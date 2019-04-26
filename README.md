@@ -69,5 +69,5 @@ Apache License 2.0
 ```
 
 ## 連絡先
-　Twitter：https://twitter.com/miu200521358
-　メール：garnet200521358@gmail.com
+ - Twitter：https://twitter.com/miu200521358
+ - メール：garnet200521358@gmail.com
