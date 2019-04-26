@@ -28,7 +28,7 @@ set /P MODEL_BONE_CSV="■トレース元モデルボーン構造CSVファイル: "
 
 rem ---  トレース変換先モデルボーン構造CSVファイル
 echo --------------
-set REPLACE_MODEL_BONE_CSV=born\あにまさ式リン準標準.csv
+set REPLACE_MODEL_BONE_CSV=born\あにまさ式ミク準標準.csv
 echo トレース変換先モデルのボーン構造CSVファイルの相対パスを入力して下さい。
 echo 何も入力せず、ENTERを押下した場合、「%REPLACE_MODEL_BONE_CSV%」のファイルを読み込みます。
 set /P REPLACE_MODEL_BONE_CSV="■トレース変換先モデルボーン構造CSVファイル: "
