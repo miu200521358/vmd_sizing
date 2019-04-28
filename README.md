@@ -18,7 +18,7 @@ python3系 で以下をインストールして下さい
 
 ## 実行方法
 
-1. [ReplaceTraceModel.bat](ReplaceTraceModel.bat) を実行する
+1. [VmdSizing.bat](VmdSizing.bat) を実行する
 1. `入力vmdファイルパス` が聞かれるので、調整したいVMDファイルパスを指定する
 1. `トレース元モデルボーン構造CSVファイル` が聞かれるので、トレース元となったモデルのボーン構造CSVファイルパスを指定する
     - ボーン構造CSVファイルの出力方法は、VMD-3d-pose-baseline-multiの[born/README.md](https://github.com/miu200521358/VMD-3d-pose-baseline-multi/tree/master/born/README.md)参照

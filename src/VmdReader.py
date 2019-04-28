@@ -93,7 +93,7 @@ class VmdReader():
             # logger.info(struct.unpack_from("64B", fin, 101 + (n * 111)))
             frame.complement = struct.unpack_from("64B", fin, 101 + (n * 111))
             # frame.complement=['%x' % x for x in range(struct.unpack_from("64B", fin, 101 + (n * 111))[0]) ]
-            logger.info("frame.complement %s: %s %s", frame.frame, bone_name, frame.complement)
+            logger.debug("frame.complement %s: %s %s", frame.frame, bone_name, frame.complement)
 
             if bone_name not in motion.frames:
                 # まだ辞書にない場合、配列追加
@@ -101,6 +101,10 @@ class VmdReader():
 
             # 辞書の該当部分にボーンフレームを追加
             motion.frames[bone_name].append(frame)
+        
+        # ソート
+        for k, v in motion.frames.items():
+            motion.frames[k] = sorted(v, key=lambda u: u.frame)
 
         # モーフ数
         morph_cnt = struct.unpack_from("I", fin, 54 + ((n + 1) * 111))
@@ -137,6 +141,10 @@ class VmdReader():
 
             # 辞書の該当部分にモーフフレームを追加
             motion.morphs[morph_name].append(morph)
+        
+        # ソート
+        for k, v in motion.morphs.items():
+            motion.morphs[k] = sorted(v, key=lambda u: u.frame)
 
         return motion
 

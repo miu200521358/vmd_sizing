@@ -15,7 +15,7 @@ handler.setLevel(logging.INFO)
 logger.setLevel(logging.INFO)
 logger.addHandler(handler)
 
-class ModelBole():
+class ModelBone():
     def __init__(self):
         # 1列目
         self.name = ""

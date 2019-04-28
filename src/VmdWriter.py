@@ -21,7 +21,8 @@ class VmdBoneFrame():
         self.frame = frame
         self.position = QVector3D(0, 0, 0)
         self.rotation = QQuaternion()
-        self.complement = []
+        self.complement = [20, 20, 0, 0, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 20, 20, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 20, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 0, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 0, 0]
+        self.key = True
 
     def write(self, fout):
         fout.write(self.name)
