@@ -136,39 +136,77 @@ def adjust_by_hand(replace_model, direction, frames, bf, replace_vertex, cnt=0):
     finger_pos = calc_finger(replace_model, direction, frames, bf)
 
     if is_inner_head(finger_pos, replace_model, replace_vertex, direction) == False:
-        logger.debug("重複無し frame: %s, finger: %s", bf.frame, finger_pos)
+        logger.debug("接触無し frame: %s, finger: %s", bf.frame, finger_pos)
         return
 
     # 腕調整
-    adjust_by_hand_bone(replace_model, direction, frames, bf, replace_vertex, "{0}腕".format(direction))
-    # ひじ調整
-    adjust_by_hand_bone(replace_model, direction, frames, bf, replace_vertex, "{0}ひじ".format(direction))
+    adjust_by_arm_bone(replace_model, direction, frames, bf, replace_vertex, "{0}腕".format(direction))
+    if cnt % 3 == 0:
+        # ひじ調整
+        adjust_by_elbow_bone(replace_model, direction, frames, bf, replace_vertex, "{0}ひじ".format(direction))
 
     if cnt < 10:
         # 3点調整してもまだ頭の中に入っていたら、自分を再呼び出し
         return adjust_by_hand(replace_model, direction, frames, bf, replace_vertex, cnt+1)
     else:
         # 10回呼び出してもダメならその時点のを返す
-        logger.info("重複解消失敗 frame: %s, finger: %s", bf.frame, finger_pos)
+        logger.info("接触解消失敗 frame: %s, finger: %s", bf.frame, finger_pos)
         return
 
-def adjust_by_hand_bone(replace_model, direction, frames, bf, replace_vertex, bone_name):
+def adjust_by_arm_bone(replace_model, direction, frames, bf, replace_vertex, bone_name):
     # 調整値
     av = 0.9
 
     # ボーン -------------
     bone_idx, _ = get_prev_bf(frames, bone_name, bf.frame)
-
-    # ボーン - X調整
     ea = frames[bone_name][bone_idx].rotation.toEulerAngles()
-    logger.debug("eax prev: %s, %s", ea, av)
-    ea.setX( ea.x() * av )
-    logger.debug("eax after: %s, %s", ea, av)
+
+    # ボーン - Z調整
+    logger.debug("eav prev: %s, %s", ea, av)
+    ea.setZ( ea.z() * av )
+    logger.debug("eav after: %s, %s", ea, av)
     frames[bone_name][bone_idx].rotation = QQuaternion.fromEulerAngles(ea)
     finger_pos = calc_finger(replace_model, direction, frames, bf)
-    logger.debug("bone-x bone: %s, finger: %s", frames[bone_name][bone_idx].rotation.toEulerAngles(), finger_pos )
+    logger.debug("bone-z bone: %s, finger: %s", frames[bone_name][bone_idx].rotation.toEulerAngles(), finger_pos )
     if is_inner_head(finger_pos, replace_model, replace_vertex, direction) == False:
-        logger.info("重複解消-x frame: %s %s, finger: %s", bone_name, bf.frame, finger_pos)
+        logger.info("接触解消-z frame: %s %s, finger: %s", bone_name, bf.frame, finger_pos)
+        return
+
+    # ボーン - Y調整
+    ea.setY( ea.y() * av )
+    frames[bone_name][bone_idx].rotation = QQuaternion.fromEulerAngles(ea)
+    finger_pos = calc_finger(replace_model, direction, frames, bf)
+    logger.debug("bone-y bone: %s, finger: %s", frames[bone_name][bone_idx].rotation.toEulerAngles(), finger_pos )
+    if is_inner_head(finger_pos, replace_model, replace_vertex, direction) == False:
+        logger.info("接触解消-y frame: %s %s, finger: %s", bone_name, bf.frame, finger_pos)
+        return
+
+    # # ボーン - X調整
+    # logger.debug("eax prev: %s, %s", ea, av)
+    # ea.setX( ea.x() * av )
+    # logger.debug("eax after: %s, %s", ea, av)
+    # frames[bone_name][bone_idx].rotation = QQuaternion.fromEulerAngles(ea)
+    # finger_pos = calc_finger(replace_model, direction, frames, bf)
+    # logger.debug("bone-x bone: %s, finger: %s", frames[bone_name][bone_idx].rotation.toEulerAngles(), finger_pos )
+    # if is_inner_head(finger_pos, replace_model, replace_vertex, direction) == False:
+    #     logger.info("接触解消-x frame: %s %s, finger: %s", bone_name, bf.frame, finger_pos)
+    #     return
+
+def adjust_by_elbow_bone(replace_model, direction, frames, bf, replace_vertex, bone_name):
+    # 調整値
+    av = 0.9
+
+    # ボーン -------------
+    bone_idx, _ = get_prev_bf(frames, bone_name, bf.frame)
+    ea = frames[bone_name][bone_idx].rotation.toEulerAngles()
+
+    # ボーン - Y調整
+    ea.setY( ea.y() * av )
+    frames[bone_name][bone_idx].rotation = QQuaternion.fromEulerAngles(ea)
+    finger_pos = calc_finger(replace_model, direction, frames, bf)
+    logger.debug("bone-y bone: %s, finger: %s", frames[bone_name][bone_idx].rotation.toEulerAngles(), finger_pos )
+    if is_inner_head(finger_pos, replace_model, replace_vertex, direction) == False:
+        logger.info("接触解消-y frame: %s %s, finger: %s", bone_name, bf.frame, finger_pos)
         return
 
     # ボーン - Z調整
@@ -179,18 +217,19 @@ def adjust_by_hand_bone(replace_model, direction, frames, bf, replace_vertex, bo
     finger_pos = calc_finger(replace_model, direction, frames, bf)
     logger.debug("bone-z bone: %s, finger: %s", frames[bone_name][bone_idx].rotation.toEulerAngles(), finger_pos )
     if is_inner_head(finger_pos, replace_model, replace_vertex, direction) == False:
-        logger.info("重複解消-z frame: %s %s, finger: %s", bone_name, bf.frame, finger_pos)
+        logger.info("接触解消-z frame: %s %s, finger: %s", bone_name, bf.frame, finger_pos)
         return
 
-    # ボーン - Y調整
-    ea.setY( ea.y() * av )
-    frames[bone_name][bone_idx].rotation = QQuaternion.fromEulerAngles(ea)
-    finger_pos = calc_finger(replace_model, direction, frames, bf)
-    logger.debug("bone-y bone: %s, finger: %s", frames[bone_name][bone_idx].rotation.toEulerAngles(), finger_pos )
-    if is_inner_head(finger_pos, replace_model, replace_vertex, direction) == False:
-        logger.info("重複解消-y frame: %s %s, finger: %s", bone_name, bf.frame, finger_pos)
-        return
-
+    # # ボーン - X調整
+    # logger.debug("eax prev: %s, %s", ea, av)
+    # ea.setX( ea.x() * av )
+    # logger.debug("eax after: %s, %s", ea, av)
+    # frames[bone_name][bone_idx].rotation = QQuaternion.fromEulerAngles(ea)
+    # finger_pos = calc_finger(replace_model, direction, frames, bf)
+    # logger.debug("bone-x bone: %s, finger: %s", frames[bone_name][bone_idx].rotation.toEulerAngles(), finger_pos )
+    # if is_inner_head(finger_pos, replace_model, replace_vertex, direction) == False:
+    #     logger.info("接触解消-x frame: %s %s, finger: %s", bone_name, bf.frame, finger_pos)
+    #     return
 
 
 # 指定されたフレームより前のキーを返す
@@ -214,12 +253,12 @@ def is_inner_head(finger_pos, replace_model, replace_vertex, direction):
     
     for v in replace_vertex:
         if direction == "左" and v.x() > finger_pos.x() and v.z() > finger_pos.z():
-            logger.debug("左頭重複: v: %s, w: %s", v, finger_pos)
+            logger.debug("左頭接触: v: %s, w: %s", v, finger_pos)
             # 左手で顔より内側ならTrue
             return True
         if direction == "右" and v.x() < finger_pos.x() and v.z() < finger_pos.z():
             # 右手で顔より内側ならTrue
-            logger.debug("右頭重複: v: %s, w: %s", v, finger_pos)
+            logger.debug("右頭接触: v: %s, w: %s", v, finger_pos)
             return True
 
     # どれもヒットしなければFalse
