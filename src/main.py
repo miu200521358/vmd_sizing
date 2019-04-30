@@ -45,7 +45,7 @@ def main(vmd_path, trace_bone_path, replace_bone_path, replace_vertex_path):
     # 移植先のセンターとグルーブは、トレース元の比率に合わせる
     adjust_center(trace_model, replace_model, "センター")
     adjust_center(trace_model, replace_model, "グルーブ")
-
+    
     # サイズ比較
     lengths = compare_length(trace_model, replace_model)
 
@@ -63,13 +63,17 @@ def main(vmd_path, trace_bone_path, replace_bone_path, replace_vertex_path):
                     # 移動量を倍率変換
                     bf.position = bf.position * lengths[k]
                 else:
-                    if k in ["左肩" ,"左腕" ,"左腕捩" ,"左ひじ" ,"左手捩" ,"左手首","右肩" ,"右腕" ,"右腕捩" ,"右ひじ" ,"右手捩" ,"右手首"] and bf.key == True and replace_vertex is not None:
+                    if k in ["左肩" ,"左腕" ,"左ひじ" ,"左手首","右肩" ,"右腕" ,"右ひじ" ,"右手首"] and bf.key == True and replace_vertex is not None:
                         # 腕系登録対象かつ頂点CSVが存在している場合
                         
                         # 方向
                         direction = "左" if "左" in k else "右"
+
+                        # 現時点の頭の位置
+                        head_pos = calc_head_bone(replace_model, motion.frames, bf)
+
                         # 回転調整
-                        adjust_by_hand(replace_model, direction, motion.frames, bf, replace_vertex)
+                        adjust_by_hand(replace_model, direction, motion.frames, bf, replace_vertex, head_pos)
 
     new_filepath = os.path.join(str(Path(vmd_path).resolve().parents[0]), os.path.basename(vmd_path).replace(".vmd", "_{1}_{0:%Y%m%d_%H%M%S}.vmd".format(datetime.datetime.now(), bone_filename)))
 
@@ -129,31 +133,31 @@ def calc_interpolate_bezier(x1v, y1v, x2v, y2v, start, end, now):
     return y
 
 # 手の調整
-def adjust_by_hand(replace_model, direction, frames, bf, replace_vertex, cnt=0):
+def adjust_by_hand(replace_model, direction, frames, bf, replace_vertex, head_pos, cnt=0):
     logger.debug("adjust_by_hand: %s, %s ------------------", cnt, bf.frame )
 
     # 手首の位置
-    finger_pos = calc_finger(replace_model, direction, frames, bf)
+    elbow_pos, finger_pos = calc_finger_bone(replace_model, direction, frames, bf)
 
-    if is_inner_head(finger_pos, replace_model, replace_vertex, direction) == False:
+    if is_inner_head(elbow_pos, finger_pos, replace_model, replace_vertex, head_pos, direction) == False:
         logger.debug("接触無し frame: %s, finger: %s", bf.frame, finger_pos)
         return
 
     # 腕調整
-    adjust_by_arm_bone(replace_model, direction, frames, bf, replace_vertex, "{0}腕".format(direction))
+    adjust_by_arm_bone(replace_model, direction, frames, bf, replace_vertex, head_pos, "{0}腕".format(direction))
     if cnt % 3 == 0:
         # ひじ調整
-        adjust_by_elbow_bone(replace_model, direction, frames, bf, replace_vertex, "{0}ひじ".format(direction))
+        adjust_by_elbow_bone(replace_model, direction, frames, bf, replace_vertex, head_pos, "{0}ひじ".format(direction))
 
     if cnt < 10:
         # 3点調整してもまだ頭の中に入っていたら、自分を再呼び出し
-        return adjust_by_hand(replace_model, direction, frames, bf, replace_vertex, cnt+1)
+        return adjust_by_hand(replace_model, direction, frames, bf, replace_vertex, head_pos, cnt+1)
     else:
         # 10回呼び出してもダメならその時点のを返す
         logger.info("接触解消失敗 frame: %s, finger: %s", bf.frame, finger_pos)
         return
 
-def adjust_by_arm_bone(replace_model, direction, frames, bf, replace_vertex, bone_name):
+def adjust_by_arm_bone(replace_model, direction, frames, bf, replace_vertex, head_pos, bone_name):
     # 調整値
     av = 0.9
 
@@ -166,18 +170,18 @@ def adjust_by_arm_bone(replace_model, direction, frames, bf, replace_vertex, bon
     ea.setZ( ea.z() * av )
     logger.debug("eav after: %s, %s", ea, av)
     frames[bone_name][bone_idx].rotation = QQuaternion.fromEulerAngles(ea)
-    finger_pos = calc_finger(replace_model, direction, frames, bf)
+    elbow_pos, finger_pos = calc_finger_bone(replace_model, direction, frames, bf)
     logger.debug("bone-z bone: %s, finger: %s", frames[bone_name][bone_idx].rotation.toEulerAngles(), finger_pos )
-    if is_inner_head(finger_pos, replace_model, replace_vertex, direction) == False:
+    if is_inner_head(elbow_pos, finger_pos, replace_model, replace_vertex, head_pos, direction) == False:
         logger.info("接触解消-z frame: %s %s, finger: %s", bone_name, bf.frame, finger_pos)
         return
 
     # ボーン - Y調整
     ea.setY( ea.y() * av )
     frames[bone_name][bone_idx].rotation = QQuaternion.fromEulerAngles(ea)
-    finger_pos = calc_finger(replace_model, direction, frames, bf)
+    elbow_pos, finger_pos = calc_finger_bone(replace_model, direction, frames, bf)
     logger.debug("bone-y bone: %s, finger: %s", frames[bone_name][bone_idx].rotation.toEulerAngles(), finger_pos )
-    if is_inner_head(finger_pos, replace_model, replace_vertex, direction) == False:
+    if is_inner_head(elbow_pos, finger_pos, replace_model, replace_vertex, head_pos, direction) == False:
         logger.info("接触解消-y frame: %s %s, finger: %s", bone_name, bf.frame, finger_pos)
         return
 
@@ -186,13 +190,13 @@ def adjust_by_arm_bone(replace_model, direction, frames, bf, replace_vertex, bon
     # ea.setX( ea.x() * av )
     # logger.debug("eax after: %s, %s", ea, av)
     # frames[bone_name][bone_idx].rotation = QQuaternion.fromEulerAngles(ea)
-    # finger_pos = calc_finger(replace_model, direction, frames, bf)
+    # finger_pos = calc_finger_bone(replace_model, direction, frames, bf)
     # logger.debug("bone-x bone: %s, finger: %s", frames[bone_name][bone_idx].rotation.toEulerAngles(), finger_pos )
     # if is_inner_head(finger_pos, replace_model, replace_vertex, direction) == False:
     #     logger.info("接触解消-x frame: %s %s, finger: %s", bone_name, bf.frame, finger_pos)
     #     return
 
-def adjust_by_elbow_bone(replace_model, direction, frames, bf, replace_vertex, bone_name):
+def adjust_by_elbow_bone(replace_model, direction, frames, bf, replace_vertex, head_pos, bone_name):
     # 調整値
     av = 0.9
 
@@ -203,9 +207,9 @@ def adjust_by_elbow_bone(replace_model, direction, frames, bf, replace_vertex, b
     # ボーン - Y調整
     ea.setY( ea.y() * av )
     frames[bone_name][bone_idx].rotation = QQuaternion.fromEulerAngles(ea)
-    finger_pos = calc_finger(replace_model, direction, frames, bf)
+    elbow_pos, finger_pos = calc_finger_bone(replace_model, direction, frames, bf)
     logger.debug("bone-y bone: %s, finger: %s", frames[bone_name][bone_idx].rotation.toEulerAngles(), finger_pos )
-    if is_inner_head(finger_pos, replace_model, replace_vertex, direction) == False:
+    if is_inner_head(elbow_pos, finger_pos, replace_model, replace_vertex, head_pos, direction) == False:
         logger.info("接触解消-y frame: %s %s, finger: %s", bone_name, bf.frame, finger_pos)
         return
 
@@ -214,9 +218,9 @@ def adjust_by_elbow_bone(replace_model, direction, frames, bf, replace_vertex, b
     ea.setZ( ea.z() * av )
     logger.debug("eav after: %s, %s", ea, av)
     frames[bone_name][bone_idx].rotation = QQuaternion.fromEulerAngles(ea)
-    finger_pos = calc_finger(replace_model, direction, frames, bf)
+    elbow_pos, finger_pos = calc_finger_bone(replace_model, direction, frames, bf)
     logger.debug("bone-z bone: %s, finger: %s", frames[bone_name][bone_idx].rotation.toEulerAngles(), finger_pos )
-    if is_inner_head(finger_pos, replace_model, replace_vertex, direction) == False:
+    if is_inner_head(elbow_pos, finger_pos, replace_model, replace_vertex, head_pos, direction) == False:
         logger.info("接触解消-z frame: %s %s, finger: %s", bone_name, bf.frame, finger_pos)
         return
 
@@ -225,7 +229,7 @@ def adjust_by_elbow_bone(replace_model, direction, frames, bf, replace_vertex, b
     # ea.setX( ea.x() * av )
     # logger.debug("eax after: %s, %s", ea, av)
     # frames[bone_name][bone_idx].rotation = QQuaternion.fromEulerAngles(ea)
-    # finger_pos = calc_finger(replace_model, direction, frames, bf)
+    # finger_pos = calc_finger_bone(replace_model, direction, frames, bf)
     # logger.debug("bone-x bone: %s, finger: %s", frames[bone_name][bone_idx].rotation.toEulerAngles(), finger_pos )
     # if is_inner_head(finger_pos, replace_model, replace_vertex, direction) == False:
     #     logger.info("接触解消-x frame: %s %s, finger: %s", bone_name, bf.frame, finger_pos)
@@ -240,10 +244,10 @@ def get_prev_bf(frames, bone_name, frameno):
             return bidx, frames[bone_name][bidx - 1]
 
     # 最後まで取れなければ、最終項目
-    return len(frames[bone_name] - 1), frames[bone_name][-1]
+    return len(frames[bone_name]) - 1, frames[bone_name][-1]
 
 # 頭の中に入っているか
-def is_inner_head(finger_pos, replace_model, replace_vertex, direction):
+def is_inner_head(elbow_pos, finger_pos, replace_model, replace_vertex, head_pos, direction):
     shoulder_y = 0 if "左肩" not in replace_model else replace_model["左肩"].position.y()
     logger.debug("shoulder_y: %s", shoulder_y)
 
@@ -251,14 +255,19 @@ def is_inner_head(finger_pos, replace_model, replace_vertex, direction):
         # 肩より手首が下ならとりあえずFalse
         return False
     
+    # 頭の初期位置からの差異
+    head_diff = head_pos - replace_model["頭"].position
+    
     for v in replace_vertex:
-        if direction == "左" and v.x() > finger_pos.x() and v.z() > finger_pos.z():
-            logger.debug("左頭接触: v: %s, w: %s", v, finger_pos)
+        hv = v + head_diff
+
+        if direction == "左" and ((hv.x() > finger_pos.x() and hv.z() > finger_pos.z()) or (hv.x() > elbow_pos.x() and hv.z() > elbow_pos.z())):
+            logger.debug("左頭接触: v: %s, w: %s", hv, finger_pos)
             # 左手で顔より内側ならTrue
             return True
-        if direction == "右" and v.x() < finger_pos.x() and v.z() < finger_pos.z():
+        if direction == "右" and ((hv.x() < finger_pos.x() and hv.z() < finger_pos.z()) or (hv.x() < elbow_pos.x() and hv.z() < elbow_pos.z())):
             # 右手で顔より内側ならTrue
-            logger.debug("右頭接触: v: %s, w: %s", v, finger_pos)
+            logger.debug("右頭接触: v: %s, w: %s", hv, finger_pos)
             return True
 
     # どれもヒットしなければFalse
@@ -266,8 +275,7 @@ def is_inner_head(finger_pos, replace_model, replace_vertex, direction):
 
 
 # 中指の位置の計算
-def calc_finger(model_bone, direction, frames, bf):
-
+def calc_finger_bone(model_bone, direction, frames, bf):
     # ローカル位置
     trans_vs = [0 for i in range(7)]
     # 肩のローカル位置
@@ -352,10 +360,13 @@ def calc_finger(model_bone, direction, frames, bf):
 
         # logger.debug("matrixs n: %s, %s", n, matrixs[n])
 
+    # ひじの位置
+    elbow_pos = matrixs[0] * matrixs[1] * matrixs[2] * QVector4D(trans_vs[3], 1)
+
     # 手首の位置
     finger_pos = matrixs[0] * matrixs[1] * matrixs[2] * matrixs[3] * matrixs[4] * matrixs[5] * QVector4D(trans_vs[6], 1)
 
-    return finger_pos.toVector3D()
+    return elbow_pos.toVector3D(), finger_pos.toVector3D()
 
 # 補間曲線を考慮した指定フレーム番号の回転値
 def calc_rotation_by_complement(frames, bone_name, frameno):
@@ -384,6 +395,68 @@ def calc_rotation_by_complement(frames, bone_name, frameno):
 
     # 最後まで行っても見つからなければ、最終項目を返す
     return frames[bone_name][-1].rotation
+
+
+# 頭のボーンの位置の計算
+def calc_head_bone(model_bone, frames, bf):
+
+    # ローカル位置
+    trans_vs = [0 for i in range(4)]
+    # 上半身のローカル位置
+    trans_vs[0] = model_bone["上半身"].position
+
+    # 上半身2のローカル位置
+    upper2 = QVector3D(0, 0, 0)
+    if "上半身2" in model_bone:
+        # 上半身2はある場合はそれを設定
+        trans_vs[1] = model_bone["上半身2"].position - model_bone["上半身"].position
+        upper2 = model_bone["上半身2"].position
+    else:
+        # 上半身2がない場合、上半身と首の中間
+        upper = model_bone["上半身"].position
+        neck = model_bone["首"].position
+        upper2 = upper + (neck - upper) / 2
+        trans_vs[1] = upper2 - model_bone["上半身"].position
+
+    # 首のローカル位置
+    trans_vs[2] = model_bone["首"].position - upper2
+    # 頭のローカル位置
+    trans_vs[3] = model_bone["頭"].position - model_bone["首"].position
+
+    # 加算用クォータニオン
+    add_qs = [0 for i in range(4)]
+    # 上半身の回転
+    add_qs[0] = calc_rotation_by_complement(frames, "上半身", bf.frame)
+
+    # 腕捩りの回転
+    if "上半身2" in model_bone:
+        # 腕捻りはある場合はそれを設定
+        add_qs[1] = calc_rotation_by_complement(frames, "上半身2", bf.frame)
+    else:
+        add_qs[1] = QQuaternion()
+
+    # 首の回転
+    add_qs[2] = calc_rotation_by_complement(frames, "首", bf.frame)
+    # 頭の回転
+    add_qs[3] = QQuaternion()
+
+    # 行列
+    matrixs = [0 for i in range(4)]
+
+    for n in range(len(matrixs)):
+        # 行列を生成
+        matrixs[n] = QMatrix4x4()
+        # 移動
+        matrixs[n].translate(trans_vs[n])
+        # 回転
+        matrixs[n].rotate(add_qs[n])
+
+        # logger.debug("matrixs n: %s, %s", n, matrixs[n])
+
+    # 頭の頂点の位置
+    head_pos = matrixs[0] * matrixs[1] * matrixs[2] * QVector4D(trans_vs[3], 1)
+
+    return head_pos.toVector3D()
 
 
 def adjust_center(trace_model, replace_model, bone_name):
@@ -426,10 +499,16 @@ def load_model_vertexs(replace_model, vertex_path):
     if not os.path.exists(vertex_path):
         return None
 
-    # キー：, 値：ボーンデータ
+    # 頭部と胴体頂点
     vertexs = []
-    # 肩より上の頂点リストを生成する
+    # 肩より上（頭部）
     shoulder_y = 0 if "左肩" not in replace_model else replace_model["左肩"].position.y()
+    # 左肩より内側（胴体）
+    left_sholder_x = 0 if "左肩" not in replace_model else replace_model["左肩"].position.x()
+    # 右肩より内側（胴体）
+    right_sholder_x = 0 if "右肩" not in replace_model else replace_model["右肩"].position.x()
+    # 左ひざより上
+    leg_y = 0 if "左ひざ" not in replace_model else replace_model["左ひざ"].position.y()
 
     # ボーンファイルを開く
     with open(vertex_path, "r", encoding=get_file_encoding(vertex_path)) as bf:
@@ -439,9 +518,10 @@ def load_model_vertexs(replace_model, vertex_path):
             if row[0] == "Vertex":
                 v = QVector3D(float(row[2]), float(row[3]), float(row[4]))
 
-                if v.y() > shoulder_y:
+                if v.y() > shoulder_y or ( v.y() > leg_y and v.x() < left_sholder_x and v.x() > right_sholder_x ):
+                    # 肩より上か、胴体の場合、頂点追加
                     vertexs.append(v)
-
+                
     logger.debug("vertexs: %s", len(vertexs))
 
     # x -> z -> y の昇順で並び替える
@@ -476,21 +556,22 @@ def load_model_bones(bone_path):
                 bones[bone.name] = bone
     
     for k, v in bones.items():
-        if "ＩＫ" in k:
+        if k == "左足ＩＫ" or k == "右足ＩＫ":
             # IKの場合、リンクボーンの離れている方を採用する
             farer_pos = QVector3D(0,0,0)
             for l in v.links:
                 if l in bones and farer_pos.length() < bones[l].position.length():
                     # 存在するボーンで、大きい方を採用
                     farer_pos = bones[l].position
+                    logger.info("farer: %s", bones[l].position)
             # 最も大きな値（離れている）のを採用
-            v.len = (v.position - farer_pos).length()
+            v.len = farer_pos.length()
         elif k == "グルーブ" or k == "センター":
             # 親がグルーブの場合、センターとの連動は行わない
             v.len = v.position.length()
         else:
             # IK以外の場合、親ボーンとの間の長さを「親ボーン」に設定する
-            if v.parent is not None and v.parent in bones and v.parent != "グルーブ" and v.parent != "センター":
+            if v.parent is not None and v.parent in bones and v.parent != "グルーブ" and v.parent != "センター" and v.parent != "左足ＩＫ" and v.parent != "右足ＩＫ":
                 # 親ボーンを採用
                 pos = v.position - bones[v.parent].position
                 if v.len > 0:
