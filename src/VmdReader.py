@@ -155,7 +155,7 @@ def get_encoding(fbytes):
     
     for encoding in codelst:
         try:
-            fstr = byte_decode(fbytes, encoding) # bytes文字列から指定文字コードの文字列に変換
+            fstr = byte_decode(fbytes, encoding, False) # bytes文字列から指定文字コードの文字列に変換
             fstr = fstr.encode('utf-8') # uft-8文字列に変換
             # 問題なく変換できたらエンコードを返す
             logger.debug("%s: encoding: %s", fstr, encoding)
@@ -165,8 +165,22 @@ def get_encoding(fbytes):
             
     raise Exception("unknown encoding!")
 
-def byte_decode(fbytes, encoding):
+def byte_decode(fbytes, encoding, is_raise=True):
     fbytes2 = re.sub(b'\x00.*$', b'', fbytes)
     logger.debug("byte_decode %s -> %s", fbytes, fbytes2)
 
-    return fbytes2.decode(encoding)
+    try:
+        return fbytes2.decode(encoding)
+    except Exception as e:
+        if is_raise:
+            # loggerだと二重出力されるので、とりあえずprint
+            print("%s", e)
+            print("2バイト文字の変換処理に失敗しました。")
+            print("モーションデータを別名保存して再実行すると直る可能性があります。")
+
+            # エラーを投げる場合はそのまま投げる
+            raise e
+        else:
+            # 投げない場合はとりあえずNone
+            return None
+
