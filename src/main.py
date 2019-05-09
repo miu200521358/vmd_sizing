@@ -370,6 +370,11 @@ def calc_finger_bone(model_bone, direction, frames, bf):
 
 # 補間曲線を考慮した指定フレーム番号の回転値
 def calc_rotation_by_complement(frames, bone_name, frameno):
+    
+    # ボーン登録がなければ初期値
+    if bone_name not in frames:
+        return QQuaternion()
+
     for bidx, bf in enumerate(frames[bone_name]):
         if bf.frame >= frameno:
             # 前のキーIDXを0に見立てて、その間の補間曲線を埋める
