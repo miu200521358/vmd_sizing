@@ -162,8 +162,11 @@ def get_encoding(fbytes):
             return encoding
         except:
             pass
-            
-    raise Exception("unknown encoding!")
+
+    print("2バイト文字の変換処理に失敗しました。")
+    print("モーションデータを別名保存して再実行すると直る可能性があります。")
+
+    raise Exception("unknown encoding!: ", fbytes)
 
 def byte_decode(fbytes, encoding, is_raise=True):
     fbytes2 = re.sub(b'\x00.*$', b'', fbytes)
