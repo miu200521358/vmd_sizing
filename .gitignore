@@ -20,3 +20,9 @@ born/*
 !あにまさ式ミク準標準.csv
 
 vertex/*
+
+build
+dist
+command.txt
+*.zip
+*.log

@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
 #
 
-import io
-import struct
 import logging
-import re
-import numpy as np
+import copy
 from PyQt5.QtGui import QQuaternion, QVector3D
 from VmdWriter import VmdBoneFrame, VmdMorphFrame
 
@@ -27,3 +24,14 @@ class ModelBone():
         self.position = QVector3D(0, 0, 0)
         # 親ボーンからの長さ(計算）
         self.len = 0
+        # 軸制限
+        self.axis_limit = QVector3D(0, 0, 0)
+
+class ModelBoneJoint():
+    def __init__(self, mb, rotation):
+        # 名前を引き継ぐ
+        self.name = mb.name
+        # 位置を引き継ぐ
+        self.position = copy.deepcopy(mb.position)
+        # 回転は指定された値
+        self.rotation = rotation

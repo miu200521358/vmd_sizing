@@ -18,6 +18,7 @@ class VmdMorphFrame():
 class VmdBoneFrame():
     def __init__(self, frame=0):
         self.name = ''
+        self.format_name = ''
         self.frame = frame
         self.position = QVector3D(0, 0, 0)
         self.rotation = QQuaternion()

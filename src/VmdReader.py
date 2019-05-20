@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 
-import io
 import struct
 import logging
 import re
-import numpy as np
 from PyQt5.QtGui import QQuaternion, QVector3D
 from VmdWriter import VmdBoneFrame, VmdMorphFrame
 
@@ -18,6 +16,7 @@ class VmdMotion():
     def __init__(self):
         self.signature = ''
         self.model_name = ''
+        self.last_motion_frame = 0
         self.motion_cnt = 0
         # ボーン名：VmdBoneFrameの配列
         self.frames = {}
@@ -47,7 +46,7 @@ class VmdReader():
         # 文字コード
         encoding = get_encoding(model_name[0])
 
-        motion.model_name = byte_decode(model_name[0], encoding)
+        motion.model_name = byte_decode(model_name[0], encoding, False)
         logger.debug("model_name %s", motion.model_name)
         
         # モーション数
@@ -67,9 +66,11 @@ class VmdReader():
             frame.name = bone_bname[0]
 
             # ボーン名を分かる形に変換(キー用)
-            bone_name = byte_decode(bone_bname[0], encoding)
+            bone_name = byte_decode(bone_bname[0], encoding, False)
             
             logger.debug("frame.name %s", bone_name)
+
+            frame.format_name = bone_name
 
             # フレームIDX
             frame.frame = struct.unpack_from("I", fin, 69 + (n * 111))[0]
@@ -101,6 +102,10 @@ class VmdReader():
 
             # 辞書の該当部分にボーンフレームを追加
             motion.frames[bone_name].append(frame)
+
+            if frame.frame > motion.last_motion_frame:
+                # 最終フレームを記録
+                motion.last_motion_frame = frame.frame
         
         # ソート
         for k, v in motion.frames.items():
@@ -123,7 +128,7 @@ class VmdReader():
             morph.name = morph_bname[0]
 
             # モーフ名を分かる形に変換(キー用)
-            morph_name = byte_decode(morph_bname[0], encoding)
+            morph_name = byte_decode(morph_bname[0], encoding, False)
             
             logger.debug("morph.name %s", morph_name)
 
@@ -155,7 +160,7 @@ def get_encoding(fbytes):
     
     for encoding in codelst:
         try:
-            fstr = byte_decode(fbytes, encoding, False) # bytes文字列から指定文字コードの文字列に変換
+            fstr = byte_decode(fbytes, encoding, True) # bytes文字列から指定文字コードの文字列に変換
             fstr = fstr.encode('utf-8') # uft-8文字列に変換
             # 問題なく変換できたらエンコードを返す
             logger.debug("%s: encoding: %s", fstr, encoding)
@@ -163,8 +168,11 @@ def get_encoding(fbytes):
         except:
             pass
 
-    print("2バイト文字の変換処理に失敗しました。")
-    print("モーションデータを別名保存して再実行すると直る可能性があります。")
+    print("■■■■■■■■■■■■■■■■■")
+    print("■　**ERROR**　")
+    print("■　2バイト文字の変換処理に失敗しました。")
+    print("■　モーションデータを別名保存して再実行すると直る可能性があります。")
+    print("■■■■■■■■■■■■■■■■■")
 
     raise Exception("unknown encoding!: ", fbytes)
 
@@ -172,18 +180,27 @@ def byte_decode(fbytes, encoding, is_raise=True):
     fbytes2 = re.sub(b'\x00.*$', b'', fbytes)
     logger.debug("byte_decode %s -> %s", fbytes, fbytes2)
 
-    try:
-        return fbytes2.decode(encoding)
-    except Exception as e:
-        if is_raise:
-            # loggerだと二重出力されるので、とりあえずprint
-            print("%s", e)
-            print("2バイト文字の変換処理に失敗しました。")
-            print("モーションデータを別名保存して再実行すると直る可能性があります。")
+    if is_raise == True:
+        try:
+            return fbytes2.decode(encoding)
+        except Exception as e:
+            # # loggerだと二重出力されるので、とりあえずprint
+            # print("fbytes: %s" % fbytes)
+            # print("%s" % e)
+            # print("■■■■■■■■■■■■■■■■■")
+            # print("■　**ERROR**　")
+            # print("■　2バイト文字の変換処理に失敗しました。")
+            # print("■　モーションデータを別名保存して再実行すると直る可能性があります。")
+            # print("■■■■■■■■■■■■■■■■■")
 
             # エラーを投げる場合はそのまま投げる
             raise e
-        else:
+    else:
+        # エラーを投げない場合
+        try:
+            # 変換できなかった文字は「?」に変換する
+            return fbytes2.decode(encoding=encoding, errors='replace')
+        except Exception as e:
             # 投げない場合はとりあえずNone
             return None
 
