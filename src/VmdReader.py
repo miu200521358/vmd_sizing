@@ -43,11 +43,13 @@ class VmdReader():
         # モデル名
         model_name = struct.unpack_from("20s", fin, 30)
 
-        # 文字コード
-        encoding = get_encoding(model_name[0])
-
-        motion.model_name = byte_decode(model_name[0], encoding, False)
-        logger.debug("model_name %s", motion.model_name)
+        try:
+            # 文字コードが取れた場合、それでモデル名取得
+            encoding = get_encoding(model_name[0])
+            motion.model_name = byte_decode(model_name[0], encoding, False)
+            logger.debug("model_name %s", motion.model_name)
+        except Exception:
+            encoding = None
         
         # モーション数
         motion_cnt = struct.unpack_from("I", fin, 50)
@@ -65,6 +67,10 @@ class VmdReader():
             # ボーン名はそのまま追加
             frame.name = bone_bname[0]
 
+            if encoding == None:
+                # モデル名でエンコードが取れなかった場合、ボーン名で取得
+                encoding = get_encoding(bone_bname[0])
+                
             # ボーン名を分かる形に変換(キー用)
             bone_name = byte_decode(bone_bname[0], encoding, False)
             
@@ -155,7 +161,7 @@ class VmdReader():
 
 
 # ファイルのエンコードを取得する
-def get_encoding(fbytes):        
+def get_encoding(fbytes, is_raise=True):        
     codelst = ('shift-jis', 'utf-8')
     
     for encoding in codelst:
