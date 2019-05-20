@@ -49,6 +49,7 @@ class VmdReader():
             motion.model_name = byte_decode(model_name[0], encoding, False)
             logger.debug("model_name %s", motion.model_name)
         except Exception:
+            print("モデル名読み込みエラーが発生しましたが、処理を続行します。")
             encoding = None
         
         # モーション数
