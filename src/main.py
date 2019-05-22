@@ -151,7 +151,7 @@ def adjust_by_hand(replace_model, direction, frames, bf, head_vertex_pos, cnt=0)
 
     # 腕調整
     adjust_by_arm_bone(replace_model, direction, frames, bf, head_vertex_pos, "{0}腕".format(direction))
-    if cnt % 3 == 0:
+    if cnt % 2 == 0:
         # ひじ調整
         adjust_by_elbow_bone(replace_model, direction, frames, bf, head_vertex_pos, "{0}ひじ".format(direction))
 
@@ -385,7 +385,7 @@ def calc_finger_bone(model_bone, direction, frames, bf):
         # 腕捻りはある場合はそれを設定
         arm_twist = calc_bone_by_complement(frames, "{0}腕捩".format(direction), bf.frame).rotation
         # 回転量を軸固定で生成する
-        add_qs[4] = QQuaternion.fromAxisAndAngle(model_bone["{0}腕捩".format(direction)].axis_limit, arm_twist.toEulerAngles().x())
+        add_qs[4] = QQuaternion.fromAxisAndAngle(model_bone["{0}腕捩".format(direction)].axis_limit, arm_twist.lengthSquared())
     else:
         add_qs[4] = QQuaternion()
 
@@ -399,7 +399,7 @@ def calc_finger_bone(model_bone, direction, frames, bf):
         # 手捻りはある場合はそれを設定
         hand_twist = calc_bone_by_complement(frames, "{0}手捩".format(direction), bf.frame).rotation
         # 回転量を軸固定で生成する
-        add_qs[7] = QQuaternion.fromAxisAndAngle(model_bone["{0}手捩".format(direction)].axis_limit, hand_twist.toEulerAngles().x())
+        add_qs[7] = QQuaternion.fromAxisAndAngle(model_bone["{0}手捩".format(direction)].axis_limit, hand_twist.lengthSquared())
     else:
         add_qs[7] = QQuaternion()
 
