@@ -2,7 +2,6 @@
 #
 import argparse
 import math
-import numpy as np
 import os
 import datetime
 from pathlib import Path
@@ -25,10 +24,10 @@ level = {0:logging.ERROR,
             3:logging.DEBUG}
 
 def main(vmd_path, trace_bone_path, replace_bone_path, replace_vertex_path):   
-    logger.info("vmd: %s", vmd_path)
-    logger.info("トレース元: %s", trace_bone_path)
-    logger.info("トレース先(ボーン): %s", replace_bone_path)
-    logger.info("トレース先(頂点): %s", replace_vertex_path)
+    print("vmd: %s" % vmd_path)
+    print("トレース元: %s" % trace_bone_path)
+    print("トレース先(ボーン): %s" % replace_bone_path)
+    print("トレース先(頂点): %s" % replace_vertex_path)
 
     # ボーンCSVファイル名・拡張子
     bone_filename, _ = os.path.splitext(os.path.basename(replace_bone_path))
@@ -55,28 +54,30 @@ def main(vmd_path, trace_bone_path, replace_bone_path, replace_vertex_path):
 
     # 変換サイズに合わせてモーション変換
     for k in ["右足ＩＫ" ,"左足ＩＫ", "センター", "グルーブ"]:
-        for bf in motion.frames[k]:
-            # 移動量を倍率変換
-            bf.position = bf.position * lengths[k]
+        if k in motion.frames and k in lengths:
+            for bf in motion.frames[k]:
+                # 移動量を倍率変換
+                bf.position = bf.position * lengths[k]
                         
     # 変換サイズに合わせてモーション変換
     if replace_vertex is not None:
         for f in range(motion.last_motion_frame):
             for kidx, k in enumerate(["左腕", "左ひじ", "右腕", "右ひじ"]):
-                for bf in motion.frames[k]:
-                    if bf.key == True and bf.frame == f:
+                if k in motion.frames:
+                    for bf in motion.frames[k]:
+                        if bf.key == True and bf.frame == f:
 
-                        # 方向
-                        direction = "左" if "左" in k else "右"
+                            # 方向
+                            direction = "左" if "左" in k else "右"
 
-                        # 現時点の頭の位置
-                        head_vertex_pos = calc_head_vertex(replace_vertex, replace_model, motion.frames, bf)
+                            # 現時点の頭の位置
+                            head_vertex_pos = calc_head_vertex(replace_vertex, replace_model, motion.frames, bf)
 
-                        # 回転調整
-                        adjust_by_hand(replace_model, direction, motion.frames, bf, head_vertex_pos)
+                            # 回転調整
+                            adjust_by_hand(replace_model, direction, motion.frames, bf, head_vertex_pos)
 
-                    elif bf.frame > f:
-                        break
+                        elif bf.frame > f:
+                            break
 
     new_filepath = os.path.join(str(Path(vmd_path).resolve().parents[0]), os.path.basename(vmd_path).replace(".vmd", "_{1}_{0:%Y%m%d_%H%M%S}.vmd".format(datetime.datetime.now(), bone_filename)))
 
@@ -98,7 +99,9 @@ def main(vmd_path, trace_bone_path, replace_bone_path, replace_vertex_path):
     writer = VmdWriter()
     writer.write_vmd_file(new_filepath, bone_frames, morph_frames, None)
 
-    logger.info("output: %s", new_filepath)
+    print("■■■■■■■■■■■■■■■■■")
+    print("■　変換出力完了: %s" % new_filepath)
+    print("■■■■■■■■■■■■■■■■■")
 
 
 # 補間曲線を求める
@@ -157,7 +160,7 @@ def adjust_by_hand(replace_model, direction, frames, bf, head_vertex_pos, cnt=0)
         return adjust_by_hand(replace_model, direction, frames, bf, head_vertex_pos, cnt+1)
     else:
         # 10回呼び出してもダメならその時点のを返す
-        logger.info("接触解消失敗 frame: %s, finger: %s", bf.frame, finger_pos)
+        print("接触解消失敗 frame: %s, finger: %s" % (bf.frame, finger_pos))
         return
 
 def adjust_by_arm_bone(replace_model, direction, frames, bf, head_vertex_pos, bone_name):
@@ -176,7 +179,7 @@ def adjust_by_arm_bone(replace_model, direction, frames, bf, head_vertex_pos, bo
     elbow_pos, finger_pos = calc_finger_bone(replace_model, direction, frames, bf)
     logger.debug("bone-z bone: %s, finger: %s", frames[bone_name][bone_idx].rotation.toEulerAngles(), finger_pos )
     if is_inner_head(elbow_pos, finger_pos, replace_model, head_vertex_pos, direction) == False:
-        logger.info("接触解消-z frame: %s %s, finger: %s", bone_name, bf.frame, finger_pos)
+        print("接触解消-z frame: %s %s, finger: %s" % (bone_name, bf.frame, finger_pos))
         return
 
     # ボーン - Y調整
@@ -185,7 +188,7 @@ def adjust_by_arm_bone(replace_model, direction, frames, bf, head_vertex_pos, bo
     elbow_pos, finger_pos = calc_finger_bone(replace_model, direction, frames, bf)
     logger.debug("bone-y bone: %s, finger: %s", frames[bone_name][bone_idx].rotation.toEulerAngles(), finger_pos )
     if is_inner_head(elbow_pos, finger_pos, replace_model, head_vertex_pos, direction) == False:
-        logger.info("接触解消-y frame: %s %s, finger: %s", bone_name, bf.frame, finger_pos)
+        print("接触解消-y frame: %s %s, finger: %s" % (bone_name, bf.frame, finger_pos))
         return
 
     # # ボーン - X調整
@@ -196,7 +199,7 @@ def adjust_by_arm_bone(replace_model, direction, frames, bf, head_vertex_pos, bo
     # finger_pos = calc_finger_bone(replace_model, direction, frames, bf)
     # logger.debug("bone-x bone: %s, finger: %s", frames[bone_name][bone_idx].rotation.toEulerAngles(), finger_pos )
     # if is_inner_head(finger_pos, replace_model, direction) == False:
-    #     logger.info("接触解消-x frame: %s %s, finger: %s", bone_name, bf.frame, finger_pos)
+    #     print("接触解消-x frame: %s %s, finger: %s", bone_name, bf.frame, finger_pos)
     #     return
 
 def adjust_by_elbow_bone(replace_model, direction, frames, bf, head_vertex_pos, bone_name):
@@ -213,7 +216,7 @@ def adjust_by_elbow_bone(replace_model, direction, frames, bf, head_vertex_pos, 
     elbow_pos, finger_pos = calc_finger_bone(replace_model, direction, frames, bf)
     logger.debug("bone-y bone: %s, finger: %s", frames[bone_name][bone_idx].rotation.toEulerAngles(), finger_pos )
     if is_inner_head(elbow_pos, finger_pos, replace_model, head_vertex_pos, direction) == False:
-        logger.info("接触解消-y frame: %s %s, finger: %s", bone_name, bf.frame, finger_pos)
+        print("接触解消-y frame: %s %s, finger: %s" % (bone_name, bf.frame, finger_pos))
         return
 
     # ボーン - Z調整
@@ -224,7 +227,7 @@ def adjust_by_elbow_bone(replace_model, direction, frames, bf, head_vertex_pos, 
     elbow_pos, finger_pos = calc_finger_bone(replace_model, direction, frames, bf)
     logger.debug("bone-z bone: %s, finger: %s", frames[bone_name][bone_idx].rotation.toEulerAngles(), finger_pos )
     if is_inner_head(elbow_pos, finger_pos, replace_model, head_vertex_pos, direction) == False:
-        logger.info("接触解消-z frame: %s %s, finger: %s", bone_name, bf.frame, finger_pos)
+        print("接触解消-z frame: %s %s, finger: %s" % (bone_name, bf.frame, finger_pos))
         return
 
     # # ボーン - X調整
@@ -235,7 +238,7 @@ def adjust_by_elbow_bone(replace_model, direction, frames, bf, head_vertex_pos, 
     # finger_pos = calc_finger_bone(replace_model, direction, frames, bf)
     # logger.debug("bone-x bone: %s, finger: %s", frames[bone_name][bone_idx].rotation.toEulerAngles(), finger_pos )
     # if is_inner_head(finger_pos, replace_model, direction) == False:
-    #     logger.info("接触解消-x frame: %s %s, finger: %s", bone_name, bf.frame, finger_pos)
+    #     print("接触解消-x frame: %s %s, finger: %s", bone_name, bf.frame, finger_pos)
     #     return
 
 
@@ -367,7 +370,7 @@ def calc_finger_bone(model_bone, direction, frames, bf):
     # 上半身の回転
     add_qs[1] = calc_bone_by_complement(frames, "上半身", bf.frame).rotation
 
-    # 腕捩りの回転
+    # 上半身2の回転
     if "上半身2" in model_bone:
         # 腕捻りはある場合はそれを設定
         add_qs[2] = calc_bone_by_complement(frames, "上半身2", bf.frame).rotation
@@ -607,7 +610,7 @@ def compare_length(trace_model, replace_model):
             # length.setX(length.x() if np.isnan(length.x()) == False and np.isinf(length.x()) == False else 0)
             # length.setY(length.y() if np.isnan(length.y()) == False and np.isinf(length.y()) == False else 0)
             # length.setZ(length.z() if np.isnan(length.z()) == False and np.isinf(length.z()) == False else 0)
-            logger.info("bone: %s, trace: %s, replace: %s, length: %s", k, trace_bone_length, replace_bone_length, length)
+            print("bone: %s, trace: %s, replace: %s, length: %s" % (k, trace_bone_length, replace_bone_length, length))
 
             lengths[k] = length
     
@@ -684,7 +687,7 @@ def load_model_bones(bone_path):
                 if l in bones and farer_pos.length() < bones[l].position.length():
                     # 存在するボーンで、大きい方を採用
                     farer_pos = bones[l].position
-                    logger.info("farer: %s", bones[l].position)
+                    logger.debug("farer: %s", bones[l].position)
             # 最も大きな値（離れている）のを採用
             v.len = farer_pos.length()
         elif k == "グルーブ" or k == "センター":
