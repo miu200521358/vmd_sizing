@@ -19,28 +19,33 @@ IF /I "%INPUT_VMD%" EQU "" (
 )
 
 
-rem ---  トレース元モデルボーン構造CSVファイル
+rem ---  トレース元モデルPMXファイル
 echo --------------
-set MODEL_BONE_CSV=born\あにまさ式ミク準標準.csv
-echo トレース元モデルのボーン構造CSVファイルの相対パスを入力して下さい。
-echo 何も入力せず、ENTERを押下した場合、「%MODEL_BONE_CSV%」のファイルを読み込みます。
-set /P MODEL_BONE_CSV="■トレース元モデルボーン構造CSVファイル: "
+set MODEL_PMX=born\あにまさ式ミク準標準.csv
+echo トレース元モデルのPMXファイルの相対パスを入力して下さい。
+echo 何も入力せず、ENTERを押下した場合、「%MODEL_PMX%」のファイルを読み込みます。
+set /P MODEL_PMX="■トレース元モデルPMXファイル: "
 
-rem ---  トレース変換先モデルボーン構造CSVファイル
+rem ---  トレース変換先モデルPMXファイル
 echo --------------
-set REPLACE_MODEL_BONE_CSV=born\あにまさ式ミク準標準.csv
-echo トレース変換先モデルのボーン構造CSVファイルの相対パスを入力して下さい。
-echo 何も入力せず、ENTERを押下した場合、「%REPLACE_MODEL_BONE_CSV%」のファイルを読み込みます。
-set /P REPLACE_MODEL_BONE_CSV="■トレース変換先モデルボーン構造CSVファイル: "
+set REPLACE_MODEL_PMX=born\あにまさ式ミク準標準.csv
+echo トレース変換先モデルのPMXファイルの相対パスを入力して下さい。
+echo 何も入力せず、ENTERを押下した場合、「%REPLACE_MODEL_PMX%」のファイルを読み込みます。
+set /P REPLACE_MODEL_PMX="■トレース変換先モデルPMXファイル: "
 
 
-rem rem ---  トレース変換先モデル頂点構造CSVファイル
+rem ---  頂点回避有無
+
 echo --------------
-set REPLACE_MODEL_VERTEX_CSV=%REPLACE_MODEL_BONE_CSV:born=vertex%
-echo トレース変換先モデルの頂点構造CSVファイルの相対パスを入力して下さい。
-echo 何も入力せず、ENTERを押下した場合、「%REPLACE_MODEL_VERTEX_CSV%」のファイルを読み込みます。
-set /P REPLACE_MODEL_VERTEX_CSV="■トレース変換先モデル頂点構造CSVファイル: "
+echo 頭部と腕の頂点回避を行うか、yes か no を入力して下さい。
+echo 何も入力せず、ENTERを押下した場合、頂点回避を行いません。
+set AVOIDANCE=0
+set IS_AVOIDANCE=no
+set /P IS_AVOIDANCE="■頂点回避処理[yes/no]: "
 
+IF /I "%IS_AVOIDANCE%" EQU "yes" (
+    set AVOIDANCE=1
+)
 
 rem ---  詳細ログ有無
 
@@ -56,6 +61,6 @@ IF /I "%IS_DEBUG%" EQU "yes" (
 )
 
 rem ---  python 実行
-python src/main.py --vmd_path %INPUT_VMD% --trace_bone_path %MODEL_BONE_CSV% --replace_bone_path %REPLACE_MODEL_BONE_CSV% --replace_vertex_path %REPLACE_MODEL_VERTEX_CSV% --verbose %VERBOSE%
+python src/main.py --vmd_path %INPUT_VMD% --trace_pmx_path %MODEL_PMX% --replace_pmx_path %REPLACE_MODEL_PMX% --avoidance %AVOIDANCE% --verbose %VERBOSE%
 
 
