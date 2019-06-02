@@ -11,7 +11,6 @@ import main
 from PmxModel import PmxModel
 from PmxReader import PmxReader
 from VmdReader import VmdReader
-from ModelBone import ModelBone
 
 def is_executable(vmd_path, org_pmx_path, rep_pmx_path):
 
@@ -153,7 +152,7 @@ def read_pmx(path):
     return pmx
 
 
-def exec(vmd_path, org_pmx_path, rep_pmx_path, output_vmd_path, is_avoidance):
+def exec(vmd_path, org_pmx_path, rep_pmx_path, output_vmd_path, is_avoidance, is_avoidance_finger, vmd_choice_values, rep_choice_values):
     print("■■■■■■■■■■■■■■■■■")
     print("■　VMDサイジング処理実行")
     print("■■■■■■■■■■■■■■■■■")
@@ -189,7 +188,7 @@ def exec(vmd_path, org_pmx_path, rep_pmx_path, output_vmd_path, is_avoidance):
         rep_pmx = read_pmx(rep_pmx_path)
 
         if motion and org_pmx and read_pmx:
-            main.main(motion, org_pmx, rep_pmx, output_vmd_path, is_avoidance)
+            main.main(motion, org_pmx, rep_pmx, output_vmd_path, is_avoidance, is_avoidance_finger, vmd_choice_values, rep_choice_values)
 
     except Exception:
         print("■■■■■■■■■■■■■■■■■")

@@ -119,7 +119,9 @@ class PmxReader():
             deform = self.read_deform()
             edge_factor = self.read_float()
 
-            pmx.vertices.append(pmx.Vertex(position, normal, uv, extended_uvs, deform, edge_factor))
+            vindex = len(pmx.vertices)
+
+            pmx.vertices.append(pmx.Vertex(vindex, position, normal, uv, extended_uvs, deform, edge_factor))
         logger.debug("len(vertices): %s", len(pmx.vertices))
 
         # 面データリスト
@@ -353,7 +355,17 @@ class PmxReader():
 
     def calc_bone_length(self, bones, bone_indexes):
         for k, v in bones.items():
-            if k in ["左足ＩＫ", "右足ＩＫ", "左つま先ＩＫ", "右つま先ＩＫ"] and v.getIkFlag() == True:
+            if k in ["左足ＩＫ", "右足ＩＫ"] and v.getIkFlag() == True:
+                #   足IKの場合、ひざボーンの位置を採用する
+                knee_pos = QVector3D(0,0,0)
+                for l in v.ik.link:
+                    logger.debug("k %s, link %s", k, l)
+                    if l.bone_index in bone_indexes and "ひざ" in bones[bone_indexes[l.bone_index]].name:
+                        # 存在するボーンで、大きい方を採用
+                        knee_pos = bones[bone_indexes[l.bone_index]].position
+                v.len = knee_pos.length()
+
+            elif k in ["左つま先ＩＫ", "右つま先ＩＫ"] and v.getIkFlag() == True:
                 # IKの場合、リンクボーンの離れている方を採用する
                 farer_pos = QVector3D(0,0,0)
                 for l in v.ik.link:
@@ -440,7 +452,11 @@ class PmxReader():
         return QVector2D(self.read_float(), self.read_float())
     
     def read_Quaternion(self):
-        return QQuaternion(self.read_float(), self.read_float(), self.read_float(), self.read_float())
+        x = self.read_float()
+        y = self.read_float()
+        z = self.read_float()
+        scalar = self.read_float()
+        return QQuaternion(scalar, x, y, z)
     
     def read_deform(self):
         deform_type = self.read_int(1)

@@ -49,7 +49,7 @@ class PmxModel():
             #     break
             if l.position.y() < min_upper_y and l.name not in ["センター", "グルーブ"]:
                 min_upper_y = l.position.y()
-        
+            
         for v in self.vertices:
             for l in head_links:
                 if v.deform.index0 == l.index and v.position.y() > min_upper_y:
@@ -60,10 +60,9 @@ class PmxModel():
 
         return upper_vertices
 
-    def create_ik_link_2_top(self, start_bone, ik_links):
-        if start_bone not in self.bones or start_bone == "全ての親":
+    def create_link_2_top(self, start_bone, ik_links):
+        if start_bone not in self.bones:
             # 開始ボーン名がなければ終了
-            # すべての親も見ない。
             return
         
         # 自分をリンクに登録
@@ -74,11 +73,12 @@ class PmxModel():
             return
 
         # 親をたどる
-        self.create_ik_link_2_top(self.bone_indexes[self.bones[start_bone].parent_index], ik_links )    
+        self.create_link_2_top(self.bone_indexes[self.bones[start_bone].parent_index], ik_links )    
 
     # 頂点構造 ----------------------------
     class Vertex():
-        def __init__(self, position, normal, uv, extended_uvs, deform, edge_factor):
+        def __init__(self, index, position, normal, uv, extended_uvs, deform, edge_factor):
+            self.index = index
             self.position = position
             self.normal = normal
             self.uv = uv
@@ -87,8 +87,8 @@ class PmxModel():
             self.edge_factor = edge_factor
             
         def __str__(self):
-            return "<Vertex position:{0}, normal:{1}, uv:{2}, extended_uv: {3}, deform:{4}, edge:{5}".format(
-                    self.position, self.normal, self.uv, len(self.extended_uvs), self.deform, self.edge_factor
+            return "<Vertex index:{0}, position:{1}, normal:{2}, uv:{3}, extended_uv: {4}, deform:{5}, edge:{6}".format(
+                    self.index, self.position, self.normal, self.uv, len(self.extended_uvs), self.deform, self.edge_factor
         )
 
         def is_deform_index(self, target_idx):

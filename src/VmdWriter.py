@@ -63,6 +63,29 @@ class VmdBoneFrame():
 
         # fout.write(bytearray([i for i in self.complement])) # 補間パラメータ(64Byte)
 
+class VmdCameraFrame():
+    def __init__(self):
+        self.frame = 0
+        self.length = 0
+        self.position = QVector3D(0, 0, 0)
+        self.euler = QVector3D(0, 0, 0)
+        self.complement=[20, 107, 20, 107, 20, 107, 20, 107, 20, 107, 20, 107, 20, 107, 20, 107, 20, 107, 20, 107, 20, 107, 20, 107]
+        self.angle = 0
+        self.perspective = 1
+
+    def write(self, fout):
+        fout.write(struct.pack('<L', self.frame))
+        fout.write(struct.pack('<f', self.length))
+        fout.write(struct.pack('<f', self.position.x()))
+        fout.write(struct.pack('<f', self.position.y()))
+        fout.write(struct.pack('<f', self.position.z()))
+        fout.write(struct.pack('<f', self.euler.x()))
+        fout.write(struct.pack('<f', self.euler.y()))
+        fout.write(struct.pack('<f', self.euler.z()))
+        fout.write(bytearray(self.complement))
+        fout.write(struct.pack('<L', self.angle))
+        fout.write(struct.pack('b', self.perspective))
+
 class VmdInfoIk():
     def __init__(self, name='', onoff=0):
         self.name = name
@@ -87,12 +110,18 @@ class VmdWriter():
     def __init__(self):
         pass
 
-    def write_vmd_file(self, filename, bone_frames, morph_frames, showik_frames):
+    def write_vmd_file(self, filename, bone_frames, morph_frames, camera_frames, showik_frames):
         """Write VMD data to a file"""
         fout = open(filename, "wb")
+
         # header
         fout.write(b'Vocaloid Motion Data 0002\x00\x00\x00\x00\x00')
-        fout.write(b'Trace Model Name    ')
+        if len(bone_frames) > 0 or len(morph_frames) > 0:
+            fout.write(b'Trace Model Name    ')
+        else:
+            # カメラ・照明
+            fout.write(b'\x83J\x83\x81\x83\x89\x81E\x8f\xc6\x96\xbe\x00on Data')
+
         # bone frames
         fout.write(struct.pack('<L', len(bone_frames))) # ボーンフレーム数
         for bf in bone_frames:
@@ -100,7 +129,9 @@ class VmdWriter():
         fout.write(struct.pack('<L', len(morph_frames))) # 表情キーフレーム数
         for mf in morph_frames:
             mf.write(fout)
-        fout.write(struct.pack('<L', 0)) # カメラキーフレーム数
+        fout.write(struct.pack('<L', len(camera_frames))) # カメラキーフレーム数
+        for cf in camera_frames:
+            cf.write(fout)
         fout.write(struct.pack('<L', 0)) # 照明キーフレーム数
         fout.write(struct.pack('<L', 0)) # セルフ影キーフレーム数
 
