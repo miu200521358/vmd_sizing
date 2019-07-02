@@ -64,30 +64,31 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
             if k in motion.frames and k in lengths:
                 for bf in motion.frames[k]:
                     # IK比率をそのまま掛ける
-                    # bf.position *= leg_ik_ratio.y()
+                    bf.position *= leg_ik_ratio.y()
+
                     # if k in ["右足ＩＫ親" ,"左足ＩＫ親", "右足ＩＫ" ,"左足ＩＫ", "右つま先ＩＫ" ,"左つま先ＩＫ"]:
                     #     bf.position.setX( bf.position.x() + leg_ik_ratio.x() )
                     #     bf.position.setZ( bf.position.z() + leg_ik_ratio.z() )
 
-                    if k in ["グルーブ", "全ての親"]:
-                        # グルーブと全ての親は自分自身
-                        bf.position.setY(bf.position.y() * lengths[k]) 
-                    else:
-                        # 足系とセンターのYはセンター
-                        bf.position.setY(bf.position.y() * lengths["センター"]) 
+                    # if k in ["グルーブ", "全ての親"]:
+                    #     # グルーブと全ての親は自分自身
+                    #     bf.position.setY(bf.position.y() * lengths[k]) 
+                    # else:
+                    #     # 足系とセンターのYはセンター
+                    #     bf.position.setY(bf.position.y() * lengths["センター"]) 
 
-                    # 足IK倍率
-                    if "右足ＩＫ" in lengths:
-                        bf.position.setX(bf.position.x() * lengths["右足ＩＫ"]) 
-                        bf.position.setZ(bf.position.z() * lengths["右足ＩＫ"]) 
-                    elif "左足ＩＫ" in lengths:
-                        # Yはセンター
-                        bf.position.setX(bf.position.x() * lengths["左足ＩＫ"]) 
-                        bf.position.setZ(bf.position.z() * lengths["左足ＩＫ"]) 
-                    else:
-                        # 足IKがない場合、自身の比率そのまま
-                        bf.position.setY(bf.position.y() * lengths[k]) 
-                        bf.position.setZ(bf.position.z() * lengths[k]) 
+                    # # 足IK倍率
+                    # if "右足ＩＫ" in lengths:
+                    #     bf.position.setX(bf.position.x() * lengths["右足ＩＫ"]) 
+                    #     bf.position.setZ(bf.position.z() * lengths["右足ＩＫ"]) 
+                    # elif "左足ＩＫ" in lengths:
+                    #     # Yはセンター
+                    #     bf.position.setX(bf.position.x() * lengths["左足ＩＫ"]) 
+                    #     bf.position.setZ(bf.position.z() * lengths["左足ＩＫ"]) 
+                    # else:
+                    #     # 足IKがない場合、自身の比率そのまま
+                    #     bf.position.setY(bf.position.y() * lengths[k]) 
+                    #     bf.position.setZ(bf.position.z() * lengths[k]) 
                     
                     if replace_model.bones[k].offset_z != 0:
                         # Zオフセットが入っている場合、オフセット調整
@@ -1651,12 +1652,12 @@ def cal_center_z_offset(trace_model, replace_model, bone_name):
 def calc_leg_ik_ratio(trace_model, replace_model):
     if "左足" in trace_model.bones and "左足" in replace_model.bones and "センター" in trace_model.bones and "センター" in replace_model.bones:
         # 比率
-        leg_ik_ratio = (replace_model.bones["左足"].position - replace_model.bones["センター"].position) \
-                            / (trace_model.bones["左足"].position - trace_model.bones["センター"].position)
+        leg_ik_ratio = (replace_model.bones["左足首"].position - replace_model.bones["左足"].position) \
+                            / (trace_model.bones["左足首"].position - trace_model.bones["左足"].position)
         # 差分
         # leg_ik_diff = trace_model.bones["左足"].position - replace_model.bones["左足"].position
 
-        logger.info("leg_ik_ratio: %s", leg_ik_ratio)
+        print("足の長さの比率: %s" % leg_ik_ratio)
     else:
         leg_ik_ratio = QVector3D(1, 1, 1)
     
