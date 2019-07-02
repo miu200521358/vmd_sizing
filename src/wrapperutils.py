@@ -203,7 +203,7 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
 
     try:
         if not output_vmd_path:
-            output_vmd_path = create_output_path(vmd_path, rep_pmx_path)
+            output_vmd_path = create_output_path(vmd_path, rep_pmx_path, is_avoidance, is_hand_ik)
             if output_vmd_path == None:
                 return False
         
