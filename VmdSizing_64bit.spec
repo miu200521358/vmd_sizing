@@ -23,10 +23,11 @@ exe = EXE(pyz,
           a.zipfiles,
           a.datas,
           [],
-          name='VmdSizing_2.02_64bit',
+          name='VmdSizing_3.00_É¿10_64bit',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
           upx=True,
           runtime_tmpdir=None,
           console=False )
+3

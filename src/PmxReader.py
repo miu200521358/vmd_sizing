@@ -24,7 +24,6 @@ class PmxReader():
         self.morph_index_size = 0
         self.rigidbody_index_size = 0
         
-    
     def read_pmx_file(self, filename):
         # PMXファイルをバイナリ読み込み
         self.buffer = open(filename, "rb").read()
@@ -278,6 +277,8 @@ class PmxReader():
             else:
                 raise ParseException("unknown morph type: {0}".format(morph.morph_type))
 
+            morph.index = len(pmx.morphs)
+
             pmx.morphs[morph.name] = morph
 
         logger.debug("len(morphs): %s", len(pmx.morphs))
@@ -295,9 +296,19 @@ class PmxReader():
             for _ in range(display_count):
                 display_type=self.read_int(1)
                 if display_type==0:
-                    display_slot.references.append((display_type, self.read_bone_index_size()))
+                    born_idx = self.read_bone_index_size()
+                    display_slot.references.append((display_type, born_idx))
+                    # ボーン表示ON
+                    for v in pmx.bones.values():
+                        if v.index == born_idx:
+                            v.display = True
                 elif display_type==1:
-                    display_slot.references.append((display_type, self.read_morph_index_size()))
+                    morph_idx = self.read_morph_index_size()
+                    display_slot.references.append((display_type, morph_idx))
+                    # モーフ表示ON
+                    for v in pmx.morphs.values():
+                        if v.index == morph_idx:
+                            v.display = True
                 else:
                     raise ParseException("unknown display_type: {0}".format(display_type))
 
@@ -355,7 +366,7 @@ class PmxReader():
 
     def calc_bone_length(self, bones, bone_indexes):
         for k, v in bones.items():
-            if k in ["左足ＩＫ", "右足ＩＫ"] and v.getIkFlag() == True:
+            if k in ["左足ＩＫ", "右足ＩＫ", "右足ＩＫ親" ,"左足ＩＫ親"] and v.getIkFlag() == True:
                 #   足IKの場合、ひざボーンの位置を採用する
                 knee_pos = QVector3D(0,0,0)
                 for l in v.ik.link:
@@ -377,24 +388,35 @@ class PmxReader():
                 # 最も大きな値（離れている）のを採用
                 v.len = farer_pos.length()
 
-            elif k in ["グルーブ", "センター"]:
+            elif k in ["グルーブ", "センター", "腰"]:
                 # 親がグルーブの場合、センターとの連動は行わない
                 v.len = v.position.length()
+                if k == "センター":
+                    v.len_3d = QVector3D(1, v.position.length(), 1)
+                else:
+                    v.len_3d = QVector3D(1, 1, 1)
             else:
                 # IK以外の場合、親ボーンとの間の長さを「親ボーン」に設定する
-                if v.parent_index is not None and v.parent_index in bone_indexes and not bone_indexes[v.parent_index] in ["グルーブ", "センター", "左足ＩＫ", "右足ＩＫ", "左つま先ＩＫ", "右つま先ＩＫ"]:
+                if v.parent_index is not None and v.parent_index in bone_indexes and not bone_indexes[v.parent_index] in ["腰", "グルーブ", "センター", "左足ＩＫ", "右足ＩＫ", "左つま先ＩＫ", "右つま先ＩＫ", "右足ＩＫ親" ,"左足ＩＫ親"]:
                     # 親ボーンを採用
                     pos = v.position - bones[bone_indexes[v.parent_index]].position
                     if v.len > 0:
                         # 既にある場合、平均値を求めて設定する
                         bones[bone_indexes[v.parent_index]].len = (v.len + pos.length()) / 2
+                        bones[bone_indexes[v.parent_index]].len_3d = (v.len_3d + pos) / 2
                     else:
                         # 0の場合はそのまま追加
                         bones[bone_indexes[v.parent_index]].len = pos.length()
+                        bones[bone_indexes[v.parent_index]].len_3d = pos
+
+                    logger.debug("bone: %s, len_3d: %s", bone_indexes[v.parent_index], bones[bone_indexes[v.parent_index]].len_3d)
                 else:
                     # 自分が最親の場合、そのまま長さ
                     v.len = v.position.length()
+                    v.len_3d = v.position
 
+                    logger.debug("bone: %s, len_3d: %s", v.name, v.len_3d)
+                
     def read_group_morph_data(self):
         return PmxModel.GroupMorphData(
                 self.read_morph_index_size(), 

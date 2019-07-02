@@ -3,8 +3,9 @@
 import struct
 import logging
 import re
+import copy
 from PyQt5.QtGui import QQuaternion, QVector3D
-from VmdWriter import VmdBoneFrame, VmdMorphFrame, VmdCameraFrame
+from VmdWriter import VmdBoneFrame, VmdMorphFrame, VmdCameraFrame, VmdLightFrame, VmdShadowFrame, VmdShowIkFrame, VmdInfoIk
 from PmxModel import ParseException
 
 logger = logging.getLogger("__main__").getChild(__name__)
@@ -15,6 +16,7 @@ logger.addHandler(handler)
 
 class VmdMotion():
     def __init__(self):
+        self.motion_name = ''
         self.signature = ''
         self.model_name = ''
         self.last_motion_frame = 0
@@ -27,12 +29,36 @@ class VmdMotion():
         self.camera_cnt = 0
         # カメラ：VmdCameraFrameの配列
         self.cameras = []
+        self.light_cnt = 0
+        # 照明：VmdLightFrameの配列
+        self.lights = []
+        self.shadow_cnt = 0
+        # セルフ影：VmdShadowFrameの配列
+        self.shadows = []
+        self.ik_cnt = 0
+        # モデル表示・IK on/off：VmdShowIkFrameの配列
+        self.showiks = []
 
 class VmdReader():
     def __init__(self):
         self.offset = 0
         self.buffer = None
         self.encoding = None
+
+    # モデル名だけ取得
+    def read_vmd_file_modelname(self, filename):
+        # VMDファイルをバイナリ読み込み
+        self.buffer = open(filename, "rb").read()
+        
+        # vmdバージョン
+        signature = self.unpack(30, "30s")
+        logger.debug("signature %s", signature)
+
+        # モデル名
+        model_bname, model_name = self.read_text(20)
+        logger.debug("model_bname %s, model_name: %s", model_bname, model_name)
+
+        return model_name
 
     def read_vmd_file(self, filename):
         # VMDファイルをバイナリ読み込み
@@ -44,17 +70,23 @@ class VmdReader():
 
         motion = VmdMotion()
         
+        # モーションパス
+        motion.motion_name = filename
+
         # モデル名
         model_bname, model_name = self.read_text(20)
-        logger.debug("model_bname %s", model_bname)        
+        logger.debug("model_bname %s, model_name: %s", model_bname, model_name)
         motion.model_name = model_name
 
         # モーション数
         motion.motion_cnt = self.read_uint(4)
         logger.debug("motion.motion_cnt %s", motion.motion_cnt)
         
+        # モーションのあるキーのINDEX
+        motion_indexes = {}
+        
         # 1F分のモーション情報
-        for _ in range(motion.motion_cnt):
+        for n in range(motion.motion_cnt):
             frame = VmdBoneFrame()
             
             # ボーン ----------------------
@@ -79,19 +111,31 @@ class VmdReader():
             logger.debug("frame.rotation.euler %s", frame.rotation.toEulerAngles())            
             
             # 補間曲線
-            frame.complement = self.unpack(64, "64B", True)
+            frame.complement = list(self.unpack(64, "64B", True))
             logger.debug("complement %s", frame.complement)
+            # オリジナルの補間曲線を保持しておく
+            frame.org_complement = copy.deepcopy(frame.complement)
             
             if bone_name not in motion.frames:
                 # まだ辞書にない場合、配列追加
                 motion.frames[bone_name] = []
+                motion_indexes[bone_name] = {}
+
+            is_not_existed = True
+            if frame.frame in motion_indexes[bone_name]:
+                is_not_existed = False
 
             # 辞書の該当部分にボーンフレームを追加
-            motion.frames[bone_name].append(frame)
+            if is_not_existed == True:
+                motion.frames[bone_name].append(frame)
+                motion_indexes[bone_name][frame.frame] = frame.frame
 
             if frame.frame > motion.last_motion_frame:
                 # 最終フレームを記録
                 motion.last_motion_frame = frame.frame
+            
+            if n % 10000 == 0:
+                print("VMDモーション読み込み キー: %s" % n)
                 
         # ソート
         for k, v in motion.frames.items():
@@ -100,9 +144,12 @@ class VmdReader():
         # モーフ数
         motion.morph_cnt = self.read_uint(4)
         logger.debug("motion.morph_cnt %s", motion.morph_cnt)
-        
+                
+        # モーションのあるキーのINDEX
+        morph_indexes = {}
+
         # 1F分のモーフ情報
-        for _ in range(motion.morph_cnt):
+        for n in range(motion.morph_cnt):
             morph = VmdMorphFrame()
             
             # ボーン ----------------------
@@ -124,10 +171,20 @@ class VmdReader():
             if morph_name not in motion.morphs:
                 # まだ辞書にない場合、配列追加
                 motion.morphs[morph_name] = []
+                morph_indexes[morph_name] = {}
 
-            # 辞書の該当部分にモーフフレームを追加
-            motion.morphs[morph_name].append(morph)
+            is_not_existed = True
+            if morph.frame in morph_indexes[morph_name]:
+                is_not_existed = False
+
+            if is_not_existed == True:
+                # まだなければ辞書の該当部分にモーフフレームを追加
+                motion.morphs[morph_name].append(morph)
+                morph_indexes[morph_name][morph.frame] = morph.frame
         
+            if n % 1000 == 0:
+                print("VMDモーション読み込み モーフ: %s" % n)
+                
         # ソート
         for k, v in motion.morphs.items():
             motion.morphs[k] = sorted(v, key=lambda u: u.frame)
@@ -172,6 +229,101 @@ class VmdReader():
         
         # ソート
         motion.cameras = sorted(motion.cameras, key=lambda u: u.frame)
+
+        # 照明数
+        try:
+            motion.light_cnt = self.read_uint(4)
+            logger.debug("motion.light_cnt %s", motion.light_cnt)
+        except Exception as e:
+            # 情報がない場合、catchして握りつぶす
+            motion.light_cnt = 0
+        
+        # 1F分の照明情報
+        for _ in range(motion.light_cnt):
+            light = VmdLightFrame()
+                        
+            # フレームIDX
+            light.frame = self.read_uint(4)
+            logger.debug("light.frame %s", light.frame)     
+
+            # 照明色(RGBだが、下手に数値が変わるのも怖いのでV3D)
+            light.color = self.read_Vector3D()
+            logger.debug("light.color %s", light.color)            
+
+            # 照明位置
+            light.position = self.read_Vector3D()
+            logger.debug("light.position %s", light.position) 
+
+            # 追加
+            motion.lights.append(light)           
+            
+        # セルフシャドウ数
+        try:
+            motion.shadow_cnt = self.read_uint(4)
+            logger.debug("motion.shadow_cnt %s", motion.shadow_cnt)
+        except Exception as e:
+            # 情報がない場合、catchして握りつぶす
+            motion.shadow_cnt = 0
+        
+        # 1F分のシャドウ情報
+        for _ in range(motion.shadow_cnt):
+            shadow = VmdShadowFrame()
+                        
+            # フレームIDX
+            shadow.frame = self.read_uint(4)
+            logger.debug("shadow.frame %s", shadow.frame)     
+
+            # シャドウ種別
+            shadow.type = self.read_uint(1)
+            logger.debug("shadow.type %s", shadow.type)            
+
+            # 距離
+            shadow.distance = self.read_float()
+            logger.debug("shadow.distance %s", shadow.distance)            
+            
+            # 追加
+            motion.shadows.append(shadow)
+
+        # IK数
+        try:
+            motion.ik_cnt = self.read_uint(4)
+            logger.debug("motion.ik_cnt %s", motion.ik_cnt)
+        except Exception as e:
+            # 昔のMMD（MMDv7.39.x64以前）はIK情報がないため、catchして握りつぶす
+            motion.ik_cnt = 0
+        
+        # 1F分のIK情報
+        for _ in range(motion.ik_cnt):
+            ik = VmdShowIkFrame()
+                        
+            # フレームIDX
+            ik.frame = self.read_uint(4)
+            logger.debug("ik.frame %s", ik.frame)     
+
+            # モデル表示, 0:OFF, 1:ON
+            ik.show = self.read_uint(1)
+            logger.debug("ik.show %s", ik.show)            
+
+            # 記録するIKの数
+            ik.ik_count = self.read_uint(4)
+            logger.debug("ik.ik_count %s", ik.ik_count)     
+
+            for _ in range(ik.ik_count):
+                ik_info = VmdInfoIk()
+
+                # IK名
+                ik_bname, ik_name = self.read_text(20)
+                ik_info.name = ik_bname
+                logger.debug("ik_info.name %s", ik_name)            
+
+                # モデル表示, 0:OFF, 1:ON
+                ik_info.onoff = self.read_uint(1)
+                logger.debug("ik_info.onoff %s", ik_info.onoff)            
+
+                ik.ik.append(ik_info)  
+
+            # 追加
+            motion.showiks.append(ik)       
             
         return motion            
                     

@@ -3,7 +3,8 @@
 
 import logging
 import copy
-from PyQt5.QtGui import QQuaternion, QVector3D, QVector2D, QColor
+from collections import OrderedDict
+from PyQt5.QtGui import QQuaternion, QVector3D, QVector2D, QColor, QMatrix4x4
 
 logger = logging.getLogger("__main__").getChild(__name__)
 handler = logging.StreamHandler()
@@ -59,21 +60,191 @@ class PmxModel():
                     break
 
         return upper_vertices
+    
+    # 左右の手首の厚みを取得する
+    def get_wrist_thickness_lr(self):
+        return {
+            "左": abs(self.get_wrist_thickness("左")), 
+            "右": abs(self.get_wrist_thickness("右"))
+        }
 
-    def create_link_2_top(self, start_bone, ik_links):
+    # 手首の厚みを取得する
+    def get_wrist_thickness(self, direction):
+        arm_qq = self.calc_arm_stance_rotation(direction)
+        # print("arm_qq: %s" % arm_qq.toEulerAngles())
+
+        # mat = QMatrix4x4()
+        # mat.rotate(arm_qq.inverted())
+        # wrist_pos = mat.mapVector(self.bones["{0}手首".format(direction)].position - self.bones["{0}ひじ".format(direction)].position)
+        wrist_pos = arm_qq.inverted().rotatedVector(self.bones["{0}手首".format(direction)].position - self.bones["{0}ひじ".format(direction)].position)
+        # print("wrist_pos: %s" % wrist_pos)
+
+        # 手首ウェイトの最下頂点
+        wrist_below_pos = self.get_wrist_below_position(direction, arm_qq, wrist_pos)
+        # print("wrist_below_pos: %s" % wrist_below_pos)
+
+        # 手首位置との差（手首の厚み）
+        return abs(wrist_below_pos.y() - wrist_pos.y())
+    
+    # 手首ウェイトの最下頂点の位置を取得する
+    def get_wrist_below_position(self, direction, arm_qq, wrist_pos):
+
+        min_wrist_below_pos = QVector3D(0, 99999, 0)
+        for v in self.vertices:
+            # 一旦水平にしたときの頂点位置を算出
+            # mat = QMatrix4x4()
+            # mat.rotate(arm_qq.inverted())
+            # v_pos = mat.mapVector(v.position - self.bones["{0}ひじ".format(direction)].position)
+            v_pos = arm_qq.inverted().rotatedVector(v.position - self.bones["{0}ひじ".format(direction)].position)
+            # logger.debug("v_pos: %s", v_pos)
+
+            for l in self.bones.values():
+                # if "{0}手首".format(direction) in l.name and v.is_deform_index(l.index) and v_pos.x() - 0.1 <= wrist_pos.x() <= v_pos.x() + 0.1 and v_pos.y() < min_wrist_below_pos.y():
+                if "{0}手首".format(direction) in l.name and v.is_deform_index(l.index) and v_pos.y() < min_wrist_below_pos.y():
+                    # if type(v.deform) is PmxModel.Bdef1:
+                    #     logger.debug("Bdef1: idx: %s, target: %s, index0: %s", v.index, l.index, v.deform.index0)
+                    # elif type(v.deform) is PmxModel.Bdef2:
+                    #     logger.debug("Bdef2: idx: %s, target: %s, index0: %s,  index1: %s", v.index, l.index, v.deform.index0, v.deform.index1)
+                    # elif type(v.deform) is PmxModel.Bdef4:
+                    #     logger.debug("Bdef4: idx: %s, target: %s, index0: %s,  index1: %s,  index2: %s,  index3: %s", v.index, l.index, v.deform.index0, v.deform.index1, v.deform.index2, v.deform.index3)
+                    # elif type(v.deform) is PmxModel.Sdef:
+                    #     logger.debug("Sdef: idx: %s, target: %s, index0: %s,  index1: %s", v.index, l.index, v.deform.index0, v.deform.index1)
+                    # elif type(v.deform) is PmxModel.Qdef:
+                    #     logger.debug("Qdef: idx: %s, target: %s, index0: %s,  index1: %s", v.index, l.index, v.deform.index0, v.deform.index1)
+
+                    # 手首のボーンにウェイトが乗っていて、かつ最下の頂点より下の場合、保持
+                    min_wrist_below_pos = v_pos
+                    # print("min_wrist_below_pos: %s, %s, %s, %s, %s" % (l.index, l.name, v.index, v.position, v_pos))
+
+        # 元の位置に戻して返す
+        return min_wrist_below_pos
+
+    # 自身の腕の角度を算出する
+    def calc_arm_stance_rotation(self, direction):
+        from_pos = self.bones["{0}ひじ".format(direction)].position
+        to_pos = self.bones["{0}手首".format(direction)].position
+
+        from_qq = QQuaternion()
+        if from_pos != QVector3D and to_pos != QVector3D:
+            logger.debug("from_pos: %s", from_pos)        
+            logger.debug("to_pos: %s", to_pos)        
+
+            to_pos = from_pos - to_pos
+            to_pos.normalize()
+            logger.debug("to_pos: %s", to_pos)        
+
+            # 水平からTOボーンまでの回転量
+            direction_x = -1 if direction == "左" else 1
+            from_qq = QQuaternion.rotationTo(QVector3D(direction_x, 0, 0), QVector3D(to_pos.x(), to_pos.y(), 0))
+            logger.debug("d: %s, from_qq: %s", direction, from_qq.toEulerAngles())
+        
+        return from_qq
+
+    # 上半身ウェイトの最前頂点の位置を取得する
+    def get_upper_front_position(self, from_bone_name, to_bone_name):
+
+        x_from = self.bones["上半身"].position.x() + ((self.bones[from_bone_name].position.x() - self.bones["上半身"].position.x()) / 2) - 0.1
+        x_to = self.bones["上半身"].position.x() + ((self.bones[to_bone_name].position.x() - self.bones["上半身"].position.x()) / 2) + 0.1
+        # logger.debug("x_from: %s, x_to: %s", x_from, x_to)
+
+        max_upper_front_pos = QVector3D(0, 0, -1)
+        min_upper_front_pos = QVector3D(0, 0, 99999)
+        for v in self.vertices:
+            for l in self.bones.values():
+                if l.name in ["上半身", "上半身2"] and v.is_deform_index(l.index) and x_from <= v.position.x() <= x_to:
+                    if v.position.z() < self.bones["上半身"].position.z() and v.position.z() < min_upper_front_pos.z():
+                        # 上半身か上半身2のボーンにウェイトが乗っていて、かつ最下の頂点より下の場合、保持
+                        min_upper_front_pos = v.position
+                        logger.debug("min_wrist_below_pos: %s, %s, %s, %s", l.index, l.name, v.index, v.position)
+                    if v.position.z() < self.bones["上半身"].position.z() and v.position.z() > max_upper_front_pos.z():
+                        # 上半身か上半身2のボーンにウェイトが乗っていて、かつ最下の頂点より上の場合、保持
+                        max_upper_front_pos = v.position
+                        logger.debug("max_wrist_below_pos: %s, %s, %s, %s", l.index, l.name, v.index, v.position)
+
+        return min_upper_front_pos, max_upper_front_pos
+
+    # 左右のボーンリンクを生成する
+    def create_link_2_top_lr(self, start_type_bone, start_type_bone_second=None):
+
+        if "左" + start_type_bone in self.bones and "右" + start_type_bone in self.bones:
+            left_links, left_indexes = self.create_link_2_top("左" + start_type_bone)
+            right_links, right_indexes = self.create_link_2_top("右" + start_type_bone)
+            return { "左": left_links, "右": right_links }, { "左": left_indexes, "右": right_indexes }
+
+        elif start_type_bone_second is not None and "左" + start_type_bone_second in self.bones and "右" + start_type_bone_second in self.bones:
+            left_links, left_indexes = self.create_link_2_top("左" + start_type_bone_second)
+            right_links, right_indexes = self.create_link_2_top("右" + start_type_bone_second)
+            return { "左": left_links, "右": right_links }, { "左": left_indexes, "右": right_indexes }
+
+        print("ボーンリンク生成失敗: start_type_bone: %s, start_type_bone_second: %s", start_type_bone, start_type_bone_second )
+
+        return None
+
+    # 一方向のボーンリンクを生成する
+    def create_link_2_top_one(self, start_type_bone, start_type_bone_second=None):
+
+        if start_type_bone in self.bones:
+            # logger.debug("first start_type_bone: %s", start_type_bone)
+            return self.create_link_2_top(start_type_bone)
+
+        elif start_type_bone_second is not None and start_type_bone_second in self.bones:
+            # logger.debug("second start_type_bone: %s", start_type_bone_second)
+            return self.create_link_2_top(start_type_bone_second)
+
+        print("ボーンリンク生成失敗: start_type_bone: %s, start_type_bone_second: %s", start_type_bone, start_type_bone_second )
+
+        return None
+
+    # ボーンリンクを生成する
+    def create_link_2_top(self, start_bone, ik_links=None, ik_indexes=None):
+        if not ik_links:
+            # 順番を保持した辞書
+            ik_links = []
+            ik_indexes = OrderedDict()
+
         if start_bone not in self.bones:
             # 開始ボーン名がなければ終了
-            return
+            return ik_links, ik_indexes
+        
+        start_type_bone = start_bone
+        if start_bone.startswith("右") or start_bone.startswith("左"):
+            # 左右から始まってたらそれは除く
+            start_type_bone = start_bone[1:]
         
         # 自分をリンクに登録
-        ik_links.append( self.bones[start_bone] )
+        ik_indexes[start_type_bone] = len(ik_indexes)
+        ik_links.append(self.bones[start_bone])
         
         if self.bones[start_bone].parent_index not in self.bone_indexes:
             # 親ボーンがボーンインデックスリストになければ終了
-            return
+            return ik_links, ik_indexes
+        
+        parent_name = self.bone_indexes[self.bones[start_bone].parent_index]
 
+        logger.debug("start_bone: %s. parent_name: %s, start_type_bone: %s", start_bone, parent_name, start_type_bone)
+        
+        # 肩がまだインデックスリストに無く、親が肩の派生の場合、肩に固定する
+        if not "肩" in ik_indexes and "肩" in parent_name and len(parent_name) > 2:
+            # logger.debug("parent_name　手首: %s -> %s", parent_name, parent_name[:3])
+            parent_name = parent_name[:2]
+
+        # 腕がまだインデックスリストに無く、親が腕の派生の場合、腕に固定する
+        if not "腕" in ik_indexes and "腕" in parent_name and len(parent_name) > 2:
+            # logger.debug("parent_name　手首: %s -> %s", parent_name, parent_name[:3])
+            parent_name = parent_name[:2]
+                
+        # ひじがまだインデックスリストに無く、親がひじの派生の場合、ひじに固定する
+        if not "ひじ" in ik_indexes and "ひじ" in parent_name and len(parent_name) > 3:
+            # logger.debug("parent_name　ひじ: %s -> %s", parent_name, parent_name[:3])
+            parent_name = parent_name[:3]
+
+        # 手首がまだインデックスリストに無く、親が手首の派生の場合、手首に固定する
+        if not "手首" in ik_indexes and "手首" in parent_name and len(parent_name) > 3:
+            # logger.debug("parent_name　手首: %s -> %s", parent_name, parent_name[:3])
+            parent_name = parent_name[:3]
+        
         # 親をたどる
-        self.create_link_2_top(self.bone_indexes[self.bones[start_bone].parent_index], ik_links )    
+        return self.create_link_2_top(parent_name, ik_links, ik_indexes )    
 
     # 頂点構造 ----------------------------
     class Vertex():
@@ -290,9 +461,15 @@ class PmxModel():
             self.external_key=external_key
             self.ik=ik
             self.index=-1
+            # 表示枠チェック時にONにするので、デフォルトはFalse
+            self.display=False
 
             # 親ボーンからの長さ(計算して求める）
             self.len = 0
+            # 親ボーンからの長さ3D版(計算して求める）
+            self.len_3d = QVector3D()
+            # センターのZ軸オフセット
+            self.offset_z = 0
             
             self.BONEFLAG_TAILPOS_IS_BONE=0x0001
             self.BONEFLAG_CAN_ROTATE=0x0002
@@ -393,16 +570,27 @@ class PmxModel():
     
     class Morph():
         def __init__(self, name, english_name, panel, morph_type, offsets=None):
+            self.index=0
             self.name=name
             self.english_name=english_name
             self.panel=panel
             self.morph_type=morph_type
             self.offsets=offsets or []
+            # 表示枠チェック時にONにするので、デフォルトはFalse
+            self.display=False
 
         def __str__(self):
             return "<Morph name:{0}, english_name:{1}, panel:{2}, morph_type:{3}, offsets(len): {4}".format(
                         self.name, self.english_name, self.panel, self.morph_type, len(self.offsets)
                     )
+        
+        # パネルの名称取得
+        def get_panel_name(self):
+            if self.panel == 1: return "眉"
+            elif self.panel == 2: return "目"
+            elif self.panel == 3: return "口"
+            elif self.panel == 4: return "他"
+            else: return "？"
             
     class GroupMorphData():
         def __init__(self, morph_index, value):
@@ -556,18 +744,12 @@ class PmxModel():
                     )
 
 
-
-
-
-
-
-
-
-
-
-
-
 class ParseException(Exception):
+    def __init__(self, message):
+        self.message=message
+
+
+class SizingException(Exception):
     def __init__(self, message):
         self.message=message
 

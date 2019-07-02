@@ -14,12 +14,16 @@ __pycache__/
 vmd/
 
 VmdSizingSelf.bat
+VmdSizingSelfAll.bat
+replace_model_all.txt
+command.txt
 
 born/*
 !あにまさ式ミク.csv
 !あにまさ式ミク準標準.csv
 
 vertex/*
+src/past
 
 data
 build
