@@ -32,9 +32,9 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
     # エラーを一度でも出力しているか
     is_error_outputed = False
 
-    print("vmd最終フレーム: %s" % motion.last_motion_frame)
-    print("作成元: %s" % trace_model.name)
-    print("トレース先: %s" % replace_model.name)
+    print("モーション: %s" % motion.path)
+    print("作成元: %s" % trace_model.path)
+    print("変換先: %s" % replace_model.path)
 
     # 移植先のセンターとグルーブは、作成元の比率に合わせる
     adjust_center(trace_model, replace_model, "センター")
@@ -51,7 +51,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
     copy_root_parent(replace_model)
 
     # サイズ比較
-    lengths = compare_length(trace_model, replace_model)
+    # lengths = compare_length(trace_model, replace_model)
 
     if motion.motion_cnt > 0:
 
@@ -61,42 +61,15 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
         # -----------------------------------------------------------------
         # 移動ボーン縮尺
         for k in ["右足ＩＫ親" ,"左足ＩＫ親", "右足ＩＫ" ,"左足ＩＫ", "右つま先ＩＫ" ,"左つま先ＩＫ", "センター", "グルーブ", "全ての親"]:
-            if k in motion.frames and k in lengths:
+            if k in motion.frames and k in replace_model.bones:
                 for bf in motion.frames[k]:
                     # IK比率をそのまま掛ける
                     bf.position *= leg_ik_ratio.y()
 
-                    # if k in ["右足ＩＫ親" ,"左足ＩＫ親", "右足ＩＫ" ,"左足ＩＫ", "右つま先ＩＫ" ,"左つま先ＩＫ"]:
-                    #     bf.position.setX( bf.position.x() + leg_ik_ratio.x() )
-                    #     bf.position.setZ( bf.position.z() + leg_ik_ratio.z() )
-
-                    # if k in ["グルーブ", "全ての親"]:
-                    #     # グルーブと全ての親は自分自身
-                    #     bf.position.setY(bf.position.y() * lengths[k]) 
-                    # else:
-                    #     # 足系とセンターのYはセンター
-                    #     bf.position.setY(bf.position.y() * lengths["センター"]) 
-
-                    # # 足IK倍率
-                    # if "右足ＩＫ" in lengths:
-                    #     bf.position.setX(bf.position.x() * lengths["右足ＩＫ"]) 
-                    #     bf.position.setZ(bf.position.z() * lengths["右足ＩＫ"]) 
-                    # elif "左足ＩＫ" in lengths:
-                    #     # Yはセンター
-                    #     bf.position.setX(bf.position.x() * lengths["左足ＩＫ"]) 
-                    #     bf.position.setZ(bf.position.z() * lengths["左足ＩＫ"]) 
-                    # else:
-                    #     # 足IKがない場合、自身の比率そのまま
-                    #     bf.position.setY(bf.position.y() * lengths[k]) 
-                    #     bf.position.setZ(bf.position.z() * lengths[k]) 
-                    
                     if replace_model.bones[k].offset_z != 0:
                         # Zオフセットが入っている場合、オフセット調整
                         bf.position.setZ(bf.position.z() + replace_model.bones[k].offset_z) 
                     
-                    if bf.frame == 394:
-                        logger.debug("移動ボーン縮尺: k: %s, %s", k, bf.position)
-
         # センターから手首までの位置(作成元モデル)
         all_org_wrist_links, _ = trace_model.create_link_2_top_lr("手首")
 
@@ -282,19 +255,19 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                 }
             print("手首の厚み: l: %s, r: %s" % ( wrist_thickness["左"], wrist_thickness["右"]))
             
-            # 作成元モデルの上半身の厚み
-            min_org_upper_front_position, max_org_upper_front_position = trace_model.get_upper_front_position("上半身", "上半身")
-            logger.debug("min_org_upper_front_position: %s, max_org_upper_front_position: %s", min_org_upper_front_position, max_org_upper_front_position)
+            # # 作成元モデルの上半身の厚み
+            # min_org_upper_front_position, max_org_upper_front_position = trace_model.get_upper_front_position("上半身", "上半身")
+            # logger.debug("min_org_upper_front_position: %s, max_org_upper_front_position: %s", min_org_upper_front_position, max_org_upper_front_position)
 
-            # 変換先モデルの上半身の厚み(min: もっとも上半身ボーンから離れている, max: もっとも上半身ボーンに近い)
-            min_rep_upper_front_position, max_rep_upper_front_position = replace_model.get_upper_front_position("上半身", "上半身")
-            logger.debug("min_rep_upper_front_position: %s, max_rep_upper_front_position: %s", min_rep_upper_front_position, max_rep_upper_front_position)
+            # # 変換先モデルの上半身の厚み(min: もっとも上半身ボーンから離れている, max: もっとも上半身ボーンに近い)
+            # min_rep_upper_front_position, max_rep_upper_front_position = replace_model.get_upper_front_position("上半身", "上半身")
+            # logger.debug("min_rep_upper_front_position: %s, max_rep_upper_front_position: %s", min_rep_upper_front_position, max_rep_upper_front_position)
 
-            # 変換先モデルと作成元モデルの上半身の厚みの差
-            org_upper_thickness_diff = abs(org_upper_links[-1].position.z() - max_org_upper_front_position.z())
-            rep_upper_thickness_diff = abs(rep_upper_links[-1].position.z() - max_rep_upper_front_position.z())
-            print("作成元の上半身の厚み: %s" % org_upper_thickness_diff)
-            print("変換先の上半身の厚み: %s" % rep_upper_thickness_diff)
+            # # 変換先モデルと作成元モデルの上半身の厚みの差
+            # org_upper_thickness_diff = abs(org_upper_links[-1].position.z() - max_org_upper_front_position.z())
+            # rep_upper_thickness_diff = abs(rep_upper_links[-1].position.z() - max_rep_upper_front_position.z())
+            # print("作成元の上半身の厚み: %s" % org_upper_thickness_diff)
+            # print("変換先の上半身の厚み: %s" % rep_upper_thickness_diff)
 
             # rep_upper_front_thickness = rep_upper_diff - org_upper_diff
             # logger.debug("上半身の厚み: %s", rep_upper_front_thickness)
@@ -611,8 +584,8 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                         # logger.debug("rep_reverse_front_wrist_pos z before: %s", rep_reverse_front_wrist_pos)
                                         # # # logger.debug("rep_upper_thickness_diff z before: %s", rep_upper_thickness_diff)
 
-                                        # rep_front_wrist_pos.setZ(rep_front_wrist_pos.z() - upper_thickness_diff)
-                                        # rep_reverse_front_wrist_pos.setZ(rep_reverse_front_wrist_pos.z() - upper_thickness_diff)
+                                        # rep_front_wrist_pos.setZ(rep_front_wrist_pos.z() + 0.15)
+                                        # rep_reverse_front_wrist_pos.setZ(rep_reverse_front_wrist_pos.z() - 0.15)
 
                                         # if (rep_front_upper_pos.z() > rep_front_wrist_pos.z() and abs(rep_front_wrist_pos.z() - rep_front_upper_pos.z()) < rep_arm_length  ) \
                                         #     or (rep_front_upper_pos.z() > rep_reverse_front_wrist_pos.z() and abs(rep_reverse_front_wrist_pos.z() - rep_front_upper_pos.z()) < rep_arm_length ) :
@@ -759,14 +732,14 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                         if not is_error_outputed:
                                             is_error_outputed = True
                                             error_file_logger.addHandler(logging.FileHandler(error_path))
-                                            error_file_logger.info("vmd: %s" , motion.motion_name)
-                                            error_file_logger.info("作成元: %s" , trace_model.name)
-                                            error_file_logger.info("トレース先: %s" , replace_model.name)
+                                            error_file_logger.info("モーション: %s" , motion.path)
+                                            error_file_logger.info("作成元: %s" , trace_model.path)
+                                            error_file_logger.info("変換先: %s" , replace_model.path)
                                             error_file_logger.info("作成元モデルの手の大きさ: %s", org_palm_length)
                                             error_file_logger.info("変換先モデルの手の大きさ: %s", rep_palm_length)
                                             error_file_logger.info("手首の厚み: l: %s, r: %s", wrist_thickness["左"], wrist_thickness["右"])
-                                            error_file_logger.debug("作成元の上半身の厚み: %s", org_upper_thickness_diff)
-                                            error_file_logger.debug("変換先の上半身の厚み: %s", rep_upper_thickness_diff)
+                                            # error_file_logger.debug("作成元の上半身の厚み: %s", org_upper_thickness_diff)
+                                            # error_file_logger.debug("変換先の上半身の厚み: %s", rep_upper_thickness_diff)
                                             # error_file_logger.debug("肩幅の差: %s" , showlder_diff_length)
 
                                         error_file_logger.warning("%sフレーム目手首位置合わせ失敗: 左肩:%s, 左腕:%s, 右肩:%s, 右腕:%s" , bf.frame, lsd, lad, rsd, rad)
@@ -778,7 +751,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                             # 指位置調整は実際には手首のみ角度調整で、arm_linksに含まれている
                                             for al in arm_links[dd]:
                                                 if al.name == cfk:
-                                                    if lsd >= 0.0 and rsd >= 0.0 and lad >= 0.0 and rad >= 0.0:
+                                                    if lsd >= 0.85 and rsd >= 0.85 and lad >= 0.85 and rad >= 0.85:
                                                         # 角度調整が既定内である場合、採用
                                                         motion.frames[cfk][bf_idx].key = True
                                                     else:
@@ -1058,36 +1031,8 @@ def calc_arm_IK2FK(target_pos, model, joint_links, all_joint_links, direction, f
                 # エフェクタのローカル軸
                 logger.debug("joint: %s, joint before: %s", all_joint_links[joint_idx].name, joint.rotation.toEulerAngles())
                 logger.debug("joint: %s, correct_qq: %s", all_joint_links[joint_idx].name, correct_qq.toEulerAngles())
-                local_correct_qq = QQuaternion()
-                if all_joint_links[joint_idx].local_x_vector == QVector3D() and all_joint_links[joint_idx].name in ["右肩", "左肩", "右ひじ", "左ひじ"]:
-                    # 補正回転量の角度
-                    correct_degree = degrees(2 * acos(correct_qq.scalar()))
-                    logger.debug("correct_degree: %s", correct_degree)
 
-                    # ローカルX軸に合わせた補正回転量
-                    if "肩" in all_joint_links[joint_idx].name:
-                        local_axis = QVector3D(1, 0, 0)
-                    else:
-                        local_axis = all_joint_links[joint_idx - 1].position - all_joint_links[joint_idx].position
-
-                    logger.debug("%s: local_x_axis: %s", all_joint_links[joint_idx].name, local_axis)        
-                    
-                    local_correct_qq = QQuaternion.fromAxisAndAngle(local_axis, correct_degree)
-                    logger.debug("local_x_correct_qq: %s", local_correct_qq.toEulerAngles())
-
-                    # 系を反転
-                    if "右" in all_joint_links[joint_idx].name:
-                        # local_correct_qq.setX( local_correct_qq.x() * -1 )
-                        # local_correct_qq.setY( local_correct_qq.y() * -1 )
-                        local_correct_qq.setZ( local_correct_qq.z() * -1 )
-                        local_correct_qq.setScalar( local_correct_qq.scalar() * -1 )
-                    else:
-                        local_correct_qq.setX( local_correct_qq.x() * -1 )
-                        # local_correct_qq.setY( local_correct_qq.y() * -1 )
-                        # local_correct_qq.setZ( local_correct_qq.z() * -1 )
-                        local_correct_qq.setScalar( local_correct_qq.scalar() * -1 )
-
-                joint.rotation = local_correct_qq.inverted() * correct_qq * joint.rotation
+                joint.rotation = correct_qq * joint.rotation
 
                 logger.debug("joint: %s, joint after: %s", joint.format_name, joint.rotation.toEulerAngles())
 
@@ -1111,7 +1056,7 @@ def calc_arm_matrixs(model, all_wrist_links, direction, frames, bf):
     matrixs_global_reversed = [QMatrix4x4() for i in range(len(all_wrist_links))]  
 
     # グローバル座標
-    for n, v in enumerate(org_matrixs):
+    for n, (v, l) in enumerate(zip(org_matrixs, reversed(all_wrist_links))):
         for m in range(n):
             if m == 0:
                 # 最初は行列
@@ -1119,6 +1064,17 @@ def calc_arm_matrixs(model, all_wrist_links, direction, frames, bf):
             else:
                 # 2番目以降は行列をかける
                 matrixs[n] *= copy.deepcopy(org_matrixs[m])
+        
+        # ローカル軸が設定されていない場合、設定
+        local_x_matrix = QMatrix4x4()
+        if l.local_x_vector == QVector3D() and l.name in ["左肩", "右肩"]:
+            local_axis = all_wrist_links[len(all_wrist_links) - n].position - l.position
+            direction_x = -1 if direction == "左" else 1
+            local_axis_qq = QQuaternion.rotationTo(QVector3D(direction_x, 0, 0), local_axis)
+            # logger.info("l.name: %s -> %s, %s", all_wrist_links[len(all_wrist_links) - n - 1].name, all_wrist_links[len(all_wrist_links) - n].name, local_axis_qq.toEulerAngles())
+            local_x_matrix.rotate(local_axis_qq)
+        
+        matrixs[n] *= local_x_matrix
 
     # 末端からとして収め直す
     for n, m in enumerate(reversed(matrixs)):
@@ -1650,13 +1606,10 @@ def cal_center_z_offset(trace_model, replace_model, bone_name):
         print("Zオフセットなし: %s: %s" % ( bone_name, replace_model.bones[bone_name].offset_z))
 
 def calc_leg_ik_ratio(trace_model, replace_model):
-    if "左足" in trace_model.bones and "左足" in replace_model.bones and "センター" in trace_model.bones and "センター" in replace_model.bones:
+    if "左足" in trace_model.bones and "左足" in replace_model.bones and "左足首" in trace_model.bones and "左足首" in replace_model.bones:
         # 比率
         leg_ik_ratio = (replace_model.bones["左足首"].position - replace_model.bones["左足"].position) \
                             / (trace_model.bones["左足首"].position - trace_model.bones["左足"].position)
-        # 差分
-        # leg_ik_diff = trace_model.bones["左足"].position - replace_model.bones["左足"].position
-
         print("足の長さの比率: %s" % leg_ik_ratio)
     else:
         leg_ik_ratio = QVector3D(1, 1, 1)
@@ -1703,8 +1656,8 @@ def compare_length(trace_model, replace_model):
             # length.setX(length.x() if np.isnan(length.x()) == False and np.isinf(length.x()) == False else 0)
             # length.setY(length.y() if np.isnan(length.y()) == False and np.isinf(length.y()) == False else 0)
             # length.setZ(length.z() if np.isnan(length.z()) == False and np.isinf(length.z()) == False else 0)
-            if k in ["右足ＩＫ親" ,"左足ＩＫ親", "右足ＩＫ" ,"左足ＩＫ", "右つま先ＩＫ" ,"左つま先ＩＫ", "センター", "グルーブ", "全ての親"]:
-                print("%s, 比率: %s, 生成元の長さ: %s, 変換先の長さ: %s" % (k, length, trace_bone_length, replace_bone_length))
+            # if k in ["右足ＩＫ親" ,"左足ＩＫ親", "右足ＩＫ" ,"左足ＩＫ", "右つま先ＩＫ" ,"左つま先ＩＫ", "センター", "グルーブ", "全ての親"]:
+            #     print("%s, 比率: %s, 生成元の長さ: %s, 変換先の長さ: %s" % (k, length, trace_bone_length, replace_bone_length))
 
             lengths[k] = length
     

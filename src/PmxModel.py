@@ -14,6 +14,7 @@ logger.addHandler(handler)
 
 class PmxModel():
     def __init__(self):
+        self.path = ''
         self.name = ''
         self.english_name = ''
         self.comment = ''

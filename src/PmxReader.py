@@ -86,6 +86,7 @@ class PmxReader():
         
         # Pmxモデル生成
         pmx = PmxModel()
+        pmx.path = filename
         
         # モデル名（日本語）
         pmx.name = self.read_text()

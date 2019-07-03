@@ -16,7 +16,7 @@ logger.addHandler(handler)
 
 class VmdMotion():
     def __init__(self):
-        self.motion_name = ''
+        self.path = ''
         self.signature = ''
         self.model_name = ''
         self.last_motion_frame = 0
@@ -71,7 +71,7 @@ class VmdReader():
         motion = VmdMotion()
         
         # モーションパス
-        motion.motion_name = filename
+        motion.path = filename
 
         # モデル名
         model_bname, model_name = self.read_text(20)

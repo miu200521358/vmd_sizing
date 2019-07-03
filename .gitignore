@@ -17,6 +17,7 @@ VmdSizingSelf.bat
 VmdSizingSelfAll.bat
 replace_model_all.txt
 command.txt
+memo.txt
 
 born/*
 !あにまさ式ミク.csv
@@ -31,3 +32,5 @@ dist
 command.txt
 *.zip
 *.log
+src/model_all_test.py
+VmdSizingSelfAll2.bat
