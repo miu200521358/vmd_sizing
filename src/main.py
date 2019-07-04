@@ -221,7 +221,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
             # 変換先モデルの上半身までのリンク生成
             rep_upper_links, _ = replace_model.create_link_2_top_one( "上半身2", "上半身" )
 
-            # 腕の長さの差（始点：ひじ, 終点：手首）
+            # 腕の長さの差（始点：腕, 終点：手首）
             org_arm_length = (trace_model.bones["右手首"].position - trace_model.bones["右腕"].position).length()
             logger.debug("org_arm_length: %s", org_arm_length)
 
@@ -232,7 +232,10 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
             # arm_diff_length = (org_arm_length / rep_arm_length)
             # else:
             arm_diff_length = rep_arm_length / org_arm_length
-            logger.debug("arm_diff_length: %s", arm_diff_length)
+            print("腕の長さ比率: %s" % arm_diff_length)
+
+            # 比率が1以上の場合、とりあえず1で固定
+            # arm_diff_length = 1 if arm_diff_length > 1 else arm_diff_length
 
             # 作成元モデルの手首の厚み
             org_wrist_thickness = trace_model.get_wrist_thickness_lr()
