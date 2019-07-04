@@ -27,7 +27,7 @@ level = {0:logging.ERROR,
 
 def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, vmd_choice_values, rep_choice_values, rep_rate_values):   
     # エラーログ出力用
-    error_path = re.sub(r'\.vmd$', "_error.log", output_vmd_path.lower())
+    error_path = re.sub(r'\.vmd$', ".log", output_vmd_path.lower())
     logger.debug("error_path: %s", error_path)
     # エラーを一度でも出力しているか
     is_error_outputed = False
@@ -882,7 +882,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
     if is_error_outputed:
         print("■■■■■■■■■■■■■■■■■")
         print("■　サイジングに失敗している箇所があります。")
-        print("■　エラーログ: %s" % error_path)
+        print("■　ログ: %s" % error_path)
         print("■■■■■■■■■■■■■■■■■")
         print("")
     print("■■■■■■■■■■■■■■■■■")
@@ -1847,43 +1847,6 @@ R_y1_idxs = [7, 22, 37, 52]
 R_x2_idxs = [11, 26, 41, 56]
 R_y2_idxs = [15, 30, 45, 60]
         
-# 補間曲線の分割
-def cut_complement(frames, bone_name, fillbf):
-
-    for bidx, bf in enumerate(frames[bone_name]):
-        if bf.frame > fillbf.frame:
-            now_bf = bf
-            prev_bf = None if bidx == 0 else frames[bone_name][bidx - 1]
-            next_bf = None if bidx == len(frames[bone_name]) - 1 else frames[bone_name][bidx + 1]
-            break
-
-    if prev_bf and now_bf and next_bf:
-        # 回転補間曲線
-        next_x1v = next_bf.complement[R_x1_idxs[3]]
-        next_y1v = next_bf.complement[R_y1_idxs[3]]
-        next_x2v = next_bf.complement[R_x2_idxs[3]]
-        next_y2v = next_bf.complement[R_y2_idxs[3]]
-        rn = calc_interpolate_bezier(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, next_bf.frame, now_bf.frame)
-        logger.debug("bone: %s, prev_bf: %s, next_bf: %s, now_bf: %s, rn: %s", bone_name, prev_bf.frame, next_bf.frame, now_bf.frame, rn)
-
-        # 前回の終点は、補間曲線の移動部分
-        prev_bf.complement[R_x2_idxs[0]] = prev_bf.complement[R_x2_idxs[1]] = prev_bf.complement[R_x2_idxs[2]] = prev_bf.complement[R_x2_idxs[3]] = round(next_x1v + ( next_x2v - next_x1v ) * rn)
-        prev_bf.complement[R_y2_idxs[0]] = prev_bf.complement[R_y2_idxs[1]] = prev_bf.complement[R_y2_idxs[2]] = prev_bf.complement[R_y2_idxs[3]] = round(next_y1v + ( next_y2v - next_y1v ) * rn)
-        logger.debug("prev_bf.x2: %s, prev_bf.y2: %s", prev_bf.complement[R_x2_idxs[0]], prev_bf.complement[R_y2_idxs[1]])
-
-        # 次点の始点は、補間曲線の残りの部分
-        next_bf.complement[R_x1_idxs[0]] = next_bf.complement[R_x1_idxs[1]] = next_bf.complement[R_x1_idxs[2]] = next_bf.complement[R_x1_idxs[3]] = round(next_x1v + ( next_x2v - next_x1v ) * (1 - rn))
-        next_bf.complement[R_y1_idxs[0]] = next_bf.complement[R_y1_idxs[1]] = next_bf.complement[R_y1_idxs[2]] = next_bf.complement[R_y1_idxs[3]] = round(next_y1v + ( next_y2v - next_y1v ) * (1 - rn))
-        logger.debug("next_bf.x1: %s, next_bf.y1: %s", prev_bf.complement[R_x1_idxs[0]], prev_bf.complement[R_y1_idxs[1]])
-
-        # 分割の始点は、前回の終点と同じ
-        now_bf.complement[R_x1_idxs[0]] = now_bf.complement[R_x1_idxs[1]] = now_bf.complement[R_x1_idxs[2]] = now_bf.complement[R_x1_idxs[3]] = prev_bf.complement[R_x2_idxs[3]]
-        now_bf.complement[R_y1_idxs[0]] = now_bf.complement[R_y1_idxs[1]] = now_bf.complement[R_y1_idxs[2]] = now_bf.complement[R_y1_idxs[3]] = prev_bf.complement[R_y2_idxs[3]]
-
-        # 分割の終点は、次回の始点と同じ
-        now_bf.complement[R_x2_idxs[0]] = now_bf.complement[R_x2_idxs[1]] = now_bf.complement[R_x2_idxs[2]] = now_bf.complement[R_x2_idxs[3]] = next_bf.complement[R_x1_idxs[3]]
-        now_bf.complement[R_y2_idxs[0]] = now_bf.complement[R_y2_idxs[1]] = now_bf.complement[R_y2_idxs[2]] = now_bf.complement[R_y2_idxs[3]] = next_bf.complement[R_y1_idxs[3]]
-
 # 補間曲線を考慮した指定フレーム番号の位置
 # https://www55.atwiki.jp/kumiho_k/pages/15.html
 # https://harigane.at.webry.info/201103/article_1.html
@@ -1920,7 +1883,7 @@ def calc_bone_by_complement(frames, bone_name, frameno):
 
             if prev_bf.rotation != bf.rotation:
                 # 回転補間曲線
-                rn = calc_interpolate_bezier(bf.complement[R_x1_idxs[3]], bf.complement[R_y1_idxs[3]], bf.complement[R_x2_idxs[3]], bf.complement[R_y2_idxs[3]], prev_bf.frame, bf.frame, fillbf.frame)
+                _, rn = calc_interpolate_bezier(bf.complement[R_x1_idxs[3]], bf.complement[R_y1_idxs[3]], bf.complement[R_x2_idxs[3]], bf.complement[R_y2_idxs[3]], prev_bf.frame, bf.frame, fillbf.frame)
                 fillbf.rotation = QQuaternion.nlerp(prev_bf.rotation, bf.rotation, rn)
                 # logger.debug("key: %s, n: %s, rn: %s, r: %s ", k, prev_frame + n, rn, QQuaternion.nlerp(prev_bf.rotation, bf.rotation, rn) )
                 # logger.debug("rotation: prev: %s, fill: %s ", prev_bf.rotation.toEulerAngles(), fillbf.rotation.toEulerAngles() )
@@ -1931,11 +1894,11 @@ def calc_bone_by_complement(frames, bone_name, frameno):
             if prev_bf.position != bf.position:
                 # http://rantyen.blog.fc2.com/blog-entry-65.html
                 # X移動補間曲線
-                xn = calc_interpolate_bezier(bf.complement[0], bf.complement[4], bf.complement[8], bf.complement[12], prev_bf.frame, bf.frame, fillbf.frame)
+                _, xn = calc_interpolate_bezier(bf.complement[0], bf.complement[4], bf.complement[8], bf.complement[12], prev_bf.frame, bf.frame, fillbf.frame)
                 # Y移動補間曲線
-                yn = calc_interpolate_bezier(bf.complement[16], bf.complement[20], bf.complement[24], bf.complement[28], prev_bf.frame, bf.frame, fillbf.frame)
+                _, yn = calc_interpolate_bezier(bf.complement[16], bf.complement[20], bf.complement[24], bf.complement[28], prev_bf.frame, bf.frame, fillbf.frame)
                 # Z移動補間曲線
-                zn = calc_interpolate_bezier(bf.complement[32], bf.complement[36], bf.complement[40], bf.complement[44], prev_bf.frame, bf.frame, fillbf.frame)
+                _, zn = calc_interpolate_bezier(bf.complement[32], bf.complement[36], bf.complement[40], bf.complement[44], prev_bf.frame, bf.frame, fillbf.frame)
 
                 fillbf.position.setX(prev_bf.position.x() + (( bf.position.x() - prev_bf.position.x()) * xn))
                 fillbf.position.setY(prev_bf.position.y() + (( bf.position.y() - prev_bf.position.y()) * yn))
@@ -1951,7 +1914,7 @@ def calc_bone_by_complement(frames, bone_name, frameno):
             next_y1v = bf.complement[R_y1_idxs[3]]
             next_x2v = bf.complement[R_x2_idxs[3]]
             next_y2v = bf.complement[R_y2_idxs[3]]
-            rn = calc_interpolate_bezier(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, bf.frame, fillbf.frame)
+            rx, rn = calc_interpolate_bezier(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, bf.frame, fillbf.frame)
             logger.debug("bone: %s, prev_bf: %s, bf: %s, fillbf: %s, rn: %s", bone_name, prev_bf.frame, bf.frame, fillbf.frame, rn)
             logger.debug("next_x1v: %s, next_y1v: %s, next_x2v: %s, next_y2v: %s, rn: %s", next_x1v, next_y1v, next_x2v, next_y2v, rn)
 
@@ -1959,16 +1922,16 @@ def calc_bone_by_complement(frames, bone_name, frameno):
             fillbf.org_complement = copy.deepcopy(bf.complement)
 
             # 分割の始点は、今回の始点と同じ
-            fillbf.complement[R_x1_idxs[0]] = fillbf.complement[R_x1_idxs[1]] = fillbf.complement[R_x1_idxs[2]] = fillbf.complement[R_x1_idxs[3]] = bf.complement[R_x1_idxs[0]]
-            fillbf.complement[R_y1_idxs[0]] = fillbf.complement[R_y1_idxs[1]] = fillbf.complement[R_y1_idxs[2]] = fillbf.complement[R_y1_idxs[3]] = bf.complement[R_y1_idxs[0]]
+            fillbf.complement[R_x1_idxs[0]] = fillbf.complement[R_x1_idxs[1]] = fillbf.complement[R_x1_idxs[2]] = fillbf.complement[R_x1_idxs[3]] = bf.complement[R_x1_idxs[3]]
+            fillbf.complement[R_y1_idxs[0]] = fillbf.complement[R_y1_idxs[1]] = fillbf.complement[R_y1_idxs[2]] = fillbf.complement[R_y1_idxs[3]] = bf.complement[R_y1_idxs[3]]
 
             # 分割の終点は、補間曲線の移動部分
-            fillbf.complement[R_x2_idxs[0]] = fillbf.complement[R_x2_idxs[1]] = fillbf.complement[R_x2_idxs[2]] = fillbf.complement[R_x2_idxs[3]] = round(next_x2v * rn)
-            fillbf.complement[R_y2_idxs[0]] = fillbf.complement[R_y2_idxs[1]] = fillbf.complement[R_y2_idxs[2]] = fillbf.complement[R_y2_idxs[3]] = round(next_y2v * rn)
+            fillbf.complement[R_x2_idxs[0]] = fillbf.complement[R_x2_idxs[1]] = fillbf.complement[R_x2_idxs[2]] = fillbf.complement[R_x2_idxs[3]] = round(127 * rx)
+            fillbf.complement[R_y2_idxs[0]] = fillbf.complement[R_y2_idxs[1]] = fillbf.complement[R_y2_idxs[2]] = fillbf.complement[R_y2_idxs[3]] = round(127 * rn)
 
             # 今回の始点は、補間曲線の残りの部分
-            bf.complement[R_x1_idxs[0]] = bf.complement[R_x1_idxs[1]] = bf.complement[R_x1_idxs[2]] = bf.complement[R_x1_idxs[3]] = 127 - round(next_x2v * (1 - rn))
-            bf.complement[R_y1_idxs[0]] = bf.complement[R_y1_idxs[1]] = bf.complement[R_y1_idxs[2]] = bf.complement[R_y1_idxs[3]] = 127 - round(next_y2v * (1 - rn))
+            bf.complement[R_x1_idxs[0]] = bf.complement[R_x1_idxs[1]] = bf.complement[R_x1_idxs[2]] = bf.complement[R_x1_idxs[3]] = 127 - round(127 * (1 - rx))
+            bf.complement[R_y1_idxs[0]] = bf.complement[R_y1_idxs[1]] = bf.complement[R_y1_idxs[2]] = bf.complement[R_y1_idxs[3]] = 127 - round(127 * (1 - rn))
             logger.debug("next_bf.x1: %s, next_bf.y1: %s", prev_bf.complement[R_x1_idxs[3]], prev_bf.complement[R_y1_idxs[3]])
 
             # 今回の終点は変わらず
@@ -2011,7 +1974,7 @@ def calc_interpolate_bezier(x1v, y1v, x2v, y2v, start, end, now):
 
     # logger.debug("y: %s, t: %s, s: %s", y, t, s)
 
-    return y
+    return x, y
 
 if __name__=="__main__":
     # Parse arguments
