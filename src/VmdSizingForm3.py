@@ -286,7 +286,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		bSizer15.Add( self.m_staticText39, 0, wx.ALL, 5 )
 
-		self.m_vmdHandDistanceTxt = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"　（1.8）", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_vmdHandDistanceTxt = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"　（1.7）", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_vmdHandDistanceTxt.Wrap( -1 )
 
 		self.m_vmdHandDistanceTxt.SetToolTip( u"現在指定されている手首間の距離です。" )
@@ -296,7 +296,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		bSizer13.Add( bSizer15, 0, wx.ALL, 5 )
 
 		# 小数点を許可したスライダー
-		self.m_sliderHandDistance = FloatSlider( self.m_panelArm, wx.ID_ANY, 1.8, 0, 10, 0.1, self.m_vmdHandDistanceTxt, wx.DefaultPosition, wx.DefaultSize, wx.SL_HORIZONTAL )
+		self.m_sliderHandDistance = FloatSlider( self.m_panelArm, wx.ID_ANY, 1.7, 0, 10, 0.1, self.m_vmdHandDistanceTxt, wx.DefaultPosition, wx.DefaultSize, wx.SL_HORIZONTAL )
 		bSizer13.Add( self.m_sliderHandDistance, 0, wx.ALL|wx.EXPAND, 5 )
 
 		# self.m_staticText391 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"手首のZ位置補正オフセット", wx.DefaultPosition, wx.DefaultSize, 0 )

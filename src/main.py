@@ -256,7 +256,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                     "左": abs((rep_wrist_thickness["左"] * palm_diff_length) - org_wrist_thickness["左"]),
                     "右": abs((rep_wrist_thickness["右"] * palm_diff_length) - org_wrist_thickness["右"]) * -1
                 }
-            print("手首の厚み: l: %s, r: %s" % ( wrist_thickness["左"], wrist_thickness["右"]))
+            print("手首の厚み差: l: %s, r: %s" % ( wrist_thickness["左"], wrist_thickness["右"]))
             
             # # 作成元モデルの上半身の厚み
             # min_org_upper_front_position, max_org_upper_front_position = trace_model.get_upper_front_position("上半身", "上半身")
@@ -318,7 +318,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                                         # 対象のキーがなくて次に行ってしまった場合、挿入
                                                         
                                                         # 補間曲線込みでキーフレーム生成
-                                                        fillbf = calc_bone_by_complement(motion.frames, al.name, f)
+                                                        fillbf = calc_bone_by_complement(motion.frames, al.name, f, True)
                                                         # とりあえず実際に登録はしない
                                                         fillbf.key = False
 
@@ -424,8 +424,11 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                 rep_wrist_diff = (rep_finger_global_3ds[len(rep_finger_global_3ds) - all_rep_finger_indexes[org_direction]["手首"] - 1] - rep_reverse_finger_global_3ds[len(rep_reverse_finger_global_3ds) - all_rep_finger_indexes[reverse_org_direction]["手首"] - 1]).length()
                                 logger.debug("rep_wrist_diff: %s", rep_wrist_diff)
 
+                                # 手首間の距離
+                                org_wrist_diff_rate = (org_wrist_diff / org_palm_length)
+
                                 # 手首の距離が手のひらの大きさより大きいか(ハート型とかあるので、可変)
-                                is_over_org_palm_length = org_palm_length * hand_distance <= org_wrist_diff
+                                is_over_org_palm_length = hand_distance <= org_wrist_diff_rate
 
                                 if not is_over_org_palm_length or hand_distance == 10:
                                     # if prev_bf and bf.frame - prev_bf.frame < 2:
@@ -437,7 +440,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                         reverse_direction = "右" if "左" == direction else "左"
 
                                         # 手首が近接している場合のみ、腕IK処理実施
-                                        print("○手首近接あり: f: %s(%s), 手首間の距離: %s" % (bf.frame, direction, (org_wrist_diff / org_palm_length) ))
+                                        print("○手首近接あり: f: %s(%s), 手首間の距離: %s" % (bf.frame, direction, org_wrist_diff_rate ))
 
                                         # 元モデルの向いている回転量
                                         org_upper_direction_qq = calc_upper_direction_qq(trace_model, org_upper_links, org_motion_frames, bf)
@@ -730,7 +733,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                     lad = abs(QQuaternion.dotProduct(motion.frames["左腕"][bf_idx].rotation, org_fill_motion_frames["左腕"][bf_idx].rotation))
                                     rad = abs(QQuaternion.dotProduct(motion.frames["右腕"][bf_idx].rotation, org_fill_motion_frames["右腕"][bf_idx].rotation))
                                     if lsd < 0.85 or rsd < 0.85 or lad < 0.85 or rad < 0.85:
-                                        print("%sフレーム目手首位置合わせ失敗: 左肩:%s, 左腕:%s, 右肩:%s, 右腕:%s" % (bf.frame, lsd, lad, rsd, rad))
+                                        print("%sフレーム目手首位置合わせ失敗: 手首間: %s, 左肩:%s, 左腕:%s, 右肩:%s, 右腕:%s" % (bf.frame, org_wrist_diff_rate, lsd, lad, rsd, rad))
                                         # 失敗時のみエラーログ出力
                                         if not is_error_outputed:
                                             is_error_outputed = True
@@ -745,7 +748,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                             # error_file_logger.debug("変換先の上半身の厚み: %s", rep_upper_thickness_diff)
                                             # error_file_logger.debug("肩幅の差: %s" , showlder_diff_length)
 
-                                        error_file_logger.warning("%sフレーム目手首位置合わせ失敗: 左肩:%s, 左腕:%s, 右肩:%s, 右腕:%s" , bf.frame, lsd, lad, rsd, rad)
+                                        error_file_logger.warning("%sフレーム目手首位置合わせ失敗: 手首間: %s, 左肩:%s, 左腕:%s, 右肩:%s, 右腕:%s" , bf.frame, org_wrist_diff_rate, lsd, lad, rsd, rad)
                                     else:
                                         logger.info("手首位置合わせ成功: f: %s, 左肩:%s, 左腕:%s, 右肩:%s, 右腕:%s", bf.frame, lsd, lad, rsd, rad)
 
@@ -781,7 +784,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                                                 break
 
                                 else:
-                                    print("×手首近接なし: f: %s(%s), 手首間の距離: %s" % (bf.frame, direction, (org_wrist_diff / org_palm_length) ))
+                                    print("－手首近接なし: f: %s(%s), 手首間の距離: %s" % (bf.frame, direction, org_wrist_diff_rate ))
 
                                 # 前々回登録キーとして保持
                                 prev_prev_bf = copy.deepcopy(prev_bf)
@@ -1850,7 +1853,7 @@ R_y2_idxs = [15, 30, 45, 60]
 # 補間曲線を考慮した指定フレーム番号の位置
 # https://www55.atwiki.jp/kumiho_k/pages/15.html
 # https://harigane.at.webry.info/201103/article_1.html
-def calc_bone_by_complement(frames, bone_name, frameno):
+def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False):
     fillbf = VmdBoneFrame()
 
     # ボーン登録がなければ初期値
@@ -1909,32 +1912,33 @@ def calc_bone_by_complement(frames, bone_name, frameno):
                 fillbf.position = copy.deepcopy(prev_bf.position)
                 # logger.debug("position stop: %s,%s prev: %s, fill: %s ", prev_frame + n, k, prev_bf.position, bf.position )
             
-            # 補間曲線を埋める
-            next_x1v = bf.complement[R_x1_idxs[3]]
-            next_y1v = bf.complement[R_y1_idxs[3]]
-            next_x2v = bf.complement[R_x2_idxs[3]]
-            next_y2v = bf.complement[R_y2_idxs[3]]
-            rx, rn = calc_interpolate_bezier(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, bf.frame, fillbf.frame)
-            logger.debug("bone: %s, prev_bf: %s, bf: %s, fillbf: %s, rn: %s", bone_name, prev_bf.frame, bf.frame, fillbf.frame, rn)
-            logger.debug("next_x1v: %s, next_y1v: %s, next_x2v: %s, next_y2v: %s, rn: %s", next_x1v, next_y1v, next_x2v, next_y2v, rn)
+            if is_calc_complement:
+                # 補間曲線を計算する場合、補間曲線を埋める
+                next_x1v = bf.complement[R_x1_idxs[3]]
+                next_y1v = bf.complement[R_y1_idxs[3]]
+                next_x2v = bf.complement[R_x2_idxs[3]]
+                next_y2v = bf.complement[R_y2_idxs[3]]
+                rx, rn = calc_interpolate_bezier(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, bf.frame, fillbf.frame)
+                logger.debug("bone: %s, prev_bf: %s, bf: %s, fillbf: %s, rn: %s", bone_name, prev_bf.frame, bf.frame, fillbf.frame, rn)
+                logger.debug("next_x1v: %s, next_y1v: %s, next_x2v: %s, next_y2v: %s, rn: %s", next_x1v, next_y1v, next_x2v, next_y2v, rn)
 
-            # オリジナルの補間曲線として先の補間曲線を保持しておく
-            fillbf.org_complement = copy.deepcopy(bf.complement)
+                # オリジナルの補間曲線として先の補間曲線を保持しておく
+                fillbf.org_complement = copy.deepcopy(bf.complement)
 
-            # 分割の始点は、今回の始点と同じ
-            fillbf.complement[R_x1_idxs[0]] = fillbf.complement[R_x1_idxs[1]] = fillbf.complement[R_x1_idxs[2]] = fillbf.complement[R_x1_idxs[3]] = bf.complement[R_x1_idxs[3]]
-            fillbf.complement[R_y1_idxs[0]] = fillbf.complement[R_y1_idxs[1]] = fillbf.complement[R_y1_idxs[2]] = fillbf.complement[R_y1_idxs[3]] = bf.complement[R_y1_idxs[3]]
+                # 分割の始点は、今回の始点と同じ
+                fillbf.complement[R_x1_idxs[0]] = fillbf.complement[R_x1_idxs[1]] = fillbf.complement[R_x1_idxs[2]] = fillbf.complement[R_x1_idxs[3]] = bf.complement[R_x1_idxs[3]]
+                fillbf.complement[R_y1_idxs[0]] = fillbf.complement[R_y1_idxs[1]] = fillbf.complement[R_y1_idxs[2]] = fillbf.complement[R_y1_idxs[3]] = bf.complement[R_y1_idxs[3]]
 
-            # 分割の終点は、補間曲線の移動部分
-            fillbf.complement[R_x2_idxs[0]] = fillbf.complement[R_x2_idxs[1]] = fillbf.complement[R_x2_idxs[2]] = fillbf.complement[R_x2_idxs[3]] = round(127 * rx)
-            fillbf.complement[R_y2_idxs[0]] = fillbf.complement[R_y2_idxs[1]] = fillbf.complement[R_y2_idxs[2]] = fillbf.complement[R_y2_idxs[3]] = round(127 * rn)
+                # 分割の終点は、補間曲線の移動部分
+                fillbf.complement[R_x2_idxs[0]] = fillbf.complement[R_x2_idxs[1]] = fillbf.complement[R_x2_idxs[2]] = fillbf.complement[R_x2_idxs[3]] = round(127 * rx)
+                fillbf.complement[R_y2_idxs[0]] = fillbf.complement[R_y2_idxs[1]] = fillbf.complement[R_y2_idxs[2]] = fillbf.complement[R_y2_idxs[3]] = round(127 * rn)
 
-            # 今回の始点は、補間曲線の残りの部分
-            bf.complement[R_x1_idxs[0]] = bf.complement[R_x1_idxs[1]] = bf.complement[R_x1_idxs[2]] = bf.complement[R_x1_idxs[3]] = 127 - round(127 * (1 - rx))
-            bf.complement[R_y1_idxs[0]] = bf.complement[R_y1_idxs[1]] = bf.complement[R_y1_idxs[2]] = bf.complement[R_y1_idxs[3]] = 127 - round(127 * (1 - rn))
-            logger.debug("next_bf.x1: %s, next_bf.y1: %s", prev_bf.complement[R_x1_idxs[3]], prev_bf.complement[R_y1_idxs[3]])
+                # 今回の始点は、補間曲線の残りの部分
+                bf.complement[R_x1_idxs[0]] = bf.complement[R_x1_idxs[1]] = bf.complement[R_x1_idxs[2]] = bf.complement[R_x1_idxs[3]] = 127 - round(127 * (1 - rx))
+                bf.complement[R_y1_idxs[0]] = bf.complement[R_y1_idxs[1]] = bf.complement[R_y1_idxs[2]] = bf.complement[R_y1_idxs[3]] = 127 - round(127 * (1 - rn))
+                logger.debug("next_bf.x1: %s, next_bf.y1: %s", prev_bf.complement[R_x1_idxs[3]], prev_bf.complement[R_y1_idxs[3]])
 
-            # 今回の終点は変わらず
+                # 今回の終点は変わらず
 
             return fillbf
 
