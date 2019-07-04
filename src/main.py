@@ -293,8 +293,8 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
             for f in range(motion.last_motion_frame + 1):
                 is_checked = False
 
-                for bf_list in motion.frames.values():
-                    for bf_idx, bf in enumerate(bf_list):
+                for k in ["左肩", "左腕", "左ひじ", "左手首", "右肩", "右腕", "右ひじ", "右手首"]:
+                    for bf_idx, bf in enumerate(motion.frames[k]):
                         if bf.frame == f:
                             # 該当フレームの場合
                             for direction in ["左", "右"]:
@@ -801,26 +801,42 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                     if is_ik_adjust:
                         # 既にIK調整終了していたら片手分のループを抜ける
                         break
-
+            
             # 補間曲線を有効なキーだけに揃える
             for direction in ["左", "右"]:
                 for al in arm_links[direction]:
-                    for bf_idx in range(len(motion.frames[al.name])):
-                        if bf_idx >= 2:
-                            prev_bf = motion.frames[al.name][bf_idx - 2]
-                            now_bf = motion.frames[al.name][bf_idx - 1]
-                            next_bf = motion.frames[al.name][bf_idx]
+                    for bf_idx, bf in enumerate(motion.frames[al.name]):
+                        now_bf = motion.frames[al.name][bf_idx]
+                        prev_bf = next_bf = None
 
-                            if now_bf.key == False:
-                                # 現在キーを実際には登録しない場合、補間曲線を上書きする
+                        if now_bf.key == False:
+                            # 現在キーを実際には登録しない場合、補間曲線を上書きする
 
-                                # prevの終点は、nextの元々の始点
-                                prev_bf.complement[R_x2_idxs[0]] = prev_bf.complement[R_x2_idxs[1]] = prev_bf.complement[R_x2_idxs[2]] = prev_bf.complement[R_x2_idxs[3]] = next_bf.org_complement[R_x1_idxs[3]]
-                                prev_bf.complement[R_y2_idxs[0]] = prev_bf.complement[R_y2_idxs[1]] = prev_bf.complement[R_y2_idxs[2]] = prev_bf.complement[R_y2_idxs[3]] = next_bf.org_complement[R_y1_idxs[3]]
+                            # 次のキー（有効不問）
+                            if bf_idx + 1 <= len(motion.frames[al.name]):
+                                next_bf = motion.frames[al.name][bf_idx + 1]
 
-                                # nextの始点は、prevの元々の終点
-                                next_bf.complement[R_x1_idxs[0]] = next_bf.complement[R_x1_idxs[1]] = next_bf.complement[R_x1_idxs[2]] = next_bf.complement[R_x1_idxs[3]] = prev_bf.org_complement[R_x2_idxs[3]]
-                                next_bf.complement[R_y1_idxs[0]] = next_bf.complement[R_y1_idxs[1]] = next_bf.complement[R_y1_idxs[2]] = next_bf.complement[R_y1_idxs[3]] = prev_bf.org_complement[R_y2_idxs[3]]
+                            # 前の有効なキー
+                            for pbf_idx in range(bf_idx - 1, 0, -1):
+                                if motion.frames[al.name][pbf_idx].key == True:
+                                    prev_bf = motion.frames[al.name][pbf_idx]
+                                    break
+
+                            if prev_bf and next_bf:
+                                logger.debug("補間曲線クリア: %s: %s, p: %s, n: %s", al.name, bf.frame, prev_bf.frame, next_bf.frame)
+                                logger.debug("prev: %s", prev_bf.org_complement)
+                                logger.debug("next: %s", next_bf.org_complement)
+
+                                # prevの終点を元に戻す
+                                prev_bf.complement[R_x2_idxs[0]] = prev_bf.complement[R_x2_idxs[1]] = prev_bf.complement[R_x2_idxs[2]] = prev_bf.complement[R_x2_idxs[3]] = prev_bf.org_complement[R_x2_idxs[3]]
+                                prev_bf.complement[R_y2_idxs[0]] = prev_bf.complement[R_y2_idxs[1]] = prev_bf.complement[R_y2_idxs[2]] = prev_bf.complement[R_y2_idxs[3]] = prev_bf.org_complement[R_y2_idxs[3]]
+                            
+                                # nextの始点を元に戻す
+                                next_bf.complement[R_x1_idxs[0]] = next_bf.complement[R_x1_idxs[1]] = next_bf.complement[R_x1_idxs[2]] = next_bf.complement[R_x1_idxs[3]] = next_bf.org_complement[R_x1_idxs[3]]
+                                next_bf.complement[R_y1_idxs[0]] = next_bf.complement[R_y1_idxs[1]] = next_bf.complement[R_y1_idxs[2]] = next_bf.complement[R_y1_idxs[3]] = next_bf.org_complement[R_y1_idxs[3]]
+
+                                logger.debug("prev x2: %s, y2: %s", prev_bf.complement[R_x2_idxs[0]], prev_bf.complement[R_y2_idxs[0]])
+                                logger.debug("next x1: %s, y1: %s", next_bf.complement[R_x1_idxs[0]], next_bf.complement[R_y1_idxs[0]])
 
 
     # モーフ置換
@@ -1939,26 +1955,23 @@ def calc_bone_by_complement(frames, bone_name, frameno):
             logger.debug("bone: %s, prev_bf: %s, bf: %s, fillbf: %s, rn: %s", bone_name, prev_bf.frame, bf.frame, fillbf.frame, rn)
             logger.debug("next_x1v: %s, next_y1v: %s, next_x2v: %s, next_y2v: %s, rn: %s", next_x1v, next_y1v, next_x2v, next_y2v, rn)
 
-            # 前回の終点は、補間曲線の移動部分
-            prev_bf.complement[R_x2_idxs[0]] = prev_bf.complement[R_x2_idxs[1]] = prev_bf.complement[R_x2_idxs[2]] = prev_bf.complement[R_x2_idxs[3]] = round(next_x2v * rn)
-            prev_bf.complement[R_y2_idxs[0]] = prev_bf.complement[R_y2_idxs[1]] = prev_bf.complement[R_y2_idxs[2]] = prev_bf.complement[R_y2_idxs[3]] = round(next_y2v * rn)
-            logger.debug("prev_bf.x2: %s, prev_bf.y2: %s", prev_bf.complement[R_x2_idxs[3]], prev_bf.complement[R_y2_idxs[3]])
-
-            # 次点の始点は、補間曲線の残りの部分
-            bf.complement[R_x1_idxs[0]] = bf.complement[R_x1_idxs[1]] = bf.complement[R_x1_idxs[2]] = bf.complement[R_x1_idxs[3]] = 127 - round(next_x2v * (1 - rn))
-            bf.complement[R_y1_idxs[0]] = bf.complement[R_y1_idxs[1]] = bf.complement[R_y1_idxs[2]] = bf.complement[R_y1_idxs[3]] = 127 - round(next_x2v * (1 - rn))
-            logger.debug("next_bf.x1: %s, next_bf.y1: %s", prev_bf.complement[R_x1_idxs[3]], prev_bf.complement[R_y1_idxs[3]])
-
-            # 分割の始点は、前回の終点と同じ
-            fillbf.complement[R_x1_idxs[0]] = fillbf.complement[R_x1_idxs[1]] = fillbf.complement[R_x1_idxs[2]] = fillbf.complement[R_x1_idxs[3]] = 127 - prev_bf.complement[R_x2_idxs[3]]
-            fillbf.complement[R_y1_idxs[0]] = fillbf.complement[R_y1_idxs[1]] = fillbf.complement[R_y1_idxs[2]] = fillbf.complement[R_y1_idxs[3]] = 127 - prev_bf.complement[R_y2_idxs[3]]
-
-            # 分割の終点は、次回の始点と同じ
-            fillbf.complement[R_x2_idxs[0]] = fillbf.complement[R_x2_idxs[1]] = fillbf.complement[R_x2_idxs[2]] = fillbf.complement[R_x2_idxs[3]] = bf.complement[R_x1_idxs[3]]
-            fillbf.complement[R_y2_idxs[0]] = fillbf.complement[R_y2_idxs[1]] = fillbf.complement[R_y2_idxs[2]] = fillbf.complement[R_y2_idxs[3]] = bf.complement[R_y1_idxs[3]]
-
             # オリジナルの補間曲線として先の補間曲線を保持しておく
             fillbf.org_complement = copy.deepcopy(bf.complement)
+
+            # 分割の始点は、今回の始点と同じ
+            fillbf.complement[R_x1_idxs[0]] = fillbf.complement[R_x1_idxs[1]] = fillbf.complement[R_x1_idxs[2]] = fillbf.complement[R_x1_idxs[3]] = bf.complement[R_x1_idxs[0]]
+            fillbf.complement[R_y1_idxs[0]] = fillbf.complement[R_y1_idxs[1]] = fillbf.complement[R_y1_idxs[2]] = fillbf.complement[R_y1_idxs[3]] = bf.complement[R_y1_idxs[0]]
+
+            # 分割の終点は、補間曲線の移動部分
+            fillbf.complement[R_x2_idxs[0]] = fillbf.complement[R_x2_idxs[1]] = fillbf.complement[R_x2_idxs[2]] = fillbf.complement[R_x2_idxs[3]] = round(next_x2v * rn)
+            fillbf.complement[R_y2_idxs[0]] = fillbf.complement[R_y2_idxs[1]] = fillbf.complement[R_y2_idxs[2]] = fillbf.complement[R_y2_idxs[3]] = round(next_y2v * rn)
+
+            # 今回の始点は、補間曲線の残りの部分
+            bf.complement[R_x1_idxs[0]] = bf.complement[R_x1_idxs[1]] = bf.complement[R_x1_idxs[2]] = bf.complement[R_x1_idxs[3]] = 127 - round(next_x2v * (1 - rn))
+            bf.complement[R_y1_idxs[0]] = bf.complement[R_y1_idxs[1]] = bf.complement[R_y1_idxs[2]] = bf.complement[R_y1_idxs[3]] = 127 - round(next_y2v * (1 - rn))
+            logger.debug("next_bf.x1: %s, next_bf.y1: %s", prev_bf.complement[R_x1_idxs[3]], prev_bf.complement[R_y1_idxs[3]])
+
+            # 今回の終点は変わらず
 
             return fillbf
 

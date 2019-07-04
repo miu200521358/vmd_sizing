@@ -115,6 +115,7 @@ class VmdReader():
             logger.debug("complement %s", frame.complement)
             # オリジナルの補間曲線を保持しておく
             frame.org_complement = copy.deepcopy(frame.complement)
+            logger.debug("org_complement %s", frame.org_complement)
             
             if bone_name not in motion.frames:
                 # まだ辞書にない場合、配列追加
