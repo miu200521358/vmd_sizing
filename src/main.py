@@ -593,8 +593,8 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                         # logger.debug("rep_reverse_front_wrist_pos z before: %s", rep_reverse_front_wrist_pos)
                                         # # # logger.debug("rep_upper_thickness_diff z before: %s", rep_upper_thickness_diff)
 
-                                        # rep_front_wrist_pos.setZ(rep_front_wrist_pos.z() + 0.15)
-                                        # rep_reverse_front_wrist_pos.setZ(rep_reverse_front_wrist_pos.z() - 0.15)
+                                        # rep_front_wrist_pos.setZ(rep_front_wrist_pos.z() * arm_diff_length)
+                                        # rep_reverse_front_wrist_pos.setZ(rep_reverse_front_wrist_pos.z() * arm_diff_length)
 
                                         # if (rep_front_upper_pos.z() > rep_front_wrist_pos.z() and abs(rep_front_wrist_pos.z() - rep_front_upper_pos.z()) < rep_arm_length  ) \
                                         #     or (rep_front_upper_pos.z() > rep_reverse_front_wrist_pos.z() and abs(rep_reverse_front_wrist_pos.z() - rep_front_upper_pos.z()) < rep_arm_length ) :
@@ -631,9 +631,37 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                         rep_wrist_pos = create_direction_pos(rep_upper_direction_qq, rep_front_wrist_pos)
                                         logger.debug("frame: %s, rep_wrist_pos after: %s", bf.frame, rep_wrist_pos)
 
+                                        # ---------
+                                        wrist_ik_bone = "{0}偽IK".format(direction)
+                                        if not wrist_ik_bone in motion.frames:
+                                            motion.frames[wrist_ik_bone] = []
+                                        
+                                        wikbf = VmdBoneFrame(bf.frame)
+                                        wikbf.name = wrist_ik_bone.encode('shift-jis')
+                                        wikbf.format_name = wrist_ik_bone
+                                        wikbf.frame = bf.frame
+                                        wikbf.key = True
+                                        wikbf.position = rep_wrist_pos
+                                        motion.frames[wrist_ik_bone].append(wikbf)
+                                        # ---------
+
                                         # 変換先モデルの向きを元に戻して、正面向きの手首を回転させた位置に合わせる(反対側)
                                         rep_reverse_wrist_pos = create_direction_pos(rep_upper_direction_qq, rep_reverse_front_wrist_pos)
                                         logger.debug("frame: %s, rep_reverse_wrist_pos after: %s", bf.frame, rep_reverse_wrist_pos)
+
+                                        # ---------
+                                        reverse_wrist_ik_bone = "{0}偽IK".format(reverse_direction)
+                                        if not reverse_wrist_ik_bone in motion.frames:
+                                            motion.frames[reverse_wrist_ik_bone] = []
+                                        
+                                        rwikbf = VmdBoneFrame(bf.frame)
+                                        rwikbf.name = reverse_wrist_ik_bone.encode('shift-jis')
+                                        rwikbf.format_name = reverse_wrist_ik_bone
+                                        rwikbf.frame = bf.frame
+                                        rwikbf.key = True
+                                        rwikbf.position = rep_reverse_wrist_pos
+                                        motion.frames[reverse_wrist_ik_bone].append(rwikbf)
+                                        # ---------
 
                                         # 手首位置から角度を求める
                                         calc_arm_IK2FK(rep_wrist_pos, replace_model, arm_links[direction], all_rep_wrist_links[direction], direction, motion.frames, bf, prev_space_bf)
@@ -701,13 +729,13 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                             # 1. 自分自身の上半身X位置
                                             # 2: 元モデルの上半身と手首位置の差
                                             rep_front_finger_pos.setX( rep_front_wrist_pos.x() \
-                                                + (( org_front_finger_pos.x() - org_front_wrist_pos.x() ) * arm_diff_length)
+                                                + (( org_front_finger_pos.x() - org_front_wrist_pos.x() ) * palm_diff_length )
                                             )
                                             logger.debug("(( org_front_finger_pos.x() - org_front_upper_pos.x() ) * arm_diff_length): %s", (( org_front_finger_pos.x() - org_front_upper_pos.x() ) * arm_diff_length))
                                                 
                                             # 指の位置を元モデルとだいたい同じ位置にする(反対側)
                                             rep_reverse_front_finger_pos.setX( rep_reverse_front_wrist_pos.x() \
-                                                + (( org_reverse_front_finger_pos.x() - org_reverse_front_wrist_pos.x() ) * arm_diff_length)
+                                                + (( org_reverse_front_finger_pos.x() - org_reverse_front_wrist_pos.x() ) * palm_diff_length)
                                             )
                                             logger.debug("(( org_reverse_front_finger_pos.x() - org_front_upper_pos.x() )  * arm_diff_length): %s", (( org_reverse_front_finger_pos.x() - org_front_upper_pos.x() )  * arm_diff_length))
 
@@ -731,12 +759,12 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                     # d = QQuaternion.dotProduct(bf.rotation, org_bf.rotation)
                                     # rk_name = bf.format_name.replace(direction, reverse_direction)
                                     logger.debug("bf.name: %s, bf_idx: %s, 右肩: %s", bf.format_name, bf_idx, len(motion.frames["右肩"]))
-                                    lsd = abs(QQuaternion.dotProduct(motion.frames["左肩"][bf_idx].rotation, org_fill_motion_frames["左肩"][bf_idx].rotation))
-                                    rsd = abs(QQuaternion.dotProduct(motion.frames["右肩"][bf_idx].rotation, org_fill_motion_frames["右肩"][bf_idx].rotation))
+                                    # lsd = abs(QQuaternion.dotProduct(motion.frames["左肩"][bf_idx].rotation, org_fill_motion_frames["左肩"][bf_idx].rotation))
+                                    # rsd = abs(QQuaternion.dotProduct(motion.frames["右肩"][bf_idx].rotation, org_fill_motion_frames["右肩"][bf_idx].rotation))
                                     lad = abs(QQuaternion.dotProduct(motion.frames["左腕"][bf_idx].rotation, org_fill_motion_frames["左腕"][bf_idx].rotation))
                                     rad = abs(QQuaternion.dotProduct(motion.frames["右腕"][bf_idx].rotation, org_fill_motion_frames["右腕"][bf_idx].rotation))
-                                    if lsd < 0.85 or rsd < 0.85 or lad < 0.85 or rad < 0.85:
-                                        print("%sフレーム目手首位置合わせ失敗: 手首間: %s, 左肩:%s, 左腕:%s, 右肩:%s, 右腕:%s" % (bf.frame, org_wrist_diff_rate, lsd, lad, rsd, rad))
+                                    if lad < 0.85 or rad < 0.85:
+                                        print("%sフレーム目手首位置合わせ失敗: 手首間: %s, 左肩:%s, 左腕:%s" % (bf.frame, org_wrist_diff_rate, lad, rad))
                                         # 失敗時のみエラーログ出力
                                         if not is_error_outputed:
                                             is_error_outputed = True
@@ -751,16 +779,16 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                             # error_file_logger.debug("変換先の上半身の厚み: %s", rep_upper_thickness_diff)
                                             # error_file_logger.debug("肩幅の差: %s" , showlder_diff_length)
 
-                                        error_file_logger.warning("%sフレーム目手首位置合わせ失敗: 手首間: %s, 左肩:%s, 左腕:%s, 右肩:%s, 右腕:%s" , bf.frame, org_wrist_diff_rate, lsd, lad, rsd, rad)
+                                        error_file_logger.warning("%sフレーム目手首位置合わせ失敗: 手首間: %s, 左肩:%s, 左腕:%s" , bf.frame, org_wrist_diff_rate, lad, rad)
                                     else:
-                                        logger.info("手首位置合わせ成功: f: %s, 左肩:%s, 左腕:%s, 右肩:%s, 右腕:%s", bf.frame, lsd, lad, rsd, rad)
+                                        logger.info("手首位置合わせ成功: f: %s, 左肩:%s, 左腕:%s", bf.frame, lad, rad)
 
                                     for cfk, cflist in org_fill_motion_frames.items():
                                         for dd in [direction, reverse_direction]:
                                             # 指位置調整は実際には手首のみ角度調整で、arm_linksに含まれている
                                             for al in arm_links[dd]:
                                                 if al.name == cfk:
-                                                    if lsd >= 0.85 and rsd >= 0.85 and lad >= 0.85 and rad >= 0.85:
+                                                    if lad >= 0.85 and rad >= 0.85:
                                                         # 角度調整が既定内である場合、採用
                                                         motion.frames[cfk][bf_idx].key = True
                                                     else:
@@ -1148,7 +1176,7 @@ def create_arm_links(model, links, direction):
     #     arm_links.append(model.bones["{0}腕捩".format(direction)])
 
     arm_links.append(get_bone_in_links_4_joint(model, links, direction, "腕", "手首"))
-    arm_links.append(get_bone_in_links_4_joint(model, links, direction, "肩", "手首"))
+    # arm_links.append(get_bone_in_links_4_joint(model, links, direction, "肩", "手首"))
     
     # logger.debug([x.name for x in arm_links])
 
