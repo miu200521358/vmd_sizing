@@ -230,8 +230,8 @@ class PmxModel():
             parent_name = parent_name[:2]
 
         # 腕がまだインデックスリストに無く、親が腕の派生の場合、腕に固定する
-        if not "腕" in ik_indexes and "腕" in parent_name and len(parent_name) > 2:
-            # logger.debug("parent_name　手首: %s -> %s", parent_name, parent_name[:3])
+        if not "腕" in ik_indexes and "腕" in parent_name and not "腕捩" in parent_name and len(parent_name) > 2:
+            # logger.debug("腕: %s -> %s", parent_name, parent_name[:2])
             parent_name = parent_name[:2]
                 
         # ひじがまだインデックスリストに無く、親がひじの派生の場合、ひじに固定する

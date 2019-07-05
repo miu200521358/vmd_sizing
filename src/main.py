@@ -235,7 +235,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
             print("腕の長さ比率: %s" % arm_diff_length)
 
             # 比率が1以上の場合、とりあえず1で固定
-            # arm_diff_length = 1 if arm_diff_length > 1 else arm_diff_length
+            arm_diff_length = 1 if arm_diff_length > 1 else arm_diff_length
 
             # 作成元モデルの手首の厚み
             org_wrist_thickness = trace_model.get_wrist_thickness_lr()
@@ -390,6 +390,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                 logger.debug("org_finger_global_3ds ------------------------")
                                 for n in range(len(all_org_finger_links[org_direction])):
                                     logger.debug("f: %s, org_finger_global_3ds %s, %s, %s", bf.frame, n, all_org_finger_links[org_direction][len(all_org_finger_links[org_direction]) - n - 1].name, org_finger_global_3ds[n])
+                                logger.debug("org 手首 index: %s", len(org_finger_global_3ds) - all_org_finger_indexes[org_direction]["手首"] - 1)
                                 logger.debug("元モデルの反対側の手の指までの情報")
                                 # 元モデルの反対側の手の指までの情報
                                 _, _, _, _, org_reverse_finger_global_3ds = create_matrix_global(trace_model, all_org_finger_links[reverse_org_direction], org_motion_frames, bf, None)
@@ -417,7 +418,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                 logger.debug("org_wrist_diff_3d: %s", (org_finger_global_3ds[len(org_finger_global_3ds) - all_org_finger_indexes[org_direction]["手首"] - 1] - org_reverse_finger_global_3ds[len(org_reverse_finger_global_3ds) - all_org_finger_indexes[reverse_org_direction]["手首"] - 1]))
 
                                 # 手首の距離
-                                org_wrist_diff = (org_finger_global_3ds[len(org_finger_global_3ds) - all_org_finger_indexes[org_direction]["手首"] - 1] - org_reverse_finger_global_3ds[len(org_reverse_finger_global_3ds) - all_org_finger_indexes[reverse_org_direction]["手首"] - 1]).length()
+                                org_wrist_diff = (org_finger_global_3ds[len(org_finger_global_3ds) - all_org_finger_indexes[org_direction]["手首"] - 1]).distanceToPoint(org_reverse_finger_global_3ds[len(org_reverse_finger_global_3ds) - all_org_finger_indexes[reverse_org_direction]["手首"] - 1])
                                 logger.debug("org_wrist_diff: %s", org_wrist_diff)
 
                                 # 手首の距離
@@ -429,6 +430,8 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
 
                                 # 手首の距離が手のひらの大きさより大きいか(ハート型とかあるので、可変)
                                 is_over_org_palm_length = hand_distance <= org_wrist_diff_rate
+
+                                logger.info("org_wrist_diff_rate: %s, org_palm_length: %s, org_wrist_diff: %s", org_wrist_diff_rate, org_palm_length, org_wrist_diff)
 
                                 if not is_over_org_palm_length or hand_distance == 10:
                                     # if prev_bf and bf.frame - prev_bf.frame < 2:
@@ -523,7 +526,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                         rep_reverse_farer_finger_diff = rep_palm_length - rep_reverse_farer_finger_length
                                         logger.debug("rep_reverse_farer_finger_diff: %s", rep_reverse_farer_finger_diff)
 
-                                        logger.debug("手の大きさ: %s", ( rep_farer_finger_diff - org_farer_finger_diff ))
+                                        logger.info("手の大きさ: %s", ( rep_farer_finger_diff - org_farer_finger_diff ))
                                         logger.debug("手の大きさ(反対側): %s", ( rep_reverse_farer_finger_diff - org_reverse_farer_finger_diff ))
 
                                         logger.debug("org_front_upper_pos before: %s", org_front_upper_pos)
@@ -556,17 +559,17 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                         rep_front_wrist_pos.setX( rep_front_wrist_pos.x() + wrist_thickness[direction])
                                         rep_reverse_front_wrist_pos.setX( rep_reverse_front_wrist_pos.x() + wrist_thickness[reverse_direction])
 
-                                        if org_wrist_diff >= 1 and hand_distance != 10:
-                                            # ある程度離れていたら、手の大きさを考慮して少し広げる
-                                            wrist_diff_sign = 1 if direction == "左" else -1
-                                            wrist_reverse_diff_sign = -1 if reverse_direction == "右" else 1
-                                            rep_front_wrist_pos.setX( rep_front_wrist_pos.x() \
-                                                + ( rep_farer_finger_diff - (org_farer_finger_diff * palm_diff_length) ) * wrist_diff_sign
-                                            )
+                                        # if org_wrist_diff >= 1 and hand_distance != 10:
+                                        #     # ある程度離れていたら、手の大きさを考慮して少し広げる
+                                        #     wrist_diff_sign = 1 if direction == "左" else -1
+                                        #     wrist_reverse_diff_sign = -1 if reverse_direction == "右" else 1
+                                        #     rep_front_wrist_pos.setX( rep_front_wrist_pos.x() \
+                                        #         + ( rep_farer_finger_diff - org_farer_finger_diff ) * wrist_diff_sign
+                                        #     )
 
-                                            rep_reverse_front_wrist_pos.setX( rep_reverse_front_wrist_pos.x() \
-                                                + ( rep_reverse_farer_finger_diff - (org_reverse_farer_finger_diff * palm_diff_length) ) * wrist_reverse_diff_sign
-                                            )
+                                        #     rep_reverse_front_wrist_pos.setX( rep_reverse_front_wrist_pos.x() \
+                                        #         + ( rep_reverse_farer_finger_diff - org_reverse_farer_finger_diff ) * wrist_reverse_diff_sign
+                                        #     )
 
                                         # rep_front_wrist_pos.setZ(rep_front_wrist_pos.z() + 0.5 * arm_diff_length)
                                         # rep_reverse_front_wrist_pos.setZ(rep_reverse_front_wrist_pos.z() + 0.5 * arm_diff_length)
@@ -697,14 +700,14 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                             # 指の位置を元モデルとだいたい同じ位置にする
                                             # 1. 自分自身の上半身X位置
                                             # 2: 元モデルの上半身と手首位置の差
-                                            rep_front_finger_pos.setX( rep_front_upper_pos.x() \
-                                                + (( org_front_finger_pos.x() - org_front_upper_pos.x() ) * arm_diff_length)
+                                            rep_front_finger_pos.setX( rep_front_wrist_pos.x() \
+                                                + (( org_front_finger_pos.x() - org_front_wrist_pos.x() ) * arm_diff_length)
                                             )
                                             logger.debug("(( org_front_finger_pos.x() - org_front_upper_pos.x() ) * arm_diff_length): %s", (( org_front_finger_pos.x() - org_front_upper_pos.x() ) * arm_diff_length))
                                                 
                                             # 指の位置を元モデルとだいたい同じ位置にする(反対側)
-                                            rep_reverse_front_finger_pos.setX( rep_front_upper_pos.x() \
-                                                + (( org_reverse_front_finger_pos.x() - org_front_upper_pos.x() )  * arm_diff_length)
+                                            rep_reverse_front_finger_pos.setX( rep_reverse_front_wrist_pos.x() \
+                                                + (( org_reverse_front_finger_pos.x() - org_reverse_front_wrist_pos.x() ) * arm_diff_length)
                                             )
                                             logger.debug("(( org_reverse_front_finger_pos.x() - org_front_upper_pos.x() )  * arm_diff_length): %s", (( org_reverse_front_finger_pos.x() - org_front_upper_pos.x() )  * arm_diff_length))
 
@@ -1093,7 +1096,7 @@ def calc_arm_matrixs(model, all_wrist_links, direction, frames, bf):
             local_axis = all_wrist_links[len(all_wrist_links) - n].position - l.position
             direction_x = -1 if direction == "左" else 1
             local_axis_qq = QQuaternion.rotationTo(QVector3D(direction_x, 0, 0), local_axis)
-            # logger.info("l.name: %s -> %s, %s", all_wrist_links[len(all_wrist_links) - n - 1].name, all_wrist_links[len(all_wrist_links) - n].name, local_axis_qq.toEulerAngles())
+            # logger.debug("l.name: %s -> %s, %s", all_wrist_links[len(all_wrist_links) - n - 1].name, all_wrist_links[len(all_wrist_links) - n].name, local_axis_qq.toEulerAngles())
             local_x_matrix.rotate(local_axis_qq)
         
         matrixs[n] *= local_x_matrix
@@ -1487,7 +1490,7 @@ def create_matrix_parts(model, links, frames, bf, scales):
             # 位置：自身から親の位置を引いた値
             trans_vs[lidx] = lbone.position + comp_bone.position - links[len(links) - lidx].position
 
-        if bf.frame == 394:
+        if bf.frame == 279:
             logger.debug("f: %s, lbone: %s, trans_vs: %s, comp_bone: %s", bf.frame, lbone.name, trans_vs[lidx], comp_bone.position)
 
         # 回転
@@ -1526,7 +1529,7 @@ def create_matrix_parts(model, links, frames, bf, scales):
         
         add_qs[lidx] = rot
     
-        if bf.frame == 394:
+        if bf.frame == 279:
             logger.debug("f: %s, lbone: %s, rot: %s", bf.frame, lbone.name, rot.toEulerAngles())
 
         # 大きさ
@@ -1865,15 +1868,15 @@ def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False
 
     for bidx, bf in enumerate(frames[bone_name]):
         if bf.frame == frameno:
-            if frameno == 394:
-                logger.debug("calc_bone_by_complement 同一キーあり: %s", bf.position)
+            if frameno == 279:
+                logger.debug("calc_bone_by_complement 同一キーあり: %s, %s", frameno, bone_name)
             # 同一フレームのキーがある場合、それを返す
             fillbf = copy.deepcopy(bf)
-            fillbf.key = False
+            # fillbf.key = False
             return fillbf
         elif bf.frame > frameno:
-            if frameno == 394:
-                logger.debug("calc_bone_by_complement 同一キーなし: %s", bf.position)
+            if frameno == 279:
+                logger.debug("calc_bone_by_complement 同一キーなし: %s, %s", frameno, bone_name)
             # 同一フレームのキーがない場合、前のキーIDXを0に見立てて、その間の補間曲線を埋める
             fillbf.name = bf.name
             fillbf.format_name = bone_name
