@@ -41,7 +41,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
     adjust_center(trace_model, replace_model, "グルーブ")
 
     # 足IKのXYZの比率
-    leg_ik_ratio = calc_leg_ik_ratio(trace_model, replace_model)
+    xz_ratio, y_ratio = calc_leg_ik_ratio(trace_model, replace_model)
 
     # センターのZ軸オフセットを計算
     cal_center_z_offset(trace_model, replace_model, "センター")
@@ -64,7 +64,9 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
             if k in motion.frames and k in replace_model.bones:
                 for bf in motion.frames[k]:
                     # IK比率をそのまま掛ける
-                    bf.position *= leg_ik_ratio.y()
+                    bf.position.setX( bf.position.x() * xz_ratio )
+                    bf.position.setY( bf.position.y() * y_ratio )
+                    bf.position.setZ( bf.position.z() * xz_ratio )
 
                     if replace_model.bones[k].offset_z != 0:
                         # Zオフセットが入っている場合、オフセット調整
@@ -1659,15 +1661,19 @@ def cal_center_z_offset(trace_model, replace_model, bone_name):
         print("Zオフセットなし: %s: %s" % ( bone_name, replace_model.bones[bone_name].offset_z))
 
 def calc_leg_ik_ratio(trace_model, replace_model):
-    if "左足" in trace_model.bones and "左足" in replace_model.bones and "左足首" in trace_model.bones and "左足首" in replace_model.bones:
-        # 比率
-        leg_ik_ratio = (replace_model.bones["左足首"].position - replace_model.bones["左足"].position) \
-                            / (trace_model.bones["左足首"].position - trace_model.bones["左足"].position)
-        print("足の長さの比率: %s" % leg_ik_ratio)
-    else:
-        leg_ik_ratio = QVector3D(1, 1, 1)
-    
-    return leg_ik_ratio
+    if "左足" in trace_model.bones and "左足" in replace_model.bones and "左ひざ" in trace_model.bones and "左ひざ" in replace_model.bones and "左足首" in trace_model.bones and "左足首" in replace_model.bones:
+        # XZ比率(足の長さ)
+        xz_ratio = ( ( (replace_model.bones["左足首"].position - replace_model.bones["左ひざ"].position) + (replace_model.bones["左ひざ"].position - replace_model.bones["左足"].position) ) \
+                            / ( (trace_model.bones["左足首"].position - trace_model.bones["左ひざ"].position) + (trace_model.bones["左ひざ"].position - trace_model.bones["左足"].position) )).length()
+        # Y比率(センターの長さ)
+        y_ratio = ((replace_model.bones["左足首"].position - replace_model.bones["左足"].position) \
+                            / (trace_model.bones["左足首"].position - trace_model.bones["左足"].position)).y()
+
+        print("足の長さの比率: xz: %s, y: %s" % (xz_ratio, y_ratio))
+
+        return xz_ratio, y_ratio
+
+    return 1, 1
 
 
 def adjust_center(trace_model, replace_model, bone_name):
