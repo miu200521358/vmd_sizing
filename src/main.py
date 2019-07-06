@@ -41,7 +41,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
     adjust_center(trace_model, replace_model, "グルーブ")
 
     # 足IKのXYZの比率
-    xz_ratio, y_ratio = calc_leg_ik_ratio(trace_model, replace_model)
+    xz_ratio, y_ratio, leg_ik_stance = calc_leg_ik_ratio(trace_model, replace_model)
 
     # センターのZ軸オフセットを計算
     cal_center_z_offset(trace_model, replace_model, "センター")
@@ -58,6 +58,9 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
         # 変換前のオリジナルモーションを保持
         org_motion_frames = copy.deepcopy(motion.frames)
 
+        # # 変換先モデルの下半身までのリンク生成
+        # rep_lower_links, _ = replace_model.create_link_2_top_one( "下半身", "下半身" )
+
         # -----------------------------------------------------------------
         # 移動ボーン縮尺
         for k in ["右足ＩＫ親" ,"左足ＩＫ親", "右足ＩＫ" ,"左足ＩＫ", "右つま先ＩＫ" ,"左つま先ＩＫ", "センター", "グルーブ", "全ての親"]:
@@ -68,9 +71,35 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                     bf.position.setY( bf.position.y() * y_ratio )
                     bf.position.setZ( bf.position.z() * xz_ratio )
 
+                    # if k in ["右足ＩＫ親" ,"左足ＩＫ親", "右足ＩＫ" ,"左足ＩＫ", "右つま先ＩＫ" ,"左つま先ＩＫ"]:
+                    #     # 足IKの場合、スタンス補正値を加味する
+                    #     bf.position.setX( bf.position.x() * 2 )
+                    #     bf.position.setZ( bf.position.z() * 2 )
+                        
+                    #     # # 方向
+                    #     # direction = "左" if "左" in k else "右"
+
+                    #     # # 変換先モデルの向いている回転量
+                    #     # rep_lower_direction_qq = calc_upper_direction_qq(trace_model, rep_lower_links, motion.frames, bf)
+                    #     # logger.debug("%s, %s, rep_lower_direction_qq: %s", bf.frame, bf.format_name, rep_lower_direction_qq.toEulerAngles())
+                    #     # logger.debug("%s, %s, bf.position: %s", bf.frame, bf.format_name, bf.position)
+
+                    #     # # 変換先モデルの向きを逆転させて、正面向きの位置を計算する
+                    #     # bf_front_pos = create_direction_pos(rep_lower_direction_qq.inverted(), bf.position)
+
+                    #     # # IKのスタンス補正値を加算
+                    #     # bf_front_pos.setX( bf_front_pos.x() + leg_ik_stance[direction] )
+                    #     # logger.debug("%s, %s, bf_front_pos: %s", bf.frame, bf.format_name, bf_front_pos)
+
+                    #     # # 変換先モデルの向きを元に戻す
+                    #     # bf.position = create_direction_pos(rep_lower_direction_qq, bf_front_pos)
+
                     if replace_model.bones[k].offset_z != 0:
                         # Zオフセットが入っている場合、オフセット調整
                         bf.position.setZ(bf.position.z() + replace_model.bones[k].offset_z) 
+
+        # -----------------------------------------------------------------
+        # 腕の角度補正
                     
         # センターから手首までの位置(作成元モデル)
         all_org_wrist_links, _ = trace_model.create_link_2_top_lr("手首")
@@ -78,8 +107,6 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
         # センターから手首までの位置(トレース先モデル)
         all_rep_wrist_links, _ = replace_model.create_link_2_top_lr("手首")
 
-        # -----------------------------------------------------------------
-        # 腕の角度補正
         all_d_list = [{"肩":"左肩", "腕":"左腕", "ひじ":"左ひじ", "手首":"左手首"}, {"肩":"右肩", "腕":"右腕", "ひじ":"右ひじ", "手首":"右手首"}]
         if set(all_d_list[0].values()).issubset(trace_model.bones) and set(all_d_list[0].values()).issubset(replace_model.bones) and \
             set(all_d_list[1].values()).issubset(trace_model.bones) and set(all_d_list[1].values()).issubset(replace_model.bones):
@@ -1663,17 +1690,32 @@ def cal_center_z_offset(trace_model, replace_model, bone_name):
 def calc_leg_ik_ratio(trace_model, replace_model):
     if "左足" in trace_model.bones and "左足" in replace_model.bones and "左ひざ" in trace_model.bones and "左ひざ" in replace_model.bones and "左足首" in trace_model.bones and "左足首" in replace_model.bones:
         # XZ比率(足の長さ)
-        xz_ratio = ( ( (replace_model.bones["左足首"].position - replace_model.bones["左ひざ"].position) + (replace_model.bones["左ひざ"].position - replace_model.bones["左足"].position) ) \
-                            / ( (trace_model.bones["左足首"].position - trace_model.bones["左ひざ"].position) + (trace_model.bones["左ひざ"].position - trace_model.bones["左足"].position) )).length()
-        # Y比率(センターの長さ)
-        y_ratio = ((replace_model.bones["左足首"].position - replace_model.bones["左足"].position) \
-                            / (trace_model.bones["左足首"].position - trace_model.bones["左足"].position)).y()
+        replace_leg_length = ( (replace_model.bones["左足首"].position - replace_model.bones["左ひざ"].position) + (replace_model.bones["左ひざ"].position - replace_model.bones["左足"].position) ).length()
+        trace_leg_length = ( (trace_model.bones["左足首"].position - trace_model.bones["左ひざ"].position) + (trace_model.bones["左ひざ"].position - trace_model.bones["左足"].position) ).length()
+        logger.debug("xz_ratio replace_leg_length: %s, trace_leg_length: %s", replace_leg_length, trace_leg_length)
+        xz_ratio = 1 if trace_leg_length == 0 else ( replace_leg_length / trace_leg_length )
+
+        # Y比率(股下のY差)
+        replace_leg_length = (replace_model.bones["左足首"].position - replace_model.bones["左足"].position).y()
+        trace_leg_length = (trace_model.bones["左足首"].position - trace_model.bones["左足"].position).y()        
+        logger.debug("y_ratio replace_leg_length: %s, trace_leg_length: %s", replace_leg_length, trace_leg_length)
+        y_ratio = 1 if trace_leg_length == 0 else ( replace_leg_length / trace_leg_length )
 
         print("足の長さの比率: xz: %s, y: %s" % (xz_ratio, y_ratio))
 
-        return xz_ratio, y_ratio
+        # 左足のスタンス距離比
+        l_stance = ((replace_model.bones["左足ＩＫ"].position - replace_model.bones["センター"].position).x()) - ((trace_model.bones["左足ＩＫ"].position - trace_model.bones["センター"].position).x() * xz_ratio)
+        r_stance = ((replace_model.bones["右足ＩＫ"].position - replace_model.bones["センター"].position).x()) - ((trace_model.bones["右足ＩＫ"].position - trace_model.bones["センター"].position).x() * xz_ratio)
 
-    return 1, 1
+        logger.info("replace: %s", (replace_model.bones["左足ＩＫ"].position - replace_model.bones["センター"].position).x())
+        logger.info("trace: %s", (trace_model.bones["左足ＩＫ"].position - trace_model.bones["センター"].position).x())
+        logger.info("trace2: %s", ((trace_model.bones["左足ＩＫ"].position - trace_model.bones["センター"].position).x() * xz_ratio))
+
+        # print("足のスタンス補正値: l: %s, r: %s" % (l_stance, r_stance))
+
+        return xz_ratio, y_ratio, {"左": l_stance, "右": r_stance}
+
+    return 1, 1, {"左": 1, "右": 1}
 
 
 def adjust_center(trace_model, replace_model, bone_name):
@@ -1755,82 +1797,24 @@ def calc_upper_direction_qq(model, links, frames, bf):
 
     return total_y_qq
 
-def create_arm_scale(trace_model, replace_model, direction, links, lengths):
-    scales = {}
-
-    for l in links:
-        if l.name in trace_model.bones and l.name in replace_model.bones:
-            if l.name in ["センター"]:
-                scales[l.name] = QVector3D(1, lengths[l.name], 1)
-            elif l.name not in ["全ての親", "グルーブ"]:
-                trace_bone_len_3d = trace_model.bones[l.name].len_3d
-                replace_bone_len_3d = replace_model.bones[l.name].len_3d
-
-                len_3d = QVector3D(1,1,1)
-
-                if trace_bone_len_3d.x() != 0:
-                    len_3d.setX( replace_bone_len_3d.x() / trace_bone_len_3d.x() )
-
-                if trace_bone_len_3d.y() != 0:
-                    len_3d.setY( replace_bone_len_3d.y() / trace_bone_len_3d.y() )
-
-                if trace_bone_len_3d.z() != 0:
-                    len_3d.setZ( replace_bone_len_3d.z() / trace_bone_len_3d.z() )
-
-                scales[l.name] = len_3d
-            else:
-                scales[l.name] = 1
-        else:
-            scales[l.name] = 1
-    
-    if "上半身" in trace_model.bones and "{0}肩".format(direction) in trace_model.bones and \
-        "上半身" in replace_model.bones and "{0}肩".format(direction) in replace_model.bones and \
-        "上半身2" not in trace_model.bones and "上半身2" in replace_model.bones:
-
-        trace_bone_len_3d = trace_model.bones["上半身"].len_3d
-        replace_bone_len_3d = replace_model.bones["上半身"].len_3d + replace_model.bones["上半身2"].len_3d
-
-        len_3d = QVector3D(1,1,1)
-
-        if trace_bone_len_3d.x() != 0:
-            len_3d.setX( replace_bone_len_3d.x() / trace_bone_len_3d.x() )
-
-        if trace_bone_len_3d.y() != 0:
-            len_3d.setY( replace_bone_len_3d.y() / trace_bone_len_3d.y() )
-
-        if trace_bone_len_3d.z() != 0:
-            len_3d.setZ( replace_bone_len_3d.z() / trace_bone_len_3d.z() )
-
-        scales["上半身"] = len_3d
-        scales["上半身2"] = 1
-
-    for skey, sval in scales.items():
-        logger.debug("scales: %s, %s", skey, sval)
-
-    return scales
 
 def calc_arm_stance(trace_model, all_org_wrist_links, replace_model, all_replace_wrist_links, direction):
     from_bone = ["肩", "腕", "ひじ", "手首"]
     to_bone = ["腕", "ひじ", "手首", "手先"]
     arm_stance_qqs = {}
     for f, t in zip(from_bone, to_bone):
-        org_z_qq = calc_arm_stance_rotation_z(trace_model, all_org_wrist_links[direction], f, t, direction)
-        rep_z_qq = calc_arm_stance_rotation_z(replace_model, all_replace_wrist_links[direction], f, t, direction)
+        org_qq = calc_arm_stance_rotation(trace_model, all_org_wrist_links[direction], f, t, direction)
+        rep_qq = calc_arm_stance_rotation(replace_model, all_replace_wrist_links[direction], f, t, direction)
 
-        org_x_qq = calc_arm_stance_rotation_x(trace_model, all_org_wrist_links[direction], f, t, direction)
-        rep_x_qq = calc_arm_stance_rotation_x(replace_model, all_replace_wrist_links[direction], f, t, direction)
+        arm_stance_qqs[f] = org_qq.inverted() * rep_qq
 
-        arm_stance_qqs[f] = org_z_qq.inverted() * rep_z_qq
-
-        logger.debug("f: %s, org_z_qq: %s", f, org_z_qq.toEulerAngles())
-        logger.debug("f: %s, rep_z_qq: %s", f, rep_z_qq.toEulerAngles())
-        logger.debug("f: %s, org_x_qq: %s", f, org_x_qq.toEulerAngles())
-        logger.debug("f: %s, rep_x_qq: %s", f, rep_x_qq.toEulerAngles())
+        logger.debug("f: %s, org_qq: %s", f, org_qq.toEulerAngles())
+        logger.debug("f: %s, rep_qq: %s", f, rep_qq.toEulerAngles())
         logger.debug("d: %s, f: %s, arm_stance_qqs: %s", direction, f, arm_stance_qqs[f].toEulerAngles())
 
     return arm_stance_qqs
 
-def calc_arm_stance_rotation_z(model, wrist_links, fbone, tbone, direction):
+def calc_arm_stance_rotation(model, wrist_links, fbone, tbone, direction):
     from_pos = QVector3D()
     to_pos = QVector3D()
 
@@ -1851,33 +1835,8 @@ def calc_arm_stance_rotation_z(model, wrist_links, fbone, tbone, direction):
 
         # 水平からTOボーンまでの回転量
         direction_x = -1 if direction == "左" else 1
-        from_qq = QQuaternion.rotationTo(QVector3D(direction_x, 0, 0), QVector3D(to_pos.x(), to_pos.y(), 0))
+        from_qq = QQuaternion.rotationTo(QVector3D(direction_x, 0, 0), to_pos)
         logger.debug("[z] d: %s, fbone: %s, from_qq: %s", direction, fbone, from_qq.toEulerAngles())
-
-    return from_qq
-
-def calc_arm_stance_rotation_x(model, wrist_links, fbone, tbone, direction):
-    from_pos = QVector3D()
-    to_pos = QVector3D()
-
-    for fk, fv in enumerate(wrist_links):
-        if fv.name.endswith(fbone):
-            from_pos = fv.position
-        if fv.name.endswith(tbone):
-            to_pos = fv.position
-
-    from_qq = QQuaternion()
-    if from_pos != QVector3D and to_pos != QVector3D:
-        logger.debug("from_pos: %s", from_pos)        
-        logger.debug("to_pos: %s", to_pos)        
-
-        to_pos = from_pos - to_pos
-        to_pos.normalize()
-        logger.debug("to_pos: %s", to_pos)        
-
-        # 水平からTOボーンまでの回転量
-        from_qq = QQuaternion.rotationTo(QVector3D(0, to_pos.y(), -1), QVector3D(0, to_pos.y(), to_pos.z()))
-        logger.debug("[x] d: %s, fbone: %s, from_qq: %s", direction, fbone, from_qq.toEulerAngles())
 
     return from_qq
 
