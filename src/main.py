@@ -565,6 +565,11 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                         # 元モデルの正面向き手首の位置（反対側）
                                         org_reverse_front_wrist_pos = org_reverse_front_finger_global_3ds[len(org_reverse_front_finger_global_3ds) - all_org_finger_indexes[reverse_direction]["手首"] - 1]
 
+                                        # 元モデルの正面向き指の位置
+                                        org_front_finger_pos = org_front_finger_global_3ds[len(org_front_finger_global_3ds) - all_org_finger_indexes[direction]["人指３"] - 1]
+                                        # 元モデルの正面向き指の位置(反対側)
+                                        org_reverse_front_finger_pos = org_reverse_front_finger_global_3ds[len(org_reverse_front_finger_global_3ds) - all_org_finger_indexes[reverse_direction]["人指３"] - 1]
+
                                         logger.debug("frame: %s, org_front_upper_pos before: %s", bf.frame, org_front_upper_pos)
                                         logger.debug("frame: %s, org_front_wrist_pos before: %s", bf.frame, org_front_wrist_pos)
                                         logger.debug("frame: %s, org_reverse_front_wrist_pos before: %s", bf.frame, org_reverse_front_wrist_pos)
@@ -625,12 +630,18 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                         # 手首の厚みを考慮
                                         wrist_diff_sign = 1 if direction == "左" else -1
                                         wrist_reverse_diff_sign = -1 if reverse_direction == "右" else 1
+                                        
+                                        if org_wrist_diff_rate < 0.5:
+                                            # 手のひらがピタッとくっついているような場合、手のひらの厚み補正
+                                            rep_front_wrist_pos.setX( rep_front_wrist_pos.x() + (wrist_thickness[direction] * wrist_diff_sign))
+                                            rep_reverse_front_wrist_pos.setX( rep_reverse_front_wrist_pos.x() + (wrist_thickness[reverse_direction] * wrist_reverse_diff_sign))
 
-                                        rep_front_wrist_pos.setX( rep_front_wrist_pos.x() + (wrist_thickness[direction] * wrist_diff_sign))
-                                        rep_reverse_front_wrist_pos.setX( rep_reverse_front_wrist_pos.x() + (wrist_thickness[reverse_direction] * wrist_reverse_diff_sign))
-
-                                        if arm_palm_diff_length >= 1 and org_wrist_diff >= 1 and hand_distance != 10:
-                                            # 変換先の方が大きくて、ある程度離れていたら、手の大きさを考慮する
+                                        if arm_palm_diff_length >= 1 and org_wrist_diff_rate >= 1 \
+                                            and ((org_front_wrist_pos.x() <= org_front_finger_pos.x() <= org_reverse_front_wrist_pos.x() \
+                                                    and org_front_wrist_pos.x() <= org_reverse_front_finger_pos.x() <= org_reverse_front_wrist_pos.x()) \
+                                                or (org_front_wrist_pos.x() >= org_front_finger_pos.x() >= org_reverse_front_wrist_pos.x() \
+                                                    and org_front_wrist_pos.x() >= org_reverse_front_finger_pos.x() >= org_reverse_front_wrist_pos.x())) :
+                                            # 変換先の方が大きくて、ある程度離れていて、かつ指が両手首の間にある場合、手の大きさを考慮する
 
                                             # 元モデルの手首から指３までで最も手首から離れている距離
                                             org_farer_finger_length = calc_farer_finger_length(org_front_finger_global_3ds, all_org_finger_indexes, direction)
@@ -775,11 +786,6 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
 
                                         if finger_links:
                                             # 指があるモデルの場合、手首角度調整
-
-                                            # 元モデルの正面向き指の位置
-                                            org_front_finger_pos = org_front_finger_global_3ds[len(org_front_finger_global_3ds) - all_org_finger_indexes[direction]["人指３"] - 1]
-                                            # 元モデルの正面向き指の位置(反対側)
-                                            org_reverse_front_finger_pos = org_reverse_front_finger_global_3ds[len(org_reverse_front_finger_global_3ds) - all_org_finger_indexes[reverse_direction]["人指３"] - 1]
 
                                             # 手首の位置が変わっているので再算出
 
