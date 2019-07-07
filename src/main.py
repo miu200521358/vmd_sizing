@@ -1870,12 +1870,12 @@ def calc_upper_direction_qq(model, links, frames, bf):
 
         total_qq *= rot
 
-    # Y軸の回転だけを抽出する
-    total_y_qq = QQuaternion.fromEulerAngles(0, total_qq.toEulerAngles().y(), 0)
+    # # Y軸の回転だけを抽出する
+    # total_y_qq = QQuaternion.fromEulerAngles(0, total_qq.toEulerAngles().y(), 0)
 
-    logger.debug("total_y_qq: %s", total_y_qq.toEulerAngles())
+    # logger.debug("total_y_qq: %s", total_y_qq.toEulerAngles())
 
-    return total_y_qq
+    return total_qq
 
 
 def calc_arm_stance(trace_model, all_org_wrist_links, replace_model, all_replace_wrist_links, direction):
