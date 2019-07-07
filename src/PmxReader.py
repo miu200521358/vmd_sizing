@@ -36,7 +36,7 @@ class PmxReader():
         version = self.read_float()        
         logger.debug("version: %s (%s)", version, self.offset)
         
-        if signature != b"PMX " or ( version != 2.0 and version != 2.1 ):
+        if signature[:3] != b"PMX" or ( version != 2.0 and version != 2.1 ):
             # 整合性チェック
             raise ParseException("PMX2.0/2.1形式外のデータです。signature: {0}, version: {1} ".format(signature, version))
         

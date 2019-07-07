@@ -89,35 +89,46 @@ class PmxModel():
     
     # 手首ウェイトの最下頂点の位置を取得する
     def get_wrist_below_position(self, direction, arm_qq, wrist_pos):
-
+        
         min_wrist_below_pos = QVector3D(0, 99999, 0)
-        for v in self.vertices:
-            # 一旦水平にしたときの頂点位置を算出
-            # mat = QMatrix4x4()
-            # mat.rotate(arm_qq.inverted())
-            # v_pos = mat.mapVector(v.position - self.bones["{0}ひじ".format(direction)].position)
-            v_pos = arm_qq.inverted().rotatedVector(v.position - self.bones["{0}ひじ".format(direction)].position)
-            # logger.debug("v_pos: %s", v_pos)
+        for is_x in [True, False]:
+            # X範囲を制限するか否か
+            for v in self.vertices:
+                # 一旦水平にしたときの頂点位置を算出
+                # mat = QMatrix4x4()
+                # mat.rotate(arm_qq.inverted())
+                # v_pos = mat.mapVector(v.position - self.bones["{0}ひじ".format(direction)].position)
+                v_pos = arm_qq.inverted().rotatedVector(v.position - self.bones["{0}ひじ".format(direction)].position)
+                # logger.debug("v_pos: %s", v_pos)
 
-            for l in self.bones.values():
-                # if "{0}手首".format(direction) in l.name and v.is_deform_index(l.index) and v_pos.x() - 0.1 <= wrist_pos.x() <= v_pos.x() + 0.1 and v_pos.y() < min_wrist_below_pos.y():
-                if "{0}手首".format(direction) in l.name and v.is_deform_index(l.index) and v_pos.y() < min_wrist_below_pos.y():
-                    # if type(v.deform) is PmxModel.Bdef1:
-                    #     logger.debug("Bdef1: idx: %s, target: %s, index0: %s", v.index, l.index, v.deform.index0)
-                    # elif type(v.deform) is PmxModel.Bdef2:
-                    #     logger.debug("Bdef2: idx: %s, target: %s, index0: %s,  index1: %s", v.index, l.index, v.deform.index0, v.deform.index1)
-                    # elif type(v.deform) is PmxModel.Bdef4:
-                    #     logger.debug("Bdef4: idx: %s, target: %s, index0: %s,  index1: %s,  index2: %s,  index3: %s", v.index, l.index, v.deform.index0, v.deform.index1, v.deform.index2, v.deform.index3)
-                    # elif type(v.deform) is PmxModel.Sdef:
-                    #     logger.debug("Sdef: idx: %s, target: %s, index0: %s,  index1: %s", v.index, l.index, v.deform.index0, v.deform.index1)
-                    # elif type(v.deform) is PmxModel.Qdef:
-                    #     logger.debug("Qdef: idx: %s, target: %s, index0: %s,  index1: %s", v.index, l.index, v.deform.index0, v.deform.index1)
+                for l in self.bones.values():
+                    if "{0}手首".format(direction) in l.name and v.is_deform_index(l.index) and v_pos.y() < min_wrist_below_pos.y() and ((is_x and v_pos.x() - 0.1 <= wrist_pos.x() <= v_pos.x() + 0.1) or not is_x):
+                        # if type(v.deform) is PmxModel.Bdef1:
+                        #     logger.debug("Bdef1: idx: %s, target: %s, index0: %s", v.index, l.index, v.deform.index0)
+                        # elif type(v.deform) is PmxModel.Bdef2:
+                        #     logger.debug("Bdef2: idx: %s, target: %s, index0: %s,  index1: %s", v.index, l.index, v.deform.index0, v.deform.index1)
+                        # elif type(v.deform) is PmxModel.Bdef4:
+                        #     logger.debug("Bdef4: idx: %s, target: %s, index0: %s,  index1: %s,  index2: %s,  index3: %s", v.index, l.index, v.deform.index0, v.deform.index1, v.deform.index2, v.deform.index3)
+                        # elif type(v.deform) is PmxModel.Sdef:
+                        #     logger.debug("Sdef: idx: %s, target: %s, index0: %s,  index1: %s", v.index, l.index, v.deform.index0, v.deform.index1)
+                        # elif type(v.deform) is PmxModel.Qdef:
+                        #     logger.debug("Qdef: idx: %s, target: %s, index0: %s,  index1: %s", v.index, l.index, v.deform.index0, v.deform.index1)
 
-                    # 手首のボーンにウェイトが乗っていて、かつ最下の頂点より下の場合、保持
-                    min_wrist_below_pos = v_pos
-                    # print("min_wrist_below_pos: %s, %s, %s, %s, %s" % (l.index, l.name, v.index, v.position, v_pos))
+                        # 手首のボーンにウェイトが乗っていて、かつ最下の頂点より下の場合、保持
+                        min_wrist_below_pos = v_pos
+                        # print("min_wrist_below_pos: %s, %s, %s, %s, %s" % (l.index, l.name, v.index, v.position, v_pos))
+            
+            if min_wrist_below_pos == QVector3D(0, 99999, 0):
+                # X制限をして見つからなかった場合、制限しないでチェック
+                continue
+            else:
+                # X制限をして見つかった場合、終了
+                break
 
-        # 元の位置に戻して返す
+        # X制限ありなし両方で見つからなかった場合、手首位置を返して結果0にする
+        if min_wrist_below_pos == QVector3D(0, 99999, 0):
+            return wrist_pos
+
         return min_wrist_below_pos
 
     # 自身の腕の角度を算出する
