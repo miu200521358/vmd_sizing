@@ -205,19 +205,22 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                     # 腕
                     for bf in motion.frames[dlist["腕"]]:
                         if bf.key == True:
+                            logger.debug("f: %s, 腕: %s, 補正腕: %s", bf.frame, bf.rotation.toEulerAngles(), arm_stance_qqs["腕"].inverted().toEulerAngles())
                             bf.rotation = bf.rotation * arm_stance_qqs["腕"].inverted()
 
                 if dlist["ひじ"] in motion.frames:
                     # ひじ
                     for bf in motion.frames[dlist["ひじ"]]:
                         if bf.key == True:
+                            logger.debug("f: %s, ひじ: %s, 補正ひじ: %s", bf.frame, bf.rotation.toEulerAngles(), arm_stance_qqs["ひじ"].inverted().toEulerAngles())
                             bf.rotation = arm_stance_qqs["腕"] * bf.rotation * arm_stance_qqs["ひじ"].inverted()
 
                 if dlist["手首"] in motion.frames:
                     # 手首
                     for bf in motion.frames[dlist["手首"]]:
                         if bf.key == True:
-                            bf.rotation = arm_stance_qqs["ひじ"] * bf.rotation * arm_stance_qqs["手首"].inverted() * arm_stance_qqs["腕"].inverted()
+                            logger.debug("f: %s, ひじ: %s, 腕: %s, 手首: %s, 補正手首: %s", bf.frame,  arm_stance_qqs["ひじ"].toEulerAngles(), arm_stance_qqs["腕"].inverted().toEulerAngles(), bf.rotation.toEulerAngles(), arm_stance_qqs["手首"].inverted().toEulerAngles())
+                            bf.rotation = bf.rotation * arm_stance_qqs["手首"].inverted()
 
         # -----------------------------------------------------------------
         # 頭部と腕の接触回避処理        
@@ -745,37 +748,37 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                         rep_wrist_pos = create_direction_pos(rep_upper_direction_qq, rep_front_wrist_pos)
                                         logger.debug("frame: %s, rep_wrist_pos after: %s", bf.frame, rep_wrist_pos)
 
-                                        # ---------
-                                        wrist_ik_bone = "{0}偽IK".format(direction)
-                                        if not wrist_ik_bone in motion.frames:
-                                            motion.frames[wrist_ik_bone] = []
+                                        # # ---------
+                                        # wrist_ik_bone = "{0}偽IK".format(direction)
+                                        # if not wrist_ik_bone in motion.frames:
+                                        #     motion.frames[wrist_ik_bone] = []
                                         
-                                        wikbf = VmdBoneFrame(bf.frame)
-                                        wikbf.name = wrist_ik_bone.encode('shift-jis')
-                                        wikbf.format_name = wrist_ik_bone
-                                        wikbf.frame = bf.frame
-                                        wikbf.key = True
-                                        wikbf.position = rep_wrist_pos
-                                        motion.frames[wrist_ik_bone].append(wikbf)
-                                        # ---------
+                                        # wikbf = VmdBoneFrame(bf.frame)
+                                        # wikbf.name = wrist_ik_bone.encode('shift-jis')
+                                        # wikbf.format_name = wrist_ik_bone
+                                        # wikbf.frame = bf.frame
+                                        # wikbf.key = True
+                                        # wikbf.position = rep_wrist_pos
+                                        # motion.frames[wrist_ik_bone].append(wikbf)
+                                        # # ---------
 
                                         # 変換先モデルの向きを元に戻して、正面向きの手首を回転させた位置に合わせる(反対側)
                                         rep_reverse_wrist_pos = create_direction_pos(rep_upper_direction_qq, rep_reverse_front_wrist_pos)
                                         logger.debug("frame: %s, rep_reverse_wrist_pos after: %s", bf.frame, rep_reverse_wrist_pos)
 
-                                        # ---------
-                                        reverse_wrist_ik_bone = "{0}偽IK".format(reverse_direction)
-                                        if not reverse_wrist_ik_bone in motion.frames:
-                                            motion.frames[reverse_wrist_ik_bone] = []
+                                        # # ---------
+                                        # reverse_wrist_ik_bone = "{0}偽IK".format(reverse_direction)
+                                        # if not reverse_wrist_ik_bone in motion.frames:
+                                        #     motion.frames[reverse_wrist_ik_bone] = []
                                         
-                                        rwikbf = VmdBoneFrame(bf.frame)
-                                        rwikbf.name = reverse_wrist_ik_bone.encode('shift-jis')
-                                        rwikbf.format_name = reverse_wrist_ik_bone
-                                        rwikbf.frame = bf.frame
-                                        rwikbf.key = True
-                                        rwikbf.position = rep_reverse_wrist_pos
-                                        motion.frames[reverse_wrist_ik_bone].append(rwikbf)
-                                        # ---------
+                                        # rwikbf = VmdBoneFrame(bf.frame)
+                                        # rwikbf.name = reverse_wrist_ik_bone.encode('shift-jis')
+                                        # rwikbf.format_name = reverse_wrist_ik_bone
+                                        # rwikbf.frame = bf.frame
+                                        # rwikbf.key = True
+                                        # rwikbf.position = rep_reverse_wrist_pos
+                                        # motion.frames[reverse_wrist_ik_bone].append(rwikbf)
+                                        # # ---------
 
                                         # 手首位置から角度を求める
                                         calc_arm_IK2FK(rep_wrist_pos, replace_model, arm_links[direction], all_rep_wrist_links[direction], direction, motion.frames, bf, prev_space_bf)
