@@ -262,70 +262,72 @@ class VmdReader():
         try:
             motion.shadow_cnt = self.read_uint(4)
             logger.debug("motion.shadow_cnt %s", motion.shadow_cnt)
+
+            # 1F分のシャドウ情報
+            for _ in range(motion.shadow_cnt):
+                shadow = VmdShadowFrame()
+                            
+                # フレームIDX
+                shadow.frame = self.read_uint(4)
+                logger.debug("shadow.frame %s", shadow.frame)     
+
+                # シャドウ種別
+                shadow.type = self.read_uint(1)
+                logger.debug("shadow.type %s", shadow.type)            
+
+                # 距離
+                shadow.distance = self.read_float()
+                logger.debug("shadow.distance %s", shadow.distance)            
+                
+                # 追加
+                motion.shadows.append(shadow)
+
         except Exception as e:
             # 情報がない場合、catchして握りつぶす
             motion.shadow_cnt = 0
         
-        # 1F分のシャドウ情報
-        for _ in range(motion.shadow_cnt):
-            shadow = VmdShadowFrame()
-                        
-            # フレームIDX
-            shadow.frame = self.read_uint(4)
-            logger.debug("shadow.frame %s", shadow.frame)     
-
-            # シャドウ種別
-            shadow.type = self.read_uint(1)
-            logger.debug("shadow.type %s", shadow.type)            
-
-            # 距離
-            shadow.distance = self.read_float()
-            logger.debug("shadow.distance %s", shadow.distance)            
-            
-            # 追加
-            motion.shadows.append(shadow)
-
         # IK数
         try:
             motion.ik_cnt = self.read_uint(4)
             logger.debug("motion.ik_cnt %s", motion.ik_cnt)
+
+            # 1F分のIK情報
+            for _ in range(motion.ik_cnt):
+                ik = VmdShowIkFrame()
+                            
+                # フレームIDX
+                ik.frame = self.read_uint(4)
+                logger.debug("ik.frame %s", ik.frame)     
+
+                # モデル表示, 0:OFF, 1:ON
+                ik.show = self.read_uint(1)
+                logger.debug("ik.show %s", ik.show)            
+
+                # 記録するIKの数
+                ik.ik_count = self.read_uint(4)
+                logger.debug("ik.ik_count %s", ik.ik_count)     
+
+                for _ in range(ik.ik_count):
+                    ik_info = VmdInfoIk()
+
+                    # IK名
+                    ik_bname, ik_name = self.read_text(20)
+                    ik_info.name = ik_bname
+                    logger.debug("ik_info.name %s", ik_name)            
+
+                    # モデル表示, 0:OFF, 1:ON
+                    ik_info.onoff = self.read_uint(1)
+                    logger.debug("ik_info.onoff %s", ik_info.onoff)            
+
+                    ik.ik.append(ik_info)  
+
+                # 追加
+                motion.showiks.append(ik)       
+                            
         except Exception as e:
             # 昔のMMD（MMDv7.39.x64以前）はIK情報がないため、catchして握りつぶす
             motion.ik_cnt = 0
         
-        # 1F分のIK情報
-        for _ in range(motion.ik_cnt):
-            ik = VmdShowIkFrame()
-                        
-            # フレームIDX
-            ik.frame = self.read_uint(4)
-            logger.debug("ik.frame %s", ik.frame)     
-
-            # モデル表示, 0:OFF, 1:ON
-            ik.show = self.read_uint(1)
-            logger.debug("ik.show %s", ik.show)            
-
-            # 記録するIKの数
-            ik.ik_count = self.read_uint(4)
-            logger.debug("ik.ik_count %s", ik.ik_count)     
-
-            for _ in range(ik.ik_count):
-                ik_info = VmdInfoIk()
-
-                # IK名
-                ik_bname, ik_name = self.read_text(20)
-                ik_info.name = ik_bname
-                logger.debug("ik_info.name %s", ik_name)            
-
-                # モデル表示, 0:OFF, 1:ON
-                ik_info.onoff = self.read_uint(1)
-                logger.debug("ik_info.onoff %s", ik_info.onoff)            
-
-                ik.ik.append(ik_info)  
-
-            # 追加
-            motion.showiks.append(ik)       
-            
         return motion            
                     
     

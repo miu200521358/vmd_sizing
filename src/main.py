@@ -1900,12 +1900,20 @@ def calc_arm_stance(trace_model, all_org_wrist_links, replace_model, all_replace
 def calc_arm_stance_rotation(model, wrist_links, fbone, tbone, direction):
     from_pos = QVector3D()
     to_pos = QVector3D()
+    tail_pos = QVector3D()
 
     for fk, fv in enumerate(wrist_links):
         if fv.name.endswith(fbone):
             from_pos = fv.position
+            if fv.tail_position != QVector3D:
+                # 表示先が相対パスの場合、保持
+                tail_pos = fv.tail_position
         if fv.name.endswith(tbone):
             to_pos = fv.position
+    
+    if to_pos == QVector3D() and tail_pos != QVector3D():
+        to_pos = tail_pos
+        logger.debug("to_pos 置換: %s", to_pos)
 
     from_qq = QQuaternion()
     if from_pos != QVector3D and to_pos != QVector3D:
