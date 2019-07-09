@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00β", pos = wx.DefaultPosition, size = wx.Size( 500,610 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00", pos = wx.DefaultPosition, size = wx.Size( 500,610 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -662,7 +662,7 @@ class VmdSizingForm3 ( wx.Frame ):
 						if vc_idx >= 0 and rc_idx >= 0 and len(vc.GetString(vc_idx)) > 0 and len(rc.GetString(rc_idx)) > 0:
 							# Prefixを除去して追加する
 							self.vmd_choice_values.append(vc.GetString(vc_idx)[3:])
-							self.rep_choice_values.append(rc.GetString(rc_idx)[1:])
+							self.rep_choice_values.append(rc.GetString(rc_idx)[2:])
 							# 念のため、丸め
 							self.rep_rate_values.append(round(rr.GetValue(), 10))
 					

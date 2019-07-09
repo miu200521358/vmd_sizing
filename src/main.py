@@ -182,6 +182,10 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
             left_arm_stance_qqs = calc_arm_stance(trace_model, all_org_wrist_links, replace_model, all_rep_wrist_links, "左")
             right_arm_stance_qqs = calc_arm_stance(trace_model, all_org_wrist_links, replace_model, all_rep_wrist_links, "右")
 
+            # for lak, lav in left_arm_stance_qqs.items():
+            #     logger.info("lak: %s, lav: %s", lak, lav.toEulerAngles())
+            #     logger.info("lak: %s,lavi: %s", lak, lav.inverted().toEulerAngles())
+
             for dlist in all_d_list:
                 # 方向
                 direction = "左" if "左肩" == dlist["肩"] else "右"
@@ -205,22 +209,19 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                     # 腕
                     for bf in motion.frames[dlist["腕"]]:
                         if bf.key == True:
-                            logger.debug("f: %s, 腕: %s, 補正腕: %s", bf.frame, bf.rotation.toEulerAngles(), arm_stance_qqs["腕"].inverted().toEulerAngles())
-                            bf.rotation = bf.rotation * arm_stance_qqs["腕"].inverted()
+                            bf.rotation = bf.rotation * arm_stance_qqs["腕"]
 
                 if dlist["ひじ"] in motion.frames:
                     # ひじ
                     for bf in motion.frames[dlist["ひじ"]]:
                         if bf.key == True:
-                            logger.debug("f: %s, ひじ: %s, 補正ひじ: %s", bf.frame, bf.rotation.toEulerAngles(), arm_stance_qqs["ひじ"].inverted().toEulerAngles())
-                            bf.rotation = arm_stance_qqs["腕"] * bf.rotation * arm_stance_qqs["ひじ"].inverted()
+                            bf.rotation = arm_stance_qqs["腕"].inverted() * bf.rotation * arm_stance_qqs["ひじ"]
 
                 if dlist["手首"] in motion.frames:
                     # 手首
                     for bf in motion.frames[dlist["手首"]]:
                         if bf.key == True:
-                            logger.debug("f: %s, ひじ: %s, 腕: %s, 手首: %s, 補正手首: %s", bf.frame,  arm_stance_qqs["ひじ"].toEulerAngles(), arm_stance_qqs["腕"].inverted().toEulerAngles(), bf.rotation.toEulerAngles(), arm_stance_qqs["手首"].inverted().toEulerAngles())
-                            bf.rotation = bf.rotation * arm_stance_qqs["手首"].inverted()
+                            bf.rotation = bf.rotation * arm_stance_qqs["手首"]
 
         # -----------------------------------------------------------------
         # 頭部と腕の接触回避処理        
@@ -349,10 +350,18 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
             logger.debug("rep_wrist_thickness: l: %s, r: %s", rep_wrist_thickness["左"], rep_wrist_thickness["右"])
 
             # 左右の手首の厚み
-            wrist_thickness = {
-                "左": abs(rep_wrist_thickness["左"] - org_wrist_thickness["左"]) * arm_palm_diff_length,
-                "右": abs(rep_wrist_thickness["右"] - org_wrist_thickness["右"]) * arm_palm_diff_length
-            }
+            if rep_wrist_thickness["左"] == 0 or org_wrist_thickness["左"] == 0 or rep_wrist_thickness["右"] == 0 or org_wrist_thickness["右"] == 0:
+                print("手首の厚みが正常に測れなかったため、厚みを考慮できません。")
+                # 手首の厚みが取得できなかった場合、0で固定
+                wrist_thickness = {
+                    "左": 0,
+                    "右": 0
+                }
+            else:
+                wrist_thickness = {
+                    "左": abs(rep_wrist_thickness["左"] - org_wrist_thickness["左"]) * arm_palm_diff_length,
+                    "右": abs(rep_wrist_thickness["右"] - org_wrist_thickness["右"]) * arm_palm_diff_length
+                }
             # if palm_diff_length < 1:
             #     wrist_thickness = {
             #         "左": abs(rep_wrist_thickness["左"] - (org_wrist_thickness["左"] * palm_diff_length)),
@@ -400,7 +409,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
             for f in range(motion.last_motion_frame + 1):
                 is_checked = False
 
-                for k in ["左肩", "左腕", "左ひじ", "左手首", "右肩", "右腕", "右ひじ", "右手首"]:
+                for k in ["左腕", "左ひじ", "左手首", "右腕", "右ひじ", "右手首"]:
                     for bf_idx, bf in enumerate(motion.frames[k]):
                         if bf.frame == f:
                             # 該当フレームの場合
@@ -430,7 +439,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                                         fillbf.key = False
 
                                                         motion.frames[al.name].insert(tbf_idx, fillbf)
-                                                        logger.debug("fill insert: %s, i: %s, f: %s", al.name, tbf_idx, fillbf.frame)
+                                                        logger.debug("fill insert: %s, i: %s, f: %s, key: %s", al.name, tbf_idx, fillbf.frame, fillbf.key)
 
                                                         is_checked = True
                                                         is_added = True
@@ -463,7 +472,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                         # 両手が終わっててチェック済みならブレイク
                         break
 
-            logger.debug("腕合わせ事前調整終了")
+            print("腕合わせ事前調整終了")
 
             # キーフレーム分割済みのフレーム情報を別保持
             org_fill_motion_frames = copy.deepcopy(motion.frames)
@@ -475,11 +484,11 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
             # ２つ前のキー
             prev_prev_bf = None
             for f in range(motion.last_motion_frame + 1):
-                for k in ["左肩", "左腕", "左ひじ", "左手首", "右肩", "右腕", "右ひじ", "右手首"]:
+                for k in ["左腕", "左ひじ", "左手首", "右腕", "右ひじ", "右手首"]:
                     is_ik_adjust = False
 
                     if k in motion.frames:
-                        for bf_idx, (bf, org_bf) in enumerate(zip(motion.frames[k], org_fill_motion_frames[k])):
+                        for bf_idx, bf in enumerate(motion.frames[k]):
                             if bf.key == True and bf.frame == f:
                                 if prev_bf and bf.frame - prev_bf.frame >= 2:
                                     # 直前キーがあり、かつ現在キーと2フレーム以上離れている場合、保持
@@ -748,37 +757,37 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                         rep_wrist_pos = create_direction_pos(rep_upper_direction_qq, rep_front_wrist_pos)
                                         logger.debug("frame: %s, rep_wrist_pos after: %s", bf.frame, rep_wrist_pos)
 
-                                        # # ---------
-                                        # wrist_ik_bone = "{0}偽IK".format(direction)
-                                        # if not wrist_ik_bone in motion.frames:
-                                        #     motion.frames[wrist_ik_bone] = []
+                                        # ---------
+                                        wrist_ik_bone = "{0}偽IK".format(direction)
+                                        if not wrist_ik_bone in motion.frames:
+                                            motion.frames[wrist_ik_bone] = []
                                         
-                                        # wikbf = VmdBoneFrame(bf.frame)
-                                        # wikbf.name = wrist_ik_bone.encode('shift-jis')
-                                        # wikbf.format_name = wrist_ik_bone
-                                        # wikbf.frame = bf.frame
-                                        # wikbf.key = True
-                                        # wikbf.position = rep_wrist_pos
-                                        # motion.frames[wrist_ik_bone].append(wikbf)
-                                        # # ---------
+                                        wikbf = VmdBoneFrame(bf.frame)
+                                        wikbf.name = wrist_ik_bone.encode('shift-jis')
+                                        wikbf.format_name = wrist_ik_bone
+                                        wikbf.frame = bf.frame
+                                        wikbf.key = True
+                                        wikbf.position = rep_wrist_pos
+                                        motion.frames[wrist_ik_bone].append(wikbf)
+                                        # ---------
 
                                         # 変換先モデルの向きを元に戻して、正面向きの手首を回転させた位置に合わせる(反対側)
                                         rep_reverse_wrist_pos = create_direction_pos(rep_upper_direction_qq, rep_reverse_front_wrist_pos)
                                         logger.debug("frame: %s, rep_reverse_wrist_pos after: %s", bf.frame, rep_reverse_wrist_pos)
 
-                                        # # ---------
-                                        # reverse_wrist_ik_bone = "{0}偽IK".format(reverse_direction)
-                                        # if not reverse_wrist_ik_bone in motion.frames:
-                                        #     motion.frames[reverse_wrist_ik_bone] = []
+                                        # ---------
+                                        reverse_wrist_ik_bone = "{0}偽IK".format(reverse_direction)
+                                        if not reverse_wrist_ik_bone in motion.frames:
+                                            motion.frames[reverse_wrist_ik_bone] = []
                                         
-                                        # rwikbf = VmdBoneFrame(bf.frame)
-                                        # rwikbf.name = reverse_wrist_ik_bone.encode('shift-jis')
-                                        # rwikbf.format_name = reverse_wrist_ik_bone
-                                        # rwikbf.frame = bf.frame
-                                        # rwikbf.key = True
-                                        # rwikbf.position = rep_reverse_wrist_pos
-                                        # motion.frames[reverse_wrist_ik_bone].append(rwikbf)
-                                        # # ---------
+                                        rwikbf = VmdBoneFrame(bf.frame)
+                                        rwikbf.name = reverse_wrist_ik_bone.encode('shift-jis')
+                                        rwikbf.format_name = reverse_wrist_ik_bone
+                                        rwikbf.frame = bf.frame
+                                        rwikbf.key = True
+                                        rwikbf.position = rep_reverse_wrist_pos
+                                        motion.frames[reverse_wrist_ik_bone].append(rwikbf)
+                                        # ---------
 
                                         # 手首位置から角度を求める
                                         calc_arm_IK2FK(rep_wrist_pos, replace_model, arm_links[direction], all_rep_wrist_links[direction], direction, motion.frames, bf, prev_space_bf)
@@ -868,6 +877,8 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
 
                                     # 手首位置合わせ結果判定 ------------
 
+                                    logger.debug("bf: %s, 右腕: %s", bf.frame, motion.frames["左腕"][bf_idx].frame)
+
                                     # d = QQuaternion.dotProduct(bf.rotation, org_bf.rotation)
                                     # rk_name = bf.format_name.replace(direction, reverse_direction)
                                     logger.debug("bf.name: %s, bf_idx: %s, 右肩: %s", bf.format_name, bf_idx, len(motion.frames["右肩"]))
@@ -901,33 +912,48 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                             for al in arm_links[dd]:
                                                 if al.name == cfk:
                                                     if lad >= 0.85 and rad >= 0.85:
-                                                        # 角度調整が既定内である場合、採用
+                                                        # 角度調整が既定内である場合
                                                         motion.frames[cfk][bf_idx].key = True
+                                                        logger.debug("採用: cfk: %s, bf: %s, f: %s, rot: %s", cfk, bf.frame, motion.frames[cfk][bf_idx].frame, motion.frames[cfk][bf_idx].rotation.toEulerAngles())
+
+                                                        # for cfk2, cflist2 in motion.frames.items():
+                                                        #     for cfv2 in cflist2:
+                                                        #         if cfv2.frame == 605:
+                                                        #             logger.debug("採用派生チェック %s: al: %s, key: %s", cfv2.frame, cfv2.format_name, cfv2.key)
+
                                                     else:
                                                         # 角度調整が既定外である場合、クリア
                                                         motion.frames[cfk][bf_idx] = copy.deepcopy(cflist[bf_idx])
                                                         logger.debug("クリア: cfk: %s, bf_idx: %s, rot: %s", cfk, bf_idx, motion.frames[cfk][bf_idx].rotation.toEulerAngles())
                                                     break
 
-                                    # 前フレーム有効化 -----------------
+                                    # # 前フレーム有効化 -----------------
 
-                                    # 調整した場合、前フレームのキーを登録する
-                                    if bf.frame == True and ((prev_space_bf and prev_prev_bf and prev_space_bf.frame - prev_prev_bf.frame >= 2) or (prev_space_bf and not prev_prev_bf)) :
-                                        for d in [org_direction, reverse_org_direction]:
-                                            for n, l in enumerate(reversed(all_rep_finger_links[d])):
-                                                # 指位置調整は実際には手首のみ角度調整で、arm_linksに含まれている
-                                                for al in arm_links[d]:
-                                                    # IK調整対象のみ登録する
-                                                    if al.name == l.name:
-                                                        for tbf_idx, tbf in enumerate(motion.frames[l.name]):
-                                                            # 前のフレームが必要な場合、キーON
-                                                            if tbf.frame == prev_space_bf.frame:
-                                                                tbf.key = True
-                                                                logger.debug("fill ON: %s, i: %s, f: %s", l.name, tbf_idx, tbf.frame)
-                                                                break
+                                    # # 調整した場合、前フレームのキーを登録する
+                                    # if bf.frame == True and ((prev_space_bf and prev_prev_bf and prev_space_bf.frame - prev_prev_bf.frame >= 2) or (prev_space_bf and not prev_prev_bf)) :
+                                    #     for d in [org_direction, reverse_org_direction]:
+                                    #         for n, l in enumerate(reversed(all_rep_finger_links[d])):
+                                    #             # 指位置調整は実際には手首のみ角度調整で、arm_linksに含まれている
+                                    #             for al in arm_links[d]:
+                                    #                 # IK調整対象のみ登録する
+                                    #                 if al.name == l.name:
+                                    #                     for tbf_idx, tbf in enumerate(motion.frames[l.name]):
+                                    #                         # 前のフレームが必要な場合、キーON
+                                    #                         if tbf.frame == prev_space_bf.frame:
+                                    #                             tbf.key = True
+                                    #                             logger.debug("fill ON: %s, bf: %s, i: %s, f: %s", l.name, bf.frame, tbf_idx, tbf.frame)
+                                    #                             break
 
                                 else:
                                     print("－手首近接なし: f: %s(%s), 手首間の距離: %s" % (bf.frame, direction, org_wrist_diff_rate ))
+
+                                    # if bf.frame == 605:
+                                    #     for cfk, cflist in org_fill_motion_frames.items():
+                                    #         for dd in [direction, reverse_direction]:
+                                    #             for al in arm_links[dd]:
+                                    #                 if al.name == cfk:
+                                    #                     logger.debug("近接無し　%s: al: %s, key: %s", bf.frame, al.name, motion.frames[cfk][bf_idx].key)
+
 
                                 # 前々回登録キーとして保持
                                 prev_prev_bf = copy.deepcopy(prev_bf)
@@ -947,6 +973,11 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                     if is_ik_adjust:
                         # 既にIK調整終了していたら片手分のループを抜ける
                         break
+
+            # for cfk2, cflist2 in motion.frames.items():
+            #     for cfv2 in cflist2:
+            #         if cfv2.frame == 605:
+            #             logger.debug("ループ終了 %s: al: %s, key: %s", cfv2.frame, cfv2.format_name, cfv2.key)
             
             # 補間曲線を有効なキーだけに揃える
             for direction in ["左", "右"]:
@@ -984,6 +1015,11 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                 logger.debug("prev x2: %s, y2: %s", prev_bf.complement[R_x2_idxs[0]], prev_bf.complement[R_y2_idxs[0]])
                                 logger.debug("next x1: %s, y1: %s", next_bf.complement[R_x1_idxs[0]], next_bf.complement[R_y1_idxs[0]])
 
+            # for cfk2, cflist2 in motion.frames.items():
+            #     for cfv2 in cflist2:
+            #         if cfv2.frame == 605:
+            #             logger.debug("補間曲線再設定終了 %s: al: %s, key: %s", cfv2.frame, cfv2.format_name, cfv2.key)
+
 
     # モーフ置換
     if len(vmd_choice_values) > 0 and len(rep_choice_values) > 0 and len(rep_rate_values) > 0 and len(vmd_choice_values) == len(rep_choice_values) == len(rep_rate_values):
@@ -1000,6 +1036,11 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                     # モーフの大きさを補正する
                     morph.ratio *= rcr
 
+    # for cfk2, cflist2 in motion.frames.items():
+    #     for cfv2 in cflist2:
+    #         if cfv2.frame == 605:
+    #             logger.debug("モーフ置換終了 %s: al: %s, key: %s", cfv2.frame, cfv2.format_name, cfv2.key)
+
     if motion.camera_cnt > 0:
         print("カメラ調整未対応")
 
@@ -1007,6 +1048,9 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
     bone_frames = []
     for k,v in motion.frames.items():
         for bf in v:
+            # if bf.frame == 605:
+            #     logger.debug("check: %s, %s, %s, %s, %s, %s", k, bf.name, bf.frame, bf.key, bf.position, bf.rotation)
+
             if bf.key == True:
                 # logger.debug("regist: %s, %s, %s, %s, %s", k, bf.name, bf.frame, bf.position, bf.rotation)
                 bone_frames.append(bf)
@@ -1115,8 +1159,8 @@ def calc_arm_IK2FK(target_pos, model, joint_links, all_joint_links, direction, f
                         # logger.debug("補間不要 bf.frame: %s %s", bf.frame, joint_name)
                         # 既存の場合は、それを選ぶ
                         joint = frames[joint_name][jidx]
-                        # 登録対象
-                        joint.key = True
+                        # # 登録対象
+                        # joint.key = True
                         break
                         
             if joint == None:
@@ -1127,8 +1171,8 @@ def calc_arm_IK2FK(target_pos, model, joint_links, all_joint_links, direction, f
                         # logger.debug("補間チェック: jbf: %s, joint: %s", jbf.frame, joint.frame)
                         if jbf.frame > joint.frame:
                             # logger.debug("要補間 bf.frame: %s %s, jidx: %s, jbf: %s, jf: %s", bf.frame, joint_name, jidx, jbf.frame, joint.frame)
-                            # 登録対象とする
-                            # joint.key = True
+                            # # 現時点では登録対象としない
+                            # joint.key = False
                             # フレームを越えたトコで、その直前に挿入
                             frames[joint_name].insert( jidx, joint )
                             break
@@ -1889,7 +1933,7 @@ def calc_arm_stance(trace_model, all_org_wrist_links, replace_model, all_replace
         org_qq = calc_arm_stance_rotation(trace_model, all_org_wrist_links[direction], f, t, direction)
         rep_qq = calc_arm_stance_rotation(replace_model, all_replace_wrist_links[direction], f, t, direction)
 
-        arm_stance_qqs[f] = org_qq.inverted() * rep_qq
+        arm_stance_qqs[f] = rep_qq.inverted() * org_qq
 
         logger.debug("f: %s, org_qq: %s", f, org_qq.toEulerAngles())
         logger.debug("f: %s, rep_qq: %s", f, rep_qq.toEulerAngles())
@@ -1920,12 +1964,12 @@ def calc_arm_stance_rotation(model, wrist_links, fbone, tbone, direction):
         logger.debug("from_pos: %s", from_pos)        
         logger.debug("to_pos: %s", to_pos)        
 
-        to_pos = from_pos - to_pos
+        to_pos = to_pos - from_pos
         to_pos.normalize()
         logger.debug("to_pos: %s", to_pos)        
 
         # 水平からTOボーンまでの回転量
-        direction_x = -1 if direction == "左" else 1
+        direction_x = 1 if direction == "左" else -1
         from_qq = QQuaternion.rotationTo(QVector3D(direction_x, 0, 0), to_pos)
         logger.debug("[z] d: %s, fbone: %s, from_qq: %s", direction, fbone, from_qq.toEulerAngles())
 
@@ -1952,14 +1996,13 @@ def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False
 
     for bidx, bf in enumerate(frames[bone_name]):
         if bf.frame == frameno:
-            if frameno == 279:
+            if frameno == 605:
                 logger.debug("calc_bone_by_complement 同一キーあり: %s, %s", frameno, bone_name)
             # 同一フレームのキーがある場合、それを返す
             fillbf = copy.deepcopy(bf)
-            # fillbf.key = False
             return fillbf
         elif bf.frame > frameno:
-            if frameno == 279:
+            if frameno == 605:
                 logger.debug("calc_bone_by_complement 同一キーなし: %s, %s", frameno, bone_name)
             # 同一フレームのキーがない場合、前のキーIDXを0に見立てて、その間の補間曲線を埋める
             fillbf.name = bf.name

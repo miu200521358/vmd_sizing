@@ -88,6 +88,7 @@ class VmdReader():
         # 1F分のモーション情報
         for n in range(motion.motion_cnt):
             frame = VmdBoneFrame()
+            frame.key = True
             
             # ボーン ----------------------
             # ボーン名
