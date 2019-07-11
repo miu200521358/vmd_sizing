@@ -746,6 +746,10 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                                         motion.frames[cfk][bf_idx].key = True
                                                         logger.debug("採用: cfk: %s, bf: %s, f: %s, rot: %s", cfk, bf.frame, motion.frames[cfk][bf_idx].frame, motion.frames[cfk][bf_idx].rotation.toEulerAngles())
 
+                                                        # 前のキーが1つより多く離れていたら有効化
+                                                        if bf_idx - 1 >= 0 and motion.frames[cfk][bf_idx].frame > motion.frames[cfk][bf_idx - 1].frame + 1:
+                                                            motion.frames[cfk][bf_idx - 1].key = True
+
                                                         # for cfk2, cflist2 in motion.frames.items():
                                                         #     for cfv2 in cflist2:
                                                         #         if cfv2.frame == 605:
@@ -1422,6 +1426,8 @@ def create_matrix_parts(model, links, frames, bf, scales):
                     rot.setScalar(rot.scalar() * -1)
                     # rot.setX(rot.x() * -1)
                     # rot.setScalar(rot.scalar() * -1)
+                
+                rot.normalize()
 
                 degree = degrees(2 * acos(rot.scalar()))
 
