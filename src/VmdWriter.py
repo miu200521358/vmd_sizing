@@ -161,9 +161,20 @@ class VmdWriter():
         if len(bone_frames) > 0 or len(morph_frames) > 0 or len(showik_frames) > 0:
             
             # モデル名を20byteで切る
-            model_bname = model_name.ljust(100).encode('shift-jis')[:20]
-            # 空白は \x00で埋める
-            model_bname = re.sub(b' ', b'\x00', model_bname)
+            model_bname = model_name.encode('shift-jis')[:20]
+            print("model_bname: %s, model_bname_len: %s" % (model_bname, len(model_bname)))
+
+            # 20文字に満たなかった場合、埋める
+            model_bname = model_bname.ljust(20, b'\x00')
+            print("model_bname: %s, model_bname_len: %s" % (model_bname, len(model_bname)))
+
+            # model_bname = model_name.ljust(100).encode('shift-jis')[:20]
+            # print("model_bname: %s" % model_bname)
+            # # 空白は \x00で埋める
+            # while re.search(rb' $', model_bname):
+            #     model_bname = re.sub(rb' $', b'\x00', model_bname)
+            #     print("model_bname while: %s" % model_bname)
+            # print("model_bname after: %s" % model_bname)
 
             # # モデル名をバイト変換して設定
             # model_name_parts = ""
