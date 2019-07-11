@@ -70,7 +70,7 @@ def is_valid_file(file_path, file_type, ext, is_print=True):
     
     return True
 
-def is_all_sizing(motion, org_pmx, rep_pmx):
+def is_all_sizing(motion, org_pmx, rep_pmx, output_vmd_path):
     if org_pmx and rep_pmx and motion:
         not_org_bones = []
         not_org_morphs = []
@@ -106,28 +106,57 @@ def is_all_sizing(motion, org_pmx, rep_pmx):
 
         # 何かしら不足しているか
         is_shortage = False
+        error_file_logger = None
 
         if len(not_org_bones) > 0 or len(not_org_morphs) > 0:
-            print("■■■■■■■■■■■■■■■■■")
-            print("■　**WARNING**　")
-            print("■　トレース元のモデルにモーションで使用されているボーン・モーフが不足しています。")
-            print("■　ボーン: %s" % ",".join(not_org_bones))
-            print("■　モーフ: %s" % ",".join(not_org_morphs))
-            print("■■■■■■■■■■■■■■■■■")
+            if output_vmd_path:
+                # ファイル出力の場合、ログファイル生成
+                error_path = re.sub(r'\.vmd$', ".log", output_vmd_path.lower())
+                error_file_logger = logging.getLogger("error")
+                error_file_logger.addHandler(logging.FileHandler(error_path))
+                error_file_logger.info("モーション: %s" , motion.path)
+                error_file_logger.info("作成元: %s" , org_pmx.path)
+                error_file_logger.info("変換先: %s" , rep_pmx.path)
+
+                print_method = error_file_logger.info
+            else:
+                print_method = print
+
+            print_method("■■■■■■■■■■■■■■■■■")
+            print_method("■　**WARNING**　")
+            print_method("■　トレース元のモデルにモーションで使用されているボーン・モーフが不足しています。")
+            print_method("■　ボーン: %s" % ",".join(not_org_bones))
+            print_method("■　モーフ: %s" % ",".join(not_org_morphs))
+            print_method("■■■■■■■■■■■■■■■■■")
 
             is_shortage = True
 
         if len(not_rep_bones) > 0 or len(not_rep_morphs) > 0:
-            print("■■■■■■■■■■■■■■■■■")
-            print("■　**WARNING**　")
-            print("■　変換後のモデルにモーションで使用されているボーン・モーフが不足しています。")
-            print("■　ボーン: %s" % ",".join(not_rep_bones))
-            print("■　モーフ: %s" % ",".join(not_rep_morphs))
-            print("■■■■■■■■■■■■■■■■■")
+            if output_vmd_path:
+                # ファイル出力の場合、ログファイル生成
+                if not error_file_logger:
+                    error_path = re.sub(r'\.vmd$', ".log", output_vmd_path.lower())
+                    error_file_logger = logging.getLogger("error")
+                    error_file_logger.addHandler(logging.FileHandler(error_path))
+                    error_file_logger.info("モーション: %s" , motion.path)
+                    error_file_logger.info("作成元: %s" , org_pmx.path)
+                    error_file_logger.info("変換先: %s" , rep_pmx.path)
+
+                print_method = error_file_logger.info
+            else:
+                print_method = print
+
+            print_method("■■■■■■■■■■■■■■■■■")
+            print_method("■　**WARNING**　")
+            print_method("■　変換後のモデルにモーションで使用されているボーン・モーフが不足しています。")
+            print_method("■　ボーン: %s" % ",".join(not_rep_bones))
+            print_method("■　モーフ: %s" % ",".join(not_rep_morphs))
+            print_method("■■■■■■■■■■■■■■■■■")
 
             is_shortage = True
 
-        if is_shortage == False:
+        if is_shortage == False and not output_vmd_path:
+            # OKのメッセージはUIログのみ
             print("■■■■■■■■■■■■■■■■■")
             print("■　**OK**　")
             print("■　変換後のモデルにモーションで使用されているボーン・モーフが揃っています。")
@@ -223,15 +252,22 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
                 return False
 
         # VMD読み込み
-        motion = read_vmd(vmd_path)
+        if not motion:
+            motion = read_vmd(vmd_path)
 
         # トレース元モデル
-        org_pmx = read_pmx(org_pmx_path)
+        if not org_pmx:
+            org_pmx = read_pmx(org_pmx_path)
 
         # 変換先モデル
-        rep_pmx = read_pmx(rep_pmx_path)
+        if not rep_pmx:
+            rep_pmx = read_pmx(rep_pmx_path)
+        
+        if motion and org_pmx and rep_pmx:
+            # ファイル出力タイプでサイジングチェック
+            is_all_sizing(motion, org_pmx, rep_pmx, output_vmd_path)
 
-        if motion and org_pmx and read_pmx:
+            # 実処理実行
             main.main(motion, org_pmx, rep_pmx, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, vmd_choice_values, rep_choice_values, rep_rate_values)
         else:
             print("ファイルデータが正しく読み込まれていないようです。\nもう一度ボタンをクリックしてみてください。")
@@ -245,10 +281,12 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
         print("")
         print(e.message)
 
-        error_path = re.sub(r'\.vmd$', "_error.log", output_vmd_path.lower())
+        error_path = re.sub(r'\.vmd$', ".log", output_vmd_path.lower())
         error_file_logger = logging.getLogger("error")
         error_file_logger.addHandler(logging.FileHandler(error_path))
-        error_file_logger.info("vmd: %s" , motion.motion_name)
+        error_file_logger.info("モーション: %s" , motion.path)
+        error_file_logger.info("作成元: %s" , org_pmx.path)
+        error_file_logger.info("変換先: %s" , rep_pmx.path)
         
         error_file_logger.error("■■■■■■■■■■■■■■■■■")
         error_file_logger.error("■　**ERROR**　")
@@ -265,10 +303,12 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
 
         print(traceback.format_exc())
 
-        error_path = re.sub(r'\.vmd$', "_error.log", output_vmd_path.lower())
+        error_path = re.sub(r'\.vmd$', ".log", output_vmd_path.lower())
         error_file_logger = logging.getLogger("error")
         error_file_logger.addHandler(logging.FileHandler(error_path))
-        error_file_logger.info("vmd: %s" , motion.motion_name)
+        error_file_logger.info("モーション: %s" , motion.path)
+        error_file_logger.info("作成元: %s" , org_pmx.path)
+        error_file_logger.info("変換先: %s" , rep_pmx.path)
         
         error_file_logger.error("■■■■■■■■■■■■■■■■■")
         error_file_logger.error("■　**ERROR**　")
