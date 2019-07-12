@@ -322,7 +322,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                                         logger.debug("fill insert: %s, i: %s, f: %s, key: %s", al.name, tbf_idx, fillbf.frame, fillbf.key)
 
                                                         # 一旦有効
-                                                        # fillbf.key = True
+                                                        fillbf.key = True
 
                                                         is_checked = True
                                                         is_added = True
@@ -808,7 +808,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                     break
 
                             # 前の有効なキー
-                            for pbf_idx in range(bf_idx - 1, 0, -1):
+                            for pbf_idx in range(bf_idx - 1, -1, -1):
                                 if motion.frames[al.name][pbf_idx].key == True and motion.frames[al.name][pbf_idx].frame != now_bf.frame:
                                     prev_bf = motion.frames[al.name][pbf_idx]
                                     break
@@ -1541,7 +1541,7 @@ def cal_center_z_offset(trace_model, replace_model, bone_name):
         print("Zオフセットなし: %s: %s" % ( bone_name, replace_model.bones[bone_name].offset_z))
 
 def calc_leg_ik_ratio(trace_model, replace_model):
-    if "左足" in trace_model.bones and "左足" in replace_model.bones and "左ひざ" in trace_model.bones and "左ひざ" in replace_model.bones and "左足首" in trace_model.bones and "左足首" in replace_model.bones:
+    if "左足" in trace_model.bones and "左足" in replace_model.bones and "左ひざ" in trace_model.bones and "左ひざ" in replace_model.bones and "左足首" in trace_model.bones and "左足首" in replace_model.bones and "センター" in trace_model.bones and "センター" in replace_model.bones:
         # XZ比率(足の長さ)
         replace_leg_length = ( (replace_model.bones["左足首"].position - replace_model.bones["左ひざ"].position) + (replace_model.bones["左ひざ"].position - replace_model.bones["左足"].position) ).length()
         trace_leg_length = ( (trace_model.bones["左足首"].position - trace_model.bones["左ひざ"].position) + (trace_model.bones["左ひざ"].position - trace_model.bones["左足"].position) ).length()
@@ -1556,18 +1556,19 @@ def calc_leg_ik_ratio(trace_model, replace_model):
 
         print("足の長さの比率: xz: %s, y: %s" % (xz_ratio, y_ratio))
 
-        # 左足のスタンス距離比
-        l_stance = ((replace_model.bones["左足ＩＫ"].position - replace_model.bones["センター"].position).x()) - ((trace_model.bones["左足ＩＫ"].position - trace_model.bones["センター"].position).x() * xz_ratio)
-        r_stance = ((replace_model.bones["右足ＩＫ"].position - replace_model.bones["センター"].position).x()) - ((trace_model.bones["右足ＩＫ"].position - trace_model.bones["センター"].position).x() * xz_ratio)
+        # # 左足のスタンス距離比
+        # l_stance = ((replace_model.bones["左足ＩＫ"].position - replace_model.bones["センター"].position).x()) - ((trace_model.bones["左足ＩＫ"].position - trace_model.bones["センター"].position).x() * xz_ratio)
+        # r_stance = ((replace_model.bones["右足ＩＫ"].position - replace_model.bones["センター"].position).x()) - ((trace_model.bones["右足ＩＫ"].position - trace_model.bones["センター"].position).x() * xz_ratio)
 
-        logger.debug("replace: %s", (replace_model.bones["左足ＩＫ"].position - replace_model.bones["センター"].position).x())
-        logger.debug("trace: %s", (trace_model.bones["左足ＩＫ"].position - trace_model.bones["センター"].position).x())
-        logger.debug("trace2: %s", ((trace_model.bones["左足ＩＫ"].position - trace_model.bones["センター"].position).x() * xz_ratio))
+        # logger.debug("replace: %s", (replace_model.bones["左足ＩＫ"].position - replace_model.bones["センター"].position).x())
+        # logger.debug("trace: %s", (trace_model.bones["左足ＩＫ"].position - trace_model.bones["センター"].position).x())
+        # logger.debug("trace2: %s", ((trace_model.bones["左足ＩＫ"].position - trace_model.bones["センター"].position).x() * xz_ratio))
 
-        # print("足のスタンス補正値: l: %s, r: %s" % (l_stance, r_stance))
+        # # print("足のスタンス補正値: l: %s, r: %s" % (l_stance, r_stance))
 
-        return xz_ratio, y_ratio, {"左": l_stance, "右": r_stance}
+        return xz_ratio, y_ratio, {"左": 1, "右": 1}
 
+    print("足、ひざ、足首、センターのいずれかのボーンが不足しているため、足の長さの比率が測れませんでした")
     return 1, 1, {"左": 1, "右": 1}
 
 
@@ -1631,11 +1632,18 @@ def calc_upper_direction_qq(model, links, frames, bf):
                 # 回転なしの場合、角度なし
                 degree = 0
             else:
+                # 回転補正
+                if "右" in lbone.name and rot.x() > 0:
+                    rot.setX(rot.x() * -1)
+                    rot.setScalar(rot.scalar() * -1)
+                elif "左" in lbone.name and rot.x() < 0:
+                    rot.setX(rot.x() * -1)
+                    rot.setScalar(rot.scalar() * -1)
+                
+                rot.normalize()
+
                 degree = degrees(2 * acos(rot.scalar()))
             
-            if 665 <= bf.frame <= 670:
-                logger.debug("軸固定: %s, fixed_axis:%s, rot: %s, degree: %s", lbone.name, lbone.fixed_axis, rot, degree)
-                
             # 軸固定の場合、回転を制限する
             rot = QQuaternion.fromAxisAndAngle(lbone.fixed_axis, degree)
     
@@ -1648,6 +1656,7 @@ def calc_upper_direction_qq(model, links, frames, bf):
 
     # logger.debug("total_y_qq: %s", total_y_qq.toEulerAngles())
 
+    # XYZ全方向の回転を参照するため、そのまま返す
     return total_qq
 
 
@@ -1737,14 +1746,17 @@ def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False
             # 実際に登録はしない
             fillbf.key = False
 
+            # if is_calc_complement:
+            #     # 補間曲線を計算する場合、前の有効なキー
+            #     for pbf_idx in range(bidx - 1, -1, -1):
+            #         if frames[bone_name][pbf_idx].key == True:
+            #             prev_bf = frames[bone_name][pbf_idx]
+            #             break
+            # else:
             # 指定されたフレーム直前のキー
             prev_bf = frames[bone_name][bidx - 1]
-
-            # # 前の有効なキー
-            # for pbf_idx in range(bidx - 1, 0, -1):
-            #     if frames[bone_name][pbf_idx].key == True:
-            #         prev_bf = frames[bone_name][pbf_idx]
-            #         break
+            
+            # logger.info("bone_name: %s, bf: %s, bidx: %s", bone_name, bf.frame, bidx)
 
             if prev_bf.rotation != bf.rotation:
                 # 回転補間曲線
@@ -1793,20 +1805,21 @@ def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False
                 # 補間曲線を元々の補間曲線からコピーする
                 fillbf.complement = copy.deepcopy(bf.complement)
 
-                # 分割の始点は、今回の始点と同じ
+                # 分割の始点は、今回の始点
                 fillbf.complement[R_x1_idxs[0]] = fillbf.complement[R_x1_idxs[1]] = fillbf.complement[R_x1_idxs[2]] = fillbf.complement[R_x1_idxs[3]] = bf.complement[R_x1_idxs[3]]
                 fillbf.complement[R_y1_idxs[0]] = fillbf.complement[R_y1_idxs[1]] = fillbf.complement[R_y1_idxs[2]] = fillbf.complement[R_y1_idxs[3]] = bf.complement[R_y1_idxs[3]]
 
-                # 分割の終点は、補間曲線の移動部分
-                fillbf.complement[R_x2_idxs[0]] = fillbf.complement[R_x2_idxs[1]] = fillbf.complement[R_x2_idxs[2]] = fillbf.complement[R_x2_idxs[3]] = round(bf.complement[R_x2_idxs[3]] * rx)
-                fillbf.complement[R_y2_idxs[0]] = fillbf.complement[R_y2_idxs[1]] = fillbf.complement[R_y2_idxs[2]] = fillbf.complement[R_y2_idxs[3]] = round(bf.complement[R_y2_idxs[3]] * rn)
+                # 分割の終点は、今回の終点の補間曲線移動部分
+                fillbf.complement[R_x2_idxs[0]] = fillbf.complement[R_x2_idxs[1]] = fillbf.complement[R_x2_idxs[2]] = fillbf.complement[R_x2_idxs[3]] = 127 - round((127 - bf.complement[R_x2_idxs[3]]) * rx)
+                fillbf.complement[R_y2_idxs[0]] = fillbf.complement[R_y2_idxs[1]] = fillbf.complement[R_y2_idxs[2]] = fillbf.complement[R_y2_idxs[3]] = 127 - round(bf.complement[R_y2_idxs[3]] * rn)
 
-                # 今回の始点は、補間曲線の開始の残り部分
-                bf.complement[R_x1_idxs[0]] = bf.complement[R_x1_idxs[1]] = bf.complement[R_x1_idxs[2]] = bf.complement[R_x1_idxs[3]] = round(bf.complement[R_x1_idxs[3]] * (1 - rx))
-                bf.complement[R_y1_idxs[0]] = bf.complement[R_y1_idxs[1]] = bf.complement[R_y1_idxs[2]] = bf.complement[R_y1_idxs[3]] = round(bf.complement[R_y1_idxs[3]] * (1 - rn))
-                logger.debug("next_bf.x1: %s, next_bf.y1: %s", prev_bf.complement[R_x1_idxs[3]], prev_bf.complement[R_y1_idxs[3]])
+                # 今回の始点は、今回の終点の補間曲線移動残り部分
+                bf.complement[R_x1_idxs[0]] = bf.complement[R_x1_idxs[1]] = bf.complement[R_x1_idxs[2]] = bf.complement[R_x1_idxs[3]] = round((127 - bf.complement[R_x2_idxs[3]]) * rx)
+                bf.complement[R_y1_idxs[0]] = bf.complement[R_y1_idxs[1]] = bf.complement[R_y1_idxs[2]] = bf.complement[R_y1_idxs[3]] = round(bf.complement[R_y2_idxs[3]] * rn)
                     
-                # 今回の終点は変わらず
+                # # 今回の終点は、今回の終点を補間曲線移動残り分
+                # bf.complement[R_x2_idxs[0]] = fillbf.complement[R_x2_idxs[1]] = fillbf.complement[R_x2_idxs[2]] = fillbf.complement[R_x2_idxs[3]] = round(bf.complement[R_x2_idxs[3]] * rx)
+                # bf.complement[R_y2_idxs[0]] = fillbf.complement[R_y2_idxs[1]] = fillbf.complement[R_y2_idxs[2]] = fillbf.complement[R_y2_idxs[3]] = round(bf.complement[R_y2_idxs[3]] * rn)
 
             return fillbf
 

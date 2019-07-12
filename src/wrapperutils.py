@@ -3,6 +3,7 @@
 
 import os.path
 import traceback
+import copy
 from datetime import datetime
 from pathlib import Path
 from PyQt5.QtGui import QQuaternion, QVector3D
@@ -268,7 +269,8 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
             is_all_sizing(motion, org_pmx, rep_pmx, output_vmd_path)
 
             # 実処理実行
-            main.main(motion, org_pmx, rep_pmx, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, vmd_choice_values, rep_choice_values, rep_rate_values)
+            # 読み込んだモーションデータそのものを弄らないよう、コピーした結果を渡す
+            main.main(copy.deepcopy(motion), org_pmx, rep_pmx, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, vmd_choice_values, rep_choice_values, rep_rate_values)
         else:
             print("ファイルデータが正しく読み込まれていないようです。\nもう一度ボタンをクリックしてみてください。")
             return False

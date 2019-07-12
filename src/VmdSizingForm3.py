@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00β33", pos = wx.DefaultPosition, size = wx.Size( 500,610 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00β34", pos = wx.DefaultPosition, size = wx.Size( 500,610 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -391,6 +391,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		# Set up event handler for any worker thread results
 		EVT_RESULT(self, self.OnResult)
+		READ_EVT_RESULT(self, self.OnReadResult)
 
 		# And indicate we don't have a worker thread yet
 		self.worker = None
@@ -475,7 +476,7 @@ class VmdSizingForm3 ( wx.Frame ):
 						# 元モデルにないモーフ追加
 						for vmk in self.vmd_data.morphs.keys():
 							if vmk not in self.org_pmx_data.morphs.keys() and (len(self.vmd_data.morphs[vmk]) > 1 or self.vmd_data.morphs[vmk][0].ratio != 0):
-								if vmk in self.rep_pmx_data.morphs.keys() and self.rep_pmx_data.morphs[mk].display == True:
+								if vmk in self.rep_pmx_data.morphs.keys() and self.rep_pmx_data.morphs[vmk].display == True:
 									# 置換先にある場合は○
 									self.vmd_morphs.append("？●:" + vmk)
 								else:
@@ -690,9 +691,17 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_btnExec.Enable()
 		# プログレス非表示
 		self.m_Gauge.SetValue(0)
-		# モーションデータクリア
-		self.vmd_data = None
-	
+
+	# スレッド実行結果
+	def OnReadResult(self, event):
+		if len(self.read_workers) > 0:
+			# 読み込みスレッドが動いている場合、delする
+			del self.read_workers[0]
+			logger.debug("read_workers: %s", len(self.read_workers))
+
+		# プログレス非表示
+		self.m_Gauge.SetValue(0)
+		
 	def ShowTraceModel(self, event):
 		if wrapperutils.is_valid_file(self.m_fileVmd.GetPath(), "調整対象VMDファイル", ".vmd", False) == False:
 			return False
@@ -724,10 +733,15 @@ class VmdSizingForm3 ( wx.Frame ):
 
 # Define notification event for thread completion
 EVT_RESULT_ID = wx.NewId()
+READ_EVT_RESULT_ID = wx.NewId()
 
 def EVT_RESULT(win, func):
 	"""Define Result Event."""
 	win.Connect(-1, -1, EVT_RESULT_ID, func)
+
+def READ_EVT_RESULT(win, func):
+	"""Define Result Event."""
+	win.Connect(-1, -1, READ_EVT_RESULT_ID, func)
 
 class ResultEvent(wx.PyEvent):
 	"""Simple event to carry arbitrary result data."""
@@ -741,7 +755,7 @@ class ReadResultEvent(wx.PyEvent):
 	def __init__(self, data, target_ctrl, label_ctrl):
 		"""Init Result Event."""
 		wx.PyEvent.__init__(self)
-		self.SetEventType(EVT_RESULT_ID)
+		self.SetEventType(READ_EVT_RESULT_ID)
 
 		if data:
 			print("■解析成功　{0}: {1}".format(label_ctrl.GetLabel(), target_ctrl.GetPath()))
