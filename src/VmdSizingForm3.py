@@ -586,7 +586,17 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.ClearMorph()
 		
 		if wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, False) == False:
-			# 読み込めるファイルではない場合、そのまま終了
+			# 読み込めるファイルではない場合、オブジェクトをクリアして終了
+
+			if target_ctrl == self.m_fileVmd:
+				self.vmd_data = None
+
+			if target_ctrl == self.m_fileOrgPmx:
+				self.org_pmx_data = None
+
+			if target_ctrl == self.m_fileRepPmx:
+				self.rep_pmx_data = None
+
 			return False
 
 		"""Start Computation."""
