@@ -154,7 +154,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_panelMorphHeader = wx.Panel( self.m_panelMorph, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		bSizer10 = wx.BoxSizer( wx.VERTICAL )
 
-		self.m_staticText132 = wx.StaticText( self.m_panelMorphHeader, wx.ID_ANY, u"モーションに使用されているモーフを、\n変換先モデルにある任意のモーフに置き換える事ができます。\nモーションモーフプルダウンの先頭記号は以下の通りです。\n○　…　モーション・生成元モデル・変換先モデルすべてにあるモーフ\n●　…　モーション・変換先モデルにあり、生成元モデルにないモーフ\n▲　…　モーションにあり、生成元モデル・変換先モデルにないモーフ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText132 = wx.StaticText( self.m_panelMorphHeader, wx.ID_ANY, u"モーションに使用されているモーフを、\n変換先モデルにある任意のモーフに置き換える事ができます。\nモーションモーフプルダウンの先頭記号は以下の通りです。\n○　…　モーション・生成元モデル・変換先モデルすべてにあるモーフ\n●　…　モーション・変換先モデルにあり、生成元モデルにないモーフ\n▲　…　モーション・生成元モデルにあり、変換先モデルにないモーフ", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText132.Wrap( -1 )
 		bSizer10.Add( self.m_staticText132, 0, wx.ALL, 5 )
 
@@ -436,6 +436,18 @@ class VmdSizingForm3 ( wx.Frame ):
 	
 	def OnTabChange(self, event):
 		if self.m_note.GetSelection() == 1:
+			if self.vmd_data == None:
+				# まだ読み込めていない場合、VMD読み込み
+				self.vmd_data = wrapperutils.read_vmd(self.m_fileVmd.GetPath(), self.m_staticText9.GetLabel(), False)
+
+			if self.org_pmx_data == None:
+				# まだ読み込めていない場合、PMX読み込み
+				self.org_pmx_data = wrapperutils.read_pmx(self.m_fileOrgPmx.GetPath(), self.m_staticText10.GetLabel(), False)
+
+			if self.rep_pmx_data == None:
+				# まだ読み込めていない場合、PMX読み込み
+				self.rep_pmx_data = wrapperutils.read_pmx(self.m_fileRepPmx.GetPath(), self.m_staticText11.GetLabel(), False)
+
 			if not self.vmd_data or not self.org_pmx_data or not self.rep_pmx_data:
 				dialog = wx.MessageDialog(self, "ファイルの指定が不足しているため、「モーフ」タブはまだ開けません\n詳しくはメッセージ欄をご確認ください。", 'ファイル指定が不足しています', style=wx.OK)
 				dialog.ShowModal()
@@ -650,11 +662,11 @@ class VmdSizingForm3 ( wx.Frame ):
 				self.vmd_data = wrapperutils.read_vmd(self.m_fileVmd.GetPath(), self.m_staticText9.GetLabel(), False)
 
 			if self.org_pmx_data == None:
-				# まだ読み込めていない場合、VMD読み込み
+				# まだ読み込めていない場合、PMX読み込み
 				self.org_pmx_data = wrapperutils.read_pmx(self.m_fileOrgPmx.GetPath(), self.m_staticText10.GetLabel(), False)
 
 			if self.rep_pmx_data == None:
-				# まだ読み込めていない場合、VMD読み込み
+				# まだ読み込めていない場合、PMX読み込み
 				self.rep_pmx_data = wrapperutils.read_pmx(self.m_fileRepPmx.GetPath(), self.m_staticText11.GetLabel(), False)
 
 			if self.vmd_data and self.org_pmx_data and self.rep_pmx_data:
