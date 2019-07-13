@@ -47,6 +47,27 @@ IF /I "%IS_AVOIDANCE%" EQU "yes" (
     set AVOIDANCE=1
 )
 
+
+rem ---  手首位置合わせ
+
+echo --------------
+echo 手首位置合わせを行うか、yes か no を入力して下さい。
+echo 何も入力せず、ENTERを押下した場合、手首位置合わせを行いません。
+set HAND_IK=0
+set HAND_DISTANCE=1.7
+set IS_HAND_IK=no
+set /P IS_HAND_IK="■手首位置合わせ[yes/no]: "
+
+IF /I "%IS_HAND_IK%" EQU "yes" (
+    set HAND_IK=1
+
+    echo --------------
+    echo 手首位置合わせを行う場合、手首間の距離を指定してください。
+    echo 何も入力せず、ENTERを押下した場合、手首間の距離「%HAND_DISTANCE%」で処理します。
+    
+    set /P HAND_DISTANCE="■手首間の距離: "
+)
+
 rem ---  詳細ログ有無
 
 echo --------------
@@ -61,6 +82,6 @@ IF /I "%IS_DEBUG%" EQU "yes" (
 )
 
 rem ---  python 実行
-python src/main.py --vmd_path %INPUT_VMD% --trace_pmx_path %MODEL_PMX% --replace_pmx_path %REPLACE_MODEL_PMX% --avoidance %AVOIDANCE% --verbose %VERBOSE%
+python src/main.py --vmd_path %INPUT_VMD% --trace_pmx_path %MODEL_PMX% --replace_pmx_path %REPLACE_MODEL_PMX% --avoidance %AVOIDANCE% --hand_ik %HAND_IK% --hand_distance %HAND_DISTANCE% --verbose %VERBOSE%
 
 

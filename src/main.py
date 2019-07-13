@@ -9,7 +9,7 @@ import re
 from math import acos, degrees
 from datetime import datetime
 from pathlib import Path
-from PyQt5.QtGui import QQuaternion, QVector3D, QMatrix4x4, QVector4D
+from PyQt5.QtGui import QQuaternion, QVector3D, QVector2D, QMatrix4x4, QVector4D
 
 from VmdWriter import VmdWriter, VmdBoneFrame
 from VmdReader import VmdReader
@@ -322,7 +322,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                                         logger.debug("fill insert: %s, i: %s, f: %s, key: %s", al.name, tbf_idx, fillbf.frame, fillbf.key)
 
                                                         # 一旦有効
-                                                        fillbf.key = True
+                                                        # fillbf.key = True
 
                                                         is_checked = True
                                                         is_added = True
@@ -364,8 +364,6 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
             prev_bf = None
             # 空白を挟んだ直前のキー
             prev_space_bf = None
-            # ２つ前のキー
-            prev_prev_bf = None
             for f in range(motion.last_motion_frame + 1):
                 for k in ["左腕", "左ひじ", "左手首", "右腕", "右ひじ", "右手首"]:
                     is_ik_adjust = False
@@ -764,8 +762,6 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                 else:
                                     print("－手首近接なし: f: %s(%s), 手首間の距離: %s" % (bf.frame, direction, org_wrist_diff_rate ))
 
-                                # 前々回登録キーとして保持
-                                prev_prev_bf = copy.deepcopy(prev_bf)
                                 # 前回登録キーとして保持
                                 prev_bf = copy.deepcopy(bf)
                                     
@@ -819,7 +815,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                     logger.debug("now: x: %s, y: %s", now_bf.complement[R_x1_idxs[3]], now_bf.complement[R_y1_idxs[3]])
                                     logger.debug("prev: %s", prev_bf.complement)
                                     logger.debug("next: %s", next_bf.complement)
-
+                                
                                 # nextの始点をnowの始点に
                                 next_bf.complement[R_x1_idxs[0]] = next_bf.complement[R_x1_idxs[1]] = next_bf.complement[R_x1_idxs[2]] = next_bf.complement[R_x1_idxs[3]] = now_bf.complement[R_x1_idxs[3]]
                                 next_bf.complement[R_y1_idxs[0]] = next_bf.complement[R_y1_idxs[1]] = next_bf.complement[R_y1_idxs[2]] = next_bf.complement[R_y1_idxs[3]] = now_bf.complement[R_y1_idxs[3]]
@@ -1794,11 +1790,12 @@ def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False
                 next_y1v = bf.complement[R_y1_idxs[3]]
                 next_x2v = bf.complement[R_x2_idxs[3]]
                 next_y2v = bf.complement[R_y2_idxs[3]]
-                rx, rn = calc_interpolate_bezier(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, bf.frame, fillbf.frame)
+                # ベジェ曲線の接線を求める
+                rx, v = calc_bezier_line_tangent(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, bf.frame, fillbf.frame)
 
-                if 2400 <= fillbf.frame <= 2500:
-                    logger.debug("bone: %s, prev_bf: %s, bf: %s, fillbf: %s, rx: %s", bone_name, prev_bf.frame, bf.frame, fillbf.frame, rx)
-                    logger.debug("next_x1v: %s, next_y1v: %s, next_x2v: %s, next_y2v: %s, rn: %s", next_x1v, next_y1v, next_x2v, next_y2v, rn)
+                if 0 <= fillbf.frame <= 1000:
+                    logger.info("bone: %s, prev_bf: %s, bf: %s, fillbf: %s, rx: %s", bone_name, prev_bf.frame, bf.frame, fillbf.frame, rx)
+                    logger.info("next_x1v: %s, next_y1v: %s, next_x2v: %s, next_y2v: %s, v: %s", next_x1v, next_y1v, next_x2v, next_y2v, v)
 
                 # オリジナルの補間曲線として先の元々の補間曲線を保持しておく
                 fillbf.org_complement = copy.deepcopy(bf.org_complement)
@@ -1809,22 +1806,54 @@ def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False
                 fillbf.complement[R_x1_idxs[0]] = fillbf.complement[R_x1_idxs[1]] = fillbf.complement[R_x1_idxs[2]] = fillbf.complement[R_x1_idxs[3]] = bf.complement[R_x1_idxs[3]]
                 fillbf.complement[R_y1_idxs[0]] = fillbf.complement[R_y1_idxs[1]] = fillbf.complement[R_y1_idxs[2]] = fillbf.complement[R_y1_idxs[3]] = bf.complement[R_y1_idxs[3]]
 
-                # 分割の終点は、今回の終点の補間曲線移動部分
-                fillbf.complement[R_x2_idxs[0]] = fillbf.complement[R_x2_idxs[1]] = fillbf.complement[R_x2_idxs[2]] = fillbf.complement[R_x2_idxs[3]] = 127 - round((127 - bf.complement[R_x2_idxs[3]]) * rx)
-                fillbf.complement[R_y2_idxs[0]] = fillbf.complement[R_y2_idxs[1]] = fillbf.complement[R_y2_idxs[2]] = fillbf.complement[R_y2_idxs[3]] = 127 - round(bf.complement[R_y2_idxs[3]] * rn)
+                # 今回の始点は、補間曲線の接線の半分
+                bf.complement[R_x1_idxs[0]] = bf.complement[R_x1_idxs[1]] = bf.complement[R_x1_idxs[2]] = bf.complement[R_x1_idxs[3]] = round(v.x() * 127 * 0.5)
+                bf.complement[R_y1_idxs[0]] = bf.complement[R_y1_idxs[1]] = bf.complement[R_y1_idxs[2]] = bf.complement[R_y1_idxs[3]] = round(v.y() * 127 * 0.5)
 
-                # 今回の始点は、今回の終点の補間曲線移動残り部分
-                bf.complement[R_x1_idxs[0]] = bf.complement[R_x1_idxs[1]] = bf.complement[R_x1_idxs[2]] = bf.complement[R_x1_idxs[3]] = round((127 - bf.complement[R_x2_idxs[3]]) * rx)
-                bf.complement[R_y1_idxs[0]] = bf.complement[R_y1_idxs[1]] = bf.complement[R_y1_idxs[2]] = bf.complement[R_y1_idxs[3]] = round(bf.complement[R_y2_idxs[3]] * rn)
-                    
-                # # 今回の終点は、今回の終点を補間曲線移動残り分
-                # bf.complement[R_x2_idxs[0]] = fillbf.complement[R_x2_idxs[1]] = fillbf.complement[R_x2_idxs[2]] = fillbf.complement[R_x2_idxs[3]] = round(bf.complement[R_x2_idxs[3]] * rx)
-                # bf.complement[R_y2_idxs[0]] = fillbf.complement[R_y2_idxs[1]] = fillbf.complement[R_y2_idxs[2]] = fillbf.complement[R_y2_idxs[3]] = round(bf.complement[R_y2_idxs[3]] * rn)
+                # 分割の終点は、補間曲線の接線の半分残り分
+                fillbf.complement[R_x2_idxs[0]] = fillbf.complement[R_x2_idxs[1]] = fillbf.complement[R_x2_idxs[2]] = fillbf.complement[R_x2_idxs[3]] = 127 - bf.complement[R_x1_idxs[3]]
+                fillbf.complement[R_y2_idxs[0]] = fillbf.complement[R_y2_idxs[1]] = fillbf.complement[R_y2_idxs[2]] = fillbf.complement[R_y2_idxs[3]] = 127 - bf.complement[R_y1_idxs[3]]
+
+                if 0 <= fillbf.frame <= 1000:
+                    logger.info("fillbf.complement[R_x2_idxs[0]]: %s, fillbf.complement[R_y2_idxs[0]]: %s", fillbf.complement[R_x2_idxs[0]], fillbf.complement[R_y2_idxs[0]])
+                    logger.info("bf.complement[R_x1_idxs[0]]: %s, bf.complement[R_y1_idxs[0]]: %s", bf.complement[R_x1_idxs[0]], bf.complement[R_y1_idxs[0]])
 
             return fillbf
 
     # 最後まで行っても見つからなければ、最終項目を返す
     return copy.deepcopy(frames[bone_name][-1])
+
+# 補間曲線（ベジェ曲線）の接線を求める
+# https://forum.shade3d.jp/t/09-bezier-line-shade-labo/249/2
+# http://junosoft.sblo.jp/article/92871518.html
+def calc_bezier_line_tangent(x1v, y1v, x2v, y2v, start, end, now):
+    if (now - start) == 0 or (end - start) == 0:
+        return QVector2D()
+
+    t = (now - start) / (end - start)
+
+    bz1 = QVector2D(0, 0)
+    bz2 = QVector2D(x1v, y1v)
+    bz3 = QVector2D(x2v, y2v)
+    bz4 = QVector2D(127, 127)
+
+    v = 3*(-1*bz1 + 3*bz2 - 3*bz3 + bz4)*t**2 + 6*(bz1-2*bz2+bz3)*t + 3*(-1*bz1 + bz2)
+
+    # v = (-3*(1 - t)**2)*bz1 + 3*(1 - t)*(1 - 3*t)*bz2 + 3*t*(2 - 3*t)*bz3 + (3*t**2)*bz4
+    v.normalize()
+
+    # if v.lengthSquared() < 0.5:
+    #     if t < 0.5:				#  outhandle が出ていなくて t = 0
+    #         v = bz3 - bz1
+    #     else :						#  inhandle が出ていなくて t = 1
+    #         v = bz4 - bz2
+    #     v.normalize()
+
+    #     if v.lengthSquared() < 0.5:
+    #         v = bz4 - bz1
+    #         v.normalize()
+        
+    return t, v
 
 
 # 補間曲線を求める
