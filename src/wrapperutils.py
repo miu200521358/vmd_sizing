@@ -318,6 +318,11 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
         error_file_logger.error("■■■■■■■■■■■■■■■■■")
 
         error_file_logger.error(traceback.format_exc())
+    
+    finally:
+        # 最後にログを終了させる
+        logging.shutdown()
+        
 
 def create_output_path(vmd_path, replace_pmx_path, is_avoidance, is_arm_ik):
     # print("vmd_path: %s " % vmd_path)

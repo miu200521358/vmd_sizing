@@ -7,6 +7,7 @@ import copy
 import traceback
 import re
 from math import acos, degrees
+from decimal import Decimal, ROUND_HALF_UP
 from datetime import datetime
 from pathlib import Path
 from PyQt5.QtGui import QQuaternion, QVector3D, QVector2D, QMatrix4x4, QVector4D
@@ -1742,16 +1743,15 @@ def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False
             # 実際に登録はしない
             fillbf.key = False
 
-            # if is_calc_complement:
-            #     # 補間曲線を計算する場合、前の有効なキー
-            #     for pbf_idx in range(bidx - 1, -1, -1):
-            #         if frames[bone_name][pbf_idx].key == True:
-            #             prev_bf = frames[bone_name][pbf_idx]
-            #             break
-            # else:
             # 指定されたフレーム直前のキー
             prev_bf = frames[bone_name][bidx - 1]
-            
+
+            # # 前の有効なキー
+            # for pbf_idx in range(bidx - 1, -1, -1):
+            #     if frames[bone_name][pbf_idx].key == True:
+            #         prev_enable_bf = frames[bone_name][pbf_idx]
+            #         break
+
             # logger.info("bone_name: %s, bf: %s, bidx: %s", bone_name, bf.frame, bidx)
 
             if prev_bf.rotation != bf.rotation:
@@ -1790,11 +1790,14 @@ def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False
                 next_y1v = bf.complement[R_y1_idxs[3]]
                 next_x2v = bf.complement[R_x2_idxs[3]]
                 next_y2v = bf.complement[R_y2_idxs[3]]
+
+                # ベジェ曲線の実値を求める
+                rx, rn = calc_interpolate_bezier(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, bf.frame, fillbf.frame)
                 # ベジェ曲線の接線を求める
                 rx, v = calc_bezier_line_tangent(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, bf.frame, fillbf.frame)
 
                 if 0 <= fillbf.frame <= 1000:
-                    logger.info("bone: %s, prev_bf: %s, bf: %s, fillbf: %s, rx: %s", bone_name, prev_bf.frame, bf.frame, fillbf.frame, rx)
+                    logger.info("bone: %s, prev_target_bf: %s, bf: %s, fillbf: %s, rx: %s", bone_name, prev_bf.frame, bf.frame, fillbf.frame, rx)
                     logger.info("next_x1v: %s, next_y1v: %s, next_x2v: %s, next_y2v: %s, v: %s", next_x1v, next_y1v, next_x2v, next_y2v, v)
 
                 # オリジナルの補間曲線として先の元々の補間曲線を保持しておく
@@ -1807,8 +1810,8 @@ def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False
                 fillbf.complement[R_y1_idxs[0]] = fillbf.complement[R_y1_idxs[1]] = fillbf.complement[R_y1_idxs[2]] = fillbf.complement[R_y1_idxs[3]] = bf.complement[R_y1_idxs[3]]
 
                 # 今回の始点は、補間曲線の接線の半分
-                bf.complement[R_x1_idxs[0]] = bf.complement[R_x1_idxs[1]] = bf.complement[R_x1_idxs[2]] = bf.complement[R_x1_idxs[3]] = round(v.x() * 127 * 0.5)
-                bf.complement[R_y1_idxs[0]] = bf.complement[R_y1_idxs[1]] = bf.complement[R_y1_idxs[2]] = bf.complement[R_y1_idxs[3]] = round(v.y() * 127 * 0.5)
+                bf.complement[R_x1_idxs[0]] = bf.complement[R_x1_idxs[1]] = bf.complement[R_x1_idxs[2]] = bf.complement[R_x1_idxs[3]] = int(Decimal(str(v.x() * 127 * 0.5)).quantize(Decimal('0'), rounding=ROUND_HALF_UP))
+                bf.complement[R_y1_idxs[0]] = bf.complement[R_y1_idxs[1]] = bf.complement[R_y1_idxs[2]] = bf.complement[R_y1_idxs[3]] = int(Decimal(str(v.y() * 127 * 0.5)).quantize(Decimal('0'), rounding=ROUND_HALF_UP))
 
                 # 分割の終点は、補間曲線の接線の半分残り分
                 fillbf.complement[R_x2_idxs[0]] = fillbf.complement[R_x2_idxs[1]] = fillbf.complement[R_x2_idxs[2]] = fillbf.complement[R_x2_idxs[3]] = 127 - bf.complement[R_x1_idxs[3]]
@@ -1824,8 +1827,6 @@ def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False
     return copy.deepcopy(frames[bone_name][-1])
 
 # 補間曲線（ベジェ曲線）の接線を求める
-# https://forum.shade3d.jp/t/09-bezier-line-shade-labo/249/2
-# http://junosoft.sblo.jp/article/92871518.html
 def calc_bezier_line_tangent(x1v, y1v, x2v, y2v, start, end, now):
     if (now - start) == 0 or (end - start) == 0:
         return QVector2D()
@@ -1837,10 +1838,29 @@ def calc_bezier_line_tangent(x1v, y1v, x2v, y2v, start, end, now):
     bz3 = QVector2D(x2v, y2v)
     bz4 = QVector2D(127, 127)
 
-    v = 3*(-1*bz1 + 3*bz2 - 3*bz3 + bz4)*t**2 + 6*(bz1-2*bz2+bz3)*t + 3*(-1*bz1 + bz2)
+    # https://stackoverflow.com/questions/4089443/find-the-tangent-of-a-point-on-a-cubic-bezier-curve
+    # dP(t) / dt =  -3(1-t)^2 * P0 + 3(1-t)^2 * P1 - 6t(1-t) * P1 - 3t^2 * P2 + 6t(1-t) * P2 + 3t^2 * P3
+    # v = -3*(1-t)**2*bz1 + 3*(1-t)**2*bz2 - 6*t*(1-t)*bz2 - 3*t**2*bz3 + 6*t*(1-t)*bz3 * 3*t**2*bz4
 
+    # P(t) = (1 - t)^3 * P0 + 3t(1-t)^2 * P1 + 3t^2 (1-t) * P2 + t^3 * P3
+    v = (1-t)**3*bz1 + 3*t*(1-t)**2*bz2 + 3*t**2*(1-t)*bz3 + t**3*bz4
+
+    # http://junosoft.sblo.jp/article/92871518.html
+    # v = 3*(-1*bz1 + 3*bz2 - 3*bz3 + bz4)*t**2 + 6*(bz1-2*bz2+bz3)*t + 3*(-1*bz1 + bz2)
+
+    # if 0 <= now <= 1000:
+    #     logger.info("v before: %s", v)
+
+    # https://forum.shade3d.jp/t/09-bezier-line-shade-labo/249/2
     # v = (-3*(1 - t)**2)*bz1 + 3*(1 - t)*(1 - 3*t)*bz2 + 3*t*(2 - 3*t)*bz3 + (3*t**2)*bz4
+
+    # if 0 <= now <= 1000:
+    #     logger.info("v after: %s", v)
+
     v.normalize()
+
+    # if 0 <= now <= 1000:
+    #     logger.info("v normalized: %s", v)
 
     # if v.lengthSquared() < 0.5:
     #     if t < 0.5:				#  outhandle が出ていなくて t = 0
@@ -1877,8 +1897,9 @@ def calc_interpolate_bezier(x1v, y1v, x2v, y2v, start, end, now):
         ft = (3 * (s * s) * t * x1) + (3 * s * (t * t) * x2) + (t * t * t) - x
         # logger.debug("i: %s, 4 << i: %s, ft: %s(%s), t: %s, s: %s", i, (4 << i), ft, abs(ft) < 0.00001, t, s)
 
-        if abs(ft) < 0.00001:
-            break
+        # lessさんのご指摘によりコメントアウト
+        # if abs(ft) < 0.00001:
+        #     break
 
         if ft > 0:
             t -= 1 / (4 << i)
