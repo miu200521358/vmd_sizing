@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00β33", pos = wx.DefaultPosition, size = wx.Size( 500,610 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00β34", pos = wx.DefaultPosition, size = wx.Size( 500,610 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -154,7 +154,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_panelMorphHeader = wx.Panel( self.m_panelMorph, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		bSizer10 = wx.BoxSizer( wx.VERTICAL )
 
-		self.m_staticText132 = wx.StaticText( self.m_panelMorphHeader, wx.ID_ANY, u"モーションに使用されているモーフを、\n変換先モデルにある任意のモーフに置き換える事ができます。\nモーションモーフプルダウンの先頭記号は以下の通りです。\n○　…　モーション・生成元モデル・変換先モデルすべてにあるモーフ\n●　…　モーション・変換先モデルにあり、生成元モデルにないモーフ\n▲　…　モーションにあり、生成元モデル・変換先モデルにないモーフ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText132 = wx.StaticText( self.m_panelMorphHeader, wx.ID_ANY, u"モーションに使用されているモーフを、\n変換先モデルにある任意のモーフに置き換える事ができます。\nモーションモーフプルダウンの先頭記号は以下の通りです。\n○　…　モーション・生成元モデル・変換先モデルすべてにあるモーフ\n●　…　モーション・変換先モデルにあり、生成元モデルにないモーフ\n▲　…　モーション・生成元モデルにあり、変換先モデルにないモーフ", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText132.Wrap( -1 )
 		bSizer10.Add( self.m_staticText132, 0, wx.ALL, 5 )
 
@@ -391,6 +391,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		# Set up event handler for any worker thread results
 		EVT_RESULT(self, self.OnResult)
+		READ_EVT_RESULT(self, self.OnReadResult)
 
 		# And indicate we don't have a worker thread yet
 		self.worker = None
@@ -435,6 +436,18 @@ class VmdSizingForm3 ( wx.Frame ):
 	
 	def OnTabChange(self, event):
 		if self.m_note.GetSelection() == 1:
+			if self.vmd_data == None:
+				# まだ読み込めていない場合、VMD読み込み
+				self.vmd_data = wrapperutils.read_vmd(self.m_fileVmd.GetPath(), self.m_staticText9.GetLabel(), False)
+
+			if self.org_pmx_data == None:
+				# まだ読み込めていない場合、PMX読み込み
+				self.org_pmx_data = wrapperutils.read_pmx(self.m_fileOrgPmx.GetPath(), self.m_staticText10.GetLabel(), False)
+
+			if self.rep_pmx_data == None:
+				# まだ読み込めていない場合、PMX読み込み
+				self.rep_pmx_data = wrapperutils.read_pmx(self.m_fileRepPmx.GetPath(), self.m_staticText11.GetLabel(), False)
+
 			if not self.vmd_data or not self.org_pmx_data or not self.rep_pmx_data:
 				dialog = wx.MessageDialog(self, "ファイルの指定が不足しているため、「モーフ」タブはまだ開けません\n詳しくはメッセージ欄をご確認ください。", 'ファイル指定が不足しています', style=wx.OK)
 				dialog.ShowModal()
@@ -475,7 +488,7 @@ class VmdSizingForm3 ( wx.Frame ):
 						# 元モデルにないモーフ追加
 						for vmk in self.vmd_data.morphs.keys():
 							if vmk not in self.org_pmx_data.morphs.keys() and (len(self.vmd_data.morphs[vmk]) > 1 or self.vmd_data.morphs[vmk][0].ratio != 0):
-								if vmk in self.rep_pmx_data.morphs.keys() and self.rep_pmx_data.morphs[mk].display == True:
+								if vmk in self.rep_pmx_data.morphs.keys() and self.rep_pmx_data.morphs[vmk].display == True:
 									# 置換先にある場合は○
 									self.vmd_morphs.append("？●:" + vmk)
 								else:
@@ -585,7 +598,17 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.ClearMorph()
 		
 		if wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, False) == False:
-			# 読み込めるファイルではない場合、そのまま終了
+			# 読み込めるファイルではない場合、オブジェクトをクリアして終了
+
+			if target_ctrl == self.m_fileVmd:
+				self.vmd_data = None
+
+			if target_ctrl == self.m_fileOrgPmx:
+				self.org_pmx_data = None
+
+			if target_ctrl == self.m_fileRepPmx:
+				self.rep_pmx_data = None
+
 			return False
 
 		"""Start Computation."""
@@ -639,11 +662,11 @@ class VmdSizingForm3 ( wx.Frame ):
 				self.vmd_data = wrapperutils.read_vmd(self.m_fileVmd.GetPath(), self.m_staticText9.GetLabel(), False)
 
 			if self.org_pmx_data == None:
-				# まだ読み込めていない場合、VMD読み込み
+				# まだ読み込めていない場合、PMX読み込み
 				self.org_pmx_data = wrapperutils.read_pmx(self.m_fileOrgPmx.GetPath(), self.m_staticText10.GetLabel(), False)
 
 			if self.rep_pmx_data == None:
-				# まだ読み込めていない場合、VMD読み込み
+				# まだ読み込めていない場合、PMX読み込み
 				self.rep_pmx_data = wrapperutils.read_pmx(self.m_fileRepPmx.GetPath(), self.m_staticText11.GetLabel(), False)
 
 			if self.vmd_data and self.org_pmx_data and self.rep_pmx_data:
@@ -690,9 +713,17 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_btnExec.Enable()
 		# プログレス非表示
 		self.m_Gauge.SetValue(0)
-		# モーションデータクリア
-		self.vmd_data = None
-	
+
+	# スレッド実行結果
+	def OnReadResult(self, event):
+		if len(self.read_workers) > 0:
+			# 読み込みスレッドが動いている場合、delする
+			del self.read_workers[0]
+			logger.debug("read_workers: %s", len(self.read_workers))
+
+		# プログレス非表示
+		self.m_Gauge.SetValue(0)
+		
 	def ShowTraceModel(self, event):
 		if wrapperutils.is_valid_file(self.m_fileVmd.GetPath(), "調整対象VMDファイル", ".vmd", False) == False:
 			return False
@@ -724,10 +755,15 @@ class VmdSizingForm3 ( wx.Frame ):
 
 # Define notification event for thread completion
 EVT_RESULT_ID = wx.NewId()
+READ_EVT_RESULT_ID = wx.NewId()
 
 def EVT_RESULT(win, func):
 	"""Define Result Event."""
 	win.Connect(-1, -1, EVT_RESULT_ID, func)
+
+def READ_EVT_RESULT(win, func):
+	"""Define Result Event."""
+	win.Connect(-1, -1, READ_EVT_RESULT_ID, func)
 
 class ResultEvent(wx.PyEvent):
 	"""Simple event to carry arbitrary result data."""
@@ -741,7 +777,7 @@ class ReadResultEvent(wx.PyEvent):
 	def __init__(self, data, target_ctrl, label_ctrl):
 		"""Init Result Event."""
 		wx.PyEvent.__init__(self)
-		self.SetEventType(EVT_RESULT_ID)
+		self.SetEventType(READ_EVT_RESULT_ID)
 
 		if data:
 			print("■解析成功　{0}: {1}".format(label_ctrl.GetLabel(), target_ctrl.GetPath()))

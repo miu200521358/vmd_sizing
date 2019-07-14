@@ -442,18 +442,19 @@ class PmxReader():
                 )
 
     def read_material_morph_data(self):
+        # 材質モーフはRGB(A)に負数が入る場合があるので、Vector型で保持
         return PmxModel.MaterialMorphData(
                 self.read_material_index_size(),
                 self.read_int(1),
-                self.read_RGBA(),
-                self.read_RGB(),
+                self.read_Vector4D(),
+                self.read_Vector3D(),
                 self.read_float(),
-                self.read_RGB(),
-                self.read_RGBA(),
+                self.read_Vector3D(),
+                self.read_Vector4D(),
                 self.read_float(),
-                self.read_RGBA(),
-                self.read_RGBA(),
-                self.read_RGBA()
+                self.read_Vector4D(),
+                self.read_Vector4D(),
+                self.read_Vector4D()
                 )
 
 

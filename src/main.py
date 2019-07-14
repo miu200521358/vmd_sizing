@@ -7,9 +7,10 @@ import copy
 import traceback
 import re
 from math import acos, degrees
+from decimal import Decimal, ROUND_HALF_UP
 from datetime import datetime
 from pathlib import Path
-from PyQt5.QtGui import QQuaternion, QVector3D, QMatrix4x4, QVector4D
+from PyQt5.QtGui import QQuaternion, QVector3D, QVector2D, QMatrix4x4, QVector4D
 
 from VmdWriter import VmdWriter, VmdBoneFrame
 from VmdReader import VmdReader
@@ -364,8 +365,6 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
             prev_bf = None
             # 空白を挟んだ直前のキー
             prev_space_bf = None
-            # ２つ前のキー
-            prev_prev_bf = None
             for f in range(motion.last_motion_frame + 1):
                 for k in ["左腕", "左ひじ", "左手首", "右腕", "右ひじ", "右手首"]:
                     is_ik_adjust = False
@@ -764,8 +763,6 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                 else:
                                     print("－手首近接なし: f: %s(%s), 手首間の距離: %s" % (bf.frame, direction, org_wrist_diff_rate ))
 
-                                # 前々回登録キーとして保持
-                                prev_prev_bf = copy.deepcopy(prev_bf)
                                 # 前回登録キーとして保持
                                 prev_bf = copy.deepcopy(bf)
                                     
@@ -808,7 +805,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                     break
 
                             # 前の有効なキー
-                            for pbf_idx in range(bf_idx - 1, 0, -1):
+                            for pbf_idx in range(bf_idx - 1, -1, -1):
                                 if motion.frames[al.name][pbf_idx].key == True and motion.frames[al.name][pbf_idx].frame != now_bf.frame:
                                     prev_bf = motion.frames[al.name][pbf_idx]
                                     break
@@ -819,7 +816,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                     logger.debug("now: x: %s, y: %s", now_bf.complement[R_x1_idxs[3]], now_bf.complement[R_y1_idxs[3]])
                                     logger.debug("prev: %s", prev_bf.complement)
                                     logger.debug("next: %s", next_bf.complement)
-
+                                
                                 # nextの始点をnowの始点に
                                 next_bf.complement[R_x1_idxs[0]] = next_bf.complement[R_x1_idxs[1]] = next_bf.complement[R_x1_idxs[2]] = next_bf.complement[R_x1_idxs[3]] = now_bf.complement[R_x1_idxs[3]]
                                 next_bf.complement[R_y1_idxs[0]] = next_bf.complement[R_y1_idxs[1]] = next_bf.complement[R_y1_idxs[2]] = next_bf.complement[R_y1_idxs[3]] = now_bf.complement[R_y1_idxs[3]]
@@ -1541,7 +1538,7 @@ def cal_center_z_offset(trace_model, replace_model, bone_name):
         print("Zオフセットなし: %s: %s" % ( bone_name, replace_model.bones[bone_name].offset_z))
 
 def calc_leg_ik_ratio(trace_model, replace_model):
-    if "左足" in trace_model.bones and "左足" in replace_model.bones and "左ひざ" in trace_model.bones and "左ひざ" in replace_model.bones and "左足首" in trace_model.bones and "左足首" in replace_model.bones:
+    if "左足" in trace_model.bones and "左足" in replace_model.bones and "左ひざ" in trace_model.bones and "左ひざ" in replace_model.bones and "左足首" in trace_model.bones and "左足首" in replace_model.bones and "センター" in trace_model.bones and "センター" in replace_model.bones:
         # XZ比率(足の長さ)
         replace_leg_length = ( (replace_model.bones["左足首"].position - replace_model.bones["左ひざ"].position) + (replace_model.bones["左ひざ"].position - replace_model.bones["左足"].position) ).length()
         trace_leg_length = ( (trace_model.bones["左足首"].position - trace_model.bones["左ひざ"].position) + (trace_model.bones["左ひざ"].position - trace_model.bones["左足"].position) ).length()
@@ -1556,18 +1553,19 @@ def calc_leg_ik_ratio(trace_model, replace_model):
 
         print("足の長さの比率: xz: %s, y: %s" % (xz_ratio, y_ratio))
 
-        # 左足のスタンス距離比
-        l_stance = ((replace_model.bones["左足ＩＫ"].position - replace_model.bones["センター"].position).x()) - ((trace_model.bones["左足ＩＫ"].position - trace_model.bones["センター"].position).x() * xz_ratio)
-        r_stance = ((replace_model.bones["右足ＩＫ"].position - replace_model.bones["センター"].position).x()) - ((trace_model.bones["右足ＩＫ"].position - trace_model.bones["センター"].position).x() * xz_ratio)
+        # # 左足のスタンス距離比
+        # l_stance = ((replace_model.bones["左足ＩＫ"].position - replace_model.bones["センター"].position).x()) - ((trace_model.bones["左足ＩＫ"].position - trace_model.bones["センター"].position).x() * xz_ratio)
+        # r_stance = ((replace_model.bones["右足ＩＫ"].position - replace_model.bones["センター"].position).x()) - ((trace_model.bones["右足ＩＫ"].position - trace_model.bones["センター"].position).x() * xz_ratio)
 
-        logger.debug("replace: %s", (replace_model.bones["左足ＩＫ"].position - replace_model.bones["センター"].position).x())
-        logger.debug("trace: %s", (trace_model.bones["左足ＩＫ"].position - trace_model.bones["センター"].position).x())
-        logger.debug("trace2: %s", ((trace_model.bones["左足ＩＫ"].position - trace_model.bones["センター"].position).x() * xz_ratio))
+        # logger.debug("replace: %s", (replace_model.bones["左足ＩＫ"].position - replace_model.bones["センター"].position).x())
+        # logger.debug("trace: %s", (trace_model.bones["左足ＩＫ"].position - trace_model.bones["センター"].position).x())
+        # logger.debug("trace2: %s", ((trace_model.bones["左足ＩＫ"].position - trace_model.bones["センター"].position).x() * xz_ratio))
 
-        # print("足のスタンス補正値: l: %s, r: %s" % (l_stance, r_stance))
+        # # print("足のスタンス補正値: l: %s, r: %s" % (l_stance, r_stance))
 
-        return xz_ratio, y_ratio, {"左": l_stance, "右": r_stance}
+        return xz_ratio, y_ratio, {"左": 1, "右": 1}
 
+    print("足、ひざ、足首、センターのいずれかのボーンが不足しているため、足の長さの比率が測れませんでした")
     return 1, 1, {"左": 1, "右": 1}
 
 
@@ -1631,11 +1629,18 @@ def calc_upper_direction_qq(model, links, frames, bf):
                 # 回転なしの場合、角度なし
                 degree = 0
             else:
+                # 回転補正
+                if "右" in lbone.name and rot.x() > 0:
+                    rot.setX(rot.x() * -1)
+                    rot.setScalar(rot.scalar() * -1)
+                elif "左" in lbone.name and rot.x() < 0:
+                    rot.setX(rot.x() * -1)
+                    rot.setScalar(rot.scalar() * -1)
+                
+                rot.normalize()
+
                 degree = degrees(2 * acos(rot.scalar()))
             
-            if 665 <= bf.frame <= 670:
-                logger.debug("軸固定: %s, fixed_axis:%s, rot: %s, degree: %s", lbone.name, lbone.fixed_axis, rot, degree)
-                
             # 軸固定の場合、回転を制限する
             rot = QQuaternion.fromAxisAndAngle(lbone.fixed_axis, degree)
     
@@ -1648,6 +1653,7 @@ def calc_upper_direction_qq(model, links, frames, bf):
 
     # logger.debug("total_y_qq: %s", total_y_qq.toEulerAngles())
 
+    # XYZ全方向の回転を参照するため、そのまま返す
     return total_qq
 
 
@@ -1741,10 +1747,12 @@ def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False
             prev_bf = frames[bone_name][bidx - 1]
 
             # # 前の有効なキー
-            # for pbf_idx in range(bidx - 1, 0, -1):
+            # for pbf_idx in range(bidx - 1, -1, -1):
             #     if frames[bone_name][pbf_idx].key == True:
-            #         prev_bf = frames[bone_name][pbf_idx]
+            #         prev_enable_bf = frames[bone_name][pbf_idx]
             #         break
+
+            # logger.info("bone_name: %s, bf: %s, bidx: %s", bone_name, bf.frame, bidx)
 
             if prev_bf.rotation != bf.rotation:
                 # 回転補間曲線
@@ -1782,36 +1790,90 @@ def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False
                 next_y1v = bf.complement[R_y1_idxs[3]]
                 next_x2v = bf.complement[R_x2_idxs[3]]
                 next_y2v = bf.complement[R_y2_idxs[3]]
-                rx, rn = calc_interpolate_bezier(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, bf.frame, fillbf.frame)
 
-                if 2400 <= fillbf.frame <= 2500:
-                    logger.debug("bone: %s, prev_bf: %s, bf: %s, fillbf: %s, rx: %s", bone_name, prev_bf.frame, bf.frame, fillbf.frame, rx)
-                    logger.debug("next_x1v: %s, next_y1v: %s, next_x2v: %s, next_y2v: %s, rn: %s", next_x1v, next_y1v, next_x2v, next_y2v, rn)
+                # ベジェ曲線の実値を求める
+                rx, rn = calc_interpolate_bezier(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, bf.frame, fillbf.frame)
+                # ベジェ曲線の接線を求める
+                rx, v = calc_bezier_line_tangent(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, bf.frame, fillbf.frame)
+
+                if 0 <= fillbf.frame <= 1000:
+                    logger.info("bone: %s, prev_target_bf: %s, bf: %s, fillbf: %s, rx: %s", bone_name, prev_bf.frame, bf.frame, fillbf.frame, rx)
+                    logger.info("next_x1v: %s, next_y1v: %s, next_x2v: %s, next_y2v: %s, v: %s", next_x1v, next_y1v, next_x2v, next_y2v, v)
 
                 # オリジナルの補間曲線として先の元々の補間曲線を保持しておく
                 fillbf.org_complement = copy.deepcopy(bf.org_complement)
                 # 補間曲線を元々の補間曲線からコピーする
                 fillbf.complement = copy.deepcopy(bf.complement)
 
-                # 分割の始点は、今回の始点と同じ
+                # 分割の始点は、今回の始点
                 fillbf.complement[R_x1_idxs[0]] = fillbf.complement[R_x1_idxs[1]] = fillbf.complement[R_x1_idxs[2]] = fillbf.complement[R_x1_idxs[3]] = bf.complement[R_x1_idxs[3]]
                 fillbf.complement[R_y1_idxs[0]] = fillbf.complement[R_y1_idxs[1]] = fillbf.complement[R_y1_idxs[2]] = fillbf.complement[R_y1_idxs[3]] = bf.complement[R_y1_idxs[3]]
 
-                # 分割の終点は、補間曲線の移動部分
-                fillbf.complement[R_x2_idxs[0]] = fillbf.complement[R_x2_idxs[1]] = fillbf.complement[R_x2_idxs[2]] = fillbf.complement[R_x2_idxs[3]] = round(bf.complement[R_x2_idxs[3]] * rx)
-                fillbf.complement[R_y2_idxs[0]] = fillbf.complement[R_y2_idxs[1]] = fillbf.complement[R_y2_idxs[2]] = fillbf.complement[R_y2_idxs[3]] = round(bf.complement[R_y2_idxs[3]] * rn)
+                # 今回の始点は、補間曲線の接線の半分
+                bf.complement[R_x1_idxs[0]] = bf.complement[R_x1_idxs[1]] = bf.complement[R_x1_idxs[2]] = bf.complement[R_x1_idxs[3]] = int(Decimal(str(v.x() * 127 * 0.5)).quantize(Decimal('0'), rounding=ROUND_HALF_UP))
+                bf.complement[R_y1_idxs[0]] = bf.complement[R_y1_idxs[1]] = bf.complement[R_y1_idxs[2]] = bf.complement[R_y1_idxs[3]] = int(Decimal(str(v.y() * 127 * 0.5)).quantize(Decimal('0'), rounding=ROUND_HALF_UP))
 
-                # 今回の始点は、補間曲線の開始の残り部分
-                bf.complement[R_x1_idxs[0]] = bf.complement[R_x1_idxs[1]] = bf.complement[R_x1_idxs[2]] = bf.complement[R_x1_idxs[3]] = round(bf.complement[R_x1_idxs[3]] * (1 - rx))
-                bf.complement[R_y1_idxs[0]] = bf.complement[R_y1_idxs[1]] = bf.complement[R_y1_idxs[2]] = bf.complement[R_y1_idxs[3]] = round(bf.complement[R_y1_idxs[3]] * (1 - rn))
-                logger.debug("next_bf.x1: %s, next_bf.y1: %s", prev_bf.complement[R_x1_idxs[3]], prev_bf.complement[R_y1_idxs[3]])
-                    
-                # 今回の終点は変わらず
+                # 分割の終点は、補間曲線の接線の半分残り分
+                fillbf.complement[R_x2_idxs[0]] = fillbf.complement[R_x2_idxs[1]] = fillbf.complement[R_x2_idxs[2]] = fillbf.complement[R_x2_idxs[3]] = 127 - bf.complement[R_x1_idxs[3]]
+                fillbf.complement[R_y2_idxs[0]] = fillbf.complement[R_y2_idxs[1]] = fillbf.complement[R_y2_idxs[2]] = fillbf.complement[R_y2_idxs[3]] = 127 - bf.complement[R_y1_idxs[3]]
+
+                if 0 <= fillbf.frame <= 1000:
+                    logger.info("fillbf.complement[R_x2_idxs[0]]: %s, fillbf.complement[R_y2_idxs[0]]: %s", fillbf.complement[R_x2_idxs[0]], fillbf.complement[R_y2_idxs[0]])
+                    logger.info("bf.complement[R_x1_idxs[0]]: %s, bf.complement[R_y1_idxs[0]]: %s", bf.complement[R_x1_idxs[0]], bf.complement[R_y1_idxs[0]])
 
             return fillbf
 
     # 最後まで行っても見つからなければ、最終項目を返す
     return copy.deepcopy(frames[bone_name][-1])
+
+# 補間曲線（ベジェ曲線）の接線を求める
+def calc_bezier_line_tangent(x1v, y1v, x2v, y2v, start, end, now):
+    if (now - start) == 0 or (end - start) == 0:
+        return QVector2D()
+
+    t = (now - start) / (end - start)
+
+    bz1 = QVector2D(0, 0)
+    bz2 = QVector2D(x1v, y1v)
+    bz3 = QVector2D(x2v, y2v)
+    bz4 = QVector2D(127, 127)
+
+    # https://stackoverflow.com/questions/4089443/find-the-tangent-of-a-point-on-a-cubic-bezier-curve
+    # dP(t) / dt =  -3(1-t)^2 * P0 + 3(1-t)^2 * P1 - 6t(1-t) * P1 - 3t^2 * P2 + 6t(1-t) * P2 + 3t^2 * P3
+    # v = -3*(1-t)**2*bz1 + 3*(1-t)**2*bz2 - 6*t*(1-t)*bz2 - 3*t**2*bz3 + 6*t*(1-t)*bz3 * 3*t**2*bz4
+
+    # P(t) = (1 - t)^3 * P0 + 3t(1-t)^2 * P1 + 3t^2 (1-t) * P2 + t^3 * P3
+    v = (1-t)**3*bz1 + 3*t*(1-t)**2*bz2 + 3*t**2*(1-t)*bz3 + t**3*bz4
+
+    # http://junosoft.sblo.jp/article/92871518.html
+    # v = 3*(-1*bz1 + 3*bz2 - 3*bz3 + bz4)*t**2 + 6*(bz1-2*bz2+bz3)*t + 3*(-1*bz1 + bz2)
+
+    # if 0 <= now <= 1000:
+    #     logger.info("v before: %s", v)
+
+    # https://forum.shade3d.jp/t/09-bezier-line-shade-labo/249/2
+    # v = (-3*(1 - t)**2)*bz1 + 3*(1 - t)*(1 - 3*t)*bz2 + 3*t*(2 - 3*t)*bz3 + (3*t**2)*bz4
+
+    # if 0 <= now <= 1000:
+    #     logger.info("v after: %s", v)
+
+    v.normalize()
+
+    # if 0 <= now <= 1000:
+    #     logger.info("v normalized: %s", v)
+
+    # if v.lengthSquared() < 0.5:
+    #     if t < 0.5:				#  outhandle が出ていなくて t = 0
+    #         v = bz3 - bz1
+    #     else :						#  inhandle が出ていなくて t = 1
+    #         v = bz4 - bz2
+    #     v.normalize()
+
+    #     if v.lengthSquared() < 0.5:
+    #         v = bz4 - bz1
+    #         v.normalize()
+        
+    return t, v
 
 
 # 補間曲線を求める
@@ -1835,8 +1897,9 @@ def calc_interpolate_bezier(x1v, y1v, x2v, y2v, start, end, now):
         ft = (3 * (s * s) * t * x1) + (3 * s * (t * t) * x2) + (t * t * t) - x
         # logger.debug("i: %s, 4 << i: %s, ft: %s(%s), t: %s, s: %s", i, (4 << i), ft, abs(ft) < 0.00001, t, s)
 
-        if abs(ft) < 0.00001:
-            break
+        # lessさんのご指摘によりコメントアウト
+        # if abs(ft) < 0.00001:
+        #     break
 
         if ft > 0:
             t -= 1 / (4 << i)

@@ -162,11 +162,11 @@ class VmdWriter():
             
             # モデル名を20byteで切る
             model_bname = model_name.encode('shift-jis')[:20]
-            print("model_bname: %s, model_bname_len: %s" % (model_bname, len(model_bname)))
+            # print("model_bname: %s, model_bname_len: %s" % (model_bname, len(model_bname)))
 
             # 20文字に満たなかった場合、埋める
             model_bname = model_bname.ljust(20, b'\x00')
-            print("model_bname: %s, model_bname_len: %s" % (model_bname, len(model_bname)))
+            # print("model_bname: %s, model_bname_len: %s" % (model_bname, len(model_bname)))
 
             # model_bname = model_name.ljust(100).encode('shift-jis')[:20]
             # print("model_bname: %s" % model_bname)
