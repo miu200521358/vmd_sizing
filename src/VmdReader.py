@@ -89,6 +89,7 @@ class VmdReader():
         for n in range(motion.motion_cnt):
             frame = VmdBoneFrame()
             frame.key = True
+            frame.read = True
             
             # ボーン ----------------------
             # ボーン名

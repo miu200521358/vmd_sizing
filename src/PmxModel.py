@@ -246,7 +246,7 @@ class PmxModel():
             # 親ボーンがボーンインデックスリストになければ終了
             return ik_links, ik_indexes
         
-        logger.info("start_bone: %s. parent_name: %s, start_type_bone: %s", start_bone, parent_name, start_type_bone)
+        logger.debug("start_bone: %s. parent_name: %s, start_type_bone: %s", start_bone, parent_name, start_type_bone)
         
         # 親をたどる
         return self.create_link_2_top(parent_name, ik_links, ik_indexes )    
