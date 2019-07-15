@@ -828,12 +828,6 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                     logger.debug("prev: %s", prev_bf.complement)
                                     logger.debug("next: %s", next_bf.complement)
                                 
-                                # 補間曲線を計算する場合、現在の補間曲線から分割する
-                                next_x1v = next_bf.org_complement[R_x1_idxs[3]]
-                                next_y1v = next_bf.org_complement[R_y1_idxs[3]]
-                                next_x2v = next_bf.org_complement[R_x2_idxs[3]]
-                                next_y2v = next_bf.org_complement[R_y2_idxs[3]]
-                                
                                 # 計算用の前キーフレ・今キーフレ・次キーフレ
                                 c_now_bf = None
                                 if prev_bf and next_bf:
@@ -898,6 +892,12 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                     if c_now_bf:
                                         # 現在キーが設定されている場合、補間曲線再計算
 
+                                        # 補間曲線を計算する場合、以前の補間曲線から分割する
+                                        next_x1v = next_bf.org_complement[R_x1_idxs[3]]
+                                        next_y1v = next_bf.org_complement[R_y1_idxs[3]]
+                                        next_x2v = next_bf.org_complement[R_x2_idxs[3]]
+                                        next_y2v = next_bf.org_complement[R_y2_idxs[3]]
+                                        
                                         # ベジェ曲線を分割して新しい制御点を求める
                                         before_bz, after_bz = calc_bezier_split(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, next_bf.frame, c_now_bf.frame, al.name)
 
