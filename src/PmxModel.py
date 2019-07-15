@@ -234,38 +234,94 @@ class PmxModel():
         # 自分をリンクに登録
         ik_indexes[start_type_bone] = len(ik_indexes)
         ik_links.append(self.bones[start_bone])
-        
-        if self.bones[start_bone].parent_index not in self.bone_indexes:
+
+        parent_name = None
+        for pname in self.PARENT_BORN_PAIR[start_bone]:
+            # 親子関係のボーンリストから親ボーンが存在した場合
+            if pname in self.bones:
+                parent_name = pname
+                break
+                
+        if not parent_name:
             # 親ボーンがボーンインデックスリストになければ終了
             return ik_links, ik_indexes
         
-        parent_name = self.bone_indexes[self.bones[start_bone].parent_index]
-
-        logger.debug("start_bone: %s. parent_name: %s, start_type_bone: %s", start_bone, parent_name, start_type_bone)
-        
-        # 肩がまだインデックスリストに無く、親が肩の派生の場合、肩に固定する
-        if not "肩" in ik_indexes and "肩" in parent_name and len(parent_name) > 2:
-            # logger.debug("parent_name　手首: %s -> %s", parent_name, parent_name[:3])
-            parent_name = parent_name[:2]
-
-        # 腕がまだインデックスリストに無く、親が腕の派生の場合、腕に固定する
-        if not "腕" in ik_indexes and "腕" in parent_name and not "腕捩" in parent_name and len(parent_name) > 2:
-            # logger.debug("腕: %s -> %s", parent_name, parent_name[:2])
-            parent_name = parent_name[:2]
-                
-        # ひじがまだインデックスリストに無く、親がひじの派生の場合、ひじに固定する
-        if not "ひじ" in ik_indexes and "ひじ" in parent_name and len(parent_name) > 3:
-            # logger.debug("parent_name　ひじ: %s -> %s", parent_name, parent_name[:3])
-            parent_name = parent_name[:3]
-
-        # 手首がまだインデックスリストに無く、親が手首の派生の場合、手首に固定する
-        if not "手首" in ik_indexes and "手首" in parent_name and len(parent_name) > 3:
-            # logger.debug("parent_name　手首: %s -> %s", parent_name, parent_name[:3])
-            parent_name = parent_name[:3]
+        logger.info("start_bone: %s. parent_name: %s, start_type_bone: %s", start_bone, parent_name, start_type_bone)
         
         # 親をたどる
         return self.create_link_2_top(parent_name, ik_links, ik_indexes )    
 
+    # ボーン関係親子のペア
+    PARENT_BORN_PAIR = {
+        "全ての親": ""
+        , "センター": ["全ての親"]
+        , "グルーブ": ["センター"]
+        , "腰": ["グルーブ", "センター"]
+        , "下半身": ["腰", "センター"]
+        , "上半身": ["腰", "センター"]
+        , "上半身2": ["上半身"]
+        , "首": ["上半身2", "上半身"]
+        , "頭": ["首"]
+        , "左肩P": ["上半身2", "上半身"]
+        , "左肩": ["左肩P", "上半身2", "上半身"]
+        , "左腕": ["左肩"]
+        , "左腕捩": ["左腕"]
+        , "左ひじ": ["左腕捩", "左腕"]
+        , "左手捩": ["左ひじ"]
+        , "左手首": ["左手捩", "左ひじ"]
+        , "左親指０": ["左手首"]
+        , "左親指１": ["左親指０", "左手首"]
+        , "左親指２": ["左親指１"]
+        , "左人指１": ["左手首"]
+        , "左人指２": ["左人指１"]
+        , "左人指３": ["左人指２"]
+        , "左中指１": ["左手首"]
+        , "左中指２": ["左中指１"]
+        , "左中指３": ["左中指２"]
+        , "左薬指１": ["左手首"]
+        , "左薬指２": ["左薬指１"]
+        , "左薬指３": ["左薬指２"]
+        , "左小指１": ["左手首"]
+        , "左小指２": ["左小指１"]
+        , "左小指３": ["左小指２"]
+        , "左足": ["下半身"]
+        , "左ひざ": ["左足"]
+        , "左足首": ["左ひざ"]
+        , "左つま先": ["左足首"]
+        , "左足IK親": ["全ての親"]
+        , "左足ＩＫ": ["左足IK親", "全ての親"]
+        , "左つま先ＩＫ": ["左足ＩＫ"]
+        , "右肩P": ["上半身2", "上半身"]
+        , "右肩": ["右肩P", "上半身2", "上半身"]
+        , "右腕": ["右肩"]
+        , "右腕捩": ["右腕"]
+        , "右ひじ": ["右腕捩", "右腕"]
+        , "右手捩": ["右ひじ"]
+        , "右手首": ["右手捩", "右ひじ"]
+        , "右親指０": ["右手首"]
+        , "右親指１": ["右親指０", "右手首"]
+        , "右親指２": ["右親指１"]
+        , "右人指１": ["右手首"]
+        , "右人指２": ["右人指１"]
+        , "右人指３": ["右人指２"]
+        , "右中指１": ["右手首"]
+        , "右中指２": ["右中指１"]
+        , "右中指３": ["右中指２"]
+        , "右薬指１": ["右手首"]
+        , "右薬指２": ["右薬指１"]
+        , "右薬指３": ["右薬指２"]
+        , "右小指１": ["右手首"]
+        , "右小指２": ["右小指１"]
+        , "右小指３": ["右小指２"]
+        , "右足": ["下半身"]
+        , "右ひざ": ["右足"]
+        , "右足首": ["右ひざ"]
+        , "右つま先": ["右足首"]
+        , "右足IK親": ["全ての親"]
+        , "右足ＩＫ": ["右足IK親", "全ての親"]
+        , "右つま先ＩＫ": ["右足ＩＫ"]
+    }
+    
     # 頂点構造 ----------------------------
     class Vertex():
         def __init__(self, index, position, normal, uv, extended_uvs, deform, edge_factor):
