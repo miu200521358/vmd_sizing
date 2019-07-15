@@ -108,7 +108,7 @@ def is_all_sizing(motion, org_pmx, rep_pmx, output_vmd_path):
         # 何かしら不足しているか
         is_shortage = False
         error_file_logger = None
-
+        
         if len(not_org_bones) > 0 or len(not_org_morphs) > 0:
             if output_vmd_path:
                 # ファイル出力の場合、ログファイル生成
@@ -163,9 +163,9 @@ def is_all_sizing(motion, org_pmx, rep_pmx, output_vmd_path):
             print("■　変換後のモデルにモーションで使用されているボーン・モーフが揃っています。")
             print("■■■■■■■■■■■■■■■■■")
 
-            return True
+            return True, None
 
-    return False                
+    return False, error_file_logger
 
 def read_vmd(path, filetype="vmd", is_print=True):
     if is_valid_file(path, filetype, ".vmd", is_print) == False:
@@ -231,6 +231,7 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
     print("■　VMDサイジング処理実行")
     print("■■■■■■■■■■■■■■■■■")
 
+    error_file_logger = None
     try:
         if not output_vmd_path:
             output_vmd_path = create_output_path(vmd_path, rep_pmx_path, is_avoidance, is_hand_ik)
@@ -266,11 +267,11 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
         
         if motion and org_pmx and rep_pmx:
             # ファイル出力タイプでサイジングチェック
-            is_all_sizing(motion, org_pmx, rep_pmx, output_vmd_path)
+            _, error_file_logger = is_all_sizing(motion, org_pmx, rep_pmx, output_vmd_path)
 
             # 実処理実行
             # 読み込んだモーションデータそのものを弄らないよう、コピーした結果を渡す
-            main.main(copy.deepcopy(motion), org_pmx, rep_pmx, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, vmd_choice_values, rep_choice_values, rep_rate_values)
+            main.main(copy.deepcopy(motion), org_pmx, rep_pmx, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, vmd_choice_values, rep_choice_values, rep_rate_values, error_file_logger)
         else:
             print("ファイルデータが正しく読み込まれていないようです。\nもう一度ボタンをクリックしてみてください。")
             return False
@@ -284,8 +285,9 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
         print(e.message)
 
         error_path = re.sub(r'\.vmd$', ".log", output_vmd_path.lower())
-        error_file_logger = logging.getLogger("error")
-        error_file_logger.addHandler(logging.FileHandler(error_path))
+        if not error_file_logger:
+            error_file_logger = logging.getLogger("error")
+            error_file_logger.addHandler(logging.FileHandler(error_path))
         error_file_logger.info("モーション: %s" , motion.path)
         error_file_logger.info("作成元: %s" , org_pmx.path)
         error_file_logger.info("変換先: %s" , rep_pmx.path)
@@ -306,8 +308,9 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
         print(traceback.format_exc())
 
         error_path = re.sub(r'\.vmd$', ".log", output_vmd_path.lower())
-        error_file_logger = logging.getLogger("error")
-        error_file_logger.addHandler(logging.FileHandler(error_path))
+        if not error_file_logger:
+            error_file_logger = logging.getLogger("error")
+            error_file_logger.addHandler(logging.FileHandler(error_path))
         error_file_logger.info("モーション: %s" , motion.path)
         error_file_logger.info("作成元: %s" , org_pmx.path)
         error_file_logger.info("変換先: %s" , rep_pmx.path)

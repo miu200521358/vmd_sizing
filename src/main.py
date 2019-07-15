@@ -25,7 +25,7 @@ level = {0:logging.ERROR,
             2:logging.INFO,
             3:logging.DEBUG}
 
-def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, vmd_choice_values, rep_choice_values, rep_rate_values):   
+def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, vmd_choice_values, rep_choice_values, rep_rate_values, error_file_logger=None):   
     # エラーログ出力用
     error_path = re.sub(r'\.vmd$', ".log", output_vmd_path.lower())
     logger.debug("error_path: %s", error_path)
@@ -712,7 +712,9 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                                             # 失敗時のみエラーログ出力
                                             if not is_hand_ik_error_outputed:
                                                 is_hand_ik_error_outputed = True
-                                                error_file_logger.addHandler(logging.FileHandler(error_path))
+                                                if not error_file_logger:
+                                                    error_file_logger.addHandler(logging.FileHandler(error_path))
+
                                                 error_file_logger.info("モーション: %s" , motion.path)
                                                 error_file_logger.info("作成元: %s" , trace_model.path)
                                                 error_file_logger.info("変換先: %s" , replace_model.path)
@@ -787,77 +789,66 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
                             # 前回のキー情報をクリア
                             prev_bf = next_bf = next_added_bf = None
 
-                            if now_bf.key == False:
-                                # 現在キーを実際には登録しない場合、補間曲線を上書きする
+                            # 読み込んだ時の次のキー
+                            for nbf_idx in range(bf_idx + 1, len(motion.frames[al.name])):
+                                if motion.frames[al.name][nbf_idx].read == True and motion.frames[al.name][nbf_idx].frame > now_bf.frame:
+                                    next_bf = motion.frames[al.name][nbf_idx]
+                                    break
 
-                                # 読み込んだ時の次のキー
-                                for nbf_idx in range(bf_idx + 1, len(motion.frames[al.name])):
-                                    if motion.frames[al.name][nbf_idx].read == True and motion.frames[al.name][nbf_idx].frame != now_bf.frame:
-                                        next_bf = motion.frames[al.name][nbf_idx]
-                                        break
+                            # 次の追加した有効なキー
+                            for nbf_idx in range(bf_idx + 1, len(motion.frames[al.name])):
+                                if motion.frames[al.name][nbf_idx].read == False and motion.frames[al.name][nbf_idx].key == True and motion.frames[al.name][nbf_idx].frame < next_bf.frame:
+                                    next_added_bf = motion.frames[al.name][nbf_idx]
+                                    break
 
-                                # 次の追加した有効なキー
-                                for nbf_idx in range(bf_idx + 1, len(motion.frames[al.name])):
-                                    if motion.frames[al.name][nbf_idx].read == False and motion.frames[al.name][nbf_idx].key == True and motion.frames[al.name][nbf_idx].frame < next_bf.frame:
-                                        next_added_bf = motion.frames[al.name][nbf_idx]
-                                        break
+                            # 有効な前のキー
+                            for pbf_idx in range(bf_idx - 1, -1, -1):
+                                if motion.frames[al.name][pbf_idx].key == True and motion.frames[al.name][pbf_idx].frame < now_bf.frame:
+                                    prev_bf = motion.frames[al.name][pbf_idx]
+                                    break
+                            
+                            if next_bf and not next_added_bf and now_bf.key == False:
+                                # 次の間に追加したキーがない場合、元に戻すだけ
 
-                                # 読み込んだ時の前のキー
-                                for pbf_idx in range(bf_idx - 1, -1, -1):
-                                    if motion.frames[al.name][pbf_idx].key == True and motion.frames[al.name][pbf_idx].frame != now_bf.frame:
-                                        prev_bf = motion.frames[al.name][pbf_idx]
-                                        break
+                                # 今回の始点を元に戻す
+                                next_bf.complement[R_x1_idxs[0]] = next_bf.complement[R_x1_idxs[1]] = next_bf.complement[R_x1_idxs[2]] = next_bf.complement[R_x1_idxs[3]] = next_bf.org_complement[R_x1_idxs[3]]
+                                next_bf.complement[R_y1_idxs[0]] = next_bf.complement[R_y1_idxs[1]] = next_bf.complement[R_y1_idxs[2]] = next_bf.complement[R_y1_idxs[3]] = next_bf.org_complement[R_y1_idxs[3]]
 
-                                if prev_bf and next_bf and not next_added_bf:
-                                    # 前と次の間に追加したキーがない場合、元に戻すだけ
+                                # 今回の終点を元に戻す
+                                next_bf.complement[R_x2_idxs[0]] = next_bf.complement[R_x2_idxs[1]] = next_bf.complement[R_x2_idxs[2]] = next_bf.complement[R_x2_idxs[3]] = next_bf.org_complement[R_x2_idxs[3]]
+                                next_bf.complement[R_y2_idxs[0]] = next_bf.complement[R_y2_idxs[1]] = next_bf.complement[R_y2_idxs[2]] = next_bf.complement[R_y2_idxs[3]] = next_bf.org_complement[R_y2_idxs[3]]
 
-                                    # 今回の始点を元に戻す
-                                    prev_bf.complement[R_x1_idxs[0]] = prev_bf.complement[R_x1_idxs[1]] = prev_bf.complement[R_x1_idxs[2]] = prev_bf.complement[R_x1_idxs[3]] = prev_bf.org_complement[R_x1_idxs[3]]
-                                    prev_bf.complement[R_y1_idxs[0]] = prev_bf.complement[R_y1_idxs[1]] = prev_bf.complement[R_y1_idxs[2]] = prev_bf.complement[R_y1_idxs[3]] = prev_bf.org_complement[R_y1_idxs[3]]
+                            elif prev_bf and next_bf and next_added_bf:
+                                if 5260 <= bf.frame <= 5290:
+                                    logger.debug("補間曲線再設定: %s: %s, p: %s, n: %s", al.name, now_bf.frame, prev_bf.frame, next_bf.frame)
+                                    logger.debug("now: x: %s, y: %s", now_bf.complement[R_x1_idxs[3]], now_bf.complement[R_y1_idxs[3]])
+                                    logger.debug("prev: %s", prev_bf.complement)
+                                    logger.debug("next: %s", next_bf.complement)
+                                
+                                # 補間曲線を計算する場合、現在の補間曲線から分割する
+                                next_x1v = next_bf.org_complement[R_x1_idxs[3]]
+                                next_y1v = next_bf.org_complement[R_y1_idxs[3]]
+                                next_x2v = next_bf.org_complement[R_x2_idxs[3]]
+                                next_y2v = next_bf.org_complement[R_y2_idxs[3]]
 
-                                    # 今回の終点を元に戻す
-                                    prev_bf.complement[R_x2_idxs[0]] = prev_bf.complement[R_x2_idxs[1]] = prev_bf.complement[R_x2_idxs[2]] = prev_bf.complement[R_x2_idxs[3]] = prev_bf.org_complement[R_x2_idxs[3]]
-                                    prev_bf.complement[R_y2_idxs[0]] = prev_bf.complement[R_y2_idxs[1]] = prev_bf.complement[R_y2_idxs[2]] = prev_bf.complement[R_y2_idxs[3]] = prev_bf.org_complement[R_y2_idxs[3]]
+                                # ベジェ曲線を分割して新しい制御点を求める
+                                before_bz, after_bz = calc_bezier_split(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, next_bf.frame, next_added_bf.frame, al.name)
 
-                                    # 今回の始点を元に戻す
-                                    next_bf.complement[R_x1_idxs[0]] = next_bf.complement[R_x1_idxs[1]] = next_bf.complement[R_x1_idxs[2]] = next_bf.complement[R_x1_idxs[3]] = next_bf.org_complement[R_x1_idxs[3]]
-                                    next_bf.complement[R_y1_idxs[0]] = next_bf.complement[R_y1_idxs[1]] = next_bf.complement[R_y1_idxs[2]] = next_bf.complement[R_y1_idxs[3]] = next_bf.org_complement[R_y1_idxs[3]]
+                                # 分割の始点は、前半のB
+                                next_added_bf.complement[R_x1_idxs[0]] = next_added_bf.complement[R_x1_idxs[1]] = next_added_bf.complement[R_x1_idxs[2]] = next_added_bf.complement[R_x1_idxs[3]] = int(before_bz[1].x())
+                                next_added_bf.complement[R_y1_idxs[0]] = next_added_bf.complement[R_y1_idxs[1]] = next_added_bf.complement[R_y1_idxs[2]] = next_added_bf.complement[R_y1_idxs[3]] = int(before_bz[1].y())
 
-                                    # 今回の終点を元に戻す
-                                    next_bf.complement[R_x2_idxs[0]] = next_bf.complement[R_x2_idxs[1]] = next_bf.complement[R_x2_idxs[2]] = next_bf.complement[R_x2_idxs[3]] = next_bf.org_complement[R_x2_idxs[3]]
-                                    next_bf.complement[R_y2_idxs[0]] = next_bf.complement[R_y2_idxs[1]] = next_bf.complement[R_y2_idxs[2]] = next_bf.complement[R_y2_idxs[3]] = next_bf.org_complement[R_y2_idxs[3]]
+                                # 分割の終点は、後半のC
+                                next_added_bf.complement[R_x2_idxs[0]] = next_added_bf.complement[R_x2_idxs[1]] = next_added_bf.complement[R_x2_idxs[2]] = next_added_bf.complement[R_x2_idxs[3]] = int(before_bz[2].x())
+                                next_added_bf.complement[R_y2_idxs[0]] = next_added_bf.complement[R_y2_idxs[1]] = next_added_bf.complement[R_y2_idxs[2]] = next_added_bf.complement[R_y2_idxs[3]] = int(before_bz[2].y())
 
-                                elif prev_bf and next_bf and next_added_bf:
-                                    if 5260 <= bf.frame <= 5290:
-                                        logger.debug("補間曲線再設定: %s: %s, p: %s, n: %s", al.name, now_bf.frame, prev_bf.frame, next_bf.frame)
-                                        logger.debug("now: x: %s, y: %s", now_bf.complement[R_x1_idxs[3]], now_bf.complement[R_y1_idxs[3]])
-                                        logger.debug("prev: %s", prev_bf.complement)
-                                        logger.debug("next: %s", next_bf.complement)
-                                    
-                                    # 補間曲線を計算する場合、現在の補間曲線から分割する
-                                    next_x1v = next_bf.org_complement[R_x1_idxs[3]]
-                                    next_y1v = next_bf.org_complement[R_y1_idxs[3]]
-                                    next_x2v = next_bf.org_complement[R_x2_idxs[3]]
-                                    next_y2v = next_bf.org_complement[R_y2_idxs[3]]
+                                # 今回の始点は、後半のB
+                                next_bf.complement[R_x1_idxs[0]] = next_bf.complement[R_x1_idxs[1]] = next_bf.complement[R_x1_idxs[2]] = next_bf.complement[R_x1_idxs[3]] = int(after_bz[1].x())
+                                next_bf.complement[R_y1_idxs[0]] = next_bf.complement[R_y1_idxs[1]] = next_bf.complement[R_y1_idxs[2]] = next_bf.complement[R_y1_idxs[3]] = int(after_bz[1].y())
 
-                                    # ベジェ曲線を分割して新しい制御点を求める
-                                    before_bz, after_bz = calc_bezier_split(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, next_bf.frame, next_added_bf.frame, al.name)
-
-                                    # 分割の始点は、前半のB
-                                    next_added_bf.complement[R_x1_idxs[0]] = next_added_bf.complement[R_x1_idxs[1]] = next_added_bf.complement[R_x1_idxs[2]] = next_added_bf.complement[R_x1_idxs[3]] = int(before_bz[1].x())
-                                    next_added_bf.complement[R_y1_idxs[0]] = next_added_bf.complement[R_y1_idxs[1]] = next_added_bf.complement[R_y1_idxs[2]] = next_added_bf.complement[R_y1_idxs[3]] = int(before_bz[1].y())
-
-                                    # 分割の終点は、後半のC
-                                    next_added_bf.complement[R_x2_idxs[0]] = next_added_bf.complement[R_x2_idxs[1]] = next_added_bf.complement[R_x2_idxs[2]] = next_added_bf.complement[R_x2_idxs[3]] = int(before_bz[2].x())
-                                    next_added_bf.complement[R_y2_idxs[0]] = next_added_bf.complement[R_y2_idxs[1]] = next_added_bf.complement[R_y2_idxs[2]] = next_added_bf.complement[R_y2_idxs[3]] = int(before_bz[2].y())
-
-                                    # 今回の始点は、後半のB
-                                    next_bf.complement[R_x1_idxs[0]] = next_bf.complement[R_x1_idxs[1]] = next_bf.complement[R_x1_idxs[2]] = next_bf.complement[R_x1_idxs[3]] = int(after_bz[1].x())
-                                    next_bf.complement[R_y1_idxs[0]] = next_bf.complement[R_y1_idxs[1]] = next_bf.complement[R_y1_idxs[2]] = next_bf.complement[R_y1_idxs[3]] = int(after_bz[1].y())
-
-                                    # 今回の終点は、後半のC
-                                    next_bf.complement[R_x2_idxs[0]] = next_bf.complement[R_x2_idxs[1]] = next_bf.complement[R_x2_idxs[2]] = next_bf.complement[R_x2_idxs[3]] = int(after_bz[2].x())
-                                    next_bf.complement[R_y2_idxs[0]] = next_bf.complement[R_y2_idxs[1]] = next_bf.complement[R_y2_idxs[2]] = next_bf.complement[R_y2_idxs[3]] = int(after_bz[2].y())
+                                # 今回の終点は、後半のC
+                                next_bf.complement[R_x2_idxs[0]] = next_bf.complement[R_x2_idxs[1]] = next_bf.complement[R_x2_idxs[2]] = next_bf.complement[R_x2_idxs[3]] = int(after_bz[2].x())
+                                next_bf.complement[R_y2_idxs[0]] = next_bf.complement[R_y2_idxs[1]] = next_bf.complement[R_y2_idxs[2]] = next_bf.complement[R_y2_idxs[3]] = int(after_bz[2].y())
 
                     print("腕合わせ事後調整 b: %s" % al.name)
 
@@ -1788,9 +1779,9 @@ def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False
             if is_calc_complement:
                 # 補間曲線の計算し直しの場合
 
-                # 前の有効なキー
+                # 前の読み込んだキー
                 for pbf_idx in range(bidx - 1, -1, -1):
-                    if frames[bone_name][pbf_idx].key == True:
+                    if frames[bone_name][pbf_idx].read == True:
                         prev_bf = frames[bone_name][pbf_idx]
                         break
                 
