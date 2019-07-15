@@ -109,7 +109,7 @@ def is_inner_upper(upper_pos, elbow_pos, finger_pos, replace_model, upper_vertex
 def calc_hand_pos(model, wrist_links, frames, bf):
 
     # グローバル行列算出
-    _, _, _, _, global_3ds = create_matrix_global(model, wrist_links, frames, bf)
+    _, _, _, _, global_3ds = utils.create_matrix_global(model, wrist_links, frames, bf)
 
     upper_pos = QVector3D()
     elbow_pos = QVector3D()
@@ -166,7 +166,7 @@ def adjust_by_arm_bone(replace_model, direction, wrist_links, frames, bf, upper_
     av = 0.9
 
     # ボーン -------------
-    bone_idx, _ = get_prev_bf(frames, bone_name, bf.frame)
+    bone_idx, _ = utils.get_prev_bf(frames, bone_name, bf.frame)
 
     # 全体を減らす
     rot = frames[bone_name][bone_idx].rotation
@@ -185,7 +185,7 @@ def adjust_by_elbow_bone(replace_model, direction, wrist_links, frames, bf, uppe
     av = 0.9
 
     # ボーン -------------
-    bone_idx, _ = get_prev_bf(frames, bone_name, bf.frame)
+    bone_idx, _ = utils.get_prev_bf(frames, bone_name, bf.frame)
 
     # 全体を減らす
     rot = frames[bone_name][bone_idx].rotation
@@ -205,7 +205,7 @@ def calc_upper_vertex(upper_vertices, model, head_links, frames, bf):
     upper_vertex_pos = {}
 
     # グローバル行列算出
-    _, _, _, matrixs = create_matrix(model, head_links, frames, bf)
+    _, _, _, matrixs = utils.create_matrix(model, head_links, frames, bf)
 
     # 該当ボーンのグローバル行列まで求める
     upper_matrixes = [QMatrix4x4() for i in range(len(head_links))]

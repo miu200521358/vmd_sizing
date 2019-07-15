@@ -36,6 +36,7 @@ def get_prev_bf(frames, bone_name, frameno):
 
     # 最後まで取れなければ、最終項目
     return len(frames[bone_name]) - 1, frames[bone_name][-1]
+    
 
 def create_matrix_parts(model, links, frames, bf, scales):
     # ローカル位置
