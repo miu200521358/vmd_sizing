@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# 接触回避処理
+# 腕IK処理
 # 
 import logging
 import copy
@@ -39,13 +39,13 @@ def exec(motion, trace_model, replace_model, is_avoidance, is_hand_ik, hand_dist
             is_error_outputed = exec_arm_ik(motion, trace_model, replace_model, hand_distance, org_motion_frames, all_rep_wrist_links, arm_links, error_path, error_file_logger)
 
             # 後始末
-            cleanup(motion, trace_model, replace_model, arm_links)
+            cleanup(motion, arm_links)
 
     return not is_error_outputed
 
 
 # 腕IK調整後始末
-def cleanup(motion, trace_model, replace_model, arm_links):
+def cleanup(motion, arm_links):
     # 補間曲線を有効なキーだけに揃える
     prev_bf = next_bf = None
     next_added_bfs = prev_added_bfs = []
@@ -100,7 +100,7 @@ def cleanup(motion, trace_model, replace_model, arm_links):
                         logger.debug("prev: %s", prev_bf.complement)
                         logger.debug("next: %s", next_bf.complement)
                     
-                    # 計算用の前キーフレ・今キーフレ・次キーフレ
+                    # 計算用の今キーフレ
                     c_now_bf = None
                     if prev_bf and next_bf:
                         if now_bf.read == True:
