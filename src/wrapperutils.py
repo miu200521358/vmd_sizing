@@ -113,7 +113,7 @@ def is_all_sizing(motion, org_pmx, rep_pmx, output_vmd_path):
             if output_vmd_path:
                 # ファイル出力の場合、ログファイル生成
                 error_path = re.sub(r'\.vmd$', ".log", output_vmd_path.lower())
-                error_file_logger = logging.getLogger("error")
+                error_file_logger = logging.getLogger("message")
                 error_file_logger.addHandler(logging.FileHandler(error_path))
                 error_file_logger.info("モーション: %s" , motion.path)
                 error_file_logger.info("作成元: %s" , org_pmx.path)
@@ -137,7 +137,7 @@ def is_all_sizing(motion, org_pmx, rep_pmx, output_vmd_path):
                 # ファイル出力の場合、ログファイル生成
                 if not error_file_logger:
                     error_path = re.sub(r'\.vmd$', ".log", output_vmd_path.lower())
-                    error_file_logger = logging.getLogger("error")
+                    error_file_logger = logging.getLogger("message")
                     error_file_logger.addHandler(logging.FileHandler(error_path))
                     error_file_logger.info("モーション: %s" , motion.path)
                     error_file_logger.info("作成元: %s" , org_pmx.path)
@@ -286,7 +286,7 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
 
         error_path = re.sub(r'\.vmd$', ".log", output_vmd_path.lower())
         if not error_file_logger:
-            error_file_logger = logging.getLogger("error")
+            error_file_logger = logging.getLogger("message")
             error_file_logger.addHandler(logging.FileHandler(error_path))
         error_file_logger.info("モーション: %s" , motion.path)
         error_file_logger.info("作成元: %s" , org_pmx.path)
@@ -309,7 +309,7 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
 
         error_path = re.sub(r'\.vmd$', ".log", output_vmd_path.lower())
         if not error_file_logger:
-            error_file_logger = logging.getLogger("error")
+            error_file_logger = logging.getLogger("message")
             error_file_logger.addHandler(logging.FileHandler(error_path))
         error_file_logger.info("モーション: %s" , motion.path)
         error_file_logger.info("作成元: %s" , org_pmx.path)
