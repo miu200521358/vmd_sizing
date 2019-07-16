@@ -14,13 +14,15 @@ import utils
 
 logger = logging.getLogger("__main__").getChild(__name__)
 
+# file_logger = logging.getLogger("message")
+# file_logger.addHandler(logging.FileHandler("test.csv"))
+
 def exec(motion, trace_model, replace_model, is_avoidance, is_hand_ik, hand_distance, org_motion_frames, error_path, error_file_logger):
+    is_error_outputed = False
+
     # -----------------------------------------------------------------
     # 頭部と腕の接触回避処理        
     if motion.motion_cnt > 0 and not is_avoidance and is_hand_ik:
-
-        # error_file_logger.info("bone_name,start,now,end,t,x1v,y1v,x2v,y2v,A.x(),A.y(),E.x(),E.y(),H.x(),H.y(),J.x(),J.y(),I.x(),I.y(),G.x(),G.y(),D.x(),D.y(),before_diff.x(),before_diff.y(),after_diff.x(),after_diff.y(),bA.x(),bA.y(),bE.x(),bE.y(),bH.x(),bH.y(),bJ.x(),bJ.y(),aJ.x(),aJ.y(),aI.x(),aI.y(),aG.x(), aG.y(),aD.x(),aD.y(),bA6.x(),bA6.y(),bE6.x(),bE6.y(),bH6.x(),bH6.y(),bJ6.x(),bJ6.y(),aJ6.x(),aJ6.y(),aI6.x(),aI6.y(),aG6.x(),aG6.y(),aD6.x(),aD6.y() ,bA2.x(),bA2.y(),bE2.x(),bE2.y(),bH2.x(),bH2.y(),bJ2.x(),bJ2.y(),aJ2.x(),aJ2.y(),aI2.x(),aI2.y(),aG2.x(),aG2.y(),aD2.x(),aD2.y()")
-
         # センターから手首までの位置(トレース先モデル)
         all_rep_wrist_links, _ = replace_model.create_link_2_top_lr("手首")
 
@@ -38,156 +40,73 @@ def exec(motion, trace_model, replace_model, is_avoidance, is_hand_ik, hand_dist
             # 手首位置合わせ処理実行
             is_error_outputed = exec_arm_ik(motion, trace_model, replace_model, hand_distance, org_motion_frames, all_rep_wrist_links, arm_links, error_path, error_file_logger)
 
-            # 後始末
-            cleanup(motion, arm_links)
+            # 補間曲線再設定
+            reset_complement(motion, arm_links)
 
     return not is_error_outputed
 
 
 # 腕IK調整後始末
-def cleanup(motion, arm_links):
+def reset_complement(motion, arm_links):
     # 補間曲線を有効なキーだけに揃える
     prev_bf = next_bf = None
-    next_added_bfs = prev_added_bfs = []
     
     for direction in ["左", "右"]:
         for al in arm_links[direction]:
             for bf_idx, bf in enumerate(motion.frames[al.name]):
                 now_bf = motion.frames[al.name][bf_idx]
 
-                if len(next_added_bfs) > 0 and next_added_bfs[0].frame >= now_bf.frame:
-                    # 前回、次回の有効キーを算出していて、それが現在キーより先の場合、処理スキップ
+                if now_bf.key == False or now_bf.read == True:
+                    # 現在キーが無効もしくは読み込みキーの場合、処理スルー
+                    if 5210 <= now_bf.frame <= 5240:
+                        logger.info("処理スルー: %s, key: %s, read: %s", now_bf.frame, now_bf.key, now_bf.read)
                     continue
 
                 # 前回のキー情報をクリア
                 prev_bf = next_bf = None
-                next_added_bfs = prev_added_bfs = []
-
+                
                 # 読み込んだ時の次のキー
                 for nbf_idx in range(bf_idx + 1, len(motion.frames[al.name])):
                     if motion.frames[al.name][nbf_idx].read == True and motion.frames[al.name][nbf_idx].frame > now_bf.frame:
                         next_bf = motion.frames[al.name][nbf_idx]
                         break
 
-                # 次の追加した有効なキー（読み込み次回キーの前のを全部見る）
-                if next_bf:
-                    for nbf_idx in range(bf_idx + 1, len(motion.frames[al.name])):
-                        if motion.frames[al.name][nbf_idx].read == False and motion.frames[al.name][nbf_idx].key == True and motion.frames[al.name][nbf_idx].frame < next_bf.frame:
-                            next_added_bfs.append(motion.frames[al.name][nbf_idx])
-
-                        if motion.frames[al.name][nbf_idx].frame > next_bf.frame:
-                            break
-                    
                 # 有効な前のキー
                 for pbf_idx in range(bf_idx - 1, -1, -1):
-                    if motion.frames[al.name][pbf_idx].read == True and motion.frames[al.name][pbf_idx].frame < now_bf.frame:
+                    if motion.frames[al.name][pbf_idx].key == True and motion.frames[al.name][pbf_idx].frame < now_bf.frame:
                         prev_bf = motion.frames[al.name][pbf_idx]
                         break
                 
-                # 前の追加した有効なキー（読み込み前回キーの以降のを全部見る）
-                if prev_bf:
-                    for nbf_idx in range(bf_idx - 1, -1, -1):
-                        if motion.frames[al.name][nbf_idx].read == False and motion.frames[al.name][nbf_idx].key == True and motion.frames[al.name][nbf_idx].frame > prev_bf.frame:
-                            prev_added_bfs.append(motion.frames[al.name][nbf_idx])
-
-                        if motion.frames[al.name][nbf_idx].frame < prev_bf.frame:
-                            break
-                    
                 if prev_bf and next_bf:
-                    if 5260 <= bf.frame <= 5290:
-                        logger.debug("補間曲線再設定: %s: %s, p: %s, n: %s", al.name, now_bf.frame, prev_bf.frame, next_bf.frame)
-                        logger.debug("now: x: %s, y: %s", now_bf.complement[utils.R_x1_idxs[3]], now_bf.complement[utils.R_y1_idxs[3]])
-                        logger.debug("prev: %s", prev_bf.complement)
-                        logger.debug("next: %s", next_bf.complement)
+                    # 前後がある場合、補間曲線を分割する
+                    next_x1v = next_bf.complement[utils.R_x1_idxs[3]]
+                    next_y1v = next_bf.complement[utils.R_y1_idxs[3]]
+                    next_x2v = next_bf.complement[utils.R_x2_idxs[3]]
+                    next_y2v = next_bf.complement[utils.R_y2_idxs[3]]
                     
-                    # 計算用の今キーフレ
-                    c_now_bf = None
-                    if prev_bf and next_bf:
-                        if now_bf.read == True:
-                            if len(next_added_bfs) == 0 and len(prev_added_bfs) == 0:
-                                # 読み込みキーで、前も後もまったくない場合、補間曲線をクリアする
-                                if al.name == "左ひじ":
-                                    logger.info("[A]読み込みキーで、前も後もまったくない場合: %s, b: %s, p: %s, n: %s", now_bf.frame, al.name, prev_bf.frame, next_bf.frame )
+                    # ベジェ曲線を分割して新しい制御点を求める
+                    before_bz, after_bz = utils.calc_bezier_split(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, next_bf.frame, now_bf.frame, al.name)
 
-                                # 次回読み込みキーの始点を元に戻す
-                                next_bf.complement[utils.R_x1_idxs[0]] = next_bf.complement[utils.R_x1_idxs[1]] = next_bf.complement[utils.R_x1_idxs[2]] = next_bf.complement[utils.R_x1_idxs[3]] = next_bf.org_complement[utils.R_x1_idxs[3]]
-                                next_bf.complement[utils.R_y1_idxs[0]] = next_bf.complement[utils.R_y1_idxs[1]] = next_bf.complement[utils.R_y1_idxs[2]] = next_bf.complement[utils.R_y1_idxs[3]] = next_bf.org_complement[utils.R_y1_idxs[3]]
+                    # if 5110 <= now_bf.frame <= 5240:
+                    logger.info("next_x1v: %s, next_y1v: %s, next_x2v: %s, next_y2v: %s, start: %s, now: %s, end: %s", next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, now_bf.frame, next_bf.frame)
+                    logger.info("before_bz: %s", before_bz)
+                    logger.info("after_bz: %s", after_bz)
 
-                                # 次回読み込みキーの終点を元に戻す
-                                next_bf.complement[utils.R_x2_idxs[0]] = next_bf.complement[utils.R_x2_idxs[1]] = next_bf.complement[utils.R_x2_idxs[2]] = next_bf.complement[utils.R_x2_idxs[3]] = next_bf.org_complement[utils.R_x2_idxs[3]]
-                                next_bf.complement[utils.R_y2_idxs[0]] = next_bf.complement[utils.R_y2_idxs[1]] = next_bf.complement[utils.R_y2_idxs[2]] = next_bf.complement[utils.R_y2_idxs[3]] = next_bf.org_complement[utils.R_y2_idxs[3]]                                    
-                            else:
-                                # 読み込みキーで、前後どちらかある場合、処理スルー
-                                if al.name == "左ひじ":
-                                    logger.info("[B]読み込みキーで、前後どちらかある場合、処理スルー: %s, b: %s, p: %s, n: %s", now_bf.frame, al.name, prev_bf.frame, next_bf.frame )
-                                pass
-                        else:
-                            # 追加キー
-                            if now_bf.key == True:
-                                # 追加キーが有効
-                                if len(next_added_bfs) == 0:
-                                    # 追加キーで、後がまったくない場合
-                                    if al.name == "左ひじ":
-                                        logger.info("[C]追加キーで、後がまったくない場合: %s, b: %s, p: %s, n: %s", now_bf.frame, al.name, prev_bf.frame, next_bf.frame )
-                                    c_now_bf = now_bf
-                                else:
-                                    # 追加キーで、後がある場合
-                                    if al.name == "左ひじ":
-                                        logger.info("[D]追加キーで、後がある場合: %s, b: %s, p: %s, n: %s", now_bf.frame, al.name, prev_bf.frame, next_bf.frame )
-                                    pass
-                            else:
-                                # 追加キーが無効
-                                if len(next_added_bfs) == 0 and len(prev_added_bfs) == 0:
-                                    # 追加キーが無効で、前も後もまったくない場合
-                                    if al.name == "左ひじ":
-                                        logger.info("[E]追加キーが無効で、前も後もまったくない場合: %s, b: %s, p: %s, n: %s", now_bf.frame, al.name, prev_bf.frame, next_bf.frame )
+                    # 分割（今回キー）の始点は、前半のB
+                    now_bf.complement[utils.R_x1_idxs[0]] = now_bf.complement[utils.R_x1_idxs[1]] = now_bf.complement[utils.R_x1_idxs[2]] = now_bf.complement[utils.R_x1_idxs[3]] = int(before_bz[1].x())
+                    now_bf.complement[utils.R_y1_idxs[0]] = now_bf.complement[utils.R_y1_idxs[1]] = now_bf.complement[utils.R_y1_idxs[2]] = now_bf.complement[utils.R_y1_idxs[3]] = int(before_bz[1].y())
 
-                                    # 次回読み込みキーの始点を元に戻す
-                                    next_bf.complement[utils.R_x1_idxs[0]] = next_bf.complement[utils.R_x1_idxs[1]] = next_bf.complement[utils.R_x1_idxs[2]] = next_bf.complement[utils.R_x1_idxs[3]] = next_bf.org_complement[utils.R_x1_idxs[3]]
-                                    next_bf.complement[utils.R_y1_idxs[0]] = next_bf.complement[utils.R_y1_idxs[1]] = next_bf.complement[utils.R_y1_idxs[2]] = next_bf.complement[utils.R_y1_idxs[3]] = next_bf.org_complement[utils.R_y1_idxs[3]]
+                    # 分割（今回キー）の終点は、後半のC
+                    now_bf.complement[utils.R_x2_idxs[0]] = now_bf.complement[utils.R_x2_idxs[1]] = now_bf.complement[utils.R_x2_idxs[2]] = now_bf.complement[utils.R_x2_idxs[3]] = int(before_bz[2].x())
+                    now_bf.complement[utils.R_y2_idxs[0]] = now_bf.complement[utils.R_y2_idxs[1]] = now_bf.complement[utils.R_y2_idxs[2]] = now_bf.complement[utils.R_y2_idxs[3]] = int(before_bz[2].y())
 
-                                    # 次回読み込みキーの終点を元に戻す
-                                    next_bf.complement[utils.R_x2_idxs[0]] = next_bf.complement[utils.R_x2_idxs[1]] = next_bf.complement[utils.R_x2_idxs[2]] = next_bf.complement[utils.R_x2_idxs[3]] = next_bf.org_complement[utils.R_x2_idxs[3]]
-                                    next_bf.complement[utils.R_y2_idxs[0]] = next_bf.complement[utils.R_y2_idxs[1]] = next_bf.complement[utils.R_y2_idxs[2]] = next_bf.complement[utils.R_y2_idxs[3]] = next_bf.org_complement[utils.R_y2_idxs[3]]                                    
-                                else:
-                                    if len(next_added_bfs) > 0:
-                                        # 追加キーが無効で、後がある場合
-                                        if al.name == "左ひじ":
-                                            logger.info("[F]追加キーが無効で、後がある場合: %s, b: %s, p: %s, n: %s", now_bf.frame, al.name, prev_bf.frame, next_bf.frame )
-                                        c_now_bf = next_added_bfs[0]
-                                    else:
-                                        # 追加キーが無効で後がない場合
-                                        if al.name == "左ひじ":
-                                            logger.info("[G]追加キーが無効で後がない場合: %s, b: %s, p: %s, n: %s", now_bf.frame, al.name, prev_bf.frame, next_bf.frame )
-                                        pass
+                    # 次回読み込みキーの始点は、後半のB
+                    next_bf.complement[utils.R_x1_idxs[0]] = next_bf.complement[utils.R_x1_idxs[1]] = next_bf.complement[utils.R_x1_idxs[2]] = next_bf.complement[utils.R_x1_idxs[3]] = int(after_bz[1].x())
+                    next_bf.complement[utils.R_y1_idxs[0]] = next_bf.complement[utils.R_y1_idxs[1]] = next_bf.complement[utils.R_y1_idxs[2]] = next_bf.complement[utils.R_y1_idxs[3]] = int(after_bz[1].y())
 
-                        if c_now_bf:
-                            # 現在キーが設定されている場合、補間曲線再計算
-
-                            # 補間曲線を計算する場合、以前の補間曲線から分割する
-                            next_x1v = next_bf.org_complement[utils.R_x1_idxs[3]]
-                            next_y1v = next_bf.org_complement[utils.R_y1_idxs[3]]
-                            next_x2v = next_bf.org_complement[utils.R_x2_idxs[3]]
-                            next_y2v = next_bf.org_complement[utils.R_y2_idxs[3]]
-                            
-                            # ベジェ曲線を分割して新しい制御点を求める
-                            before_bz, after_bz = utils.calc_bezier_split(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, next_bf.frame, c_now_bf.frame, al.name)
-
-                            # 分割（今回キー）の始点は、前半のB
-                            c_now_bf.complement[utils.R_x1_idxs[0]] = c_now_bf.complement[utils.R_x1_idxs[1]] = c_now_bf.complement[utils.R_x1_idxs[2]] = c_now_bf.complement[utils.R_x1_idxs[3]] = int(before_bz[1].x())
-                            c_now_bf.complement[utils.R_y1_idxs[0]] = c_now_bf.complement[utils.R_y1_idxs[1]] = c_now_bf.complement[utils.R_y1_idxs[2]] = c_now_bf.complement[utils.R_y1_idxs[3]] = int(before_bz[1].y())
-
-                            # 分割（今回キー）の終点は、後半のC
-                            c_now_bf.complement[utils.R_x2_idxs[0]] = c_now_bf.complement[utils.R_x2_idxs[1]] = c_now_bf.complement[utils.R_x2_idxs[2]] = c_now_bf.complement[utils.R_x2_idxs[3]] = int(before_bz[2].x())
-                            c_now_bf.complement[utils.R_y2_idxs[0]] = c_now_bf.complement[utils.R_y2_idxs[1]] = c_now_bf.complement[utils.R_y2_idxs[2]] = c_now_bf.complement[utils.R_y2_idxs[3]] = int(before_bz[2].y())
-
-                            # 次回読み込みキーの始点は、後半のB
-                            next_bf.complement[utils.R_x1_idxs[0]] = next_bf.complement[utils.R_x1_idxs[1]] = next_bf.complement[utils.R_x1_idxs[2]] = next_bf.complement[utils.R_x1_idxs[3]] = int(after_bz[1].x())
-                            next_bf.complement[utils.R_y1_idxs[0]] = next_bf.complement[utils.R_y1_idxs[1]] = next_bf.complement[utils.R_y1_idxs[2]] = next_bf.complement[utils.R_y1_idxs[3]] = int(after_bz[1].y())
-
-                            # 次回読み込みキーの終点は、後半のC
-                            next_bf.complement[utils.R_x2_idxs[0]] = next_bf.complement[utils.R_x2_idxs[1]] = next_bf.complement[utils.R_x2_idxs[2]] = next_bf.complement[utils.R_x2_idxs[3]] = int(after_bz[2].x())
-                            next_bf.complement[utils.R_y2_idxs[0]] = next_bf.complement[utils.R_y2_idxs[1]] = next_bf.complement[utils.R_y2_idxs[2]] = next_bf.complement[utils.R_y2_idxs[3]] = int(after_bz[2].y())
+                    # 次回読み込みキーの終点は、後半のC
+                    next_bf.complement[utils.R_x2_idxs[0]] = next_bf.complement[utils.R_x2_idxs[1]] = next_bf.complement[utils.R_x2_idxs[2]] = next_bf.complement[utils.R_x2_idxs[3]] = int(after_bz[2].x())
+                    next_bf.complement[utils.R_y2_idxs[0]] = next_bf.complement[utils.R_y2_idxs[1]] = next_bf.complement[utils.R_y2_idxs[2]] = next_bf.complement[utils.R_y2_idxs[3]] = int(after_bz[2].y())
 
             print("手首位置合わせ事後調整 b: %s" % al.name)
 
@@ -209,7 +128,8 @@ def prepare(motion, arm_links, hand_distance):
                                 for tbf_idx, tbf in enumerate(motion.frames[al.name]):
                                     if tbf.frame == bf.frame:
                                         # とりあえず登録対象のキーが既存なので終了
-                                        logger.debug("fill 既存あり: %s, i: %s, f: %s", al.name, tbf_idx, bf.frame)
+                                        if bf.frame == 5117:
+                                            logger.info("fill 既存あり: %s, i: %s, f: %s", al.name, tbf_idx, bf.frame)
                                         is_checked = True
                                         is_added = True
                                         break
@@ -223,7 +143,8 @@ def prepare(motion, arm_links, hand_distance):
                                         fillbf.key = True if hand_distance < 0 else False
 
                                         motion.frames[al.name].insert(tbf_idx, fillbf)
-                                        logger.debug("fill insert: %s, i: %s, f: %s, key: %s", al.name, tbf_idx, fillbf.frame, fillbf.key)
+                                        if bf.frame == 5117:
+                                            logger.info("fill insert: %s, i: %s, f: %s, key: %s", al.name, tbf_idx, fillbf.frame, fillbf.key)
 
                                         is_checked = True
                                         is_added = True
@@ -234,7 +155,10 @@ def prepare(motion, arm_links, hand_distance):
                                     fillbf = copy.deepcopy(tbf)
                                     # とりあえず実際に登録はしない
                                     fillbf.key = False
-                                    logger.debug("fill 今回なし: %s, i: %s, f: %s", al.name, tbf_idx, fillbf.frame)
+                                    # 読み込みキーではない
+                                    fillbf.read = False
+                                    if bf.frame == 5117:
+                                        logger.info("fill 今回なし: %s, i: %s, f: %s", al.name, tbf_idx, fillbf.frame)
                                     motion.frames[al.name].insert(tbf_idx, fillbf)
 
                     if is_checked:
@@ -582,44 +506,44 @@ def exec_arm_ik(motion, trace_model, replace_model, hand_distance, org_motion_fr
                                 rep_wrist_pos = create_direction_pos(rep_upper_direction_qq, rep_front_wrist_pos)
                                 logger.debug("frame: %s, rep_wrist_pos after: %s", bf.frame, rep_wrist_pos)
 
-                                # ---------
-                                wrist_ik_bone = "{0}偽IK".format(direction)
-                                if not wrist_ik_bone in motion.frames:
-                                    motion.frames[wrist_ik_bone] = []
+                                # # ---------
+                                # wrist_ik_bone = "{0}偽IK".format(direction)
+                                # if not wrist_ik_bone in motion.frames:
+                                #     motion.frames[wrist_ik_bone] = []
                                 
-                                wikbf = VmdBoneFrame(bf.frame)
-                                wikbf.name = wrist_ik_bone.encode('shift-jis')
-                                wikbf.format_name = wrist_ik_bone
-                                wikbf.frame = bf.frame
-                                wikbf.key = True
-                                wikbf.position = rep_wrist_pos
-                                motion.frames[wrist_ik_bone].append(wikbf)
-                                # ---------
+                                # wikbf = VmdBoneFrame(bf.frame)
+                                # wikbf.name = wrist_ik_bone.encode('shift-jis')
+                                # wikbf.format_name = wrist_ik_bone
+                                # wikbf.frame = bf.frame
+                                # wikbf.key = True
+                                # wikbf.position = rep_wrist_pos
+                                # motion.frames[wrist_ik_bone].append(wikbf)
+                                # # ---------
 
                                 # 変換先モデルの向きを元に戻して、正面向きの手首を回転させた位置に合わせる(反対側)
                                 rep_reverse_wrist_pos = create_direction_pos(rep_upper_direction_qq, rep_reverse_front_wrist_pos)
                                 logger.debug("frame: %s, rep_reverse_wrist_pos after: %s", bf.frame, rep_reverse_wrist_pos)
 
-                                # ---------
-                                reverse_wrist_ik_bone = "{0}偽IK".format(reverse_direction)
-                                if not reverse_wrist_ik_bone in motion.frames:
-                                    motion.frames[reverse_wrist_ik_bone] = []
+                                # # ---------
+                                # reverse_wrist_ik_bone = "{0}偽IK".format(reverse_direction)
+                                # if not reverse_wrist_ik_bone in motion.frames:
+                                #     motion.frames[reverse_wrist_ik_bone] = []
                                 
-                                rwikbf = VmdBoneFrame(bf.frame)
-                                rwikbf.name = reverse_wrist_ik_bone.encode('shift-jis')
-                                rwikbf.format_name = reverse_wrist_ik_bone
-                                rwikbf.frame = bf.frame
-                                rwikbf.key = True
-                                rwikbf.position = rep_reverse_wrist_pos
-                                motion.frames[reverse_wrist_ik_bone].append(rwikbf)
-                                # ---------
+                                # rwikbf = VmdBoneFrame(bf.frame)
+                                # rwikbf.name = reverse_wrist_ik_bone.encode('shift-jis')
+                                # rwikbf.format_name = reverse_wrist_ik_bone
+                                # rwikbf.frame = bf.frame
+                                # rwikbf.key = True
+                                # rwikbf.position = rep_reverse_wrist_pos
+                                # motion.frames[reverse_wrist_ik_bone].append(rwikbf)
+                                # # ---------
 
                                 # 手首位置から角度を求める
                                 calc_arm_IK2FK(rep_wrist_pos, replace_model, arm_links[direction], all_rep_wrist_links[direction], direction, motion.frames, bf, prev_space_bf)
                                 # 反対側の手首位置から角度を求める
                                 calc_arm_IK2FK(rep_reverse_wrist_pos, replace_model, arm_links[reverse_direction], all_rep_wrist_links[reverse_direction], reverse_direction, motion.frames, bf, prev_space_bf)
 
-                                # # 指位置調整-----------------
+                                # 指位置調整-----------------
 
                                 if finger_links:
                                     # 指があるモデルの場合、手首角度調整
@@ -741,7 +665,9 @@ def exec_arm_ik(motion, trace_model, replace_model, hand_distance, org_motion_fr
                                             if lad >= 0.85 and rad >= 0.85:
                                                 # 角度調整が既定内である場合
                                                 motion.frames[cfk][bf_idx].key = True
-                                                logger.debug("採用: cfk: %s, bf: %s, f: %s, rot: %s", cfk, bf.frame, motion.frames[cfk][bf_idx].frame, motion.frames[cfk][bf_idx].rotation.toEulerAngles())
+
+                                                if bf.frame == 5117:
+                                                    logger.info("採用: cfk: %s, bf: %s, f: %s, read: %s, rot: %s", cfk, bf.frame, motion.frames[cfk][bf_idx].frame, motion.frames[cfk][bf_idx].read, motion.frames[cfk][bf_idx].rotation.toEulerAngles())
 
                                                 # 前のキーが1つより多く離れていたら有効化
                                                 if bf_idx - 1 >= 0 and motion.frames[cfk][bf_idx].frame > motion.frames[cfk][bf_idx - 1].frame + 1:

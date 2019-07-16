@@ -14,7 +14,7 @@ from VmdWriter import VmdWriter, VmdBoneFrame
 from VmdReader import VmdReader
 from PmxModel import PmxModel, SizingException
 from PmxReader import PmxReader
-import utils, utils_move, utils_arm_stance, utils_avoidance, utils_arm_ik, utils_morph
+import utils, sub_move, sub_arm_stance, sub_avoidance, sub_arm_ik, sub_morph
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -41,19 +41,19 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
     is_success = True
 
     # 移動系ボーン縮尺処理
-    is_success = is_success and utils_move.exec(motion, trace_model, replace_model, error_path, error_file_logger)
+    is_success = is_success and sub_move.exec(motion, trace_model, replace_model, error_path, error_file_logger)
 
     # 腕スタンス補正処理
-    is_success = is_success and utils_arm_stance.exec(motion, trace_model, replace_model, error_path, error_file_logger)
+    is_success = is_success and sub_arm_stance.exec(motion, trace_model, replace_model, error_path, error_file_logger)
 
     # 頭部と腕の接触回避処理
-    is_success = is_success and utils_avoidance.exec(motion, trace_model, replace_model, is_avoidance, is_avoidance_finger, is_hand_ik, error_path, error_file_logger)
+    is_success = is_success and sub_avoidance.exec(motion, trace_model, replace_model, is_avoidance, is_avoidance_finger, is_hand_ik, error_path, error_file_logger)
 
     # 腕IK処理
-    is_success = is_success and utils_arm_ik.exec(motion, trace_model, replace_model, is_avoidance, is_hand_ik, hand_distance, org_motion_frames, error_path, error_file_logger)
+    is_success = is_success and sub_arm_ik.exec(motion, trace_model, replace_model, is_avoidance, is_hand_ik, hand_distance, org_motion_frames, error_path, error_file_logger)
 
     # モーフ処理
-    is_success = is_success and utils_morph.exec(motion, trace_model, replace_model, vmd_choice_values, rep_choice_values, rep_rate_values, error_path, error_file_logger)
+    is_success = is_success and sub_morph.exec(motion, trace_model, replace_model, vmd_choice_values, rep_choice_values, rep_rate_values, error_path, error_file_logger)
 
     if motion.camera_cnt > 0:
         print("カメラ調整未対応")

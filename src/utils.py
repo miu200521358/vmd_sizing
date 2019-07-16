@@ -229,20 +229,23 @@ def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False
 
     for bidx, bf in enumerate(frames[bone_name]):
         if bf.frame == frameno:
-            if frameno == 605:
-                logger.debug("calc_bone_by_complement 同一キーあり: %s, %s", frameno, bone_name)
             # 同一フレームのキーがある場合、それを返す
             fillbf = copy.deepcopy(bf)
+            if frameno == 5217:
+                logger.info("calc_bone_by_complement 同一キーあり: %s, %s, read: %s", frameno, bone_name, fillbf.read)
             return fillbf
         elif bf.frame > frameno:
-            if frameno == 605:
-                logger.debug("calc_bone_by_complement 同一キーなし: %s, %s", frameno, bone_name)
             # 同一フレームのキーがない場合、前のキーIDXを0に見立てて、その間の補間曲線を埋める
             fillbf.name = bf.name
             fillbf.format_name = bone_name
             fillbf.frame = frameno
             # 実際に登録はしない
             fillbf.key = False
+            # 読み込みキーではない
+            fillbf.read = False
+
+            if frameno == 5217:
+                logger.info("calc_bone_by_complement 同一キーなし: %s, %s, read: %s", frameno, bone_name, fillbf.read)
 
             if is_calc_complement:
                 # 補間曲線の計算し直しの場合
@@ -296,55 +299,58 @@ def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False
                 fillbf.position = copy.deepcopy(prev_bf.position)
                 # logger.debug("position stop: %s,%s prev: %s, fill: %s ", prev_frame + n, k, prev_bf.position, bf.position )
             
-            if is_calc_complement:
-                # 指定されたフレーム直前のキーを再設定
-                prev_bf = frames[bone_name][bidx - 1]
+            # if is_calc_complement:
+            #     # 指定されたフレーム直前のキーを再設定
+            #     prev_bf = frames[bone_name][bidx - 1]
 
-                # 補間曲線を計算する場合、現在の補間曲線から分割する
-                next_x1v = bf.complement[R_x1_idxs[3]]
-                next_y1v = bf.complement[R_y1_idxs[3]]
-                next_x2v = bf.complement[R_x2_idxs[3]]
-                next_y2v = bf.complement[R_y2_idxs[3]]
+            #     # 補間曲線を計算する場合、現在の補間曲線から分割する
+            #     next_x1v = bf.complement[R_x1_idxs[3]]
+            #     next_y1v = bf.complement[R_y1_idxs[3]]
+            #     next_x2v = bf.complement[R_x2_idxs[3]]
+            #     next_y2v = bf.complement[R_y2_idxs[3]]
                 
-                # # ベジェ曲線の実値を求める
-                # rx, rn = calc_interpolate_bezier(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, bf.frame, fillbf.frame)
-                # # ベジェ曲線の接線を求める
-                # rx, v = calc_bezier_line_tangent(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, bf.frame, fillbf.frame)
-                # ベジェ曲線を分割して新しい制御点を求める
-                before_bz, after_bz = calc_bezier_split(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, bf.frame, fillbf.frame, bone_name)
+            #     # # ベジェ曲線の実値を求める
+            #     # rx, rn = calc_interpolate_bezier(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, bf.frame, fillbf.frame)
+            #     # # ベジェ曲線の接線を求める
+            #     # rx, v = calc_bezier_line_tangent(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, bf.frame, fillbf.frame)
+            #     # ベジェ曲線を分割して新しい制御点を求める
+            #     before_bz, after_bz = calc_bezier_split(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, bf.frame, fillbf.frame, bone_name)
 
-                logger.debug("bone: %s, prev: %s, bf: %s, fillbf: %s", bone_name, prev_bf.frame, bf.frame, fillbf.frame)
-                if 2440 <= fillbf.frame <= 2440:
-                    logger.debug("next_x1v: %s, next_y1v: %s, next_x2v: %s, next_y2v: %s", next_x1v, next_y1v, next_x2v, next_y2v)
-                    logger.debug("before_bz: %s", before_bz)
-                    logger.debug("after_bz: %s", after_bz)
+            #     logger.debug("bone: %s, prev: %s, bf: %s, fillbf: %s", bone_name, prev_bf.frame, bf.frame, fillbf.frame)
+            #     if 2440 <= fillbf.frame <= 2440:
+            #         logger.debug("next_x1v: %s, next_y1v: %s, next_x2v: %s, next_y2v: %s", next_x1v, next_y1v, next_x2v, next_y2v)
+            #         logger.debug("before_bz: %s", before_bz)
+            #         logger.debug("after_bz: %s", after_bz)
 
-                # オリジナルの補間曲線として先の元々の補間曲線を保持しておく
-                fillbf.org_complement = copy.deepcopy(bf.org_complement)
-                # 補間曲線を元々の補間曲線からコピーする
-                fillbf.complement = copy.deepcopy(bf.complement)
+            #     # オリジナルの補間曲線として先の元々の補間曲線を保持しておく
+            #     fillbf.org_complement = copy.deepcopy(bf.org_complement)
+            #     # 補間曲線を元々の補間曲線からコピーする
+            #     fillbf.complement = copy.deepcopy(bf.complement)
 
-                # 分割の始点は、前半のB
-                fillbf.complement[R_x1_idxs[0]] = fillbf.complement[R_x1_idxs[1]] = fillbf.complement[R_x1_idxs[2]] = fillbf.complement[R_x1_idxs[3]] = int(before_bz[1].x())
-                fillbf.complement[R_y1_idxs[0]] = fillbf.complement[R_y1_idxs[1]] = fillbf.complement[R_y1_idxs[2]] = fillbf.complement[R_y1_idxs[3]] = int(before_bz[1].y())
+            #     # 分割の始点は、前半のB
+            #     fillbf.complement[R_x1_idxs[0]] = fillbf.complement[R_x1_idxs[1]] = fillbf.complement[R_x1_idxs[2]] = fillbf.complement[R_x1_idxs[3]] = int(before_bz[1].x())
+            #     fillbf.complement[R_y1_idxs[0]] = fillbf.complement[R_y1_idxs[1]] = fillbf.complement[R_y1_idxs[2]] = fillbf.complement[R_y1_idxs[3]] = int(before_bz[1].y())
 
-                # 分割の終点は、後半のC
-                fillbf.complement[R_x2_idxs[0]] = fillbf.complement[R_x2_idxs[1]] = fillbf.complement[R_x2_idxs[2]] = fillbf.complement[R_x2_idxs[3]] = int(before_bz[2].x())
-                fillbf.complement[R_y2_idxs[0]] = fillbf.complement[R_y2_idxs[1]] = fillbf.complement[R_y2_idxs[2]] = fillbf.complement[R_y2_idxs[3]] = int(before_bz[2].y())
+            #     # 分割の終点は、後半のC
+            #     fillbf.complement[R_x2_idxs[0]] = fillbf.complement[R_x2_idxs[1]] = fillbf.complement[R_x2_idxs[2]] = fillbf.complement[R_x2_idxs[3]] = int(before_bz[2].x())
+            #     fillbf.complement[R_y2_idxs[0]] = fillbf.complement[R_y2_idxs[1]] = fillbf.complement[R_y2_idxs[2]] = fillbf.complement[R_y2_idxs[3]] = int(before_bz[2].y())
 
-                # 今回の始点は、後半のB
-                bf.complement[R_x1_idxs[0]] = bf.complement[R_x1_idxs[1]] = bf.complement[R_x1_idxs[2]] = bf.complement[R_x1_idxs[3]] = int(after_bz[1].x())
-                bf.complement[R_y1_idxs[0]] = bf.complement[R_y1_idxs[1]] = bf.complement[R_y1_idxs[2]] = bf.complement[R_y1_idxs[3]] = int(after_bz[1].y())
+            #     # 今回の始点は、後半のB
+            #     bf.complement[R_x1_idxs[0]] = bf.complement[R_x1_idxs[1]] = bf.complement[R_x1_idxs[2]] = bf.complement[R_x1_idxs[3]] = int(after_bz[1].x())
+            #     bf.complement[R_y1_idxs[0]] = bf.complement[R_y1_idxs[1]] = bf.complement[R_y1_idxs[2]] = bf.complement[R_y1_idxs[3]] = int(after_bz[1].y())
 
-                # 今回の終点は、後半のC
-                bf.complement[R_x2_idxs[0]] = bf.complement[R_x2_idxs[1]] = bf.complement[R_x2_idxs[2]] = bf.complement[R_x2_idxs[3]] = int(after_bz[2].x())
-                bf.complement[R_y2_idxs[0]] = bf.complement[R_y2_idxs[1]] = bf.complement[R_y2_idxs[2]] = bf.complement[R_y2_idxs[3]] = int(after_bz[2].y())
+            #     # 今回の終点は、後半のC
+            #     bf.complement[R_x2_idxs[0]] = bf.complement[R_x2_idxs[1]] = bf.complement[R_x2_idxs[2]] = bf.complement[R_x2_idxs[3]] = int(after_bz[2].x())
+            #     bf.complement[R_y2_idxs[0]] = bf.complement[R_y2_idxs[1]] = bf.complement[R_y2_idxs[2]] = bf.complement[R_y2_idxs[3]] = int(after_bz[2].y())
 
-                if 2440 <= fillbf.frame <= 2440:
-                    logger.debug("fillbf.complement[R_x2_idxs[0]]: %s, fillbf.complement[R_y2_idxs[0]]: %s", fillbf.complement[R_x2_idxs[0]], fillbf.complement[R_y2_idxs[0]])
-                    logger.debug("bf.complement[R_x1_idxs[0]]: %s, bf.complement[R_y1_idxs[0]]: %s", bf.complement[R_x1_idxs[0]], bf.complement[R_y1_idxs[0]])
+            #     if 2440 <= fillbf.frame <= 2440:
+            #         logger.debug("fillbf.complement[R_x2_idxs[0]]: %s, fillbf.complement[R_y2_idxs[0]]: %s", fillbf.complement[R_x2_idxs[0]], fillbf.complement[R_y2_idxs[0]])
+            #         logger.debug("bf.complement[R_x1_idxs[0]]: %s, bf.complement[R_y1_idxs[0]]: %s", bf.complement[R_x1_idxs[0]], bf.complement[R_y1_idxs[0]])
 
             return fillbf
+
+    if frameno == 5217:
+        logger.info("calc_bone_by_complement 見つからなかった: %s, %s", frameno, bone_name)
 
     # 最後まで行っても見つからなければ、最終項目を返す
     return copy.deepcopy(frames[bone_name][-1])
@@ -408,10 +414,10 @@ def calc_bezier_split(x1v, y1v, x2v, y2v, start, end, now, bone_name):
 
     # return calc_bezier_split_range(x1v, y1v, x2v, y2v, 0, t), calc_bezier_split_range(x1v, y1v, x2v, y2v, t, 1)
 
-    A = QVector2D(0, 0)
-    B = QVector2D(x1v/127, y1v/127)
-    C = QVector2D(x2v/127, y2v/127)
-    D = QVector2D(1, 1)
+    A = QVector2D(0.0, 0.0)
+    B = QVector2D(x1v/127.0, y1v/127.0)
+    C = QVector2D(x2v/127.0, y2v/127.0)
+    D = QVector2D(1.0, 1.0)
 
     E = (1-t)*A + t*B
     F = (1-t)*B + t*C
@@ -424,10 +430,10 @@ def calc_bezier_split(x1v, y1v, x2v, y2v, start, end, now, bone_name):
     before_diff = (J-A)
     after_diff = (D-J)
 
-    bA = (A / before_diff)
-    bE = (E / before_diff)
-    bH = (H / before_diff)
-    bJ = (J / before_diff)
+    bA = ((A-A) / before_diff)
+    bE = ((E-A) / before_diff)
+    bH = ((H-A) / before_diff)
+    bJ = ((J-A) / before_diff)
 
     aJ = ((J-J) / after_diff)
     aI = ((I-J) / after_diff)
@@ -442,10 +448,12 @@ def calc_bezier_split(x1v, y1v, x2v, y2v, start, end, now, bone_name):
     aI2 = round_bezier_mmd(aI)
     aG2 = round_bezier_mmd(aG)
     aD2 = round_bezier_mmd(aD)
-    
-    # error_file_logger.info("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s", bone_name,start,now,end,t,x1v,y1v,x2v,y2v,A.x(),A.y(),E.x(),E.y(),H.x(),H.y(),J.x(),J.y(),I.x(),I.y(),G.x(),G.y(),D.x(),D.y(),before_diff.x(),before_diff.y(),after_diff.x(),after_diff.y(),bA.x(),bA.y(),bE.x(),bE.y(),bH.x(),bH.y(),bJ.x(),bJ.y(),aJ.x(),aJ.y(),aI.x(),aI.y(),aG.x(), aG.y(),aD.x(),aD.y(),bA6.x(),bA6.y(),bE6.x(),bE6.y(),bH6.x(),bH6.y(),bJ6.x(),bJ6.y(),aJ6.x(),aJ6.y(),aI6.x(),aI6.y(),aG6.x(),aG6.y(),aD6.x(),aD6.y() ,bA2.x(),bA2.y(),bE2.x(),bE2.y(),bH2.x(),bH2.y(),bJ2.x(),bJ2.y(),aJ2.x(),aJ2.y(),aI2.x(),aI2.y(),aG2.x(),aG2.y(),aD2.x(),aD2.y())
+
+    logger.info("bone_name,start,now,end,t,x1v,y1v,x2v,y2v,A.x(),A.y(),B.x(),B.y(),C.x(),C.y(),D.x(),D.y(),E.x(),E.y(),F.x(),F.y(),G.x(),G.y(),H.x(),H.y(),I.x(),I.y(),J.x(),J.y(),before_diff.x(),before_diff.y(),after_diff.x(),after_diff.y(),bA.x(),bA.y(),bE.x(),bE.y(),bH.x(),bH.y(),bJ.x(),bJ.y(),aJ.x(),aJ.y(),aI.x(),aI.y(),aG.x(), aG.y(),aD.x(),aD.y() ,bA2.x(),bA2.y(),bE2.x(),bE2.y(),bH2.x(),bH2.y(),bJ2.x(),bJ2.y(),aJ2.x(),aJ2.y(),aI2.x(),aI2.y(),aG2.x(),aG2.y(),aD2.x(),aD2.y()")    
+    logger.info("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s", bone_name,start,now,end,t,x1v,y1v,x2v,y2v,A.x(),A.y(),B.x(),B.y(),C.x(),C.y(),D.x(),D.y(),E.x(),E.y(),F.x(),F.y(),G.x(),G.y(),H.x(),H.y(),I.x(),I.y(),J.x(),J.y(),before_diff.x(),before_diff.y(),after_diff.x(),after_diff.y(),bA.x(),bA.y(),bE.x(),bE.y(),bH.x(),bH.y(),bJ.x(),bJ.y(),aJ.x(),aJ.y(),aI.x(),aI.y(),aG.x(), aG.y(),aD.x(),aD.y() ,bA2.x(),bA2.y(),bE2.x(),bE2.y(),bH2.x(),bH2.y(),bJ2.x(),bJ2.y(),aJ2.x(),aJ2.y(),aI2.x(),aI2.y(),aG2.x(),aG2.y(),aD2.x(),aD2.y())
 
     return [bA2, bE2, bH2, bJ2], [aJ2, aI2, aG2, aD2]
+
 
 # ベジェ曲線の任意の範囲を切り分ける処理
 # def calc_bezier_split_range(x1v, y1v, x2v, y2v, t1, t2):
