@@ -59,7 +59,7 @@ def reset_complement(motion, arm_links):
                 if now_bf.key == False or now_bf.read == True:
                     # 現在キーが無効もしくは読み込みキーの場合、処理スルー
                     if 5210 <= now_bf.frame <= 5240:
-                        logger.info("処理スルー: %s, key: %s, read: %s", now_bf.frame, now_bf.key, now_bf.read)
+                        logger.debug("処理スルー: %s, key: %s, read: %s", now_bf.frame, now_bf.key, now_bf.read)
                     continue
 
                 # 前回のキー情報をクリア
@@ -88,9 +88,9 @@ def reset_complement(motion, arm_links):
                     before_bz, after_bz = utils.calc_bezier_split(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, next_bf.frame, now_bf.frame, al.name)
 
                     # if 5110 <= now_bf.frame <= 5240:
-                    logger.info("next_x1v: %s, next_y1v: %s, next_x2v: %s, next_y2v: %s, start: %s, now: %s, end: %s", next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, now_bf.frame, next_bf.frame)
-                    logger.info("before_bz: %s", before_bz)
-                    logger.info("after_bz: %s", after_bz)
+                    logger.debug("next_x1v: %s, next_y1v: %s, next_x2v: %s, next_y2v: %s, start: %s, now: %s, end: %s", next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, now_bf.frame, next_bf.frame)
+                    logger.debug("before_bz: %s", before_bz)
+                    logger.debug("after_bz: %s", after_bz)
 
                     # 分割（今回キー）の始点は、前半のB
                     now_bf.complement[utils.R_x1_idxs[0]] = now_bf.complement[utils.R_x1_idxs[1]] = now_bf.complement[utils.R_x1_idxs[2]] = now_bf.complement[utils.R_x1_idxs[3]] = int(before_bz[1].x())
@@ -129,7 +129,7 @@ def prepare(motion, arm_links, hand_distance):
                                     if tbf.frame == bf.frame:
                                         # とりあえず登録対象のキーが既存なので終了
                                         if bf.frame == 5117:
-                                            logger.info("fill 既存あり: %s, i: %s, f: %s", al.name, tbf_idx, bf.frame)
+                                            logger.debug("fill 既存あり: %s, i: %s, f: %s", al.name, tbf_idx, bf.frame)
                                         is_checked = True
                                         is_added = True
                                         break
@@ -144,7 +144,7 @@ def prepare(motion, arm_links, hand_distance):
 
                                         motion.frames[al.name].insert(tbf_idx, fillbf)
                                         if bf.frame == 5117:
-                                            logger.info("fill insert: %s, i: %s, f: %s, key: %s", al.name, tbf_idx, fillbf.frame, fillbf.key)
+                                            logger.debug("fill insert: %s, i: %s, f: %s, key: %s", al.name, tbf_idx, fillbf.frame, fillbf.key)
 
                                         is_checked = True
                                         is_added = True
@@ -158,7 +158,7 @@ def prepare(motion, arm_links, hand_distance):
                                     # 読み込みキーではない
                                     fillbf.read = False
                                     if bf.frame == 5117:
-                                        logger.info("fill 今回なし: %s, i: %s, f: %s", al.name, tbf_idx, fillbf.frame)
+                                        logger.debug("fill 今回なし: %s, i: %s, f: %s", al.name, tbf_idx, fillbf.frame)
                                     motion.frames[al.name].insert(tbf_idx, fillbf)
 
                     if is_checked:
@@ -667,7 +667,7 @@ def exec_arm_ik(motion, trace_model, replace_model, hand_distance, org_motion_fr
                                                 motion.frames[cfk][bf_idx].key = True
 
                                                 if bf.frame == 5117:
-                                                    logger.info("採用: cfk: %s, bf: %s, f: %s, read: %s, rot: %s", cfk, bf.frame, motion.frames[cfk][bf_idx].frame, motion.frames[cfk][bf_idx].read, motion.frames[cfk][bf_idx].rotation.toEulerAngles())
+                                                    logger.debug("採用: cfk: %s, bf: %s, f: %s, read: %s, rot: %s", cfk, bf.frame, motion.frames[cfk][bf_idx].frame, motion.frames[cfk][bf_idx].read, motion.frames[cfk][bf_idx].rotation.toEulerAngles())
 
                                                 # 前のキーが1つより多く離れていたら有効化
                                                 if bf_idx - 1 >= 0 and motion.frames[cfk][bf_idx].frame > motion.frames[cfk][bf_idx - 1].frame + 1:
