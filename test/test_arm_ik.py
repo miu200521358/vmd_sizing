@@ -202,36 +202,36 @@ class TestSubArmIK(unittest.TestCase):
         # ---------------------------------
         # 今回の開始X
         for r in utils.R_x1_idxs:
-            self.assertEqual(39, motion.frames["左手首"][1].complement[r])
+            self.assertEqual(30, motion.frames["左手首"][1].complement[r])
 
         # 今回の開始Y
         for r in utils.R_y1_idxs:
-            self.assertEqual(39, motion.frames["左手首"][1].complement[r])
+            self.assertEqual(30, motion.frames["左手首"][1].complement[r])
 
         # 今回の終了X
         for r in utils.R_x2_idxs:
-            self.assertEqual(78, motion.frames["左手首"][1].complement[r])
+            self.assertEqual(30, motion.frames["左手首"][1].complement[r])
 
         # 今回の終了Y
         for r in utils.R_y2_idxs:
-            self.assertEqual(78, motion.frames["左手首"][1].complement[r])
+            self.assertEqual(30, motion.frames["左手首"][1].complement[r])
 
         # ---------------------------------
         # 次回の開始X
         for r in utils.R_x1_idxs:
-            self.assertEqual(11, motion.frames["左手首"][2].complement[r])
+            self.assertEqual(10, motion.frames["左手首"][2].complement[r])
 
         # 次回の開始Y
         for r in utils.R_y1_idxs:
-            self.assertEqual(11, motion.frames["左手首"][2].complement[r])
+            self.assertEqual(10, motion.frames["左手首"][2].complement[r])
 
         # 次回の終了X
         for r in utils.R_x2_idxs:
-            self.assertEqual(34, motion.frames["左手首"][2].complement[r])
+            self.assertEqual(20, motion.frames["左手首"][2].complement[r])
 
         # 次回の終了Y
         for r in utils.R_y2_idxs:
-            self.assertEqual(34, motion.frames["左手首"][2].complement[r])
+            self.assertEqual(20, motion.frames["左手首"][2].complement[r])
 
     def test_reset_complement_05(self):
         # モーションの宣言
@@ -326,19 +326,19 @@ class TestSubArmIK(unittest.TestCase):
         # ---------------------------------
         # 今回の開始X
         for r in utils.R_x1_idxs:
-            self.assertEqual(39, motion.frames["左手首"][1].complement[r])
+            self.assertEqual(30, motion.frames["左手首"][1].complement[r])
 
         # 今回の開始Y
         for r in utils.R_y1_idxs:
-            self.assertEqual(39, motion.frames["左手首"][1].complement[r])
+            self.assertEqual(30, motion.frames["左手首"][1].complement[r])
 
         # 今回の終了X
         for r in utils.R_x2_idxs:
-            self.assertEqual(78, motion.frames["左手首"][1].complement[r])
+            self.assertEqual(30, motion.frames["左手首"][1].complement[r])
 
         # 今回の終了Y
         for r in utils.R_y2_idxs:
-            self.assertEqual(78, motion.frames["左手首"][1].complement[r])
+            self.assertEqual(30, motion.frames["左手首"][1].complement[r])
 
         # ---------------------------------
         # 無効次回の開始X
@@ -360,19 +360,19 @@ class TestSubArmIK(unittest.TestCase):
         # ---------------------------------
         # 次回の開始X
         for r in utils.R_x1_idxs:
-            self.assertEqual(11, motion.frames["左手首"][3].complement[r])
+            self.assertEqual(10, motion.frames["左手首"][3].complement[r])
 
         # 次回の開始Y
         for r in utils.R_y1_idxs:
-            self.assertEqual(11, motion.frames["左手首"][3].complement[r])
+            self.assertEqual(10, motion.frames["左手首"][3].complement[r])
 
         # 次回の終了X
         for r in utils.R_x2_idxs:
-            self.assertEqual(34, motion.frames["左手首"][3].complement[r])
+            self.assertEqual(20, motion.frames["左手首"][3].complement[r])
 
         # 次回の終了Y
         for r in utils.R_y2_idxs:
-            self.assertEqual(34, motion.frames["左手首"][3].complement[r])
+            self.assertEqual(20, motion.frames["左手首"][3].complement[r])
 
     def test_reset_complement_06(self):
         # モーションの宣言
@@ -483,19 +483,19 @@ class TestSubArmIK(unittest.TestCase):
         # ---------------------------------
         # 今回の開始X
         for r in utils.R_x1_idxs:
-            self.assertEqual(39, motion.frames["左手首"][1].complement[r])
+            self.assertEqual(30, motion.frames["左手首"][1].complement[r])
 
         # 今回の開始Y
         for r in utils.R_y1_idxs:
-            self.assertEqual(39, motion.frames["左手首"][1].complement[r])
+            self.assertEqual(30, motion.frames["左手首"][1].complement[r])
 
         # 今回の終了X
         for r in utils.R_x2_idxs:
-            self.assertEqual(78, motion.frames["左手首"][1].complement[r])
+            self.assertEqual(30, motion.frames["左手首"][1].complement[r])
 
         # 今回の終了Y
         for r in utils.R_y2_idxs:
-            self.assertEqual(78, motion.frames["左手首"][1].complement[r])
+            self.assertEqual(30, motion.frames["左手首"][1].complement[r])
 
         # ---------------------------------
         # 無効次回の開始X
@@ -517,36 +517,36 @@ class TestSubArmIK(unittest.TestCase):
         # ---------------------------------
         # 有効次回の開始X
         for r in utils.R_x1_idxs:
-            self.assertEqual(25, motion.frames["左手首"][3].complement[r])
+            self.assertEqual(17, motion.frames["左手首"][3].complement[r])
 
         # 有効次回の開始Y
         for r in utils.R_y1_idxs:
-            self.assertEqual(25, motion.frames["左手首"][3].complement[r])
+            self.assertEqual(17, motion.frames["左手首"][3].complement[r])
 
         # 有効次回の終了X
         for r in utils.R_x2_idxs:
-            self.assertEqual(60, motion.frames["左手首"][3].complement[r])
+            self.assertEqual(34, motion.frames["左手首"][3].complement[r])
 
         # 有効次回の終了Y
         for r in utils.R_y2_idxs:
-            self.assertEqual(60, motion.frames["左手首"][3].complement[r])
+            self.assertEqual(34, motion.frames["左手首"][3].complement[r])
 
         # ---------------------------------
         # 次回の開始X
         for r in utils.R_x1_idxs:
-            self.assertEqual(22, motion.frames["左手首"][4].complement[r])
+            self.assertEqual(29, motion.frames["左手首"][4].complement[r])
 
         # 次回の開始Y
         for r in utils.R_y1_idxs:
-            self.assertEqual(22, motion.frames["左手首"][4].complement[r])
+            self.assertEqual(29, motion.frames["左手首"][4].complement[r])
 
         # 次回の終了X
         for r in utils.R_x2_idxs:
-            self.assertEqual(59, motion.frames["左手首"][4].complement[r])
+            self.assertEqual(70, motion.frames["左手首"][4].complement[r])
 
         # 次回の終了Y
         for r in utils.R_y2_idxs:
-            self.assertEqual(59, motion.frames["左手首"][4].complement[r])
+            self.assertEqual(70, motion.frames["左手首"][4].complement[r])
 
 
     def test_reset_complement_07(self):
