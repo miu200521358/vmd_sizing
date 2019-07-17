@@ -262,16 +262,16 @@ def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False
                 # 処理対象補間曲線
                 comp = bf.complement
 
-            # logger.debug("bone_name: %s, bf: %s, bidx: %s", bone_name, bf.frame, bidx)
+            logger.info("bone_name: %s, bf: %s, bidx: %s", bone_name, bf.frame, bidx)
 
             if prev_bf.rotation != bf.rotation:
                 # 回転補間曲線
                 _, _, rn = calc_interpolate_bezier(comp[R_x1_idxs[3]], comp[R_y1_idxs[3]], comp[R_x2_idxs[3]], comp[R_y2_idxs[3]], prev_bf.frame, bf.frame, fillbf.frame)
                 fillbf.rotation = QQuaternion.slerp(prev_bf.rotation, bf.rotation, rn)
 
-                if 1070 <= fillbf.frame <= 1090:
-                    logger.debug("f: %s, k: %s, rn: %s, r: %s ", frameno, bone_name, rn, fillbf.rotation.toEulerAngles() )
-                    logger.debug("rotation: prev: %s, bf: %s ", prev_bf.rotation.toEulerAngles(), bf.rotation.toEulerAngles() )
+                # if 1070 <= fillbf.frame <= 1090:
+                logger.info("f: %s, k: %s, rn: %s, r: %s ", frameno, bone_name, rn, fillbf.rotation.toEulerAngles() )
+                logger.info("rotation: prev: %s, bf: %s ", prev_bf.rotation.toEulerAngles(), bf.rotation.toEulerAngles() )
             else:
                 fillbf.rotation = copy.deepcopy(prev_bf.rotation)
 
@@ -307,11 +307,13 @@ def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False
 # http://geom.web.fc2.com/geometry/bezier/cut-cb.html
 def calc_bezier_split(x1v, y1v, x2v, y2v, start, end, now, bone_name):
     if (now - start) == 0 or (end - start) == 0:
-        return [QVector2D(),QVector2D(),QVector2D(),QVector2D()], [QVector2D(),QVector2D(),QVector2D(),QVector2D()]
+        return True, [QVector2D(),QVector2D(),QVector2D(),QVector2D()], [QVector2D(),QVector2D(),QVector2D(),QVector2D()]
 
     beforebz = afterbz = None
-    for offset in range(end-start):
+    is_fit = False
+    for offset in range(min(end-start, 3)):
         # オフセット（始点から終点の差）を加味してベジェ曲線を分割する
+        # ただし3F以上ズレた場合はNG
 
         # プラス方向でオフセット
         beforebz, afterbz = calc_bezier_split_offset(x1v, y1v, x2v, y2v, start, end, now, bone_name, offset)
@@ -319,31 +321,30 @@ def calc_bezier_split(x1v, y1v, x2v, y2v, start, end, now, bone_name):
         # logger.debug("offset plus: beforebz: %s, afterbz: %s", beforebz, afterbz)
 
         if is_fit_bezier_mmd(beforebz) and is_fit_bezier_mmd(afterbz):
+            is_fit = True
             break
-
-        # フィット判定に外れていたらとりあえずクリア
-        beforebz = afterbz = None
 
         if offset != 0:
             # マイナス方向でオフセット
             beforebz, afterbz = calc_bezier_split_offset(x1v, y1v, x2v, y2v, start, end, now, bone_name, -offset)
 
             if is_fit_bezier_mmd(beforebz) and is_fit_bezier_mmd(afterbz):
+                is_fit = True
                 break
-            
-            # フィット判定に外れていたらとりあえずクリア
-            beforebz = afterbz = None
 
-    if not beforebz or not afterbz:
-        # 分割に最後まで失敗してる場合、とりあえず入力値を入れて返す
-        beforebz = [QVector2D(0,0), QVector2D(x1v,y1v), QVector2D(x2v,y2v), QVector2D(127,127)]
-        afterbz = [QVector2D(0,0), QVector2D(x1v,y1v), QVector2D(x2v,y2v), QVector2D(127,127)]
+    if not is_fit:
+        # 分割に最後まで失敗してる場合
+        logger.info("分割に最後まで失敗")
 
-    return beforebz, afterbz
+    return is_fit, beforebz, afterbz
 
 # ベジェ曲線の値がMMD用に合っているか
 def is_fit_bezier_mmd(bz):
     for b in bz:
+        # 1割未満は誤差として吸収してしまう
+        b.setX( 0 if -2 <= b.x() < 0 else b.x() )
+        b.setY( 0 if 127 < b.x() <= 129 else b.y() )
+
         if not (0 <= b.x() <= 127) or not (0 <= b.y() <= 127):
             # MMD用の範囲内でなければNG
             return False
@@ -382,8 +383,8 @@ def calc_bezier_split_offset(x1v, y1v, x2v, y2v, start, end, now, bone_name, off
     aG2 = round_bezier_mmd(aG)
     aD2 = round_bezier_mmd(aD)
 
-    logger.debug("bone_name,start,now,end,offset,t,x1v,y1v,x2v,y2v,A.x(),A.y(),B.x(),B.y(),C.x(),C.y(),D.x(),D.y(),E.x(),E.y(),F.x(),F.y(),G.x(),G.y(),H.x(),H.y(),I.x(),I.y(),J.x(),J.y(),bA.x(),bA.y(),bE.x(),bE.y(),bH.x(),bH.y(),bJ.x(),bJ.y(),aJ.x(),aJ.y(),aI.x(),aI.y(),aG.x(), aG.y(),aD.x(),aD.y() ,bA2.x(),bA2.y(),bE2.x(),bE2.y(),bH2.x(),bH2.y(),bJ2.x(),bJ2.y(),aJ2.x(),aJ2.y(),aI2.x(),aI2.y(),aG2.x(),aG2.y(),aD2.x(),aD2.y()")    
-    logger.debug("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s", bone_name,start,now,end,offset,t,x1v,y1v,x2v,y2v,A.x(),A.y(),B.x(),B.y(),C.x(),C.y(),D.x(),D.y(),E.x(),E.y(),F.x(),F.y(),G.x(),G.y(),H.x(),H.y(),I.x(),I.y(),J.x(),J.y(),bA.x(),bA.y(),bE.x(),bE.y(),bH.x(),bH.y(),bJ.x(),bJ.y(),aJ.x(),aJ.y(),aI.x(),aI.y(),aG.x(), aG.y(),aD.x(),aD.y() ,bA2.x(),bA2.y(),bE2.x(),bE2.y(),bH2.x(),bH2.y(),bJ2.x(),bJ2.y(),aJ2.x(),aJ2.y(),aI2.x(),aI2.y(),aG2.x(),aG2.y(),aD2.x(),aD2.y())
+    logger.info("bone_name,start,now,end,offset,t,x1v,y1v,x2v,y2v,A.x(),A.y(),B.x(),B.y(),C.x(),C.y(),D.x(),D.y(),E.x(),E.y(),F.x(),F.y(),G.x(),G.y(),H.x(),H.y(),I.x(),I.y(),J.x(),J.y(),bA.x(),bA.y(),bE.x(),bE.y(),bH.x(),bH.y(),bJ.x(),bJ.y(),aJ.x(),aJ.y(),aI.x(),aI.y(),aG.x(), aG.y(),aD.x(),aD.y() ,bA2.x(),bA2.y(),bE2.x(),bE2.y(),bH2.x(),bH2.y(),bJ2.x(),bJ2.y(),aJ2.x(),aJ2.y(),aI2.x(),aI2.y(),aG2.x(),aG2.y(),aD2.x(),aD2.y()")    
+    logger.info("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s", bone_name,start,now,end,offset,t,x1v,y1v,x2v,y2v,A.x(),A.y(),B.x(),B.y(),C.x(),C.y(),D.x(),D.y(),E.x(),E.y(),F.x(),F.y(),G.x(),G.y(),H.x(),H.y(),I.x(),I.y(),J.x(),J.y(),bA.x(),bA.y(),bE.x(),bE.y(),bH.x(),bH.y(),bJ.x(),bJ.y(),aJ.x(),aJ.y(),aI.x(),aI.y(),aG.x(), aG.y(),aD.x(),aD.y() ,bA2.x(),bA2.y(),bE2.x(),bE2.y(),bH2.x(),bH2.y(),bJ2.x(),bJ2.y(),aJ2.x(),aJ2.y(),aI2.x(),aI2.y(),aG2.x(),aG2.y(),aD2.x(),aD2.y())
 
     return [bA2, bE2, bH2, bJ2], [aJ2, aI2, aG2, aD2]
 
@@ -431,7 +432,6 @@ def round_bezier_mmd(target):
 
     return t2
 
-
 # 補間曲線を求める
 # http://d.hatena.ne.jp/edvakf/20111016/1318716097
 def calc_interpolate_bezier(x1v, y1v, x2v, y2v, start, end, now):
@@ -469,3 +469,84 @@ def calc_interpolate_bezier(x1v, y1v, x2v, y2v, start, end, now):
     # logger.debug("y: %s, t: %s, s: %s", y, t, s)
 
     return t, x, y
+
+# 補間曲線のXを求める
+# http://d.hatena.ne.jp/edvakf/20111016/1318716097
+def calc_interpolate_bezier_x(x1v, y1v, x2v, y2v, y):
+    x1 = x1v / 127
+    x2 = x2v / 127
+    y1 = y1v / 127
+    y2 = y2v / 127
+
+    t = 0.5
+    s = 0.5
+
+    # logger.debug("x1: %s, x2: %s, y1: %s, y2: %s, x: %s", x1, x2, y1, y2, x)
+
+    for i in range(15):
+        ft = (3 * (s * s) * t * y1) + (3 * s * (t * t) * y2) + (t * t * t) - y
+        # logger.debug("i: %s, 4 << i: %s, ft: %s(%s), t: %s, s: %s", i, (4 << i), ft, abs(ft) < 0.00001, t, s)
+
+        # lessさんのご指摘によりコメントアウト
+        # if abs(ft) < 0.00001:
+        #     break
+
+        if ft > 0:
+            t -= 1 / (4 << i)
+        else:
+            t += 1 / (4 << i)
+        
+        s = 1 - t
+
+    x = (3 * (s * s) * t * x1) + (3 * s * (t * t) * x2) + (t * t * t)
+
+    return t, x
+
+def calc_interpolate_bezier_now(start, end, x, org_now, now_offset):
+    # x = (now - start) / (end - start)
+    # x * (end - start) = now - start
+    # end * x - start * x = now - start
+    # now = end * x - start * x + start
+    now = end * x - start * x + start
+    logger.info("now: %s", now)
+
+    # 一旦整数部にまで持ち上げる
+    now2 = now * 1000000
+
+    # 偶数丸めなので、整数部で丸めた後元に戻す
+    now2 = round(round(now2, -6) / 1000000)
+    logger.info("now2: %s, start: %s, end: %s, org_now: %s", now2, start, end, org_now)
+
+    # 元々の開始と同じ場合、ひとつずらす
+    if now2 == org_now:
+        now2 += now_offset
+        logger.info("元々の開始と同じ場合、ずらす now2: %s", now2)
+
+        if start < now2 < end:
+            # まだはみ出してない場合、もうひとつずらす
+            now2 += now_offset
+
+    # 開始と同じ場合、ひとつずらす
+    if now2 == start:
+        now2 += 1
+        logger.info("開始と同じ場合、ずらす now2: %s", now2)
+
+        if now2 < end:
+            # まだはみ出してない場合、もうひとつずらす
+            now2 += 1
+
+    # 終了と同じ場合、ひとつずらす    
+    if now2 == end:
+        now2 -= 1
+        logger.info("終了と同じ場合、ずらす now2: %s", now2)
+
+        if now2 > start:
+            # まだはみ出してない場合、もうひとつずらす
+            now2 -= 1
+
+    logger.info("now2: %s", now2)
+
+    return now2
+
+
+    

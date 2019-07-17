@@ -113,5 +113,36 @@ class TestUtils(unittest.TestCase):
         beforebz, afterbz = utils.calc_bezier_split(127, 0, 0, 127, 10, 20, 19, "左手首")
 
 
+
+
+
+    def test_calc_bezier_split_12(self):
+        beforebz, afterbz = utils.calc_bezier_split(0, 127, 127, 0, 10, 20, 14, "左手首")
+
+    def test_calc_bezier_split_13(self):
+        beforebz, afterbz = utils.calc_bezier_split(0, 127, 127, 0, 10, 20, 13, "左手首")
+
+    def test_calc_bezier_split_14(self):
+        beforebz, afterbz = utils.calc_bezier_split(0, 127, 127, 0, 10, 20, 12, "左手首")
+
+    def test_calc_bezier_split_15(self):
+        beforebz, afterbz = utils.calc_bezier_split(0, 127, 127, 0, 10, 20, 11, "左手首")
+
+    def test_calc_bezier_split_16(self):
+        beforebz, afterbz = utils.calc_bezier_split(0, 127, 127, 0, 10, 20, 16, "左手首")
+
+    def test_calc_bezier_split_17(self):
+        beforebz, afterbz = utils.calc_bezier_split(0, 127, 127, 0, 10, 20, 17, "左手首")
+
+    def test_calc_bezier_split_18(self):
+        beforebz, afterbz = utils.calc_bezier_split(0, 127, 127, 0, 10, 20, 18, "左手首")
+
+    def test_calc_bezier_split_19(self):
+        beforebz, afterbz = utils.calc_bezier_split(0, 127, 127, 0, 10, 20, 19, "左手首")
+
+    def test_calc_bezier_split_20(self):
+        beforebz, afterbz = utils.calc_bezier_split(0, 127, 127, 0, 10, 20, 15, "左手首")
+
+
 if __name__ == "__main__":
     unittest.main()
