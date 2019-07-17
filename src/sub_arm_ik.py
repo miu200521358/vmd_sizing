@@ -545,8 +545,9 @@ def exec_arm_ik(motion, trace_model, replace_model, hand_distance, org_motion_fr
 
                                 # 指位置調整-----------------
 
-                                if finger_links:
-                                    # 指があるモデルの場合、手首角度調整
+                                if finger_links and wrist_thickness["左"] != 0 and wrist_thickness["右"] != 0:
+                                    # 指があるモデルの場合、手首角度調整。
+                                    # ただし、手首の厚みが取れなかった場合、ボーン構造が通常と異なる可能性があるため、調整対象外
 
                                     # 手首の位置が変わっているので再算出
 
