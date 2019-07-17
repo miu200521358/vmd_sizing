@@ -3,8 +3,7 @@
 # 
 import logging
 import copy
-import numpy as np
-from math import acos, degrees
+from math import acos, degrees, isnan
 from PyQt5.QtGui import QQuaternion, QVector3D, QVector2D, QMatrix4x4, QVector4D
 
 from VmdWriter import VmdWriter, VmdBoneFrame
@@ -310,8 +309,51 @@ def calc_bezier_split(x1v, y1v, x2v, y2v, start, end, now, bone_name):
     if (now - start) == 0 or (end - start) == 0:
         return [QVector2D(),QVector2D(),QVector2D(),QVector2D()], [QVector2D(),QVector2D(),QVector2D(),QVector2D()]
 
+    beforebz = afterbz = None
+    for offset in range(end-start):
+        # オフセット（始点から終点の差）を加味してベジェ曲線を分割する
+
+        # プラス方向でオフセット
+        beforebz, afterbz = calc_bezier_split_offset(x1v, y1v, x2v, y2v, start, end, now, bone_name, offset)
+
+        # logger.debug("offset plus: beforebz: %s, afterbz: %s", beforebz, afterbz)
+
+        if is_fit_bezier_mmd(beforebz) and is_fit_bezier_mmd(afterbz):
+            break
+
+        # フィット判定に外れていたらとりあえずクリア
+        beforebz = afterbz = None
+
+        if offset != 0:
+            # マイナス方向でオフセット
+            beforebz, afterbz = calc_bezier_split_offset(x1v, y1v, x2v, y2v, start, end, now, bone_name, -offset)
+
+            if is_fit_bezier_mmd(beforebz) and is_fit_bezier_mmd(afterbz):
+                break
+            
+            # フィット判定に外れていたらとりあえずクリア
+            beforebz = afterbz = None
+
+    if not beforebz or not afterbz:
+        # 分割に最後まで失敗してる場合、とりあえず入力値を入れて返す
+        beforebz = [QVector2D(0,0), QVector2D(x1v,y1v), QVector2D(x2v,y2v), QVector2D(127,127)]
+        afterbz = [QVector2D(0,0), QVector2D(x1v,y1v), QVector2D(x2v,y2v), QVector2D(127,127)]
+
+    return beforebz, afterbz
+
+# ベジェ曲線の値がMMD用に合っているか
+def is_fit_bezier_mmd(bz):
+    for b in bz:
+        if not (0 <= b.x() <= 127) or not (0 <= b.y() <= 127):
+            # MMD用の範囲内でなければNG
+            return False
+
+    return True
+    
+# オフセット込みの3次ベジェ曲線の分割
+def calc_bezier_split_offset(x1v, y1v, x2v, y2v, start, end, now, bone_name, offset=0):
     # 補間曲線の進んだ時間分を求める
-    t, _, _ = calc_interpolate_bezier(x1v, y1v, x2v, y2v, start, end, now)
+    t, _, _ = calc_interpolate_bezier(x1v, y1v, x2v, y2v, start, end, now+offset)
 
     A = QVector2D(0.0, 0.0)
     B = QVector2D(x1v/127, y1v/127)
@@ -340,34 +382,52 @@ def calc_bezier_split(x1v, y1v, x2v, y2v, start, end, now, bone_name):
     aG2 = round_bezier_mmd(aG)
     aD2 = round_bezier_mmd(aD)
 
-    logger.debug("bone_name,start,now,end,t,x1v,y1v,x2v,y2v,A.x(),A.y(),B.x(),B.y(),C.x(),C.y(),D.x(),D.y(),E.x(),E.y(),F.x(),F.y(),G.x(),G.y(),H.x(),H.y(),I.x(),I.y(),J.x(),J.y(),bA.x(),bA.y(),bE.x(),bE.y(),bH.x(),bH.y(),bJ.x(),bJ.y(),aJ.x(),aJ.y(),aI.x(),aI.y(),aG.x(), aG.y(),aD.x(),aD.y() ,bA2.x(),bA2.y(),bE2.x(),bE2.y(),bH2.x(),bH2.y(),bJ2.x(),bJ2.y(),aJ2.x(),aJ2.y(),aI2.x(),aI2.y(),aG2.x(),aG2.y(),aD2.x(),aD2.y()")    
-    logger.debug("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s", bone_name,start,now,end,t,x1v,y1v,x2v,y2v,A.x(),A.y(),B.x(),B.y(),C.x(),C.y(),D.x(),D.y(),E.x(),E.y(),F.x(),F.y(),G.x(),G.y(),H.x(),H.y(),I.x(),I.y(),J.x(),J.y(),bA.x(),bA.y(),bE.x(),bE.y(),bH.x(),bH.y(),bJ.x(),bJ.y(),aJ.x(),aJ.y(),aI.x(),aI.y(),aG.x(), aG.y(),aD.x(),aD.y() ,bA2.x(),bA2.y(),bE2.x(),bE2.y(),bH2.x(),bH2.y(),bJ2.x(),bJ2.y(),aJ2.x(),aJ2.y(),aI2.x(),aI2.y(),aG2.x(),aG2.y(),aD2.x(),aD2.y())
+    logger.debug("bone_name,start,now,end,offset,t,x1v,y1v,x2v,y2v,A.x(),A.y(),B.x(),B.y(),C.x(),C.y(),D.x(),D.y(),E.x(),E.y(),F.x(),F.y(),G.x(),G.y(),H.x(),H.y(),I.x(),I.y(),J.x(),J.y(),bA.x(),bA.y(),bE.x(),bE.y(),bH.x(),bH.y(),bJ.x(),bJ.y(),aJ.x(),aJ.y(),aI.x(),aI.y(),aG.x(), aG.y(),aD.x(),aD.y() ,bA2.x(),bA2.y(),bE2.x(),bE2.y(),bH2.x(),bH2.y(),bJ2.x(),bJ2.y(),aJ2.x(),aJ2.y(),aI2.x(),aI2.y(),aG2.x(),aG2.y(),aD2.x(),aD2.y()")    
+    logger.debug("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s", bone_name,start,now,end,offset,t,x1v,y1v,x2v,y2v,A.x(),A.y(),B.x(),B.y(),C.x(),C.y(),D.x(),D.y(),E.x(),E.y(),F.x(),F.y(),G.x(),G.y(),H.x(),H.y(),I.x(),I.y(),J.x(),J.y(),bA.x(),bA.y(),bE.x(),bE.y(),bH.x(),bH.y(),bJ.x(),bJ.y(),aJ.x(),aJ.y(),aI.x(),aI.y(),aG.x(), aG.y(),aD.x(),aD.y() ,bA2.x(),bA2.y(),bE2.x(),bE2.y(),bH2.x(),bH2.y(),bJ2.x(),bJ2.y(),aJ2.x(),aJ2.y(),aI2.x(),aI2.y(),aG2.x(),aG2.y(),aD2.x(),aD2.y())
 
     return [bA2, bE2, bH2, bJ2], [aJ2, aI2, aG2, aD2]
-
-
 
 # 分割したベジェのスケーリング
 def scale_bezier(p1, p2, p3, p4):
     diff = p4 - p1
 
-    s1 = (p1-p1) / diff
-    s2 = (p2-p1) / diff
-    s3 = (p3-p1) / diff
-    s4 = (p4-p1) / diff
+    # nan対策
+    s1 = scale_bezier_point(p1, p1, diff)
+    s2 = scale_bezier_point(p2, p1, diff)
+    s3 = scale_bezier_point(p3, p1, diff)
+    s4 = scale_bezier_point(p4, p1, diff)
 
     return s1, s2, s3, s4
+
+# nan対策を加味したベジェ曲線の点算出
+def scale_bezier_point(pn, p1, diff):
+    s = (pn-p1) / diff
+
+    # logger.debug("diff: %s", diff)
+    # logger.debug("(pn-p1): %s", (pn-p1))
+    # logger.debug("s: %s", s)
+
+    # nanになったら0決め打ち
+    if isnan(s.x()):
+        s.setX(0)
+
+    if isnan(s.y()):
+        s.setY(0)
+
+    return s
 
 
 def round_bezier_mmd(target):
     # 一旦整数部にまで持ち上げる
     t2 = target * 1000000 * 127
 
+    # logger.debug("target: %s, t2: %s", target, t2)
+    
     # 偶数丸めなので、整数部で丸めた後元に戻す
     t2.setX(round(round(t2.x(), -6) / 1000000))
     t2.setY(round(round(t2.y(), -6) / 1000000))
 
-    logger.debug("target: %s, t2: %s", target, t2)
+    # logger.debug("target: %s, t2: %s", target, t2)
 
     return t2
 
@@ -376,7 +436,7 @@ def round_bezier_mmd(target):
 # http://d.hatena.ne.jp/edvakf/20111016/1318716097
 def calc_interpolate_bezier(x1v, y1v, x2v, y2v, start, end, now):
     if (now - start) == 0 or (end - start) == 0:
-        return 0, 0
+        return 0, 0, 0
         
     x = (now - start) / (end - start)
     x1 = x1v / 127

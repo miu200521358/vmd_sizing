@@ -4,7 +4,7 @@ block_cipher = None
 
 
 a = Analysis(['src\\wrapper.py'],
-             pathex=['c:\\MMD\\vmd_sizing'],
+             pathex=[],
              binaries=[],
              datas=[],
              hiddenimports=['wx._adv', 'wx._html'],
@@ -23,7 +23,7 @@ exe = EXE(pyz,
           a.zipfiles,
           a.datas,
           [],
-          name='VmdSizing_3.00_32bit',
+          name='VmdSizing_3.00_¦Â39_32bit',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
