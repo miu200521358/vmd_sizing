@@ -3,7 +3,7 @@
 # 
 import logging
 import copy
-from math import acos, degrees, isnan
+from math import acos, degrees, isnan, factorial
 from PyQt5.QtGui import QQuaternion, QVector3D, QVector2D, QMatrix4x4, QVector4D
 
 from VmdWriter import VmdWriter, VmdBoneFrame
@@ -12,6 +12,9 @@ from PmxModel import PmxModel, SizingException
 from PmxReader import PmxReader
 
 logger = logging.getLogger("__main__").getChild(__name__)
+
+# MMDでの補間曲線の最大値
+MMD_COMPLEMENT_MAX = 127
 
 # ログを生成する
 def create_error_logger(motion, trace_model, replace_model, error_path, error_file_logger):
@@ -37,7 +40,7 @@ def get_prev_bf(frames, bone_name, frameno):
     # 最後まで取れなければ、最終項目
     return len(frames[bone_name]) - 1, frames[bone_name][-1]
     
-
+# グローバル座標計算行列のための情報を生成する
 def create_matrix_parts(model, links, frames, bf, scales):
     # ローカル位置
     trans_vs = [QVector3D() for i in range(len(links))]
@@ -229,7 +232,7 @@ def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False
             if frameno == 5217:
                 logger.debug("calc_bone_by_complement 同一キーあり: %s, %s, read: %s", frameno, bone_name, fillbf.read)
             return fillbf
-        elif bf.frame > frameno:
+        elif (not is_calc_complement and bf.frame > frameno) or (is_calc_complement and bf.frame > frameno and bf.read):
             # 同一フレームのキーがない場合、前のキーIDXを0に見立てて、その間の補間曲線を埋める
             fillbf.name = bf.name
             fillbf.format_name = bone_name
@@ -253,6 +256,14 @@ def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False
                 
                 # 処理対象補間曲線（処理前の補間曲線）
                 comp = bf.org_complement
+                # 処理対象前回転
+                prev_rot = prev_bf.org_rotation
+                # 処理対象回転
+                rot = bf.org_rotation
+                # 処理対象前移動
+                prev_pos = prev_bf.org_position
+                # 処理対象移動
+                pos = bf.org_position
             else:
                 # 補間曲線は弄らない場合
 
@@ -261,22 +272,30 @@ def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False
 
                 # 処理対象補間曲線
                 comp = bf.complement
+                # 処理対象前回転
+                prev_rot = prev_bf.rotation
+                # 処理対象回転
+                rot = bf.rotation
+                # 処理対象前移動
+                prev_pos = prev_bf.position
+                # 処理対象移動
+                pos = bf.position
 
-            logger.info("bone_name: %s, bf: %s, bidx: %s", bone_name, bf.frame, bidx)
+            logger.debug("bone_name: %s, bf: %s, bidx: %s", bone_name, bf.frame, bidx)
 
-            if prev_bf.rotation != bf.rotation:
+            if prev_rot != rot:
                 # 回転補間曲線
                 _, _, rn = calc_interpolate_bezier(comp[R_x1_idxs[3]], comp[R_y1_idxs[3]], comp[R_x2_idxs[3]], comp[R_y2_idxs[3]], prev_bf.frame, bf.frame, fillbf.frame)
-                fillbf.rotation = QQuaternion.slerp(prev_bf.rotation, bf.rotation, rn)
+                fillbf.rotation = QQuaternion.slerp(prev_rot, rot, rn)
 
                 # if 1070 <= fillbf.frame <= 1090:
-                logger.info("f: %s, k: %s, rn: %s, r: %s ", frameno, bone_name, rn, fillbf.rotation.toEulerAngles() )
-                logger.info("rotation: prev: %s, bf: %s ", prev_bf.rotation.toEulerAngles(), bf.rotation.toEulerAngles() )
+                logger.debug(", f: %s, k: %s, rn: %s, r: %s ", frameno, bone_name, rn, fillbf.rotation.toEulerAngles() )
+                logger.debug(", rotation: prev: %s, bf: %s ", prev_rot.toEulerAngles(), rot.toEulerAngles() )
             else:
-                fillbf.rotation = copy.deepcopy(prev_bf.rotation)
+                fillbf.rotation = copy.deepcopy(prev_rot)
 
             # 補間曲線を元に間を埋める
-            if prev_bf.position != bf.position:
+            if prev_pos != pos:
                 # http://rantyen.blog.fc2.com/blog-entry-65.html
                 # X移動補間曲線
                 _, _, xn = calc_interpolate_bezier(comp[0], comp[4], comp[8], comp[12], prev_bf.frame, bf.frame, fillbf.frame)
@@ -285,14 +304,14 @@ def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False
                 # Z移動補間曲線
                 _, _, zn = calc_interpolate_bezier(comp[32], comp[36], comp[40], comp[44], prev_bf.frame, bf.frame, fillbf.frame)
 
-                fillbf.position.setX(prev_bf.position.x() + (( bf.position.x() - prev_bf.position.x()) * xn))
-                fillbf.position.setY(prev_bf.position.y() + (( bf.position.y() - prev_bf.position.y()) * yn))
-                fillbf.position.setZ(prev_bf.position.z() + (( bf.position.z() - prev_bf.position.z()) * zn))
-                # logger.debug("key: %s, n: %s, xn: %s, yn: %s, zn: %s, xa: %s", k, prev_frame + n, xn, yn, zn, ( bf.position.x() - prev_bf.position.x()) * xn )
-                # logger.debug("position: prev: %s, fill: %s ", prev_bf.position, fillbf.position )
+                fillbf.position.setX(prev_pos.x() + (( pos.x() - prev_pos.x()) * xn))
+                fillbf.position.setY(prev_pos.y() + (( pos.y() - prev_pos.y()) * yn))
+                fillbf.position.setZ(prev_pos.z() + (( pos.z() - prev_pos.z()) * zn))
+                # logger.debug("key: %s, n: %s, xn: %s, yn: %s, zn: %s, xa: %s", k, prev_frame + n, xn, yn, zn, ( pos.x() - prev_pos.x()) * xn )
+                # logger.debug("position: prev: %s, fill: %s ", prev_pos, fillbf.position )
             else:
-                fillbf.position = copy.deepcopy(prev_bf.position)
-                # logger.debug("position stop: %s,%s prev: %s, fill: %s ", prev_frame + n, k, prev_bf.position, bf.position )
+                fillbf.position = copy.deepcopy(prev_pos)
+                # logger.debug("position stop: %s,%s prev: %s, fill: %s ", prev_frame + n, k, prev_pos, pos )
             
             return fillbf
 
@@ -309,43 +328,20 @@ def calc_bezier_split(x1v, y1v, x2v, y2v, start, end, now, bone_name):
     if (now - start) == 0 or (end - start) == 0:
         return True, [QVector2D(),QVector2D(),QVector2D(),QVector2D()], [QVector2D(),QVector2D(),QVector2D(),QVector2D()]
 
-    beforebz = afterbz = None
-    is_fit = False
-    for offset in range(min(end-start, 3)):
-        # オフセット（始点から終点の差）を加味してベジェ曲線を分割する
-        # ただし3F以上ズレた場合はNG
+    # オフセットなしで取得
+    t, x, y, beforebz, afterbz = calc_bezier_split_offset(x1v, y1v, x2v, y2v, start, end, now, bone_name, 0)
 
-        # プラス方向でオフセット
-        beforebz, afterbz = calc_bezier_split_offset(x1v, y1v, x2v, y2v, start, end, now, bone_name, offset)
-
-        # logger.debug("offset plus: beforebz: %s, afterbz: %s", beforebz, afterbz)
-
-        if is_fit_bezier_mmd(beforebz) and is_fit_bezier_mmd(afterbz):
-            is_fit = True
-            break
-
-        if offset != 0:
-            # マイナス方向でオフセット
-            beforebz, afterbz = calc_bezier_split_offset(x1v, y1v, x2v, y2v, start, end, now, bone_name, -offset)
-
-            if is_fit_bezier_mmd(beforebz) and is_fit_bezier_mmd(afterbz):
-                is_fit = True
-                break
-
-    if not is_fit:
-        # 分割に最後まで失敗してる場合
-        logger.info("分割に最後まで失敗")
-
-    return is_fit, beforebz, afterbz
+    # ベジェ曲線の値がMMD用に合っているか
+    return t, x, y, is_fit_bezier_mmd(beforebz), is_fit_bezier_mmd(afterbz), beforebz, afterbz
 
 # ベジェ曲線の値がMMD用に合っているか
 def is_fit_bezier_mmd(bz):
     for b in bz:
-        # 1割未満は誤差として吸収してしまう
-        b.setX( 0 if -2 <= b.x() < 0 else b.x() )
-        b.setY( 0 if 127 < b.x() <= 129 else b.y() )
+        # # 1割以下は誤差として吸収してしまう
+        # b.setX( 0 if MMD_COMPLEMENT_MAX-1 <= b.x() < 0 else b.x() )
+        # b.setY( MMD_COMPLEMENT_MAX if MMD_COMPLEMENT_MAX < b.x() <= MMD_COMPLEMENT_MAX+1 else b.y() )
 
-        if not (0 <= b.x() <= 127) or not (0 <= b.y() <= 127):
+        if not (0 <= b.x() <= MMD_COMPLEMENT_MAX) or not (0 <= b.y() <= MMD_COMPLEMENT_MAX):
             # MMD用の範囲内でなければNG
             return False
 
@@ -354,11 +350,11 @@ def is_fit_bezier_mmd(bz):
 # オフセット込みの3次ベジェ曲線の分割
 def calc_bezier_split_offset(x1v, y1v, x2v, y2v, start, end, now, bone_name, offset=0):
     # 補間曲線の進んだ時間分を求める
-    t, _, _ = calc_interpolate_bezier(x1v, y1v, x2v, y2v, start, end, now+offset)
+    t, x, y = calc_interpolate_bezier(x1v, y1v, x2v, y2v, start, end, now+offset)
 
     A = QVector2D(0.0, 0.0)
-    B = QVector2D(x1v/127, y1v/127)
-    C = QVector2D(x2v/127, y2v/127)
+    B = QVector2D(x1v/MMD_COMPLEMENT_MAX, y1v/MMD_COMPLEMENT_MAX)
+    C = QVector2D(x2v/MMD_COMPLEMENT_MAX, y2v/MMD_COMPLEMENT_MAX)
     D = QVector2D(1.0, 1.0)
 
     E = (1-t)*A + t*B
@@ -386,7 +382,7 @@ def calc_bezier_split_offset(x1v, y1v, x2v, y2v, start, end, now, bone_name, off
     logger.info("bone_name,start,now,end,offset,t,x1v,y1v,x2v,y2v,A.x(),A.y(),B.x(),B.y(),C.x(),C.y(),D.x(),D.y(),E.x(),E.y(),F.x(),F.y(),G.x(),G.y(),H.x(),H.y(),I.x(),I.y(),J.x(),J.y(),bA.x(),bA.y(),bE.x(),bE.y(),bH.x(),bH.y(),bJ.x(),bJ.y(),aJ.x(),aJ.y(),aI.x(),aI.y(),aG.x(), aG.y(),aD.x(),aD.y() ,bA2.x(),bA2.y(),bE2.x(),bE2.y(),bH2.x(),bH2.y(),bJ2.x(),bJ2.y(),aJ2.x(),aJ2.y(),aI2.x(),aI2.y(),aG2.x(),aG2.y(),aD2.x(),aD2.y()")    
     logger.info("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s", bone_name,start,now,end,offset,t,x1v,y1v,x2v,y2v,A.x(),A.y(),B.x(),B.y(),C.x(),C.y(),D.x(),D.y(),E.x(),E.y(),F.x(),F.y(),G.x(),G.y(),H.x(),H.y(),I.x(),I.y(),J.x(),J.y(),bA.x(),bA.y(),bE.x(),bE.y(),bH.x(),bH.y(),bJ.x(),bJ.y(),aJ.x(),aJ.y(),aI.x(),aI.y(),aG.x(), aG.y(),aD.x(),aD.y() ,bA2.x(),bA2.y(),bE2.x(),bE2.y(),bH2.x(),bH2.y(),bJ2.x(),bJ2.y(),aJ2.x(),aJ2.y(),aI2.x(),aI2.y(),aG2.x(),aG2.y(),aD2.x(),aD2.y())
 
-    return [bA2, bE2, bH2, bJ2], [aJ2, aI2, aG2, aD2]
+    return t, x, y, [bA2, bE2, bH2, bJ2], [aJ2, aI2, aG2, aD2]
 
 # 分割したベジェのスケーリング
 def scale_bezier(p1, p2, p3, p4):
@@ -417,14 +413,14 @@ def scale_bezier_point(pn, p1, diff):
 
     return s
 
-
+# ベジェ曲線をMMD用の数値に丸める
 def round_bezier_mmd(target):
     # 一旦整数部にまで持ち上げる
-    t2 = target * 1000000 * 127
+    t2 = target * 1000000 * MMD_COMPLEMENT_MAX
 
     # logger.debug("target: %s, t2: %s", target, t2)
     
-    # 偶数丸めなので、整数部で丸めた後元に戻す
+    # 偶数丸めなので、整数部で丸めた後、元に戻す
     t2.setX(round(round(t2.x(), -6) / 1000000))
     t2.setY(round(round(t2.y(), -6) / 1000000))
 
@@ -434,15 +430,17 @@ def round_bezier_mmd(target):
 
 # 補間曲線を求める
 # http://d.hatena.ne.jp/edvakf/20111016/1318716097
+# https://pomax.github.io/bezierinfo
+# https://shspage.hatenadiary.org/entry/20140625/1403702735
 def calc_interpolate_bezier(x1v, y1v, x2v, y2v, start, end, now):
     if (now - start) == 0 or (end - start) == 0:
         return 0, 0, 0
         
     x = (now - start) / (end - start)
-    x1 = x1v / 127
-    x2 = x2v / 127
-    y1 = y1v / 127
-    y2 = y2v / 127
+    x1 = x1v / MMD_COMPLEMENT_MAX
+    x2 = x2v / MMD_COMPLEMENT_MAX
+    y1 = y1v / MMD_COMPLEMENT_MAX
+    y2 = y2v / MMD_COMPLEMENT_MAX
 
     t = 0.5
     s = 0.5
@@ -470,83 +468,65 @@ def calc_interpolate_bezier(x1v, y1v, x2v, y2v, start, end, now):
 
     return t, x, y
 
-# 補間曲線のXを求める
+# 補間曲線でもっとも接線の傾きが急な位置を求める
 # http://d.hatena.ne.jp/edvakf/20111016/1318716097
-def calc_interpolate_bezier_x(x1v, y1v, x2v, y2v, y):
-    x1 = x1v / 127
-    x2 = x2v / 127
-    y1 = y1v / 127
-    y2 = y2v / 127
+def calc_interpolate_bezier_most_tangent(x1v, y1v, x2v, y2v, start, end, is_before):
 
-    t = 0.5
-    s = 0.5
+    if start+1 == end:
+        logger.info(",区切り位置なしのため終了, start: %s, end: %s", start, end)
+        # 区切る対象がない場合、終了
+        return 0
 
-    # logger.debug("x1: %s, x2: %s, y1: %s, y2: %s, x: %s", x1, x2, y1, y2, x)
+    # 接線の傾き
+    p = t = btan = 0
+    is_replus = False
+    for p in range(start+1, end):
+        # 補間曲線を再算出
+        t, _, _ = calc_interpolate_bezier(x1v, y1v, x2v, y2v, start, end, p)
 
-    for i in range(15):
-        ft = (3 * (s * s) * t * y1) + (3 * s * (t * t) * y2) + (t * t * t) - y
-        # logger.debug("i: %s, 4 << i: %s, ft: %s(%s), t: %s, s: %s", i, (4 << i), ft, abs(ft) < 0.00001, t, s)
+        # 接線を求める
+        btan2 = calc_bezier_line_tangent(x1v, y1v, x2v, y2v, t)
 
-        # lessさんのご指摘によりコメントアウト
-        # if abs(ft) < 0.00001:
-        #     break
+        logger.debug(", start: %s, end: %s, p: %s, btan2: %s, btan: %s", start, end, p, btan2, btan)
 
-        if ft > 0:
-            t -= 1 / (4 << i)
+        if btan2 > btan:
+            if not is_replus:
+                # 接線の傾きが大きい場合、増加で置き換え
+                btan = btan2
+            else:
+                # 接線の傾きが大きく、かつ一度減少してから増えている場合、終了
+                break
         else:
-            t += 1 / (4 << i)
-        
-        s = 1 - t
+            # 接線の傾きが前より小さい場合、次に増えるまでFLG=ON
+            # 単調増加のため、接線の傾きが逆になったら終了
+            is_replus = True
+            # 傾きは常に置き換え
+            btan = btan2
 
-    x = (3 * (s * s) * t * x1) + (3 * s * (t * t) * x2) + (t * t * t)
+    if p == end - 1:
+        logger.debug(",最後まで単調増加, start: %s, end: %s, p: %s, btan2: %s, btan: %s", start, end, p, btan2, btan)
 
-    return t, x
+        # return round(start+(end-start)/2)
+        if is_before:
+            # 前半で最後まで単調増加の場合、最初-1を返す
+            return end-1
+        else:
+            # 後半で最後まで単調増加の場合、最初＋1を返す
+            return start+1
 
-def calc_interpolate_bezier_now(start, end, x, org_now, now_offset):
-    # x = (now - start) / (end - start)
-    # x * (end - start) = now - start
-    # end * x - start * x = now - start
-    # now = end * x - start * x + start
-    now = end * x - start * x + start
-    logger.info("now: %s", now)
+    # 再算出した値を返す
+    return p
 
-    # 一旦整数部にまで持ち上げる
-    now2 = now * 1000000
+# 補間曲線（ベジェ曲線）の接線を求める
+# http://proofcafe.org/k27c8/math/math/analysisI/page/inclination_of_tangential_line/
+def calc_bezier_line_tangent(x1v, y1v, x2v, y2v, t):
+    bz1 = QVector2D(0, 0)
+    bz2 = QVector2D(x1v, y1v)
+    bz3 = QVector2D(x2v, y2v)
+    bz4 = QVector2D(MMD_COMPLEMENT_MAX, MMD_COMPLEMENT_MAX)
 
-    # 偶数丸めなので、整数部で丸めた後元に戻す
-    now2 = round(round(now2, -6) / 1000000)
-    logger.info("now2: %s, start: %s, end: %s, org_now: %s", now2, start, end, org_now)
+    v = (1-t)**3*bz1 + 3*(1-t)**2*t*bz2 + 3*(1-t)*t**2*bz3 + t**3*bz4
+    v.normalize()
 
-    # 元々の開始と同じ場合、ひとつずらす
-    if now2 == org_now:
-        now2 += now_offset
-        logger.info("元々の開始と同じ場合、ずらす now2: %s", now2)
-
-        if start < now2 < end:
-            # まだはみ出してない場合、もうひとつずらす
-            now2 += now_offset
-
-    # 開始と同じ場合、ひとつずらす
-    if now2 == start:
-        now2 += 1
-        logger.info("開始と同じ場合、ずらす now2: %s", now2)
-
-        if now2 < end:
-            # まだはみ出してない場合、もうひとつずらす
-            now2 += 1
-
-    # 終了と同じ場合、ひとつずらす    
-    if now2 == end:
-        now2 -= 1
-        logger.info("終了と同じ場合、ずらす now2: %s", now2)
-
-        if now2 > start:
-            # まだはみ出してない場合、もうひとつずらす
-            now2 -= 1
-
-    logger.info("now2: %s", now2)
-
-    return now2
-
-
-    
+    # 傾きを算出して返す
+    return v.y() / v.x()

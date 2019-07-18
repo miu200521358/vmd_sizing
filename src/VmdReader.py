@@ -105,12 +105,16 @@ class VmdReader():
             
             # 位置X,Y,Z
             frame.position = self.read_Vector3D()
-            logger.debug("frame.position %s", frame.position)            
+            logger.debug("frame.position %s", frame.position)   
+            # オリジナルを保持
+            frame.org_position = copy.deepcopy(frame.position)         
             
             # 回転X,Y,Z,scalar
             frame.rotation = self.read_Quaternion()
             logger.debug("frame.rotation %s", frame.rotation)            
             logger.debug("frame.rotation.euler %s", frame.rotation.toEulerAngles())            
+            # オリジナルを保持
+            frame.org_rotation = copy.deepcopy(frame.rotation)         
             
             # 補間曲線
             frame.complement = list(self.unpack(64, "64B", True))
