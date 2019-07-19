@@ -3,7 +3,7 @@
 # 
 import logging
 import copy
-from math import acos, degrees, isnan, factorial
+from math import atan2, acos, degrees, isnan, factorial
 from PyQt5.QtGui import QQuaternion, QVector3D, QVector2D, QMatrix4x4, QVector4D
 
 from VmdWriter import VmdWriter, VmdBoneFrame
@@ -498,26 +498,27 @@ def calc_interpolate_bezier_most_tangent(x1v, y1v, x2v, y2v, start, end, is_befo
                 break
         else:
             # 接線の傾きが前より小さい場合、次に増えるまでFLG=ON
-            # 単調増加のため、接線の傾きが逆になったら終了
             is_replus = True
             # 傾きは常に置き換え
             btan = btan2
 
     if p == end - 1:
-        logger.debug(",最後まで単調増加, start: %s, end: %s, p: %s, btan2: %s, btan: %s", start, end, p, btan2, btan)
+        logger.info(",ノか逆ノ, start: %s, end: %s, p: %s, btan2: %s, btan: %s", start, end, p, btan2, btan)
 
         # return round(start+(end-start)/2)
         if is_before:
-            # 前半で最後まで単調増加の場合、最初-1を返す
+            # 前半でノか逆ノの場合、最後-1を返す
             return end-1
         else:
-            # 後半で最後まで単調増加の場合、最初＋1を返す
+            # 後半でノか逆ノの場合、最初＋1を返す
             return start+1
 
     # 再算出した値を返す
     return p
 
+
 # 補間曲線（ベジェ曲線）の接線を求める
+# 90度: 1, 180度: 2, 270度：3, 360度: 4
 # http://proofcafe.org/k27c8/math/math/analysisI/page/inclination_of_tangential_line/
 def calc_bezier_line_tangent(x1v, y1v, x2v, y2v, t):
     bz1 = QVector2D(0, 0)
@@ -529,4 +530,4 @@ def calc_bezier_line_tangent(x1v, y1v, x2v, y2v, t):
     v.normalize()
 
     # 傾きを算出して返す
-    return v.y() / v.x()
+    return atan2(v.y(), v.x())
