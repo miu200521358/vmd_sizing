@@ -487,7 +487,7 @@ def calc_interpolate_bezier_most_tangent(x1v, y1v, x2v, y2v, start, end, is_befo
         # 接線を求める
         btan2 = calc_bezier_line_tangent(x1v, y1v, x2v, y2v, t)
 
-        logger.debug(", start: %s, end: %s, p: %s, btan2: %s, btan: %s", start, end, p, btan2, btan)
+        logger.info(", start: %s, end: %s, p: %s, btan2: %s, btan: %s, degree: %s", start, end, p, btan2, btan, degrees(btan2))
 
         if btan2 > btan:
             if not is_replus:
