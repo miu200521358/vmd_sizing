@@ -3,7 +3,7 @@
 # 
 import logging
 import copy
-from math import atan2, acos, degrees, isnan, factorial
+from math import atan2, acos, cos, sin, degrees, isnan, isclose, sqrt, pi
 from PyQt5.QtGui import QQuaternion, QVector3D, QVector2D, QMatrix4x4, QVector4D
 
 from VmdWriter import VmdWriter, VmdBoneFrame
@@ -14,7 +14,7 @@ from PmxReader import PmxReader
 logger = logging.getLogger("__main__").getChild(__name__)
 
 # MMDでの補間曲線の最大値
-MMD_COMPLEMENT_MAX = 127
+COMPLEMENT_MMD_MAX = 127
 
 # ログを生成する
 def create_error_logger(motion, trace_model, replace_model, error_path, error_file_logger):
@@ -40,6 +40,7 @@ def get_prev_bf(frames, bone_name, frameno):
     # 最後まで取れなければ、最終項目
     return len(frames[bone_name]) - 1, frames[bone_name][-1]
     
+
 # グローバル座標計算行列のための情報を生成する
 def create_matrix_parts(model, links, frames, bf, scales):
     # ローカル位置
@@ -140,6 +141,7 @@ def create_matrix(model, links, frames, bf, scales=None):
     
     return trans_vs, add_qs, scale_l, matrixs
 
+# グローバル座標リスト生成
 def create_matrix_global(model, links, frames, bf, scales=None):
     trans_vs, add_qs, scale_l, matrixs = create_matrix(model, links, frames, bf, scales)
 
@@ -233,7 +235,8 @@ def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False
                 logger.debug("calc_bone_by_complement 同一キーあり: %s, %s, read: %s", frameno, bone_name, fillbf.read)
             return fillbf
         elif (not is_calc_complement and bf.frame > frameno) or (is_calc_complement and bf.frame > frameno and bf.read):
-            # 同一フレームのキーがない場合、前のキーIDXを0に見立てて、その間の補間曲線を埋める
+            # 補間曲線の再計算がない場合、そのまま次の。再計算ありの場合、読み込みキーのみチェック対象とする
+            # 同一フレームのキーがない場合、挿入
             fillbf.name = bf.name
             fillbf.format_name = bone_name
             fillbf.frame = frameno
@@ -328,33 +331,34 @@ def calc_bezier_split(x1v, y1v, x2v, y2v, start, end, now, bone_name):
     if (now - start) == 0 or (end - start) == 0:
         return True, [QVector2D(),QVector2D(),QVector2D(),QVector2D()], [QVector2D(),QVector2D(),QVector2D(),QVector2D()]
 
-    # オフセットなしで取得
-    t, x, y, beforebz, afterbz = calc_bezier_split_offset(x1v, y1v, x2v, y2v, start, end, now, bone_name, 0)
+    # 3次ベジェ曲線を分割する
+    t, x, y, beforebz, afterbz = calc_bezier_split_offset(x1v, y1v, x2v, y2v, start, end, now, bone_name)
 
-    # ベジェ曲線の値がMMD用に合っているか
+    # ベジェ曲線の値がMMD用に合っているかを加味して返す
     return t, x, y, is_fit_bezier_mmd(beforebz), is_fit_bezier_mmd(afterbz), beforebz, afterbz
+
 
 # ベジェ曲線の値がMMD用に合っているか
 def is_fit_bezier_mmd(bz):
     for b in bz:
         # # 1割以下は誤差として吸収してしまう
-        # b.setX( 0 if MMD_COMPLEMENT_MAX-1 <= b.x() < 0 else b.x() )
-        # b.setY( MMD_COMPLEMENT_MAX if MMD_COMPLEMENT_MAX < b.x() <= MMD_COMPLEMENT_MAX+1 else b.y() )
+        # b.setX( 0 if COMPLEMENT_MMD_MAX-1 <= b.x() < 0 else b.x() )
+        # b.setY( COMPLEMENT_MMD_MAX if COMPLEMENT_MMD_MAX < b.x() <= COMPLEMENT_MMD_MAX+1 else b.y() )
 
-        if not (0 <= b.x() <= MMD_COMPLEMENT_MAX) or not (0 <= b.y() <= MMD_COMPLEMENT_MAX):
+        if not (0 <= b.x() <= COMPLEMENT_MMD_MAX) or not (0 <= b.y() <= COMPLEMENT_MMD_MAX):
             # MMD用の範囲内でなければNG
             return False
 
     return True
     
 # オフセット込みの3次ベジェ曲線の分割
-def calc_bezier_split_offset(x1v, y1v, x2v, y2v, start, end, now, bone_name, offset=0):
+def calc_bezier_split_offset(x1v, y1v, x2v, y2v, start, end, now, bone_name):
     # 補間曲線の進んだ時間分を求める
-    t, x, y = calc_interpolate_bezier(x1v, y1v, x2v, y2v, start, end, now+offset)
+    t, x, y = calc_interpolate_bezier(x1v, y1v, x2v, y2v, start, end, now)
 
     A = QVector2D(0.0, 0.0)
-    B = QVector2D(x1v/MMD_COMPLEMENT_MAX, y1v/MMD_COMPLEMENT_MAX)
-    C = QVector2D(x2v/MMD_COMPLEMENT_MAX, y2v/MMD_COMPLEMENT_MAX)
+    B = QVector2D(x1v/COMPLEMENT_MMD_MAX, y1v/COMPLEMENT_MMD_MAX)
+    C = QVector2D(x2v/COMPLEMENT_MMD_MAX, y2v/COMPLEMENT_MMD_MAX)
     D = QVector2D(1.0, 1.0)
 
     E = (1-t)*A + t*B
@@ -379,8 +383,8 @@ def calc_bezier_split_offset(x1v, y1v, x2v, y2v, start, end, now, bone_name, off
     aG2 = round_bezier_mmd(aG)
     aD2 = round_bezier_mmd(aD)
 
-    logger.info("bone_name,start,now,end,offset,t,x1v,y1v,x2v,y2v,A.x(),A.y(),B.x(),B.y(),C.x(),C.y(),D.x(),D.y(),E.x(),E.y(),F.x(),F.y(),G.x(),G.y(),H.x(),H.y(),I.x(),I.y(),J.x(),J.y(),bA.x(),bA.y(),bE.x(),bE.y(),bH.x(),bH.y(),bJ.x(),bJ.y(),aJ.x(),aJ.y(),aI.x(),aI.y(),aG.x(), aG.y(),aD.x(),aD.y() ,bA2.x(),bA2.y(),bE2.x(),bE2.y(),bH2.x(),bH2.y(),bJ2.x(),bJ2.y(),aJ2.x(),aJ2.y(),aI2.x(),aI2.y(),aG2.x(),aG2.y(),aD2.x(),aD2.y()")    
-    logger.info("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s", bone_name,start,now,end,offset,t,x1v,y1v,x2v,y2v,A.x(),A.y(),B.x(),B.y(),C.x(),C.y(),D.x(),D.y(),E.x(),E.y(),F.x(),F.y(),G.x(),G.y(),H.x(),H.y(),I.x(),I.y(),J.x(),J.y(),bA.x(),bA.y(),bE.x(),bE.y(),bH.x(),bH.y(),bJ.x(),bJ.y(),aJ.x(),aJ.y(),aI.x(),aI.y(),aG.x(), aG.y(),aD.x(),aD.y() ,bA2.x(),bA2.y(),bE2.x(),bE2.y(),bH2.x(),bH2.y(),bJ2.x(),bJ2.y(),aJ2.x(),aJ2.y(),aI2.x(),aI2.y(),aG2.x(),aG2.y(),aD2.x(),aD2.y())
+    logger.info("bone_name,start,now,end,t,x1v,y1v,x2v,y2v,A.x(),A.y(),B.x(),B.y(),C.x(),C.y(),D.x(),D.y(),E.x(),E.y(),F.x(),F.y(),G.x(),G.y(),H.x(),H.y(),I.x(),I.y(),J.x(),J.y(),bA.x(),bA.y(),bE.x(),bE.y(),bH.x(),bH.y(),bJ.x(),bJ.y(),aJ.x(),aJ.y(),aI.x(),aI.y(),aG.x(), aG.y(),aD.x(),aD.y() ,bA2.x(),bA2.y(),bE2.x(),bE2.y(),bH2.x(),bH2.y(),bJ2.x(),bJ2.y(),aJ2.x(),aJ2.y(),aI2.x(),aI2.y(),aG2.x(),aG2.y(),aD2.x(),aD2.y()")    
+    logger.info("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s", bone_name,start,now,end,t,x1v,y1v,x2v,y2v,A.x(),A.y(),B.x(),B.y(),C.x(),C.y(),D.x(),D.y(),E.x(),E.y(),F.x(),F.y(),G.x(),G.y(),H.x(),H.y(),I.x(),I.y(),J.x(),J.y(),bA.x(),bA.y(),bE.x(),bE.y(),bH.x(),bH.y(),bJ.x(),bJ.y(),aJ.x(),aJ.y(),aI.x(),aI.y(),aG.x(), aG.y(),aD.x(),aD.y() ,bA2.x(),bA2.y(),bE2.x(),bE2.y(),bH2.x(),bH2.y(),bJ2.x(),bJ2.y(),aJ2.x(),aJ2.y(),aI2.x(),aI2.y(),aG2.x(),aG2.y(),aD2.x(),aD2.y())
 
     return t, x, y, [bA2, bE2, bH2, bJ2], [aJ2, aI2, aG2, aD2]
 
@@ -415,18 +419,21 @@ def scale_bezier_point(pn, p1, diff):
 
 # ベジェ曲線をMMD用の数値に丸める
 def round_bezier_mmd(target):
-    # 一旦整数部にまで持ち上げる
-    t2 = target * 1000000 * MMD_COMPLEMENT_MAX
+    t2 = QVector2D()
 
-    # logger.debug("target: %s, t2: %s", target, t2)
-    
-    # 偶数丸めなので、整数部で丸めた後、元に戻す
-    t2.setX(round(round(t2.x(), -6) / 1000000))
-    t2.setY(round(round(t2.y(), -6) / 1000000))
-
-    # logger.debug("target: %s, t2: %s", target, t2)
+    # XとYをそれぞれ整数(0-127)に丸める
+    t2.setX(round_integer(target.x() * COMPLEMENT_MMD_MAX))
+    t2.setY(round_integer(target.y() * COMPLEMENT_MMD_MAX))
 
     return t2
+
+def round_integer(t):
+    # 一旦整数部にまで持ち上げる
+    t2 = t * 1000000
+    
+    # pythonは偶数丸めなので、整数部で丸めた後、元に戻す
+    return round(round(t2, -6) / 1000000)
+
 
 # 補間曲線を求める
 # http://d.hatena.ne.jp/edvakf/20111016/1318716097
@@ -437,10 +444,10 @@ def calc_interpolate_bezier(x1v, y1v, x2v, y2v, start, end, now):
         return 0, 0, 0
         
     x = (now - start) / (end - start)
-    x1 = x1v / MMD_COMPLEMENT_MAX
-    x2 = x2v / MMD_COMPLEMENT_MAX
-    y1 = y1v / MMD_COMPLEMENT_MAX
-    y2 = y2v / MMD_COMPLEMENT_MAX
+    x1 = x1v / COMPLEMENT_MMD_MAX
+    x2 = x2v / COMPLEMENT_MMD_MAX
+    y1 = y1v / COMPLEMENT_MMD_MAX
+    y2 = y2v / COMPLEMENT_MMD_MAX
 
     t = 0.5
     s = 0.5
@@ -468,66 +475,31 @@ def calc_interpolate_bezier(x1v, y1v, x2v, y2v, start, end, now):
 
     return t, x, y
 
-# 補間曲線でもっとも接線の傾きが急な位置を求める
-# http://d.hatena.ne.jp/edvakf/20111016/1318716097
-def calc_interpolate_bezier_most_tangent(x1v, y1v, x2v, y2v, start, end, is_before):
+# 指定されたtに相当するx(フレーム番号)とy(0-1)を返す
+def calc_interpolate_bezier_by_t(x1v, y1v, x2v, y2v, start, end, t):
+    x1 = x1v / COMPLEMENT_MMD_MAX
+    x2 = x2v / COMPLEMENT_MMD_MAX
+    y1 = y1v / COMPLEMENT_MMD_MAX
+    y2 = y2v / COMPLEMENT_MMD_MAX
 
-    if start+1 == end:
-        logger.info(",区切り位置なしのため終了, start: %s, end: %s", start, end)
-        # 区切る対象がない場合、終了
-        return 0
+    s = 1 - t 
 
-    # 接線の傾き
-    p = t = btan = 0
-    is_replus = False
-    for p in range(start+1, end):
-        # 補間曲線を再算出
-        t, _, _ = calc_interpolate_bezier(x1v, y1v, x2v, y2v, start, end, p)
+    x = (3 * (s * s) * t * x1) + (3 * s * (t * t) * x2) + (t * t * t)
+    y = (3 * (s * s) * t * y1) + (3 * s * (t * t) * y2) + (t * t * t)
 
-        # 接線を求める
-        btan2 = calc_bezier_line_tangent(x1v, y1v, x2v, y2v, t)
+    # 開始から終了までの区間に広げる(yは広げない？)
+    x2 = start + ((end - start) * x)
 
-        logger.info(", start: %s, end: %s, p: %s, btan2: %s, btan: %s, degree: %s", start, end, p, btan2, btan, degrees(btan2))
+    # 整数に丸める
+    x3 = round_integer(x2)
 
-        if btan2 > btan:
-            if not is_replus:
-                # 接線の傾きが大きい場合、増加で置き換え
-                btan = btan2
-            else:
-                # 接線の傾きが大きく、かつ一度減少してから増えている場合、終了
-                break
-        else:
-            # 接線の傾きが前より小さい場合、次に増えるまでFLG=ON
-            is_replus = True
-            # 傾きは常に置き換え
-            btan = btan2
+    # 開始と被ってたらずらす
+    x3 = start + 1 if x3 == start else x3
 
-    if p == end - 1:
-        logger.info(",ノか逆ノ, start: %s, end: %s, p: %s, btan2: %s, btan: %s", start, end, p, btan2, btan)
+    # 終了と被ってたらずらす
+    x3 = end - 1 if x3 == end else x3
 
-        # return round(start+(end-start)/2)
-        if is_before:
-            # 前半でノか逆ノの場合、最後-1を返す
-            return end-1
-        else:
-            # 後半でノか逆ノの場合、最初＋1を返す
-            return start+1
+    logger.info(",calc_interpolate_bezier_by_t,x1v,%s, y1v,%s, x2v,%s, y2v,%s, y,%s,x,%s,t,%s,x2,%s,x3,%s",x1v, y1v, x2v, y2v, y, x, t,x2,x3)
 
-    # 再算出した値を返す
-    return p
+    return x3, y
 
-
-# 補間曲線（ベジェ曲線）の接線を求める
-# 90度: 1, 180度: 2, 270度：3, 360度: 4
-# http://proofcafe.org/k27c8/math/math/analysisI/page/inclination_of_tangential_line/
-def calc_bezier_line_tangent(x1v, y1v, x2v, y2v, t):
-    bz1 = QVector2D(0, 0)
-    bz2 = QVector2D(x1v, y1v)
-    bz3 = QVector2D(x2v, y2v)
-    bz4 = QVector2D(MMD_COMPLEMENT_MAX, MMD_COMPLEMENT_MAX)
-
-    v = (1-t)**3*bz1 + 3*(1-t)**2*t*bz2 + 3*(1-t)*t**2*bz3 + t**3*bz4
-    v.normalize()
-
-    # 傾きを算出して返す
-    return atan2(v.y(), v.x())
