@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00β39", pos = wx.DefaultPosition, size = wx.Size( 500,610 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00β40", pos = wx.DefaultPosition, size = wx.Size( 500,610 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列

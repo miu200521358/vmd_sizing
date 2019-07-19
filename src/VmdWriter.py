@@ -28,12 +28,16 @@ class VmdBoneFrame():
         self.frame = frame
         self.position = QVector3D(0, 0, 0)
         self.rotation = QQuaternion()
+        self.org_position = QVector3D(0, 0, 0)
+        self.org_rotation = QQuaternion()
         self.complement = [20, 20, 0, 0, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 20, 20, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 20, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 0, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 0, 0]
         self.org_complement = [20, 20, 0, 0, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 20, 20, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 20, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 0, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 0, 0]
         # 登録対象であるか否か
         self.key = False
         # VMD読み込み処理で読み込んだキーか
         self.read = False
+        # 補間曲線の分割で追加したキーか
+        self.split_complement = False
 
     def __str__(self):
         return "<VmdBoneFrame format_name:{0}, frame:{1}, position:{2}, rotation:{3}, complement: {4}, key:{5}".format(
@@ -69,7 +73,7 @@ class VmdBoneFrame():
         # print([ c.encode('unicode_escape') for c in self.complement ])
         # fout.write(struct.pack('=64s', c))
         # fout.write(struct.pack('=64s', [ c.encode('unicode_escape') for c in self.complement ][0]))
-        # print("f: %s, c: %s" % (self.frame, self.complement))
+        # print("f: %s, b: %s, c: %s" % (self.frame, self.format_name, self.complement))
         fout.write(bytearray(self.complement))
 
         # for c in self.complement:
