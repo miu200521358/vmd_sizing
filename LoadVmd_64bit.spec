@@ -3,14 +3,14 @@
 block_cipher = None
 
 
-a = Analysis(['src\\wrapper.py'],
+a = Analysis(['src\\load_vmd.py'],
              pathex=[],
              binaries=[],
              datas=[],
-             hiddenimports=['wx._adv', 'wx._html'],
+             hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],
-             excludes=['mkl','libopenblas'],
+             excludes=[],
              win_no_prefer_redirects=False,
              win_private_assemblies=False,
              cipher=block_cipher,
@@ -23,11 +23,10 @@ exe = EXE(pyz,
           a.zipfiles,
           a.datas,
           [],
-          name='VmdSizing_3.00_É¿44_64bit',
+          name='LoadVmd_1.00_64bit',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
           upx=True,
           runtime_tmpdir=None,
-          console=False )
-3
+          console=True )

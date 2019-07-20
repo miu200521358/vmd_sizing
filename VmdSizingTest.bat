@@ -11,4 +11,5 @@ cls
 rem ---  python é¿çs
 python test/test_utils.py
 python test/test_arm_ik.py
+python test/test_morph.py
 

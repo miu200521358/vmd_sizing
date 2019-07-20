@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 class TestUtils(unittest.TestCase):
 
     def test_calc_bezier_split_01(self):
-        beforebz, afterbz = utils.calc_bezier_split(10, 10, 20, 20, 0, 30, 5, "左手首")
+        t, x, y, bfit, afit, beforebz, afterbz = utils.calc_bezier_split(10, 10, 20, 20, 0, 30, 5, "左手首")
 
         self.assertEqual(0, beforebz[0].x())
         self.assertEqual(0, beforebz[0].y())
@@ -47,7 +47,7 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(127, afterbz[3].y())
 
     def test_calc_bezier_split_02(self):
-        beforebz, afterbz = utils.calc_bezier_split(19, 19, 55, 55, 5, 30, 15, "左手首")
+        t, x, y, bfit, afit, beforebz, afterbz = utils.calc_bezier_split(19, 19, 55, 55, 5, 30, 15, "左手首")
 
         self.assertEqual(0, beforebz[0].x())
         self.assertEqual(0, beforebz[0].y())
@@ -68,7 +68,7 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(127, afterbz[3].y())
 
     def test_calc_bezier_split_03(self):
-        beforebz, afterbz = utils.calc_bezier_split(127, 0, 0, 127, 10, 20, 15, "左手首")
+        t, x, y, bfit, afit, beforebz, afterbz = utils.calc_bezier_split(127, 0, 0, 127, 10, 20, 15, "左手首")
 
         self.assertEqual(0, beforebz[0].x())
         self.assertEqual(0, beforebz[0].y())
@@ -89,59 +89,59 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(127, afterbz[3].y())
 
     def test_calc_bezier_split_04(self):
-        beforebz, afterbz = utils.calc_bezier_split(127, 0, 0, 127, 10, 20, 14, "左手首")
+        t, x, y, bfit, afit, beforebz, afterbz = utils.calc_bezier_split(127, 0, 0, 127, 10, 20, 14, "左手首")
 
     def test_calc_bezier_split_05(self):
-        beforebz, afterbz = utils.calc_bezier_split(127, 0, 0, 127, 10, 20, 13, "左手首")
+        t, x, y, bfit, afit, beforebz, afterbz = utils.calc_bezier_split(127, 0, 0, 127, 10, 20, 13, "左手首")
 
     def test_calc_bezier_split_06(self):
-        beforebz, afterbz = utils.calc_bezier_split(127, 0, 0, 127, 10, 20, 12, "左手首")
+        t, x, y, bfit, afit, beforebz, afterbz = utils.calc_bezier_split(127, 0, 0, 127, 10, 20, 12, "左手首")
 
     def test_calc_bezier_split_07(self):
-        beforebz, afterbz = utils.calc_bezier_split(127, 0, 0, 127, 10, 20, 11, "左手首")
+        t, x, y, bfit, afit, beforebz, afterbz = utils.calc_bezier_split(127, 0, 0, 127, 10, 20, 11, "左手首")
 
     def test_calc_bezier_split_08(self):
-        beforebz, afterbz = utils.calc_bezier_split(127, 0, 0, 127, 10, 20, 16, "左手首")
+        t, x, y, bfit, afit, beforebz, afterbz = utils.calc_bezier_split(127, 0, 0, 127, 10, 20, 16, "左手首")
 
     def test_calc_bezier_split_09(self):
-        beforebz, afterbz = utils.calc_bezier_split(127, 0, 0, 127, 10, 20, 17, "左手首")
+        t, x, y, bfit, afit, beforebz, afterbz = utils.calc_bezier_split(127, 0, 0, 127, 10, 20, 17, "左手首")
 
     def test_calc_bezier_split_10(self):
-        beforebz, afterbz = utils.calc_bezier_split(127, 0, 0, 127, 10, 20, 18, "左手首")
+        t, x, y, bfit, afit, beforebz, afterbz = utils.calc_bezier_split(127, 0, 0, 127, 10, 20, 18, "左手首")
 
     def test_calc_bezier_split_11(self):
-        beforebz, afterbz = utils.calc_bezier_split(127, 0, 0, 127, 10, 20, 19, "左手首")
+        t, x, y, bfit, afit, beforebz, afterbz = utils.calc_bezier_split(127, 0, 0, 127, 10, 20, 19, "左手首")
 
 
 
 
 
     def test_calc_bezier_split_12(self):
-        beforebz, afterbz = utils.calc_bezier_split(0, 127, 127, 0, 10, 20, 14, "左手首")
+        t, x, y, bfit, afit, beforebz, afterbz = utils.calc_bezier_split(0, 127, 127, 0, 10, 20, 14, "左手首")
 
     def test_calc_bezier_split_13(self):
-        beforebz, afterbz = utils.calc_bezier_split(0, 127, 127, 0, 10, 20, 13, "左手首")
+        t, x, y, bfit, afit, beforebz, afterbz = utils.calc_bezier_split(0, 127, 127, 0, 10, 20, 13, "左手首")
 
     def test_calc_bezier_split_14(self):
-        beforebz, afterbz = utils.calc_bezier_split(0, 127, 127, 0, 10, 20, 12, "左手首")
+        t, x, y, bfit, afit, beforebz, afterbz = utils.calc_bezier_split(0, 127, 127, 0, 10, 20, 12, "左手首")
 
     def test_calc_bezier_split_15(self):
-        beforebz, afterbz = utils.calc_bezier_split(0, 127, 127, 0, 10, 20, 11, "左手首")
+        t, x, y, bfit, afit, beforebz, afterbz = utils.calc_bezier_split(0, 127, 127, 0, 10, 20, 11, "左手首")
 
     def test_calc_bezier_split_16(self):
-        beforebz, afterbz = utils.calc_bezier_split(0, 127, 127, 0, 10, 20, 16, "左手首")
+        t, x, y, bfit, afit, beforebz, afterbz = utils.calc_bezier_split(0, 127, 127, 0, 10, 20, 16, "左手首")
 
     def test_calc_bezier_split_17(self):
-        beforebz, afterbz = utils.calc_bezier_split(0, 127, 127, 0, 10, 20, 17, "左手首")
+        t, x, y, bfit, afit, beforebz, afterbz = utils.calc_bezier_split(0, 127, 127, 0, 10, 20, 17, "左手首")
 
     def test_calc_bezier_split_18(self):
-        beforebz, afterbz = utils.calc_bezier_split(0, 127, 127, 0, 10, 20, 18, "左手首")
+        t, x, y, bfit, afit, beforebz, afterbz = utils.calc_bezier_split(0, 127, 127, 0, 10, 20, 18, "左手首")
 
     def test_calc_bezier_split_19(self):
-        beforebz, afterbz = utils.calc_bezier_split(0, 127, 127, 0, 10, 20, 19, "左手首")
+        t, x, y, bfit, afit, beforebz, afterbz = utils.calc_bezier_split(0, 127, 127, 0, 10, 20, 19, "左手首")
 
     def test_calc_bezier_split_20(self):
-        beforebz, afterbz = utils.calc_bezier_split(0, 127, 127, 0, 10, 20, 15, "左手首")
+        t, x, y, bfit, afit, beforebz, afterbz = utils.calc_bezier_split(0, 127, 127, 0, 10, 20, 15, "左手首")
 
 
 if __name__ == "__main__":
