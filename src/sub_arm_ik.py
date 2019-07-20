@@ -582,13 +582,14 @@ def exec_arm_ik(motion, trace_model, replace_model, hand_distance, org_motion_fr
                                         or (org_front_wrist_pos.x() >= org_front_finger_pos.x() >= org_reverse_front_wrist_pos.x() \
                                             and org_front_wrist_pos.x() >= org_reverse_front_finger_pos.x() >= org_reverse_front_wrist_pos.x())) :
                                     # 変換先の方が大きくて、ある程度離れていて、かつ指が両手首の間にある場合、手の大きさを考慮する
+                                    logger.debug("手の大きさを考慮: arm_palm_diff_length: %s, org_wrist_diff_rate: %s", arm_palm_diff_length, org_wrist_diff_rate)
 
                                     # 元モデルの手首から指３までで最も手首から離れている距離
                                     org_farer_finger_length = calc_farer_finger_length(org_front_finger_global_3ds, all_org_finger_indexes, direction)
                                     logger.debug("org_farer_finger_length: %s", org_farer_finger_length)
 
                                     # 元モデルの手の大きさとの差
-                                    org_farer_finger_diff = org_farer_finger_length - org_palm_length
+                                    org_farer_finger_diff = org_palm_length - org_farer_finger_length
                                     logger.debug("org_farer_finger_diff: %s", org_farer_finger_diff)
 
                                     # 元モデルの手首から指３までで最も手首から離れている距離（反対側）
@@ -596,7 +597,7 @@ def exec_arm_ik(motion, trace_model, replace_model, hand_distance, org_motion_fr
                                     logger.debug("org_farer_finger_length: %s", org_farer_finger_length)
 
                                     # 元モデルの手の大きさとの差（反対側）
-                                    org_reverse_farer_finger_diff = org_reverse_farer_finger_length - org_palm_length
+                                    org_reverse_farer_finger_diff = org_palm_length - org_reverse_farer_finger_length
                                     logger.debug("org_reverse_farer_finger_diff: %s", org_reverse_farer_finger_diff)
 
                                     # 手首から指３までで最も手首から離れている距離
@@ -604,7 +605,7 @@ def exec_arm_ik(motion, trace_model, replace_model, hand_distance, org_motion_fr
                                     logger.debug("rep_farer_finger_length: %s", rep_farer_finger_length)
 
                                     # 手の大きさとの差
-                                    rep_farer_finger_diff = rep_farer_finger_length - rep_palm_length
+                                    rep_farer_finger_diff = rep_palm_length - rep_farer_finger_length
                                     logger.debug("rep_farer_finger_diff: %s", rep_farer_finger_diff)
 
                                     logger.debug("手の大きさ: %s", ( rep_farer_finger_diff - org_farer_finger_length ))
@@ -614,15 +615,15 @@ def exec_arm_ik(motion, trace_model, replace_model, hand_distance, org_motion_fr
                                     logger.debug("rep_reverse_farer_finger_length: %s", rep_reverse_farer_finger_length)
 
                                     # 手の大きさとの差
-                                    rep_reverse_farer_finger_diff = rep_reverse_farer_finger_length - rep_palm_length
+                                    rep_reverse_farer_finger_diff = rep_palm_length - rep_reverse_farer_finger_length
                                     logger.debug("rep_reverse_farer_finger_diff: %s", rep_reverse_farer_finger_diff)
 
                                     rep_front_wrist_pos.setX( rep_front_wrist_pos.x() \
-                                        + ( rep_farer_finger_length - org_farer_finger_length ) * wrist_diff_sign
+                                        + ( rep_farer_finger_diff - org_farer_finger_diff ) / 2 * wrist_diff_sign
                                     )
 
                                     rep_reverse_front_wrist_pos.setX( rep_reverse_front_wrist_pos.x() \
-                                        + ( rep_reverse_farer_finger_length - org_reverse_farer_finger_length ) * wrist_reverse_diff_sign
+                                        + ( rep_reverse_farer_finger_diff - org_reverse_farer_finger_diff ) / 2 * wrist_reverse_diff_sign
                                     )
 
                                 logger.debug("frame: %s, rep_front_wrist_pos after: %s", bf.frame, rep_front_wrist_pos)

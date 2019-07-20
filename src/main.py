@@ -33,9 +33,8 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
     print("作成元: %s" % trace_model.path)
     print("変換先: %s" % replace_model.path)
 
-    if motion.motion_cnt > 0:
-        # 変換前のオリジナルモーションを保持
-        org_motion_frames = copy.deepcopy(motion.frames)
+    # 変換前のオリジナルモーションを保持
+    org_motion_frames = copy.deepcopy(motion.frames)
 
     # 処理に成功しているか
     is_success = True
