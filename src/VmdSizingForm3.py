@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00β41", pos = wx.DefaultPosition, size = wx.Size( 500,610 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00β44", pos = wx.DefaultPosition, size = wx.Size( 500,610 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -219,7 +219,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_radioArmNone = wx.RadioButton( self.m_panelArm, wx.ID_ANY, u"腕関係の処理を行わない", wx.DefaultPosition, wx.DefaultSize, style=wx.RB_GROUP )
 		self.m_radioArmNone.SetValue( True )
 
-		self.m_radioAvoidance = wx.RadioButton( self.m_panelArm, wx.ID_ANY, u"頭～上半身に腕が貫通しないよう、接触回避処理を行う", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_radioAvoidance = wx.RadioButton( self.m_panelArm, wx.ID_ANY, u"頭に腕が貫通しないよう、接触回避処理を行う", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_radioArmIK = wx.RadioButton( self.m_panelArm, wx.ID_ANY, u"変換先モデルの体型に合わせて、腕位置を調整する", wx.DefaultPosition, wx.DefaultSize, 0 )
 
 		bSizer13.Add( self.m_radioArmNone, 0, wx.ALL, 5 )
@@ -233,7 +233,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_staticText91.SetFont( wx.Font( wx.NORMAL_FONT.GetPointSize(), wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, False, wx.EmptyString ) )
 		bSizer13.Add( self.m_staticText91, 0, wx.ALL, 5 )
 
-		self.m_staticText92 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"ねんどろ風など、頭身が大幅に異なる場合に、\n頭部～上半身に腕が貫通してしまうのを軽減できます。", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText92 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"ねんどろ風など、頭身が大幅に異なる場合に、\n頭部に腕が貫通してしまうのを軽減できます。", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText92.Wrap( -1 )
 
 		bSizer13.Add( self.m_staticText92, 0, wx.ALL, 5 )
@@ -693,8 +693,14 @@ class VmdSizingForm3 ( wx.Frame ):
 					logger.info("rep_choice_values: %s", self.rep_choice_values)
 					logger.info("rep_rate_values: %s", self.rep_rate_values)
 
+				# ファイル入力不可
+				self.m_fileVmd.Disable()
+				self.m_fileOrgPmx.Disable()
+				self.m_fileRepPmx.Disable()
+				self.m_fileOutputVmd.Disable()
 				# 実行ボタン押下不可
 				self.m_btnExec.Disable()
+				self.m_btnCheck.Disable()
 				# スレッド実行
 				self.worker = ExecWorkerThread(self)
 		else:
@@ -711,6 +717,12 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.worker = None
 		# 実行ボタン押下許可
 		self.m_btnExec.Enable()
+		self.m_btnCheck.Enable()
+		# ファイル入力可
+		self.m_fileVmd.Enable()
+		self.m_fileOrgPmx.Enable()
+		self.m_fileRepPmx.Enable()
+		self.m_fileOutputVmd.Enable()
 		# プログレス非表示
 		self.m_Gauge.SetValue(0)
 

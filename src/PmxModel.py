@@ -46,11 +46,11 @@ class PmxModel():
 
         min_upper_y = 99999
         for l in head_links:
-            # if l.name == "首":
-            #     min_upper_y = l.position.y()
-            #     break
-            if l.position.y() < min_upper_y and l.name not in ["センター", "グルーブ"]:
+            if l.name == "首":
                 min_upper_y = l.position.y()
+                break
+            # if l.position.y() < min_upper_y and l.name not in ["センター", "グルーブ"]:
+            #     min_upper_y = l.position.y()
             
         for v in self.vertices:
             for l in head_links:

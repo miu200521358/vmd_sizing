@@ -119,14 +119,14 @@ def split_complement(motion, next_x1v, next_y1v, next_x2v, next_y2v, prev_bf, ne
     next_bf.complement[utils.R_y2_idxs[0]] = next_bf.complement[utils.R_y2_idxs[1]] = next_bf.complement[utils.R_y2_idxs[2]] = next_bf.complement[utils.R_y2_idxs[3]] = int(after_bz[2].y())
 
     if bresult and aresult:
-        logger.info("%s, 【分割成功】: , %s,prev: %s, now: %s, next: %s", indent, al.name, prev_bf.frame, now_bf.frame, next_bf.frame)
+        logger.debug("%s, 【分割成功】: , %s,prev: %s, now: %s, next: %s", indent, al.name, prev_bf.frame, now_bf.frame, next_bf.frame)
         
         return
     else:
         # 分割に失敗している場合、さらに分割する
 
         if not bresult:
-            logger.info("%s, 【分割前半失敗開始】: ,%s, prev: %s, now: %s, next: %s", indent, al.name, prev_bf.frame, now_bf.frame, next_bf.frame)
+            logger.debug("%s, 【分割前半失敗開始】: ,%s, prev: %s, now: %s, next: %s", indent, al.name, prev_bf.frame, now_bf.frame, next_bf.frame)
 
             # 前半用補間曲線
             next_x1v = now_bf.complement[utils.R_x1_idxs[3]]
@@ -136,7 +136,7 @@ def split_complement(motion, next_x1v, next_y1v, next_x2v, next_y2v, prev_bf, ne
 
             # 前半を区切る位置を求める(t=0.5で曲線を半分に分割する位置)
             now, _ = utils.calc_interpolate_bezier_by_t(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, now_bf.frame, 0.5)
-            logger.info("%s, 【前半】, now: %s", indent, now)
+            logger.debug("%s, 【前半】, now: %s", indent, now)
 
             if now > prev_bf.frame:
                 # ちゃんとキーが打てるような状態の場合、前半を再分割
@@ -162,7 +162,7 @@ def split_complement(motion, next_x1v, next_y1v, next_x2v, next_y2v, prev_bf, ne
                 r_y2 = 0 if 0 > before_bz[2].y() else utils.COMPLEMENT_MMD_MAX if utils.COMPLEMENT_MMD_MAX < before_bz[2].y() else int(before_bz[2].y())
                 now_bf.complement[utils.R_y2_idxs[0]] = now_bf.complement[utils.R_y2_idxs[1]] = now_bf.complement[utils.R_y2_idxs[2]] = now_bf.complement[utils.R_y2_idxs[3]] = r_y2
 
-                logger.info("%s,前半分割キー取得失敗,R_x1_idxs,%s,R_y1_idxs,%s,R_x2_idxs,%s,R_y2_idxs,%s,before_bz,%s", indent, now_bf.complement[utils.R_x1_idxs[3]], now_bf.complement[utils.R_y1_idxs[3]], now_bf.complement[utils.R_x2_idxs[3]], now_bf.complement[utils.R_x2_idxs[3]],before_bz)
+                logger.debug("%s,前半分割キー取得失敗,R_x1_idxs,%s,R_y1_idxs,%s,R_x2_idxs,%s,R_y2_idxs,%s,before_bz,%s", indent, now_bf.complement[utils.R_x1_idxs[3]], now_bf.complement[utils.R_y1_idxs[3]], now_bf.complement[utils.R_x2_idxs[3]], now_bf.complement[utils.R_x2_idxs[3]],before_bz)
 
         if not aresult:
             logger.debug("%s, 【分割後半失敗開始】: ,%s, prev: %s, now: %s, next: %s", indent, al.name, prev_bf.frame, now_bf.frame, next_bf.frame)
@@ -175,7 +175,7 @@ def split_complement(motion, next_x1v, next_y1v, next_x2v, next_y2v, prev_bf, ne
 
             # 後半を区切る位置を求める
             now, _ = utils.calc_interpolate_bezier_by_t(next_x1v, next_y1v, next_x2v, next_y2v, now_bf.frame, next_bf.frame, 0.5)
-            logger.info("%s, 【後半】, now: %s", indent, now)
+            logger.debug("%s, 【後半】, now: %s", indent, now)
 
             if now > now_bf.frame:
                 # ちゃんとキーが打てるような状態の場合、後半を再分割
@@ -199,12 +199,12 @@ def split_complement(motion, next_x1v, next_y1v, next_x2v, next_y2v, prev_bf, ne
                 r_y2 = 0 if 0 > after_bz[2].y() else utils.COMPLEMENT_MMD_MAX if utils.COMPLEMENT_MMD_MAX < after_bz[2].y() else int(after_bz[2].y())
                 next_bf.complement[utils.R_y2_idxs[0]] = next_bf.complement[utils.R_y2_idxs[1]] = next_bf.complement[utils.R_y2_idxs[2]] = next_bf.complement[utils.R_y2_idxs[3]] = r_y2
 
-                logger.info("%s,後半分割キー取得失敗,R_x1_idxs,%s,R_y1_idxs,%s,R_x2_idxs,%s,R_y2_idxs,%s,after_bz,%s", indent, next_bf.complement[utils.R_x1_idxs[3]], next_bf.complement[utils.R_y1_idxs[3]], next_bf.complement[utils.R_x2_idxs[3]], next_bf.complement[utils.R_x2_idxs[3]],after_bz)
+                logger.debug("%s,後半分割キー取得失敗,R_x1_idxs,%s,R_y1_idxs,%s,R_x2_idxs,%s,R_y2_idxs,%s,after_bz,%s", indent, next_bf.complement[utils.R_x1_idxs[3]], next_bf.complement[utils.R_y1_idxs[3]], next_bf.complement[utils.R_x2_idxs[3]], next_bf.complement[utils.R_x2_idxs[3]],after_bz)
 
-        logger.info("%s, 【分割失敗終了】: ,%s, prev: %s, now: %s, next: %s", indent, al.name, prev_bf.frame, now_bf.frame, next_bf.frame)
+        logger.debug("%s, 【分割失敗終了】: ,%s, prev: %s, now: %s, next: %s", indent, al.name, prev_bf.frame, now_bf.frame, next_bf.frame)
         return
     
-    logger.info("%s, 【分割終了】: ,%s, prev: %s, now: %s, next: %s, next_x1v: %s, next_y1v: %s, next_x2v: %s, next_y2v: %s", indent, al.name, prev_bf.frame, now_bf.frame, next_bf.frame, next_x1v, next_y1v, next_x2v, next_y2v)
+    logger.debug("%s, 【分割終了】: ,%s, prev: %s, now: %s, next: %s, next_x1v: %s, next_y1v: %s, next_x2v: %s, next_y2v: %s", indent, al.name, prev_bf.frame, now_bf.frame, next_bf.frame, next_x1v, next_y1v, next_x2v, next_y2v)
     return
 
 # キーの分割を再設定する
@@ -212,7 +212,7 @@ def recalc_bone_by_complement(motion, al, now):
     for tbf_idx, tbf in enumerate(motion.frames[al.name]):
         if tbf.frame == now:
             # とりあえず登録対象のキーが既存なのでそのキーを有効にして返す
-            logger.info(",追加のトコに既にキーあり,now, %s,%s", now,al.name)
+            logger.debug(",追加のトコに既にキーあり,now, %s,%s", now,al.name)
 
             tbf.key = True
             # 再分割キー明示
