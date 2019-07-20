@@ -13,7 +13,7 @@ import utils
 
 logger = logging.getLogger("__main__").getChild(__name__)
 
-def exec(motion, trace_model, replace_model, vmd_choice_values, rep_choice_values, rep_rate_values, error_path, error_file_logger):
+def exec(motion, trace_model, replace_model, vmd_choice_values, rep_choice_values, rep_rate_values, error_file_handler):
 
     # モーフ置換
     if len(vmd_choice_values) > 0 and len(rep_choice_values) > 0 and len(rep_rate_values) > 0 and len(vmd_choice_values) == len(rep_choice_values) == len(rep_rate_values):

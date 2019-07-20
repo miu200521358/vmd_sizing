@@ -244,6 +244,7 @@ class PmxReader():
         morphs_by_panel[1] = [] # 眉
         morphs_by_panel[3] = [] # 口
         morphs_by_panel[4] = [] # 他
+        morphs_by_panel[0] = [] # システム予約
 
         # モーフデータリスト
         for _ in range(self.read_int(4)):      
@@ -287,6 +288,10 @@ class PmxReader():
                 raise ParseException("unknown morph type: {0}".format(morph.morph_type))
 
             morph.index = len(pmx.morphs)
+
+            if not morph.panel in morphs_by_panel.keys():
+                # ないと思うが念のためパネル情報がなければ追加
+                morphs_by_panel[morph.panel] = 0
 
             morphs_by_panel[morph.panel].append(morph)
 
