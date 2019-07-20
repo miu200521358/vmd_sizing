@@ -13,7 +13,7 @@ import utils
 
 logger = logging.getLogger("__main__").getChild(__name__)
 
-def exec(motion, trace_model, replace_model, is_avoidance, is_avoidance_finger, is_hand_ik, error_path, error_file_logger):
+def exec(motion, trace_model, replace_model, is_avoidance, is_avoidance_finger, is_hand_ik, error_file_handler):
 
     # -----------------------------------------------------------------
     # 頭部と腕の接触回避処理        

@@ -13,7 +13,7 @@ import utils
 
 logger = logging.getLogger("__main__").getChild(__name__)
 
-def exec(motion, trace_model, replace_model, error_path, error_file_logger):
+def exec(motion, trace_model, replace_model, error_file_handler):
 
     if motion.motion_cnt > 0:
         # -----------------------------------------------------------------

@@ -12,12 +12,14 @@ import wx.xrc
 import logging
 import sys
 import os.path
-from threading import Thread
+import time
+import re
+from threading import Thread, Event
 
 import wrapperutils
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("__main__").getChild(__name__)
 
 ###########################################################################
 ## Class VmdSizingForm3
@@ -26,7 +28,7 @@ logger = logging.getLogger(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00β45", pos = wx.DefaultPosition, size = wx.Size( 500,610 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00β46", pos = wx.DefaultPosition, size = wx.Size( 500,610 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -46,6 +48,9 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.arrow_choices = None
 		self.rep_choices = None
 		self.rep_rates = None
+
+		# ファイルハンドラ
+		self.error_file_handler = None
 		# ---------------------------------------------
 
 		self.SetSizeHints( wx.DefaultSize, wx.DefaultSize )
@@ -416,13 +421,42 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_radioAvoidance.Bind(wx.EVT_RADIOBUTTON, self.OnCreateOutputVmd)
 		self.m_radioArmIK.Bind(wx.EVT_RADIOBUTTON, self.OnCreateOutputVmd)
 
+		# 終了時の処理
+		self.Bind(wx.EVT_CLOSE, self.OnClose)
+
 		self.SetSizer( bSizer1 )
 		self.Layout()
 
 		self.Centre( wx.BOTH )
+	
+	def OnClose(self, event):
+		for h in logger.handlers:
+			print("logger.handlers: %s", h)
+			# ハンドラを終了させる
+			h.flush()
+			h.close()
+			# ファイルロガーを手放す
+			logger.removeHandler(h) 
+		# 最後にログを終了させる
+		logging.shutdown()
+
+		# print("OnClose")
+		if self.worker:
+			# スレッドを止める
+			self.worker.stop()
+			self.worker = None
+		
+		self.Destroy()
 
 	def __del__( self ):
-		pass
+		# 最後にログを終了させる
+		logging.shutdown()
+
+		# print("__del__")
+		if self.worker:
+			# スレッドを止める
+			self.worker.stop()
+			self.worker = None
 	
 	def OnArmOnOff(self, event, target_ctrl):
 		# どっちか片方しか選択できない
@@ -654,7 +688,7 @@ class VmdSizingForm3 ( wx.Frame ):
 			self.rep_pmx_data = wrapperutils.read_pmx(self.m_fileRepPmx.GetPath(), self.m_staticText11.GetLabel(), False)
 
 		# 読み込み処理が終わったらサイジングできるかチェック
-		wrapperutils.is_all_sizing(self.vmd_data, self.org_pmx_data, self.rep_pmx_data, None)
+		wrapperutils.is_all_sizing(None, self.vmd_data, self.org_pmx_data, self.rep_pmx_data, None)
 
 		self.m_Gauge.SetValue(0)
 
@@ -688,17 +722,27 @@ class VmdSizingForm3 ( wx.Frame ):
 				self.rep_choice_values = []
 				self.rep_rate_values = []
 
+				morph_pair = {}
 				if self.vmd_choices and self.rep_choices:
 					for vc, rc, rr in zip(self.vmd_choices, self.rep_choices, self.rep_rates):
 						vc_idx = vc.GetSelection()
 						rc_idx = rc.GetSelection()
 						logger.debug("vc_idx: %s, rc_idx: %s", vc_idx, rc_idx)
 						if vc_idx >= 0 and rc_idx >= 0 and len(vc.GetString(vc_idx)) > 0 and len(rc.GetString(rc_idx)) > 0:
+							vcv = vc.GetString(vc_idx)[3:]
+							rcv = rc.GetString(rc_idx)[2:]
+
+							if (vcv,rcv) in morph_pair.keys():
+								# 元と先が同じ場合、処理スルー
+								continue
+
 							# Prefixを除去して追加する
-							self.vmd_choice_values.append(vc.GetString(vc_idx)[3:])
-							self.rep_choice_values.append(rc.GetString(rc_idx)[2:])
+							self.vmd_choice_values.append(vcv)
+							self.rep_choice_values.append(rcv)
 							# 念のため、丸め
 							self.rep_rate_values.append(round(rr.GetValue(), 10))
+							# ペアとして登録する
+							morph_pair[(vcv,rcv)] = True							
 					
 					logger.info("vmd_choice_values: %s", self.vmd_choice_values)
 					logger.info("rep_choice_values: %s", self.rep_choice_values)
@@ -712,8 +756,16 @@ class VmdSizingForm3 ( wx.Frame ):
 				# 実行ボタン押下不可
 				self.m_btnExec.Disable()
 				self.m_btnCheck.Disable()
+
+				# エラーハンドラ設定
+				if not self.error_file_handler:
+					error_path = re.sub(r'\.vmd$', ".log", self.m_fileOutputVmd.GetPath())
+					self.error_file_handler = logging.FileHandler(error_path)
+				
 				# スレッド実行
 				self.worker = ExecWorkerThread(self)
+				self.worker.start()
+				self.worker.stop_event.set()
 		else:
 			print("まだ処理が実行中です。終了してから再度実行してください。")
 
@@ -741,7 +793,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.rep_choice_values = []
 		self.rep_rate_values = []
 		# 一旦出力ファイル設定
-		self.OnCreateOutputVmd(wx.EVT_FILEPICKER_CHANGED)
+		# self.OnCreateOutputVmd(wx.EVT_FILEPICKER_CHANGED)
 
 	# スレッド実行結果
 	def OnReadResult(self, event):
@@ -823,6 +875,8 @@ class ReadWorkerThread(Thread):
 		Thread.__init__(self)
 		self._notify_window = notify_window
 		self._want_abort = 0
+		# メイン終了時にもスレッド終了する
+		self.daemon = True
 
 		# パラメーター設定
 		self.target_ctrl = target_ctrl
@@ -881,6 +935,7 @@ class ReadWorkerThread(Thread):
 
 
 # Thread class that executes processing
+# http://nobunaga.hatenablog.jp/entry/2016/06/03/204450
 class ExecWorkerThread(Thread):
 	"""Worker Thread Class."""
 	def __init__(self, notify_window):
@@ -888,10 +943,12 @@ class ExecWorkerThread(Thread):
 		Thread.__init__(self)
 		self._notify_window = notify_window
 		self._want_abort = 0
+		self.stop_event = Event()
+		# メイン終了時にもスレッド終了する
+		self.daemon = True
 
-		# This starts the thread running on creation, but you could
-		# also make the GUI thread responsible for calling this
-		self.start()
+	def stop(self):
+		self.stop_event.set()
 
 	def run(self):
 		"""Run Worker Thread."""
@@ -902,7 +959,8 @@ class ExecWorkerThread(Thread):
 
 		# 処理実行
 		wrapperutils.exec(
-			self._notify_window.vmd_data
+			self._notify_window.error_file_handler
+			, self._notify_window.vmd_data
 			, self._notify_window.org_pmx_data
 			, self._notify_window.rep_pmx_data
 			, self._notify_window.m_fileVmd.GetPath()
