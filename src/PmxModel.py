@@ -31,8 +31,8 @@ class PmxModel():
         self.bones = {}
         # ボーンINDEXデータ
         self.bone_indexes = {}
-        # モーフデータ
-        self.morphs = {}
+        # モーフデータ(順番保持)
+        self.morphs = OrderedDict()
         # 表示枠データ
         self.display_slots = {}
         # 剛体データ

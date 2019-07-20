@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00β44", pos = wx.DefaultPosition, size = wx.Size( 500,610 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00β45", pos = wx.DefaultPosition, size = wx.Size( 500,610 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -545,10 +545,13 @@ class VmdSizingForm3 ( wx.Frame ):
 		# スクロールバーの表示のためにサイズ調整
 		self.gridMorphSizer.FitInside( self.m_scrolledMorph )
 
-		# 前行のイベントの削除
+		# 前行のイベントの変更
 		if len(self.vmd_choices) > 1:
-			self.vmd_choices[-2].Unbind(wx.EVT_CHOICE)
-			self.rep_choices[-2].Unbind(wx.EVT_CHOICE)
+			# self.vmd_choices[-2].Unbind(wx.EVT_CHOICE)
+			# self.rep_choices[-2].Unbind(wx.EVT_CHOICE)
+			# プルダウンを切り替えたときにファイル出力パスを切り替える
+			self.vmd_choices[-1].Bind(wx.EVT_CHOICE, self.OnCreateOutputVmd)
+			self.rep_choices[-1].Bind(wx.EVT_CHOICE, self.OnCreateOutputVmd)
 
 		# 新規行のイベントの追加
 		self.vmd_choices[-1].Bind(wx.EVT_CHOICE, self.OnFillAddMorphLine)
@@ -559,6 +562,9 @@ class VmdSizingForm3 ( wx.Frame ):
 		# logger.debug("item: %s, size: %s", self.gridMorphSizer.GetItemCount(), self.gridMorphSizer.GetSize())
 
 	def OnFillAddMorphLine(self, event):
+		# 一旦出力ファイル設定
+		self.OnCreateOutputVmd(wx.EVT_FILEPICKER_CHANGED)
+
 		# logger.info("OnFillAddMorphLine: vmd_choices: %s, rep_choices: %s", self.vmd_choices[-1].GetSelection(), self.rep_choices[-1].GetSelection() > 0)
 		# 最終行のモーフが選択されていたらモーフ行追加
 		if self.vmd_choices[-1].GetSelection() > 0 and self.rep_choices[-1].GetSelection() > 0:
@@ -590,7 +596,12 @@ class VmdSizingForm3 ( wx.Frame ):
 			self.m_scrolledMorph.Layout()
 
 	# ファイル読み込み処理実行
-	def OnLoadFile(self, event, target_ctrl, label_ctrl, ext):		
+	def OnLoadFile(self, event, target_ctrl, label_ctrl, ext):
+		# なんか除去がうまくいかないので保留
+		# logger.info("target_ctrl.GetPath(): %s", target_ctrl.GetPath())
+		# # 先頭と末尾のダブルクォーテーションは除去
+		# target_ctrl.SetPath(target_ctrl.GetPath().strip("\""))
+
 		# 一旦出力ファイル設定
 		self.OnCreateOutputVmd(event)
 
@@ -725,6 +736,12 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_fileOutputVmd.Enable()
 		# プログレス非表示
 		self.m_Gauge.SetValue(0)
+		# モーフ置換配列クリア
+		self.vmd_choice_values = []
+		self.rep_choice_values = []
+		self.rep_rate_values = []
+		# 一旦出力ファイル設定
+		self.OnCreateOutputVmd(wx.EVT_FILEPICKER_CHANGED)
 
 	# スレッド実行結果
 	def OnReadResult(self, event):
@@ -752,7 +769,9 @@ class VmdSizingForm3 ( wx.Frame ):
 		# print("OnCreateOutputVmd2")
 		# print("m_fileVmd: %s " % self.m_fileVmd.GetPath())
 		# print("m_fileRepPmx: %s " % self.m_fileRepPmx.GetPath())
-		new_filepath = wrapperutils.create_output_path(self.m_fileVmd.GetPath(), self.m_fileRepPmx.GetPath(), self.m_radioAvoidance.GetValue(), self.m_radioArmIK.GetValue())
+		# print("self.vmd_choices: %s" % self.vmd_choices)
+		# print("(self.vmd_choices and len(self.vmd_choices) > 1): %s" % (self.vmd_choices and len(self.vmd_choices) > 0))
+		new_filepath = wrapperutils.create_output_path(self.m_fileVmd.GetPath(), self.m_fileRepPmx.GetPath(), self.m_radioAvoidance.GetValue(), self.m_radioArmIK.GetValue(), (self.vmd_choices and len(self.vmd_choices) > 0))
 		# print("new_filepath: %s " % new_filepath)
 		if new_filepath is not None:
 			self.m_fileOutputVmd.SetPath(new_filepath)

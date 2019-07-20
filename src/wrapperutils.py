@@ -234,7 +234,7 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
     error_file_logger = None
     try:
         if not output_vmd_path:
-            output_vmd_path = create_output_path(vmd_path, rep_pmx_path, is_avoidance, is_hand_ik)
+            output_vmd_path = create_output_path(vmd_path, rep_pmx_path, is_avoidance, is_hand_ik, len(vmd_choice_values) > 0)
             if output_vmd_path == None:
                 return False
         
@@ -325,11 +325,14 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
     finally:
         # 最後にログを終了させる
         logging.shutdown()
+        # オブジェクトクリア
+        error_file_logger = None
         
 
-def create_output_path(vmd_path, replace_pmx_path, is_avoidance, is_arm_ik):
+def create_output_path(vmd_path, replace_pmx_path, is_avoidance, is_arm_ik, is_morph):
     # print("vmd_path: %s " % vmd_path)
     # print("replace_pmx_path: %s" % replace_pmx_path)
+    # print("is_morph: %s" % is_morph)
 
     if not os.path.exists(vmd_path) or not os.path.exists(replace_pmx_path):
         return None
@@ -339,10 +342,14 @@ def create_output_path(vmd_path, replace_pmx_path, is_avoidance, is_arm_ik):
 
     # 腕サフィックス
     arm_suffix = ""
-    if is_avoidance: arm_suffix = "_回避"
-    if is_arm_ik: arm_suffix = "_位置"
+    if is_avoidance: arm_suffix = "A"
+    if is_arm_ik: arm_suffix = "P"
 
-    output_vmd_path = os.path.join(str(Path(vmd_path).resolve().parents[0]), os.path.basename(vmd_path).replace(".vmd", "_{1}{2}_{0:%Y%m%d_%H%M%S}.vmd".format(datetime.now(), bone_filename, arm_suffix)))
+    # モーフサフィックス
+    morph_suffix = ""
+    if is_morph: morph_suffix = "M"
+
+    output_vmd_path = os.path.join(str(Path(vmd_path).resolve().parents[0]), os.path.basename(vmd_path).replace(".vmd", "_{1}{2}{3}_{0:%Y%m%d_%H%M%S}.vmd".format(datetime.now(), bone_filename, morph_suffix, arm_suffix)))
 
     if len(output_vmd_path) >= 255 and os.name == "nt":
         print("■■■■■■■■■■■■■■■■■")

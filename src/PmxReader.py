@@ -3,6 +3,7 @@
 
 import logging
 import struct
+from collections import OrderedDict
 from PyQt5.QtGui import QQuaternion, QVector4D, QVector3D, QVector2D, QColor
 
 from PmxModel import PmxModel, ParseException
@@ -237,6 +238,13 @@ class PmxReader():
         # ボーンの長さを計算する
         self.calc_bone_length(pmx.bones, pmx.bone_indexes)
 
+        # 操作パネル (PMD:カテゴリ) 1:眉(左下) 2:目(左上) 3:口(右上) 4:その他(右下)
+        morphs_by_panel = OrderedDict()
+        morphs_by_panel[2] = [] # 目
+        morphs_by_panel[1] = [] # 眉
+        morphs_by_panel[3] = [] # 口
+        morphs_by_panel[4] = [] # 他
+
         # モーフデータリスト
         for _ in range(self.read_int(4)):      
             morph = PmxModel.Morph(
@@ -280,7 +288,12 @@ class PmxReader():
 
             morph.index = len(pmx.morphs)
 
-            pmx.morphs[morph.name] = morph
+            morphs_by_panel[morph.panel].append(morph)
+
+        # モーフのパネル順に並び替えてモーフを登録していく
+        for _, mlist in morphs_by_panel.items():
+            for m in mlist:
+                pmx.morphs[m.name] = m
 
         logger.debug("len(morphs): %s", len(pmx.morphs))
 
