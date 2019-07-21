@@ -771,6 +771,7 @@ def exec_arm_ik(motion, trace_model, replace_model, hand_distance, org_motion_fr
                                 if not is_error_outputed:
                                     is_error_outputed = True
                                     if not error_file_logger:
+                                        error_file_logger = logging.getLogger("message")
                                         error_file_logger.addHandler(error_file_handler)
 
                                     error_file_logger.info("モーション: %s" , motion.path)

@@ -71,7 +71,7 @@ def is_valid_file(file_path, file_type, ext, is_print=True):
     
     return True
 
-def is_all_sizing(error_file_handler, motion, org_pmx, rep_pmx, output_vmd_path):
+def is_all_sizing(error_file_handler, motion, org_pmx, rep_pmx):
     if org_pmx and rep_pmx and motion:
         not_org_bones = []
         not_org_morphs = []
@@ -154,7 +154,7 @@ def is_all_sizing(error_file_handler, motion, org_pmx, rep_pmx, output_vmd_path)
 
             is_shortage = True
 
-        if is_shortage == False and not output_vmd_path:
+        if is_shortage == False and not error_file_handler:
             # OKのメッセージはUIログのみ
             print("■■■■■■■■■■■■■■■■■")
             print("■　**OK**　")
@@ -265,7 +265,7 @@ def exec(error_file_handler, motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, r
         
         if motion and org_pmx and rep_pmx:
             # ファイル出力タイプでサイジングチェック
-            is_all_sizing(error_file_handler, motion, org_pmx, rep_pmx, output_vmd_path)
+            is_all_sizing(error_file_handler, motion, org_pmx, rep_pmx)
 
             # 実処理実行
             # 読み込んだモーションデータそのものを弄らないよう、コピーした結果を渡す
