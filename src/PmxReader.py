@@ -8,7 +8,7 @@ from PyQt5.QtGui import QQuaternion, QVector4D, QVector3D, QVector2D, QColor
 
 from PmxModel import PmxModel, ParseException
 
-logger = logging.getLogger("__main__").getChild(__name__)
+logger = logging.getLogger("VmdSizing").getChild(__name__)
 handler = logging.StreamHandler()
 handler.setLevel(logging.INFO)
 logger.setLevel(logging.INFO)

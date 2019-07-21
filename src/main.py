@@ -17,14 +17,14 @@ from PmxReader import PmxReader
 import utils, sub_move, sub_arm_stance, sub_avoidance, sub_arm_ik, sub_morph
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("VmdSizing").getChild(__name__)
 
 level = {0:logging.ERROR,
             1:logging.WARNING,
             2:logging.INFO,
             3:logging.DEBUG}
 
-def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, vmd_choice_values, rep_choice_values, rep_rate_values, error_file_handler):   
+def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, vmd_choice_values, rep_choice_values, rep_rate_values, error_file_handler, error_file_logger):   
     print("モーション: %s" % motion.path)
     print("作成元: %s" % trace_model.path)
     print("変換先: %s" % replace_model.path)
@@ -36,19 +36,19 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
     is_success = True
 
     # 移動系ボーン縮尺処理
-    is_success = is_success and sub_move.exec(motion, trace_model, replace_model, error_file_handler)
+    is_success = is_success and sub_move.exec(motion, trace_model, replace_model, error_file_handler, error_file_logger)
 
     # 腕スタンス補正処理
-    is_success = is_success and sub_arm_stance.exec(motion, trace_model, replace_model, error_file_handler)
+    is_success = is_success and sub_arm_stance.exec(motion, trace_model, replace_model, error_file_handler, error_file_logger)
 
     # 頭部と腕の接触回避処理
-    is_success = is_success and sub_avoidance.exec(motion, trace_model, replace_model, is_avoidance, is_avoidance_finger, is_hand_ik, error_file_handler)
+    is_success = is_success and sub_avoidance.exec(motion, trace_model, replace_model, is_avoidance, is_avoidance_finger, is_hand_ik, error_file_handler, error_file_logger)
 
     # 腕IK処理
-    is_success = is_success and sub_arm_ik.exec(motion, trace_model, replace_model, is_avoidance, is_hand_ik, hand_distance, org_motion_frames, error_file_handler)
+    is_success = is_success and sub_arm_ik.exec(motion, trace_model, replace_model, is_avoidance, is_hand_ik, hand_distance, org_motion_frames, error_file_handler, error_file_logger)
 
     # モーフ処理
-    is_success = is_success and sub_morph.exec(motion, trace_model, replace_model, vmd_choice_values, rep_choice_values, rep_rate_values, error_file_handler)
+    is_success = is_success and sub_morph.exec(motion, trace_model, replace_model, vmd_choice_values, rep_choice_values, rep_rate_values, error_file_handler, error_file_logger)
 
     if motion.camera_cnt > 0:
         print("カメラ調整未対応")
@@ -80,7 +80,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
     if not is_success:
         print("■■■■■■■■■■■■■■■■■")
         print("■　サイジングに失敗している箇所があります。")
-        print("■　ログ: %s" % error_path)
+        print("■　ログを確認してください。")
         print("■■■■■■■■■■■■■■■■■")
         print("")
 
@@ -129,7 +129,7 @@ if __name__=="__main__":
         error_path = re.sub(r'\.vmd$', ".log", output_vmd_path)
         error_file_handler = logging.FileHandler(error_path)
 
-        main(motion, org_pmx, rep_pmx, output_vmd_path, is_avoidance, True, is_hand_ik, args.hand_distance, [], [], [], error_file_handler) 
+        main(motion, org_pmx, rep_pmx, output_vmd_path, is_avoidance, True, is_hand_ik, args.hand_distance, [], [], [], error_file_handler, None) 
 
     except SizingException as e:
         print("■■■■■■■■■■■■■■■■■")
