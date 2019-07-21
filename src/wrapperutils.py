@@ -57,7 +57,7 @@ def is_valid_file(file_path, file_type, ext, is_print=True):
     
     # ボーンCSVファイル名・拡張子
     file_name, test_ext = os.path.splitext(os.path.basename(file_path))
-    # logger.info("file_name: %s, test_ext: %s", file_name, test_ext)
+    # logger.debug("file_name: %s, test_ext: %s", file_name, test_ext)
 
     if ext.lower() != test_ext.lower():
         if is_print:

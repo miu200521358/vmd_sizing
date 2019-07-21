@@ -24,26 +24,25 @@ def create_custom_logger(name, handler):
     global loggers
 
     if loggers.get(name):
-        logger.info("loggerあり")
+        logger.debug("loggerあり")
         new_logger = loggers.get(name)
     else:
-        logger.info("loggerなし")
+        logger.debug("loggerなし")
         new_logger = logging.getLogger(name)
         new_logger.setLevel(logging.INFO)
 
         loggers[name] = new_logger
     
-
     for f in new_logger.handlers:
         # 既存のハンドラはすべて削除
-        logger.info("before f: %s", f)
+        logger.debug("before f: %s", f)
         new_logger.removeHandler(f)
     
     # 指定されたハンドラを紐付ける
     new_logger.addHandler(handler)
 
-    for f in new_logger.handlers:
-        logger.info("after f: %s", f)
+    # for f in new_logger.handlers:
+    #     logger.debug("after f: %s", f)
     
     return new_logger
 

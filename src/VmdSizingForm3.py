@@ -28,7 +28,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00β48", pos = wx.DefaultPosition, size = wx.Size( 500,610 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00", pos = wx.DefaultPosition, size = wx.Size( 500,610 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -599,7 +599,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		# 一旦出力ファイル設定
 		self.OnCreateOutputVmd(wx.EVT_FILEPICKER_CHANGED)
 
-		# logger.info("OnFillAddMorphLine: vmd_choices: %s, rep_choices: %s", self.vmd_choices[-1].GetSelection(), self.rep_choices[-1].GetSelection() > 0)
+		# logger.debug("OnFillAddMorphLine: vmd_choices: %s, rep_choices: %s", self.vmd_choices[-1].GetSelection(), self.rep_choices[-1].GetSelection() > 0)
 		# 最終行のモーフが選択されていたらモーフ行追加
 		if self.vmd_choices[-1].GetSelection() > 0 and self.rep_choices[-1].GetSelection() > 0:
 			self.AddMorphLine()
@@ -632,7 +632,7 @@ class VmdSizingForm3 ( wx.Frame ):
 	# ファイル読み込み処理実行
 	def OnLoadFile(self, event, target_ctrl, label_ctrl, ext):
 		# なんか除去がうまくいかないので保留
-		# logger.info("target_ctrl.GetPath(): %s", target_ctrl.GetPath())
+		# logger.debug("target_ctrl.GetPath(): %s", target_ctrl.GetPath())
 		# # 先頭と末尾のダブルクォーテーションは除去
 		# target_ctrl.SetPath(target_ctrl.GetPath().strip("\""))
 
@@ -744,9 +744,9 @@ class VmdSizingForm3 ( wx.Frame ):
 							# ペアとして登録する
 							morph_pair[(vcv,rcv)] = True							
 					
-					logger.info("vmd_choice_values: %s", self.vmd_choice_values)
-					logger.info("rep_choice_values: %s", self.rep_choice_values)
-					logger.info("rep_rate_values: %s", self.rep_rate_values)
+					logger.debug("vmd_choice_values: %s", self.vmd_choice_values)
+					logger.debug("rep_choice_values: %s", self.rep_choice_values)
+					logger.debug("rep_rate_values: %s", self.rep_rate_values)
 
 				# ファイル入力不可
 				self.m_fileVmd.Disable()
