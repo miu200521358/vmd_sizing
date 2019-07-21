@@ -7,6 +7,7 @@ from PyQt5.QtGui import QQuaternion, QVector3D, QColor
 class VmdMorphFrame():
     def __init__(self, frame=0):
         self.name = ''
+        self.format_name = ''
         self.frame = frame
         self.ratio = 0
     

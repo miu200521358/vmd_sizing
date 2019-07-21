@@ -12,12 +12,12 @@ from PmxModel import PmxModel, SizingException
 from PmxReader import PmxReader
 import utils
 
-logger = logging.getLogger("__main__").getChild(__name__)
+logger = logging.getLogger("VmdSizing").getChild(__name__)
 
 # file_logger = logging.getLogger("message")
 # file_logger.addHandler(logging.FileHandler("test.csv"))
 
-def exec(motion, trace_model, replace_model, is_avoidance, is_hand_ik, hand_distance, org_motion_frames, error_file_handler):
+def exec(motion, trace_model, replace_model, is_avoidance, is_hand_ik, hand_distance, org_motion_frames, error_file_handler, error_file_logger):
     is_error_outputed = False
 
     # -----------------------------------------------------------------
@@ -38,7 +38,7 @@ def exec(motion, trace_model, replace_model, is_avoidance, is_hand_ik, hand_dist
 
         if hand_distance >= 0:
             # 手首位置合わせ処理実行
-            is_error_outputed = exec_arm_ik(motion, trace_model, replace_model, hand_distance, org_motion_frames, all_rep_wrist_links, arm_links, error_file_handler)
+            is_error_outputed = exec_arm_ik(motion, trace_model, replace_model, hand_distance, org_motion_frames, all_rep_wrist_links, arm_links, error_file_handler, error_file_logger)
 
             # 補間曲線再設定
             reset_complement(motion, arm_links)
@@ -312,9 +312,7 @@ def prepare(motion, arm_links, hand_distance):
     print("手首位置合わせ事前調整終了")
 
 # 手首位置合わせ実行
-def exec_arm_ik(motion, trace_model, replace_model, hand_distance, org_motion_frames, all_rep_wrist_links, arm_links, error_file_handler):
-    error_file_logger = None
-    
+def exec_arm_ik(motion, trace_model, replace_model, hand_distance, org_motion_frames, all_rep_wrist_links, arm_links, error_file_handler, error_file_logger):    
     # 腕IKによる位置調整を行う場合
 
     # エラーを一度でも出力しているか(腕IK)
@@ -771,12 +769,8 @@ def exec_arm_ik(motion, trace_model, replace_model, hand_distance, org_motion_fr
                                 if not is_error_outputed:
                                     is_error_outputed = True
                                     if not error_file_logger:
-                                        error_file_logger = logging.getLogger("message")
-                                        error_file_logger.addHandler(error_file_handler)
+                                        error_file_logger = utils.create_error_file_logger(motion, trace_model, replace_model, error_file_handler)
 
-                                    error_file_logger.info("モーション: %s" , motion.path)
-                                    error_file_logger.info("作成元: %s" , trace_model.path)
-                                    error_file_logger.info("変換先: %s" , replace_model.path)
                                     error_file_logger.info("作成元モデルの手の大きさ: %s", org_palm_length)
                                     error_file_logger.info("変換先モデルの手の大きさ: %s", rep_palm_length)
                                     error_file_logger.info("手首の厚み: l: %s, r: %s", wrist_thickness["左"], wrist_thickness["右"])
@@ -834,7 +828,7 @@ def exec_arm_ik(motion, trace_model, replace_model, hand_distance, org_motion_fr
             if is_ik_adjust:
                 # 既にIK調整終了していたら片手分のループを抜ける
                 break
-
+    
     return is_error_outputed
 
 # 手首から指３までで最も離れている関節の距離

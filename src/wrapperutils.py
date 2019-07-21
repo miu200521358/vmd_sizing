@@ -13,10 +13,11 @@ import main
 from PmxModel import PmxModel, SizingException
 from PmxReader import PmxReader
 from VmdReader import VmdReader
+import utils
 
 import logging
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("__main__").getChild(__name__)
+logger = logging.getLogger("VmdSizing").getChild(__name__)
 
 def is_executable(vmd_path, org_pmx_path, rep_pmx_path):
 
@@ -71,7 +72,7 @@ def is_valid_file(file_path, file_type, ext, is_print=True):
     
     return True
 
-def is_all_sizing(error_file_handler, motion, org_pmx, rep_pmx):
+def is_all_sizing(motion, org_pmx, rep_pmx, error_file_handler=None, error_file_logger=None):
     if org_pmx and rep_pmx and motion:
         not_org_bones = []
         not_org_morphs = []
@@ -107,17 +108,10 @@ def is_all_sizing(error_file_handler, motion, org_pmx, rep_pmx):
 
         # 何かしら不足しているか
         is_shortage = False
-        error_file_logger = None
         
         if len(not_org_bones) > 0 or len(not_org_morphs) > 0:
             if error_file_handler:
-                # ファイル出力の場合、ログファイル生成
-                error_file_logger = logging.getLogger("message")
-                error_file_logger.addHandler(error_file_handler)
-                error_file_logger.info("モーション: %s" , motion.path)
-                error_file_logger.info("作成元: %s" , org_pmx.path)
-                error_file_logger.info("変換先: %s" , rep_pmx.path)
-
+                error_file_logger = utils.create_error_file_logger(motion, org_pmx, rep_pmx, error_file_handler)
                 print_method = error_file_logger.info
             else:
                 print_method = print
@@ -133,14 +127,7 @@ def is_all_sizing(error_file_handler, motion, org_pmx, rep_pmx):
 
         if len(not_rep_bones) > 0 or len(not_rep_morphs) > 0:
             if error_file_handler:
-                # ファイル出力の場合、ログファイル生成
-                if not error_file_logger:
-                    error_file_logger = logging.getLogger("message")
-                    error_file_logger.addHandler(error_file_handler)
-                    error_file_logger.info("モーション: %s" , motion.path)
-                    error_file_logger.info("作成元: %s" , org_pmx.path)
-                    error_file_logger.info("変換先: %s" , rep_pmx.path)
-
+                error_file_logger = utils.create_error_file_logger(motion, org_pmx, rep_pmx, error_file_handler)
                 print_method = error_file_logger.info
             else:
                 print_method = print
@@ -224,12 +211,15 @@ def read_pmx(path, filetype="pmx", is_print=True):
     return pmx
 
 
-def exec(error_file_handler, motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, vmd_choice_values, rep_choice_values, rep_rate_values):
+def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, vmd_choice_values, rep_choice_values, rep_rate_values, error_file_handler):
     print("■■■■■■■■■■■■■■■■■")
     print("■　VMDサイジング処理実行")
     print("■■■■■■■■■■■■■■■■■")
 
+    error_path = re.sub(r'\.vmd$', ".log", output_vmd_path)
+    error_file_handler = logging.FileHandler(error_path)
     error_file_logger = None
+
     try:
         if not output_vmd_path:
             output_vmd_path = create_output_path(vmd_path, rep_pmx_path, is_avoidance, is_hand_ik, len(vmd_choice_values) > 0)
@@ -265,11 +255,11 @@ def exec(error_file_handler, motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, r
         
         if motion and org_pmx and rep_pmx:
             # ファイル出力タイプでサイジングチェック
-            is_all_sizing(error_file_handler, motion, org_pmx, rep_pmx)
+            is_all_sizing(motion, org_pmx, rep_pmx, error_file_handler, error_file_logger)
 
             # 実処理実行
             # 読み込んだモーションデータそのものを弄らないよう、コピーした結果を渡す
-            main.main(copy.deepcopy(motion), org_pmx, rep_pmx, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, vmd_choice_values, rep_choice_values, rep_rate_values, error_file_handler)
+            main.main(copy.deepcopy(motion), org_pmx, rep_pmx, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, vmd_choice_values, rep_choice_values, rep_rate_values, error_file_handler, error_file_logger)
         else:
             print("ファイルデータが正しく読み込まれていないようです。\nもう一度ボタンをクリックしてみてください。")
             return False
@@ -282,12 +272,7 @@ def exec(error_file_handler, motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, r
         print("")
         print(e.message)
 
-        if not error_file_logger:
-            error_file_logger = logging.getLogger("message")
-            error_file_logger.addHandler(error_file_handler)
-        error_file_logger.info("モーション: %s" , motion.path)
-        error_file_logger.info("作成元: %s" , org_pmx.path)
-        error_file_logger.info("変換先: %s" , rep_pmx.path)
+        error_file_logger = utils.create_error_file_logger(motion, org_pmx, rep_pmx, error_file_handler)
         
         error_file_logger.error("■■■■■■■■■■■■■■■■■")
         error_file_logger.error("■　**ERROR**　")
@@ -304,12 +289,7 @@ def exec(error_file_handler, motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, r
 
         print(traceback.format_exc())
 
-        if not error_file_logger:
-            error_file_logger = logging.getLogger("message")
-            error_file_logger.addHandler(error_file_handler)
-        error_file_logger.info("モーション: %s" , motion.path)
-        error_file_logger.info("作成元: %s" , org_pmx.path)
-        error_file_logger.info("変換先: %s" , rep_pmx.path)
+        error_file_logger = utils.create_error_file_logger(motion, org_pmx, rep_pmx, error_file_handler)
         
         error_file_logger.error("■■■■■■■■■■■■■■■■■")
         error_file_logger.error("■　**ERROR**　")
@@ -317,18 +297,8 @@ def exec(error_file_handler, motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, r
         error_file_logger.error("■■■■■■■■■■■■■■■■■")
 
         error_file_logger.error(traceback.format_exc())
-    
     finally:
-        # ファイルロガーを手放す
-        logger.removeHandler(error_file_handler)
-        # ハンドラを終了させる
-        error_file_handler.flush()
-        error_file_handler.close()
-        # 最後にログを終了させる
         logging.shutdown()
-        # オブジェクトクリア
-        error_file_logger = None
-        
 
 def create_output_path(vmd_path, replace_pmx_path, is_avoidance, is_arm_ik, is_morph):
     # print("vmd_path: %s " % vmd_path)

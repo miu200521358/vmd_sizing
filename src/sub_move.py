@@ -11,10 +11,10 @@ from PmxModel import PmxModel, SizingException
 from PmxReader import PmxReader
 import utils
 
-logger = logging.getLogger("__main__").getChild(__name__)
+logger = logging.getLogger("VmdSizing").getChild(__name__)
 
 
-def exec(motion, trace_model, replace_model, error_file_handler):
+def exec(motion, trace_model, replace_model, error_file_handler, error_file_logger):
 
     # 移植先のセンターとグルーブは、作成元の比率に合わせる
     adjust_center(trace_model, replace_model, "センター")
