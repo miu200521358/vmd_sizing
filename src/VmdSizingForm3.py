@@ -19,7 +19,7 @@ from threading import Thread, Event
 import wrapperutils
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("__main__").getChild(__name__)
+logger = logging.getLogger("VmdSizing").getChild(__name__)
 
 ###########################################################################
 ## Class VmdSizingForm3
@@ -28,7 +28,7 @@ logger = logging.getLogger("__main__").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00β47", pos = wx.DefaultPosition, size = wx.Size( 500,610 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00β48", pos = wx.DefaultPosition, size = wx.Size( 500,610 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -50,7 +50,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.rep_rates = None
 
 		# ファイルハンドラ
-		self.error_file_handler = None
+		self.error_file_handlers = []
 		# ---------------------------------------------
 
 		self.SetSizeHints( wx.DefaultSize, wx.DefaultSize )
@@ -388,7 +388,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		# redirect text here
 		sys.stdout = self.m_txtConsole
 
-		# # Connect Events
+		# Connect Events
 		self.m_btnCheck.Bind( wx.EVT_BUTTON, self.OnCheck )
 		self.m_btnExec.Bind( wx.EVT_BUTTON, self.OnExec )
 		self.m_btnAddLine.Bind( wx.EVT_BUTTON, self.OnAddMorphLine )
@@ -688,7 +688,7 @@ class VmdSizingForm3 ( wx.Frame ):
 			self.rep_pmx_data = wrapperutils.read_pmx(self.m_fileRepPmx.GetPath(), self.m_staticText11.GetLabel(), False)
 
 		# 読み込み処理が終わったらサイジングできるかチェック
-		wrapperutils.is_all_sizing(None, self.vmd_data, self.org_pmx_data, self.rep_pmx_data)
+		wrapperutils.is_all_sizing(self.vmd_data, self.org_pmx_data, self.rep_pmx_data)
 
 		self.m_Gauge.SetValue(0)
 
@@ -756,11 +756,10 @@ class VmdSizingForm3 ( wx.Frame ):
 				# 実行ボタン押下不可
 				self.m_btnExec.Disable()
 				self.m_btnCheck.Disable()
-
-				# エラーハンドラ設定
-				if not self.error_file_handler:
-					error_path = re.sub(r'\.vmd$', ".log", self.m_fileOutputVmd.GetPath())
-					self.error_file_handler = logging.FileHandler(error_path)
+			
+				error_path = re.sub(r'\.vmd$', ".log", self.m_fileOutputVmd.GetPath())
+				self.error_file_handlers.append(logging.FileHandler(error_path))
+				# self.error_file_handlers = None
 				
 				# スレッド実行
 				self.worker = ExecWorkerThread(self)
@@ -959,8 +958,7 @@ class ExecWorkerThread(Thread):
 
 		# 処理実行
 		wrapperutils.exec(
-			self._notify_window.error_file_handler
-			, self._notify_window.vmd_data
+			self._notify_window.vmd_data
 			, self._notify_window.org_pmx_data
 			, self._notify_window.rep_pmx_data
 			, self._notify_window.m_fileVmd.GetPath()
@@ -974,6 +972,7 @@ class ExecWorkerThread(Thread):
 			, self._notify_window.vmd_choice_values
 			, self._notify_window.rep_choice_values			
 			, self._notify_window.rep_rate_values
+			, self._notify_window.error_file_handlers[-1]
 		)
 
 		# Here's where the result would be returned (this is an

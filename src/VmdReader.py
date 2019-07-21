@@ -8,7 +8,7 @@ from PyQt5.QtGui import QQuaternion, QVector3D
 from VmdWriter import VmdBoneFrame, VmdMorphFrame, VmdCameraFrame, VmdLightFrame, VmdShadowFrame, VmdShowIkFrame, VmdInfoIk
 from PmxModel import ParseException
 
-logger = logging.getLogger("__main__").getChild(__name__)
+logger = logging.getLogger("VmdSizing").getChild(__name__)
 handler = logging.StreamHandler()
 handler.setLevel(logging.INFO)
 logger.setLevel(logging.INFO)

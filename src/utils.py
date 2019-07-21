@@ -3,6 +3,7 @@
 # 
 import logging
 import copy
+import datetime
 from math import atan2, acos, cos, sin, degrees, isnan, isclose, sqrt, pi
 from PyQt5.QtGui import QQuaternion, QVector3D, QVector2D, QMatrix4x4, QVector4D
 
@@ -11,24 +12,57 @@ from VmdReader import VmdReader
 from PmxModel import PmxModel, SizingException
 from PmxReader import PmxReader
 
-logger = logging.getLogger("__main__").getChild(__name__)
+logger = logging.getLogger("VmdSizing").getChild(__name__)
 
 # MMDでの補間曲線の最大値
 COMPLEMENT_MMD_MAX = 127
 
+
+loggers = {}
+
+def create_custom_logger(name, handler):
+    global loggers
+
+    if loggers.get(name):
+        logger.info("loggerあり")
+        new_logger = loggers.get(name)
+    else:
+        logger.info("loggerなし")
+        new_logger = logging.getLogger(name)
+        new_logger.setLevel(logging.INFO)
+
+        loggers[name] = new_logger
+    
+
+    for f in new_logger.handlers:
+        # 既存のハンドラはすべて削除
+        logger.info("before f: %s", f)
+        new_logger.removeHandler(f)
+    
+    # 指定されたハンドラを紐付ける
+    new_logger.addHandler(handler)
+
+    for f in new_logger.handlers:
+        logger.info("after f: %s", f)
+    
+    return new_logger
+
 # ログを生成する
-def create_error_logger(motion, trace_model, replace_model, error_path, error_file_logger):
+def create_error_file_logger(motion, trace_model, replace_model, error_file_handler):
+    global loggers
 
-    if not error_file_logger:
-        error_file_logger = logging.getLogger("message")
-        error_file_logger.addHandler(logging.FileHandler(error_path))
-
+    error_file_logger = create_custom_logger("VmdSizingError", error_file_handler)
     error_file_logger.info("モーション: %s" , motion.path)
     error_file_logger.info("作成元: %s" , trace_model.path)
     error_file_logger.info("変換先: %s" , replace_model.path)
 
     return error_file_logger
 
+def close_error_file_logger(error_file_logger, error_file_handler):
+    if error_file_logger:
+        error_file_handler.close()
+        error_file_logger.removeHandler(error_file_handler)
+    error_file_logger = None
 
 # 指定されたフレームより前のキーを返す
 def get_prev_bf(frames, bone_name, frameno):

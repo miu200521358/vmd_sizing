@@ -3,7 +3,7 @@
 block_cipher = None
 
 
-a = Analysis(['src\\load_vmd.py'],
+a = Analysis(['src\\converter_wrapper.py'],
              pathex=[],
              binaries=[],
              datas=[],
@@ -23,10 +23,11 @@ exe = EXE(pyz,
           a.zipfiles,
           a.datas,
           [],
-          name='LoadVmd_1.00_64bit',
+          name='VmdConverter_1.00_64bit',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
           upx=True,
           runtime_tmpdir=None,
-          console=True )
+          console=False )
+3

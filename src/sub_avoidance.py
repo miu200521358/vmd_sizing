@@ -11,9 +11,9 @@ from PmxModel import PmxModel, SizingException
 from PmxReader import PmxReader
 import utils
 
-logger = logging.getLogger("__main__").getChild(__name__)
+logger = logging.getLogger("VmdSizing").getChild(__name__)
 
-def exec(motion, trace_model, replace_model, is_avoidance, is_avoidance_finger, is_hand_ik, error_file_handler):
+def exec(motion, trace_model, replace_model, is_avoidance, is_avoidance_finger, is_hand_ik, error_file_handler, error_file_logger):
 
     # -----------------------------------------------------------------
     # 頭部と腕の接触回避処理        
