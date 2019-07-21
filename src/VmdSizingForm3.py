@@ -28,7 +28,7 @@ logger = logging.getLogger("__main__").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00β46", pos = wx.DefaultPosition, size = wx.Size( 500,610 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00β47", pos = wx.DefaultPosition, size = wx.Size( 500,610 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -688,7 +688,7 @@ class VmdSizingForm3 ( wx.Frame ):
 			self.rep_pmx_data = wrapperutils.read_pmx(self.m_fileRepPmx.GetPath(), self.m_staticText11.GetLabel(), False)
 
 		# 読み込み処理が終わったらサイジングできるかチェック
-		wrapperutils.is_all_sizing(None, self.vmd_data, self.org_pmx_data, self.rep_pmx_data, None)
+		wrapperutils.is_all_sizing(None, self.vmd_data, self.org_pmx_data, self.rep_pmx_data)
 
 		self.m_Gauge.SetValue(0)
 
