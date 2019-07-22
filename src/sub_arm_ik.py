@@ -17,7 +17,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 # file_logger = logging.getLogger("message")
 # file_logger.addHandler(logging.FileHandler("test.csv"))
 
-def exec(motion, trace_model, replace_model, is_avoidance, is_hand_ik, hand_distance, org_motion_frames, error_file_handler, error_file_logger):
+def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_hand_ik, hand_distance, org_motion_frames):
     is_error_outputed = False
 
     # -----------------------------------------------------------------
@@ -38,7 +38,7 @@ def exec(motion, trace_model, replace_model, is_avoidance, is_hand_ik, hand_dist
 
         if hand_distance >= 0:
             # 手首位置合わせ処理実行
-            is_error_outputed = exec_arm_ik(motion, trace_model, replace_model, hand_distance, org_motion_frames, all_rep_wrist_links, arm_links, error_file_handler, error_file_logger)
+            is_error_outputed = exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distance, org_motion_frames, all_rep_wrist_links, arm_links)
 
             # 補間曲線再設定
             reset_complement(motion, arm_links)
@@ -312,11 +312,12 @@ def prepare(motion, arm_links, hand_distance):
     print("手首位置合わせ事前調整終了")
 
 # 手首位置合わせ実行
-def exec_arm_ik(motion, trace_model, replace_model, hand_distance, org_motion_frames, all_rep_wrist_links, arm_links, error_file_handler, error_file_logger):    
+def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distance, org_motion_frames, all_rep_wrist_links, arm_links):    
     # 腕IKによる位置調整を行う場合
 
     # エラーを一度でも出力しているか(腕IK)
     is_error_outputed = False
+    error_file_logger = None
 
     # 指の先までの位置(作成元モデル)
     all_org_finger_links, all_org_finger_indexes = trace_model.create_link_2_top_lr("人指３", "手首")
@@ -769,7 +770,7 @@ def exec_arm_ik(motion, trace_model, replace_model, hand_distance, org_motion_fr
                                 if not is_error_outputed:
                                     is_error_outputed = True
                                     if not error_file_logger:
-                                        error_file_logger = utils.create_error_file_logger(motion, trace_model, replace_model, error_file_handler)
+                                        error_file_logger = utils.create_error_file_logger(motion, trace_model, replace_model, output_vmd_path)
 
                                     error_file_logger.info("作成元モデルの手の大きさ: %s", org_palm_length)
                                     error_file_logger.info("変換先モデルの手の大きさ: %s", rep_palm_length)
