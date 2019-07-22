@@ -30,7 +30,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00β56", pos = wx.DefaultPosition, size = wx.Size( 600,710 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00β59", pos = wx.DefaultPosition, size = wx.Size( 600,710 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -56,10 +56,10 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		# ファイル履歴
 		self.file_hitories = {"vmd":[],"org_pmx":[],"rep_pmx":[],"max":10}
-		# 設定JSONファイルがあれば読み込み
+		# 履歴JSONファイルがあれば読み込み
 		try:
-			if os.path.exists("setting.json"):
-				with open('setting.json', 'r') as f:
+			if os.path.exists("history.json"):
+				with open('history.json', 'r') as f:
 					self.file_hitories = json.load(f)
 		except Exception:
 			self.file_hitories = {"vmd":[],"org_pmx":[],"rep_pmx":[],"max":10}
@@ -493,7 +493,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		# 入力履歴を保存		
 		try:
-			with open('setting.json', 'w') as f:
+			with open('history.json', 'w') as f:
 				json.dump(self.file_hitories, f, ensure_ascii=False)
 		finally:
 			print(traceback.format_exc())
@@ -678,8 +678,12 @@ class VmdSizingForm3 ( wx.Frame ):
 
 			print("出力成功: %s" % output_moprh_path)
 
+			dialog = wx.MessageDialog(self, "モーフデータのエクスポートに成功しました \n'%s'" % (output_moprh_path), style=wx.OK)
+			dialog.ShowModal()
+			dialog.Destroy()
+
 		except Exception:
-			dialog = wx.MessageDialog(self, "CSVファイルが出力できませんでした '%s'\n\n%s." % (output_moprh_path, traceback.format_exc()), style=wx.OK)
+			dialog = wx.MessageDialog(self, "モーフデータのエクスポートに失敗しました \n'%s'\n\n%s." % (output_moprh_path, traceback.format_exc()), style=wx.OK)
 			dialog.ShowModal()
 			dialog.Destroy()
 
@@ -703,6 +707,9 @@ class VmdSizingForm3 ( wx.Frame ):
 					logger.debug("vmd_choice_values: %s", vmd_choice_values)
 					logger.debug("rep_choice_values: %s", rep_choice_values)
 					logger.debug("rep_rate_values: %s", rep_rate_values)
+
+					if len(vmd_choice_values) == 0 or len(rep_choice_values) == 0 or len(rep_rate_values) == 0:
+						return
 
 					for vcv, rcv, rrv in zip(vmd_choice_values, rep_choice_values, rep_rate_values):
 						vc = self.vmd_choices[-1]
@@ -728,7 +735,8 @@ class VmdSizingForm3 ( wx.Frame ):
 									if is_seted:
 										break
 						# 大きさ補正を設定する
-						rr.SetValue(rrv)
+						if rrv and wrapperutils.isDecimal(rrv):
+							rr.SetValue(rrv)
 						# モーフ行追加
 						self.AddMorphLine()
 
@@ -920,17 +928,17 @@ class VmdSizingForm3 ( wx.Frame ):
 				# 履歴保持
 				if not self.m_fileVmd.GetPath() in self.file_hitories["vmd"]:
 					self.file_hitories["vmd"].insert(0, self.m_fileVmd.GetPath())
-					self.m_fileVmd.AutoComplete(self.file_hitories["vmd"][:self.file_hitories["max"]])
+					self.m_fileVmd.TextCtrl.AutoComplete(self.file_hitories["vmd"][:self.file_hitories["max"]])
 				
 				# 履歴保持
 				if not self.m_fileOrgPmx.GetPath() in self.file_hitories["org_pmx"]:
 					self.file_hitories["org_pmx"].insert(0, self.m_fileOrgPmx.GetPath())
-					self.m_fileOrgPmx.AutoComplete(self.file_hitories["org_pmx"][:self.file_hitories["max"]])
+					self.m_fileOrgPmx.TextCtrl.AutoComplete(self.file_hitories["org_pmx"][:self.file_hitories["max"]])
 				
 				# 履歴保持
 				if not self.m_fileRepPmx.GetPath() in self.file_hitories["rep_pmx"]:
 					self.file_hitories["rep_pmx"].insert(0, self.m_fileRepPmx.GetPath())
-					self.m_fileRepPmx.AutoComplete(self.file_hitories["rep_pmx"][:self.file_hitories["max"]])
+					self.m_fileRepPmx.TextCtrl.AutoComplete(self.file_hitories["rep_pmx"][:self.file_hitories["max"]])
 
 				# スレッド実行
 				self.worker = ExecWorkerThread(self)
@@ -1154,93 +1162,6 @@ class ExecWorkerThread(Thread):
 		"""abort worker thread."""
 		# Method for use by main thread to signal an abort
 		self._want_abort = 1
-
-class MyTextCompleter(wx.TextCompleterSimple):
-
-	def __init__(self, choices):
-		wx.TextCompleterSimple.__init__(self)
-		self.choices = choices
-
-	def GetCompletions(self, text):
-		return [s for s in self.choices if text in s]
-
-class MyFilePickerCtrl(wx.PickerBase):
-	def __init__(self, window, parent, parent_sizer, id=wx.ID_ANY, path="", file_style=wx.FD_DEFAULT_STYLE, 
-					file_message=wx.FileSelectorPromptStr, wildcard=wx.FileSelectorDefaultWildcardStr, 
-					label_ctrl=None):
-
-		wx.PickerBase.__init__(self)
-		self.window = window
-		self.parent = parent
-		self.label_ctrl = label_ctrl
-		self.file_message = file_message
-		self.wildcard = wildcard
-		self.file_style = file_style
-		self.loaded = False
-
-		self.sizer = wx.BoxSizer( wx.HORIZONTAL )
-		self.SetTextCtrl( wx.TextCtrl( parent, wx.ID_ANY, value=path, pos=wx.DefaultPosition, size=wx.DefaultSize, style=0 ) )
-		# self.SetPickerCtrl( wx.FilePickerCtrl( parent, id=wx.ID_ANY, path=wx.EmptyString, message=file_message, wildcard=wildcard, pos=wx.DefaultPosition, size=(85,-1), style=file_style ) )
-		self.SetPickerCtrl( wx.Button( parent, wx.ID_ANY, u"開く", wx.DefaultPosition, wx.DefaultSize, 0 ) )
-		self.PickerCtrl.Bind(wx.EVT_BUTTON, self.OnFilePick)
-
-		if self.label_ctrl:
-			self.TextCtrl.Bind(wx.EVT_TEXT, self.OnTextChange)
-			self.TextCtrl.Bind(wx.EVT_SET_FOCUS, self.OnTextFocus)
-
-		self.sizer.Add( self.TextCtrl, 1, wx.ALL, 5 )
-		self.sizer.Add( self.PickerCtrl, 0, wx.ALL, 5 )
-
-		parent_sizer.Add( self.sizer, 0, wx.EXPAND, 5 )
-		
-	def GetPath(self):
-		return self.TextCtrl.GetValue()
-
-	def SetPath(self, filename):
-		self.TextCtrl.SetValue(filename)
-
-	def Disable(self):
-		self.TextCtrl.Disable()
-		self.PickerCtrl.Disable()
-	
-	def Enable(self):
-		self.TextCtrl.Enable()
-		self.PickerCtrl.Enable()
-	
-	def AutoComplete(self, choices):
-		self.TextCtrl.AutoComplete(choices)
-	
-	def SetDropTarget(self, target):
-		self.TextCtrl.SetDropTarget(target)
-	
-	def OnTextFocus(self, event):
-		self.loaded = False
-		logger.debug("OnTextFocus: l: %s, ", self.loaded)
-		event.Skip()
-
-	def OnTextChange(self, event):
-		logger.debug("OnTextChange: %s, %s, l: %s, ", event.GetString(), self.TextCtrl.GetValue(), self.loaded)
-
-		if not self.loaded and self.TextCtrl.GetValue() == event.GetString() and os.path.exists(event.GetString()) and os.path.isfile(event.GetString()):
-			logger.info("OnTextChange Save: %s, %s, l: %s, ", event.GetString(), self.TextCtrl.GetValue(), self.loaded)
-			self.loaded = True
-			self.TextCtrl.ChangeValue(event.GetString())
-			self.window.OnLoadFile(wx.EVT_TEXT, self, self.label_ctrl, self.wildcard.strip("*"))
-
-		event.Skip()
-
-	def OnFilePick(self, event):
-		with wx.FileDialog(self, self.file_message, defaultFile=self.GetPath(), 
-			wildcard=self.wildcard, style=self.file_style) as fileDialog:
-			if fileDialog.ShowModal() == wx.ID_CANCEL:
-				return     # the user changed their mind
-
-			# Proceed loading the file chosen by the user
-			self.TextCtrl.SetValue(fileDialog.GetPath())
-
-			if self.label_ctrl:
-				self.window.OnLoadFile(wx.EVT_TEXT, self, self.label_ctrl, self.wildcard.strip("*"))
-
 
 class MyFileDropTarget(wx.FileDropTarget):
 	def __init__(self, window, target_ctrl, label_ctrl, ext):

@@ -358,3 +358,12 @@ def create_output_path(vmd_path, replace_pmx_path, is_avoidance, is_arm_ik, is_m
         return None
     
     return output_vmd_path
+
+def isDecimal(value):
+    """
+    小数チェック
+    符号は認めない
+    :param value: チェック対象の文字列
+    :rtype: チェック対象文字列が、整数または小数の場合 True True
+    """
+    return re.match(r"^[0-9]*[.]?[0-9]+$", value) is not None
