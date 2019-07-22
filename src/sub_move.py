@@ -14,7 +14,7 @@ import utils
 logger = logging.getLogger("VmdSizing").getChild(__name__)
 
 
-def exec(motion, trace_model, replace_model, error_file_handler, error_file_logger):
+def exec(motion, trace_model, replace_model, output_vmd_path):
 
     # 移植先のセンターとグルーブは、作成元の比率に合わせる
     adjust_center(trace_model, replace_model, "センター")

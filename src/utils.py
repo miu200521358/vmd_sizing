@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # ユーティリティ系
 # 
+import re
 import logging
 import copy
 import datetime
@@ -47,8 +48,12 @@ def create_custom_logger(name, handler):
     return new_logger
 
 # ログを生成する
-def create_error_file_logger(motion, trace_model, replace_model, error_file_handler):
+def create_error_file_logger(motion, trace_model, replace_model, output_vmd_path):
     global loggers
+
+    error_path = re.sub(r'\.vmd$', ".log", output_vmd_path)
+    logger.info("error_path: %s", error_path)
+    error_file_handler = logging.FileHandler(error_path)
 
     error_file_logger = create_custom_logger("VmdSizingError", error_file_handler)
     error_file_logger.info("モーション: %s" , motion.path)

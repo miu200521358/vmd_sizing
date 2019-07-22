@@ -13,7 +13,7 @@ import utils
 
 logger = logging.getLogger("VmdSizing").getChild(__name__)
 
-def exec(motion, trace_model, replace_model, is_avoidance, is_avoidance_finger, is_hand_ik, error_file_handler, error_file_logger):
+def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik):
 
     # -----------------------------------------------------------------
     # 頭部と腕の接触回避処理        

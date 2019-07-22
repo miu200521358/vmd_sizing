@@ -72,7 +72,7 @@ def is_valid_file(file_path, file_type, ext, is_print=True):
     
     return True
 
-def is_all_sizing(motion, org_pmx, rep_pmx, error_file_handler=None, error_file_logger=None):
+def is_all_sizing(motion, org_pmx, rep_pmx, output_vmd_path=None):
     if org_pmx and rep_pmx and motion:
         not_org_bones = []
         not_org_morphs = []
@@ -109,9 +109,11 @@ def is_all_sizing(motion, org_pmx, rep_pmx, error_file_handler=None, error_file_
         # 何かしら不足しているか
         is_shortage = False
         
-        if len(not_org_bones) > 0 or len(not_org_morphs) > 0:
-            if error_file_handler:
-                error_file_logger = utils.create_error_file_logger(motion, org_pmx, rep_pmx, error_file_handler)
+        error_file_logger = error_file_handler = None
+
+        if len(not_org_bones) > 0 or (not output_vmd_path and len(not_org_morphs) > 0):
+            if output_vmd_path:
+                error_file_logger = utils.create_error_file_logger(motion, org_pmx, rep_pmx, output_vmd_path)
                 print_method = error_file_logger.info
             else:
                 print_method = print
@@ -125,9 +127,9 @@ def is_all_sizing(motion, org_pmx, rep_pmx, error_file_handler=None, error_file_
 
             is_shortage = True
 
-        if len(not_rep_bones) > 0 or len(not_rep_morphs) > 0:
-            if error_file_handler:
-                error_file_logger = utils.create_error_file_logger(motion, org_pmx, rep_pmx, error_file_handler)
+        if len(not_rep_bones) > 0 or (not output_vmd_path and len(not_rep_morphs) > 0):
+            if output_vmd_path:
+                error_file_logger = utils.create_error_file_logger(motion, org_pmx, rep_pmx, output_vmd_path)
                 print_method = error_file_logger.info
             else:
                 print_method = print
@@ -141,14 +143,14 @@ def is_all_sizing(motion, org_pmx, rep_pmx, error_file_handler=None, error_file_
 
             is_shortage = True
 
-        if is_shortage == False and not error_file_handler:
+        if is_shortage == False and not output_vmd_path:
             # OKのメッセージはUIログのみ
             print("■■■■■■■■■■■■■■■■■")
             print("■　**OK**　")
             print("■　変換後のモデルにモーションで使用されているボーン・モーフが揃っています。")
             print("■■■■■■■■■■■■■■■■■")
 
-            return True, None
+            return True
 
     return False
 
@@ -211,15 +213,13 @@ def read_pmx(path, filetype="pmx", is_print=True):
     return pmx
 
 
-def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, vmd_choice_values, rep_choice_values, rep_rate_values, error_file_handler):
+def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, vmd_choice_values, rep_choice_values, rep_rate_values):
     print("■■■■■■■■■■■■■■■■■")
     print("■　VMDサイジング処理実行")
     print("■■■■■■■■■■■■■■■■■")
 
-    error_path = re.sub(r'\.vmd$', ".log", output_vmd_path)
-    error_file_handler = logging.FileHandler(error_path)
-    error_file_logger = None
-
+    error_file_logger = error_file_handler = None
+    
     try:
         if not output_vmd_path:
             output_vmd_path = create_output_path(vmd_path, rep_pmx_path, is_avoidance, is_hand_ik, len(vmd_choice_values) > 0)
@@ -255,11 +255,11 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
         
         if motion and org_pmx and rep_pmx:
             # ファイル出力タイプでサイジングチェック
-            is_all_sizing(motion, org_pmx, rep_pmx, error_file_handler, error_file_logger)
+            is_all_sizing(motion, org_pmx, rep_pmx, output_vmd_path)
 
             # 実処理実行
             # 読み込んだモーションデータそのものを弄らないよう、コピーした結果を渡す
-            main.main(copy.deepcopy(motion), org_pmx, rep_pmx, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, vmd_choice_values, rep_choice_values, rep_rate_values, error_file_handler, error_file_logger)
+            main.main(copy.deepcopy(motion), org_pmx, rep_pmx, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, vmd_choice_values, rep_choice_values, rep_rate_values)
         else:
             print("ファイルデータが正しく読み込まれていないようです。\nもう一度ボタンをクリックしてみてください。")
             return False
@@ -272,7 +272,7 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
         print("")
         print(e.message)
 
-        error_file_logger = utils.create_error_file_logger(motion, org_pmx, rep_pmx, error_file_handler)
+        error_file_logger = utils.create_error_file_logger(motion, org_pmx, rep_pmx, output_vmd_path)
         
         error_file_logger.error("■■■■■■■■■■■■■■■■■")
         error_file_logger.error("■　**ERROR**　")
@@ -289,7 +289,7 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
 
         print(traceback.format_exc())
 
-        error_file_logger = utils.create_error_file_logger(motion, org_pmx, rep_pmx, error_file_handler)
+        error_file_logger = utils.create_error_file_logger(motion, org_pmx, rep_pmx, output_vmd_path)
         
         error_file_logger.error("■■■■■■■■■■■■■■■■■")
         error_file_logger.error("■　**ERROR**　")

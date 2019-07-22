@@ -28,7 +28,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00", pos = wx.DefaultPosition, size = wx.Size( 500,610 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00β54", pos = wx.DefaultPosition, size = wx.Size( 500,610 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -48,6 +48,9 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.arrow_choices = None
 		self.rep_choices = None
 		self.rep_rates = None
+
+		# スレッド用
+		self.worker = None
 
 		# ファイルハンドラ
 		self.error_file_handlers = []
@@ -74,10 +77,13 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		bSizer5.Add( self.m_staticText9, 0, wx.ALL, 5 )
 
-		self.m_vmdTraceTxt = wx.StaticText( self.m_panelFile, wx.ID_ANY, u"　（調整対象VMD未設定）", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_vmdTraceTxt.Wrap( -1 )
+		# self.m_vmdTraceTxt = wx.StaticText( self.m_panelFile, wx.ID_ANY, u"　（調整対象VMD未設定）", wx.DefaultPosition, wx.DefaultSize, 0 )
+		# self.m_vmdTraceTxt.Wrap( -1 )
 
-		self.m_vmdTraceTxt.SetToolTip( u"VMDファイルに記録されているモデル名です。" )
+		self.m_vmdTraceTxt = wx.TextCtrl( self.m_panelFile, wx.ID_ANY, u"　（調整対象VMD未設定）", wx.DefaultPosition, (300,-1), wx.TE_READONLY|wx.BORDER_NONE|wx.WANTS_CHARS )
+		self.m_vmdTraceTxt.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_3DLIGHT ) )
+
+		self.m_vmdTraceTxt.SetToolTip( u"VMDファイルに記録されているモデル名です。選択でコピペ可能です。" )
 
 		bSizer5.Add( self.m_vmdTraceTxt, 0, wx.ALL, 5 )
 
@@ -613,8 +619,10 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.rep_morphs = None
 		self.vmd_choices = None
 		self.rep_choices = None
+		self.rep_rates = None
 		self.vmd_choice_values = []
 		self.rep_choice_values = []
+		self.rep_rate_values = []
 
 		logger.debug("ClearMorph: size: %s", self.gridMorphSizer.GetItemCount())
 		
@@ -729,6 +737,7 @@ class VmdSizingForm3 ( wx.Frame ):
 						rc_idx = rc.GetSelection()
 						logger.debug("vc_idx: %s, rc_idx: %s", vc_idx, rc_idx)
 						if vc_idx >= 0 and rc_idx >= 0 and len(vc.GetString(vc_idx)) > 0 and len(rc.GetString(rc_idx)) > 0:
+							# Prefixを除去する
 							vcv = vc.GetString(vc_idx)[3:]
 							rcv = rc.GetString(rc_idx)[2:]
 
@@ -736,7 +745,7 @@ class VmdSizingForm3 ( wx.Frame ):
 								# 元と先が同じ場合、処理スルー
 								continue
 
-							# Prefixを除去して追加する
+							# リストに追加
 							self.vmd_choice_values.append(vcv)
 							self.rep_choice_values.append(rcv)
 							# 念のため、丸め
@@ -756,9 +765,15 @@ class VmdSizingForm3 ( wx.Frame ):
 				# 実行ボタン押下不可
 				self.m_btnExec.Disable()
 				self.m_btnCheck.Disable()
-			
-				error_path = re.sub(r'\.vmd$', ".log", self.m_fileOutputVmd.GetPath())
-				self.error_file_handlers.append(logging.FileHandler(error_path))
+
+				# 出力ファイルパスがなければ生成
+				if not self.m_fileOutputVmd.GetPath():
+					output_vmd_path = wrapperutils.create_output_path(self.m_fileVmd.GetPath(), self.m_fileRepPmx.GetPath(), self.m_radioAvoidance.GetValue(), self.m_radioArmIK.GetValue(), (self.vmd_choices and len(self.vmd_choices) > 0))
+					if output_vmd_path:
+						self.m_fileOutputVmd.SetPath(output_vmd_path)
+
+				# error_path = re.sub(r'\.vmd$', ".log", self.m_fileOutputVmd.GetPath())
+				# self.error_file_handlers.append(logging.FileHandler(error_path))
 				# self.error_file_handlers = None
 				
 				# スレッド実行
@@ -811,9 +826,9 @@ class VmdSizingForm3 ( wx.Frame ):
 		# モデル名表示追加
 		model_name = wrapperutils.read_vmd_modelname(self.m_fileVmd.GetPath())
 		if model_name == None:
-			self.m_vmdTraceTxt.SetLabel("　（トレース元モデル取得失敗）")
+			self.m_vmdTraceTxt.SetValue("　（トレース元モデル取得失敗）")
 		else:
-			self.m_vmdTraceTxt.SetLabel("　（トレース元: "+ model_name +"）")
+			self.m_vmdTraceTxt.SetValue("　（トレース元: "+ model_name +"）")
 
 	# 出力ファイルパスの生成
 	def OnCreateOutputVmd(self, event):	
@@ -831,7 +846,7 @@ class VmdSizingForm3 ( wx.Frame ):
 			# VMDファイルパスが空でなければ、トレースモデル名表示
 			self.ShowTraceModel(event)
 		else:
-			self.m_vmdTraceTxt.SetLabel("　（調整対象VMD未設定）")
+			self.m_vmdTraceTxt.SetValue("　（調整対象VMD未設定）")
 
 	
 
@@ -972,7 +987,6 @@ class ExecWorkerThread(Thread):
 			, self._notify_window.vmd_choice_values
 			, self._notify_window.rep_choice_values			
 			, self._notify_window.rep_rate_values
-			, self._notify_window.error_file_handlers[-1]
 		)
 
 		# Here's where the result would be returned (this is an
