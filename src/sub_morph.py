@@ -24,7 +24,7 @@ def exec(motion, trace_model, replace_model, output_vmd_path, vmd_choice_values,
         clear_morphs(motion, vmd_choice_values)
 
         # モーフのブレンド処理
-        blended_morphs = blend_morphs(motion, vmd_choice_values, rep_choice_values, rep_rate_values, replace_morphs)
+        blended_morphs = blend_morphs(motion, replace_morphs)
 
         # モーフの登録処理
         regist_morphs(motion, blended_morphs)
@@ -56,60 +56,56 @@ def create_replace_morphs(motion, vmd_choice_values, rep_choice_values, rep_rate
     return replace_morphs
 
 # モーフの登録処理
-def blend_morphs(motion, vmd_choice_values, rep_choice_values, rep_rate_values, replace_morphs):
+def blend_morphs(motion, replace_morphs):
 
     # ブレンドしたモーフ情報　キー：置換後モーフ、値：モーフリスト
     blended_morphs = {}
 
+    # 最終的に登録する置換後モーフのリストを生成しておく
+    for (rcv, vcv) in replace_morphs.keys():
+        logger.debug("rcv: %s, vcv: %s, keys: %s", rcv, vcv, motion.morphs.keys())
+        if rcv in motion.morphs.keys():
+            logger.debug("モーションデータにキーがある場合それを保持")
+            # モーションデータにキーがある場合それを保持
+            blended_morphs[rcv] = copy.deepcopy(motion.morphs[rcv])
+        else:
+            # キーがない場合、新規配列
+            blended_morphs[rcv] = []
+
     # モーフの登録処理
     for (rcv, vcv), mlist in replace_morphs.items():
-        # 変換したモーフを登録
-        if not rcv in motion.morphs.keys():
-            # 既存キーがまったくない場合、そのまま設定
-            blended_morphs[rcv] = mlist
-        else:
-            # 変換先のモーフが、変換元にもある場合
-            if rcv == vcv:
-                # 変換元と変換先のモーフ名がまったく同じ場合、上書き
-                blended_morphs[rcv] = mlist
-            else:
-                # 変換元と変換先のモーフ名が違う場合、既存のを変換先に加算する
+        # 既存のを変換先に合算する
+        for _, rm in enumerate(mlist):
+            logger.debug("enumerate: rm: %s", rm.frame)
+            is_blended = False
 
-                # 変換元と変換先をブレンドしたモーフリスト キー：フレーム番号, 値: モーフオブジェクト
-                brend_morphs = {}
+            logger.debug("blended_morphs[rcv]: %s", [x.frame for x in blended_morphs[rcv]])
+            for bdm in blended_morphs[rcv]:
+                logger.debug("check: bdm: %s, rm: %s", bdm.frame, rm.frame)
+                if bdm.frame == rm.frame:
+                    logger.debug("add: bdm: %s(%s), rm: %s(%s)", bdm.frame, bdm.ratio, rm.frame, rm.ratio)
+                    # 既存のフレームと同じ番号のフレームにモーフを追加する場合、合算
+                    is_blended = True
+                    bdm.ratio += rm.ratio
+                    logger.debug("add after: bdm: %s(%s), rm: %s(%s)", bdm.frame, bdm.ratio, rm.frame, rm.ratio)
+                    break
 
-                for _, om in enumerate(motion.morphs[rcv]):
-                    # 既存のをフレーム番号をキーに登録していく
-                    brend_morphs[om.frame] = om
-
-                for _, rm in enumerate(mlist):
-                    # 変換後のをフレーム番号をキーに登録していく
-                    if not rm.frame in brend_morphs.keys():
-                        # まだないフレームの場合、そのまま追加
-                        brend_morphs[rm.frame] = rm
-                    else:
-                        # フレームがある場合、加算
-                        brend_morphs[rm.frame].ratio += rm.ratio
-                
-                # 合わせた結果を設定
-                if not rcv in blended_morphs.keys():
-                    blended_morphs[rcv] = []
-                    
-                for n, bm in enumerate(blended_morphs[rcv]):
-                    if not bm.frame in brend_morphs.keys():
-                        blended_morphs[rcv].append(brend_morphs[bm.frame])
-                    else:
-                        blended_morphs[rcv][n].ratio += brend_morphs[bm.frame].ratio
+            if not is_blended:
+                logger.debug("既存のリストにない場合、そのまま設定: rm: %s", rm.frame)
+                # 既存のリストにない場合、そのまま設定
+                blended_morphs[rcv].append(rm)
 
     return blended_morphs
 
 # モーフのクリア処理
 def clear_morphs(motion, vmd_choice_values):
     for vcv in vmd_choice_values:
-        motion.morphs[vcv] = []
+        if vcv in motion.morphs.keys():
+            motion.morphs[vcv] = []
 
 # モーフの登録処理
 def regist_morphs(motion, blended_morphs):
     for bmk, bmv in blended_morphs.items():
+        logger.debug("bmk: %s", bmk)
         motion.morphs[bmk] = bmv
     

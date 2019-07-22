@@ -300,6 +300,33 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
     finally:
         logging.shutdown()
 
+# モーフ組み合わせファイル用パス生成
+def create_output_morph_path(vmd_path, org_pmx_path, rep_pmx_path):
+
+    if not os.path.exists(vmd_path) or not os.path.exists(org_pmx_path) or not os.path.exists(rep_pmx_path):
+        return None
+
+    # ボーンCSVファイル名・拡張子
+    org_bone_filename, _ = os.path.splitext(os.path.basename(org_pmx_path))
+
+    # ボーンCSVファイル名・拡張子
+    rep_bone_filename, _ = os.path.splitext(os.path.basename(rep_pmx_path))
+
+    output_moprh_path = os.path.join(str(Path(vmd_path).resolve().parents[0]), os.path.basename(vmd_path).replace(".vmd", "_{0}_{1}.csv".format(org_bone_filename, rep_bone_filename)))
+
+    if len(output_moprh_path) >= 255 and os.name == "nt":
+        print("■■■■■■■■■■■■■■■■■")
+        print("■　**ERROR**　")
+        print("■　生成予定のファイルパスがWindowsの制限を超えているため、処理を中断します。")
+        print("■　生成予定パス: "+ output_moprh_path )
+        print("■■■■■■■■■■■■■■■■■")
+        return None
+    
+    return output_moprh_path
+
+
+
+
 def create_output_path(vmd_path, replace_pmx_path, is_avoidance, is_arm_ik, is_morph):
     # print("vmd_path: %s " % vmd_path)
     # print("replace_pmx_path: %s" % replace_pmx_path)
