@@ -196,7 +196,10 @@ class PmxModel():
             right_links, right_indexes = self.create_link_2_top("右" + start_type_bone_second)
             return { "左": left_links, "右": right_links }, { "左": left_indexes, "右": right_indexes }
 
-        print("ボーンリンク生成失敗: start_type_bone: %s, start_type_bone_second: %s", start_type_bone, start_type_bone_second )
+        if not start_type_bone_second:
+            raise SizingException("ボーンリンクの生成に失敗しました。モデル「%s」に「%s」のボーンがあるか確認してください。" % ( self.name, start_type_bone) )
+        else:
+            raise SizingException("ボーンリンクの生成に失敗しました。モデル「%s」に「%s」もしくは「%s」のボーンがあるか確認してください。" % (self.name, start_type_bone, start_type_bone_second) )
 
         return None
 
@@ -211,7 +214,10 @@ class PmxModel():
             # logger.debug("second start_type_bone: %s", start_type_bone_second)
             return self.create_link_2_top(start_type_bone_second)
 
-        print("ボーンリンク生成失敗: start_type_bone: %s, start_type_bone_second: %s", start_type_bone, start_type_bone_second )
+        if not start_type_bone_second:
+            raise SizingException("ボーンリンクの生成に失敗しました。モデル「%s」に「%s」のボーンがあるか確認してください。" % ( self.name, start_type_bone) )
+        else:
+            raise SizingException("ボーンリンクの生成に失敗しました。モデル「%s」に「%s」もしくは「%s」のボーンがあるか確認してください。" % (self.name, start_type_bone, start_type_bone_second) )
 
         return None
 

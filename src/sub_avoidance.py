@@ -158,7 +158,7 @@ def adjust_by_hand(replace_model, direction, wrist_links, frames, bf, upper_vert
         return adjust_by_hand(replace_model, direction, wrist_links, frames, bf, upper_vertex_pos, cnt+1)
     else:
         # 10回呼び出してもダメならその時点のを返す
-        print("接触解消失敗 frame: %s, finger: %s" % (bf.frame, finger_pos))
+        print("×%sフレーム目接触解消失敗: 先端位置: (%s,%s,%s)" % (bf.frame, finger_pos.x(), finger_pos.y(), finger_pos.z()))
         return
 
 def adjust_by_arm_bone(replace_model, direction, wrist_links, frames, bf, upper_vertex_pos, bone_name):
@@ -177,7 +177,7 @@ def adjust_by_arm_bone(replace_model, direction, wrist_links, frames, bf, upper_
 
     upper_pos, elbow_pos, finger_pos = calc_hand_pos(replace_model, wrist_links, frames, bf)
     if is_inner_upper(upper_pos, elbow_pos, finger_pos, replace_model, upper_vertex_pos, direction, bf) == False:
-        print("接触解消-%s frame: %s, finger: %s" % (bone_name, bf.frame, finger_pos))
+        print("○%sフレーム目接触解消成功(%s): 先端位置: (%s,%s,%s)" % (bf.frame, bone_name, finger_pos.x(), finger_pos.y(), finger_pos.z()))
         return
 
 def adjust_by_elbow_bone(replace_model, direction, wrist_links, frames, bf, upper_vertex_pos, bone_name):
@@ -196,7 +196,7 @@ def adjust_by_elbow_bone(replace_model, direction, wrist_links, frames, bf, uppe
 
     upper_pos, elbow_pos, finger_pos = calc_hand_pos(replace_model, wrist_links, frames, bf)
     if is_inner_upper(upper_pos, elbow_pos, finger_pos, replace_model, upper_vertex_pos, direction, bf) == False:
-        print("接触解消-%s frame: %s, finger: %s" % (bone_name, bf.frame, finger_pos))
+        print("○%sフレーム目接触解消成功(%s): 先端位置: (%s,%s,%s)" % (bf.frame, bone_name, finger_pos.x(), finger_pos.y(), finger_pos.z()))
         return
 
 # 頭の頂点の位置の計算
