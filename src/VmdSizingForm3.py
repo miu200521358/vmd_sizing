@@ -32,7 +32,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00β63", pos = wx.DefaultPosition, size = wx.Size( 600,710 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00β64", pos = wx.DefaultPosition, size = wx.Size( 600,710 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -478,15 +478,15 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_fileOutputVmd.SetDropTarget(MyFileDropTarget(self, self.m_fileOutputVmd, self.m_staticText12, ".vmd"))
 
 		# ファイルパス変更時の処理
-		self.m_fileVmd.Bind( wx.EVT_FILEPICKER_CHANGED, self.OnCreateOutputVmd)
-		self.m_fileOrgPmx.Bind( wx.EVT_FILEPICKER_CHANGED, self.OnCreateOutputVmd)
-		self.m_fileRepPmx.Bind( wx.EVT_FILEPICKER_CHANGED, self.OnCreateOutputVmd)
+		self.m_fileVmd.Bind( wx.EVT_FILEPICKER_CHANGED, lambda event: self.OnChangeFile(event, self.m_fileVmd, self.m_staticText9, ".vmd"))
+		self.m_fileOrgPmx.Bind( wx.EVT_FILEPICKER_CHANGED, lambda event: self.OnChangeFile(event, self.m_fileOrgPmx, self.m_staticText10, ".pmx"))
+		self.m_fileRepPmx.Bind( wx.EVT_FILEPICKER_CHANGED, lambda event: self.OnChangeFile(event, self.m_fileRepPmx, self.m_staticText11, ".pmx"))
 		# self.m_fileOutputVmd.Bind( wx.EVT_FILEPICKER_CHANGED, self.OnCreateOutputVmd)
 
 		# ファイル履歴ボタン押下時の処理
-		self.m_btnHistoryVmd.Bind(wx.EVT_BUTTON, lambda event: self.OnShowHistory(event, self.file_hitories["vmd"], self.file_hitories["max"], self.m_fileVmd))
-		self.m_btnHistoryOrgPmx.Bind(wx.EVT_BUTTON, lambda event: self.OnShowHistory(event, self.file_hitories["org_pmx"], self.file_hitories["max"], self.m_fileOrgPmx))
-		self.m_btnHistoryRepPmx.Bind(wx.EVT_BUTTON, lambda event: self.OnShowHistory(event, self.file_hitories["rep_pmx"], self.file_hitories["max"], self.m_fileRepPmx))
+		self.m_btnHistoryVmd.Bind(wx.EVT_BUTTON, lambda event: self.OnShowHistory(event, self.file_hitories["vmd"], self.file_hitories["max"], self.m_fileVmd, self.m_staticText9, ".vmd"))
+		self.m_btnHistoryOrgPmx.Bind(wx.EVT_BUTTON, lambda event: self.OnShowHistory(event, self.file_hitories["org_pmx"], self.file_hitories["max"], self.m_fileOrgPmx, self.m_staticText10, ".pmx"))
+		self.m_btnHistoryRepPmx.Bind(wx.EVT_BUTTON, lambda event: self.OnShowHistory(event, self.file_hitories["rep_pmx"], self.file_hitories["max"], self.m_fileRepPmx, self.m_staticText11, ".pmx"))
 
 		# # # ファイルパス変更時の処理
 		# self.m_fileVmd.Bind( wx.EVT_FILEPICKER_CHANGED, lambda event: self.OnLoadFile(event, self.m_fileVmd, self.m_staticText9, ".vmd") )
@@ -527,7 +527,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		self.Centre( wx.BOTH )
 	
-	def OnShowHistory(self, event, hitories, maxc, target_ctrl):
+	def OnShowHistory(self, event, hitories, maxc, target_ctrl, label_ctrl, ext):
 		with wx.SingleChoiceDialog(self, "ファイルを選んでダブルクリック、またはOKボタンをクリックしてください。", caption ="ファイル履歴選択",
 							choices=hitories[:maxc],
 							style=wx.CAPTION|wx.CLOSE_BOX|wx.SYSTEM_MENU|wx.OK|wx.CANCEL|wx.CENTRE) as choiceDialog:
@@ -536,8 +536,8 @@ class VmdSizingForm3 ( wx.Frame ):
 				return     # the user changed their mind
 			
 			target_ctrl.SetPath(choiceDialog.GetStringSelection())
-			# 出力パス生成
-			self.OnCreateOutputVmd(event)
+			# ファイル変更処理
+			self.OnChangeFile(event, target_ctrl, label_ctrl, ext)
 
 	def OnClose(self, event):
 		for h in logger.handlers:
@@ -922,16 +922,16 @@ class VmdSizingForm3 ( wx.Frame ):
 
 
 
-	# ファイル読み込み処理実行
-	def OnLoadFile(self, event, target_ctrl, label_ctrl, ext):
+	# ファイル切り替え処理実行
+	def OnChangeFile(self, event, target_ctrl, label_ctrl, ext):
 		# 先頭と末尾の改行は除去
 		target_path = target_ctrl.GetPath().strip()
-		logger.info("target_ctrl.GetPath(): %s", target_ctrl.GetPath())
+		logger.debug("target_ctrl.GetPath(): %s", target_ctrl.GetPath())
 
 		# 先頭と末尾のダブルクォーテーションは除去
 		target_path = re.sub(r'^\\+\"(\w)\\', r'\1:\\', target_ctrl.GetPath())
 		target_path = target_path.strip("\"")
-		logger.info("target_path: %s", target_path)
+		logger.debug("target_path: %s", target_path)
 
 		target_ctrl.SetPath(target_path)
 
@@ -950,11 +950,11 @@ class VmdSizingForm3 ( wx.Frame ):
 			event.Skip()
 			return
 
-		# 一旦出力ファイル設定
-		self.OnCreateOutputVmd(event)
-
 		# 出力ファイル以外はモーフも変わるので初期化
 		self.ClearMorph()
+
+		# 一旦出力ファイル設定
+		self.OnCreateOutputVmd(event)
 
 		# ファイルの読み込み処理は行わない
 		# """Start Computation."""
@@ -1081,6 +1081,10 @@ class VmdSizingForm3 ( wx.Frame ):
 				self.m_fileOrgPmx.Disable()
 				self.m_fileRepPmx.Disable()
 				self.m_fileOutputVmd.Disable()
+				# 履歴ボタン押下不可
+				self.m_btnHistoryVmd.Disable()
+				self.m_btnHistoryOrgPmx.Disable()
+				self.m_btnHistoryRepPmx.Disable()
 				# 実行ボタン押下不可
 				self.m_btnExec.Disable()
 				self.m_btnCheck.Disable()
@@ -1134,6 +1138,10 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_fileOrgPmx.Enable()
 		self.m_fileRepPmx.Enable()
 		self.m_fileOutputVmd.Enable()
+		# 履歴ボタン押下可
+		self.m_btnHistoryVmd.Enable()
+		self.m_btnHistoryOrgPmx.Enable()
+		self.m_btnHistoryRepPmx.Enable()
 		# プログレス非表示
 		self.m_Gauge.SetValue(0)
 		# モーフ置換配列クリア
@@ -1170,7 +1178,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		# print("m_fileVmd: %s " % self.m_fileVmd.GetPath())
 		# print("m_fileRepPmx: %s " % self.m_fileRepPmx.GetPath())
 		# print("self.vmd_choices: %s" % self.vmd_choices)
-		# print("(self.vmd_choices and len(self.vmd_choices) > 1): %s" % (self.vmd_choices and len(self.vmd_choices) > 0))
+		# print("(self.vmd_choices and len(self.vmd_choices) > 0): %s" % (self.vmd_choices and len(self.vmd_choices) > 0))
 		new_filepath = wrapperutils.create_output_path(self.m_fileVmd.GetPath(), self.m_fileRepPmx.GetPath(), self.m_radioAvoidance.GetValue(), self.m_radioArmIK.GetValue(), (self.vmd_choices and len(self.vmd_choices) > 0))
 		# print("new_filepath: %s " % new_filepath)
 		if new_filepath is not None:
