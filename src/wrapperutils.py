@@ -359,7 +359,7 @@ def create_output_path(vmd_path, replace_pmx_path, is_avoidance, is_arm_ik, is_m
     
     return output_vmd_path
 
-def isDecimal(value):
+def is_decimal(value):
     """
     小数チェック
     符号は認めない
