@@ -56,14 +56,14 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.worker = None
 
 		# ファイル履歴
-		self.file_hitories = {"vmd":[],"org_pmx":[],"rep_pmx":[],"max":10}
+		self.file_hitories = {"vmd":[],"org_pmx":[],"rep_pmx":[],"max":20}
 		# 履歴JSONファイルがあれば読み込み
 		try:
 			if os.path.exists("history.json"):
 				with open('history.json', 'r') as f:
 					self.file_hitories = json.load(f)
 		except Exception:
-			self.file_hitories = {"vmd":[],"org_pmx":[],"rep_pmx":[],"max":10}
+			self.file_hitories = {"vmd":[],"org_pmx":[],"rep_pmx":[],"max":20}
 
 		# ---------------------------------------------
 
@@ -103,12 +103,20 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		bSizer4.Add( bSizer5, 0, wx.EXPAND, 5 )
 
+		bSizer6 = wx.BoxSizer( wx.HORIZONTAL )
+
 		self.m_fileVmd = wx.FilePickerCtrl( self.m_panelFile, wx.ID_ANY, wx.EmptyString, u"調整対象VMDファイルを開く", u"*.vmd", wx.DefaultPosition, wx.DefaultSize, wx.FLP_DEFAULT_STYLE )
 		# self.m_fileVmd = MyFilePickerCtrl( self, self.m_panelFile, bSizer4, id=wx.ID_ANY, path="", file_message=u"調整対象VMDファイルを開く", wildcard=u"*.vmd", file_style=wx.FD_OPEN|wx.FD_FILE_MUST_EXIST, label_ctrl=self.m_staticText9 )
+		self.m_fileVmd.GetPickerCtrl().SetLabel("開く")
 		self.m_fileVmd.SetToolTip( u"調整したいモーションのVMDパスを指定してください。\nD&Dでの指定、Browseボタンからの指定ができます。" )
 		# self.m_fileVmd.GetTextCtrl().AutoComplete(self.file_hitories["vmd"])
 
-		bSizer4.Add( self.m_fileVmd, 0, wx.ALL|wx.EXPAND, 5 )
+		bSizer6.Add( self.m_fileVmd, 1, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_btnHistoryVmd = wx.Button( self.m_panelFile, wx.ID_ANY, u"履歴", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer6.Add( self.m_btnHistoryVmd, 0, wx.ALL, 5 )
+
+		bSizer4.Add( bSizer6, 0, wx.EXPAND, 5 )
 
 		self.m_staticText10 = wx.StaticText( self.m_panelFile, wx.ID_ANY, u"モーション作成元モデルPMXファイル", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText10.Wrap( -1 )
@@ -451,10 +459,13 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_fileVmd.Bind( wx.EVT_FILEPICKER_CHANGED, self.OnCreateOutputVmd)
 		self.m_fileRepPmx.Bind( wx.EVT_FILEPICKER_CHANGED, self.OnCreateOutputVmd)
 
-		# # ファイルパス変更時の処理
-		# self.Bind( wx.EVT_FILEPICKER_CHANGED, lambda eventVmd: self.OnLoadFile(eventVmd, self.m_fileVmd, self.m_staticText9, ".vmd"), self.m_fileVmd )
-		# self.Bind( wx.EVT_FILEPICKER_CHANGED, lambda eventOrgPmx: self.OnLoadFile(eventOrgPmx, self.m_fileOrgPmx, self.m_staticText10, ".pmx"), self.m_fileOrgPmx )
-		# self.Bind( wx.EVT_FILEPICKER_CHANGED, lambda eventRepPmx: self.OnLoadFile(eventRepPmx, self.m_fileRepPmx, self.m_staticText11, ".pmx"), self.m_fileRepPmx )
+		# ファイル履歴ボタン押下時の処理
+		self.m_btnHistoryVmd.Bind(wx.EVT_BUTTON, lambda event: self.OnShowHistory(event, self.file_hitories["vmd"], self.file_hitories["max"], self.m_fileVmd))
+
+		# ファイルパス変更時の処理
+		self.m_fileVmd.Bind( wx.EVT_FILEPICKER_CHANGED, lambda event: self.OnLoadFile(event, self.m_fileVmd, self.m_staticText9, ".vmd") )
+		self.m_fileOrgPmx.Bind( wx.EVT_FILEPICKER_CHANGED, lambda event: self.OnLoadFile(event, self.m_fileOrgPmx, self.m_staticText10, ".pmx") )
+		self.m_fileRepPmx.Bind( wx.EVT_FILEPICKER_CHANGED, lambda event: self.OnLoadFile(event, self.m_fileRepPmx, self.m_staticText11, ".pmx") )
 
 		# 読み込み処理は、モーフタブ押下・事前チェック・実行のいずれか押下時のみ、ファイルロードを行う
 		# self.m_fileVmd.GetPickerCtrl().Bind( wx.EVT_BUTTON, lambda event: self.OnLoadFile(event, self.m_fileVmd, self.m_staticText9, ".vmd"))
@@ -489,6 +500,16 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		self.Centre( wx.BOTH )
 	
+	def OnShowHistory(self, event, hitories, maxc, target_ctrl):
+		with wx.SingleChoiceDialog(self, "ファイルを選んでダブルクリックしてください", caption ="ファイル履歴選択",
+							choices=hitories[:maxc],
+							style=wx.DEFAULT_DIALOG_STYLE) as choiceDialog:
+
+			if choiceDialog.ShowModal() == wx.ID_CANCEL:
+				return     # the user changed their mind
+			
+			target_ctrl.SetPath(choiceDialog.GetStringSelection())
+
 	def OnClose(self, event):
 		for h in logger.handlers:
 			print("logger.handlers: %s", h)
@@ -856,21 +877,6 @@ class VmdSizingForm3 ( wx.Frame ):
 			event.Skip()			
 			return
 
-		if target_ctrl == self.m_fileVmd and self.vmd_data and self.vmd_data.path == target_path:
-			# フォーカスが外れただけで、パスが変わってなければ終了
-			event.Skip()			
-			return
-
-		if target_ctrl == self.m_fileOrgPmx and self.org_pmx_data and self.org_pmx_data.path == target_path:
-			# フォーカスが外れただけで、パスが変わってなければ終了
-			event.Skip()			
-			return
-
-		if target_ctrl == self.m_fileRepPmx and self.rep_pmx_data and self.rep_pmx_data.path == target_path:
-			# フォーカスが外れただけで、パスが変わってなければ終了
-			event.Skip()			
-			return
-
 		target_ctrl.SetPath(target_path)
 
 		# 一旦出力ファイル設定
@@ -879,7 +885,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		# 出力ファイル以外はモーフも変わるので初期化
 		self.ClearMorph()
 
-		if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, True):
+		if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, False):
 			# 読み込めるファイルではない場合、オブジェクトをクリアして終了
 
 			if target_ctrl == self.m_fileVmd:
