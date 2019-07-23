@@ -32,7 +32,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00β65", pos = wx.DefaultPosition, size = wx.Size( 600,710 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00β66", pos = wx.DefaultPosition, size = wx.Size( 600,710 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -866,13 +866,13 @@ class VmdSizingForm3 ( wx.Frame ):
 			self.m_scrolledMorph.Layout()
 	
 	def LoadFiles(self, is_print=True):
-		self.LoadOneFile(self.m_fileVmd, self.m_staticText9, ".vmd", is_print)
-		self.LoadOneFile(self.m_fileOrgPmx, self.m_staticText10, ".pmx", is_print)
-		self.LoadOneFile(self.m_fileRepPmx, self.m_staticText11, ".pmx", is_print)
+		is_vmd = self.LoadOneFile(self.m_fileVmd, self.m_staticText9, ".vmd", is_print)
+		is_org_pmx = self.LoadOneFile(self.m_fileOrgPmx, self.m_staticText10, ".pmx", is_print)
+		is_rep_pmx = self.LoadOneFile(self.m_fileRepPmx, self.m_staticText11, ".pmx", is_print)
 
-		# 出力ファイル設定
-		# self.OnCreateOutputVmd(wx.EVT_TEXT)
-	
+		# 全ファイル一括チェック
+		return is_vmd and is_org_pmx and is_rep_pmx
+
 	def LoadOneFile(self, target_ctrl, label_ctrl, ext, is_print=True):
 		# 先頭と末尾の改行は除去
 		target_path = target_ctrl.GetPath().strip()
@@ -888,37 +888,52 @@ class VmdSizingForm3 ( wx.Frame ):
 		# メインスレッドで読み込む
 		if target_ctrl == self.m_fileVmd:
 			if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, is_print):
+				logger.info("vmd_data クリア: %s", target_ctrl.GetPath())
 				# 読み込めるファイルではない場合、オブジェクトをクリアして終了
 				self.vmd_data = None
-			else:
-				if not self.vmd_data or (self.vmd_data and self.vmd_data.path != target_ctrl.GetPath()):
-					# VMD読み込む
-					self.vmd_data = wrapperutils.read_vmd(target_ctrl.GetPath(), label_ctrl.GetLabel(), is_print)
 
-					# 出力ファイル以外はモーフも変わるので初期化
-					self.ClearMorph()
+				return False
+			else:
+				logger.info("vmd_data 読み込み: %s", target_ctrl.GetPath())
+				# VMD読み込む
+				self.vmd_data = wrapperutils.read_vmd(target_ctrl.GetPath(), label_ctrl.GetLabel(), is_print)
+
+				# 出力ファイル以外はモーフも変わるので初期化
+				self.ClearMorph()
+
+				return True
 
 		if target_ctrl == self.m_fileOrgPmx:
 			if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, is_print):
+				logger.info("org_pmx_data クリア: %s", target_ctrl.GetPath())
 				self.org_pmx_data = None
-			else:
-				if not self.org_pmx_data or (self.org_pmx_data and self.org_pmx_data.path != target_ctrl.GetPath()):
-					# 元PMX読み込む
-					self.org_pmx_data = wrapperutils.read_pmx(target_ctrl.GetPath(), label_ctrl.GetLabel(), is_print)
 
-					# 出力ファイル以外はモーフも変わるので初期化
-					self.ClearMorph()
+				return False
+			else:
+				logger.info("org_pmx_data 読み込み: %s", target_ctrl.GetPath())
+				# 元PMX読み込む
+				self.org_pmx_data = wrapperutils.read_pmx(target_ctrl.GetPath(), label_ctrl.GetLabel(), is_print)
+
+				# 出力ファイル以外はモーフも変わるので初期化
+				self.ClearMorph()
+
+				return True
 
 		if target_ctrl == self.m_fileRepPmx:
 			if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, is_print):
+				logger.info("rep_pmx_data クリア: %s", target_ctrl.GetPath())
 				self.rep_pmx_data = None
-			else:
-				if not self.rep_pmx_data or (self.rep_pmx_data and self.rep_pmx_data.path != target_ctrl.GetPath()):
-					# 先PMX読み込む
-					self.rep_pmx_data = wrapperutils.read_pmx(target_ctrl.GetPath(), label_ctrl.GetLabel(), is_print)
 
-					# 出力ファイル以外はモーフも変わるので初期化
-					self.ClearMorph()
+				return False
+			else:
+				logger.info("rep_pmx_data 読み込み: %s", target_ctrl.GetPath())
+				# 先PMX読み込む
+				self.rep_pmx_data = wrapperutils.read_pmx(target_ctrl.GetPath(), label_ctrl.GetLabel(), is_print)
+
+				# 出力ファイル以外はモーフも変わるので初期化
+				self.ClearMorph()
+
+				return True
 
 
 
@@ -976,12 +991,10 @@ class VmdSizingForm3 ( wx.Frame ):
 		
 		self.m_Gauge.Pulse()
 
-		if wrapperutils.is_executable(self.m_fileVmd.GetPath(), self.m_fileOrgPmx.GetPath(), self.m_fileRepPmx.GetPath()) == False:
+		# 全件読み込み		
+		if not self.LoadFiles(True):
 			self.m_Gauge.SetValue(0)
 			return False
-
-		# 全件読み込み		
-		self.LoadFiles(True)
 
 		# if self.vmd_data == None:
 		# 	# まだ読み込めていない場合、VMD読み込み
@@ -1049,11 +1062,9 @@ class VmdSizingForm3 ( wx.Frame ):
 			self.m_txtConsole.Clear()
 			wx.GetApp().Yield()
 
-			if wrapperutils.is_executable(self.m_fileVmd.GetPath(), self.m_fileOrgPmx.GetPath(), self.m_fileRepPmx.GetPath()) == False:
-				return False
-
 			# 全件読み込み		
-			self.LoadFiles(True)
+			if not self.LoadFiles(True):
+				return False
 
 			# if self.vmd_data == None:
 			# 	# まだ読み込めていない場合、VMD読み込み
