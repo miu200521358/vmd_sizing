@@ -32,7 +32,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00β66", pos = wx.DefaultPosition, size = wx.Size( 600,710 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00_β67", pos = wx.DefaultPosition, size = wx.Size( 600,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -1059,11 +1059,39 @@ class VmdSizingForm3 ( wx.Frame ):
 	# 実行ボタン押下
 	def OnExec(self, event):
 		if not self.worker:
+			# ファイル入力不可
+			self.m_fileVmd.Disable()
+			self.m_fileOrgPmx.Disable()
+			self.m_fileRepPmx.Disable()
+			self.m_fileOutputVmd.Disable()
+			# 履歴ボタン押下不可
+			self.m_btnHistoryVmd.Disable()
+			self.m_btnHistoryOrgPmx.Disable()
+			self.m_btnHistoryRepPmx.Disable()
+			# 実行ボタン押下不可
+			self.m_btnExec.Disable()
+			self.m_btnCheck.Disable()
+
 			self.m_txtConsole.Clear()
 			wx.GetApp().Yield()
 
 			# 全件読み込み		
 			if not self.LoadFiles(True):
+				# 実行ボタン押下許可
+				self.m_btnExec.Enable()
+				self.m_btnCheck.Enable()
+				# ファイル入力可
+				self.m_fileVmd.Enable()
+				self.m_fileOrgPmx.Enable()
+				self.m_fileRepPmx.Enable()
+				self.m_fileOutputVmd.Enable()
+				# 履歴ボタン押下可
+				self.m_btnHistoryVmd.Enable()
+				self.m_btnHistoryOrgPmx.Enable()
+				self.m_btnHistoryRepPmx.Enable()
+				# プログレス非表示
+				self.m_Gauge.SetValue(0)
+
 				return False
 
 			# if self.vmd_data == None:
@@ -1086,19 +1114,6 @@ class VmdSizingForm3 ( wx.Frame ):
 
 				# モーフデータ生成				
 				self.vmd_choice_values, self.rep_choice_values, self.rep_rate_values = self.create_morph_data()
-
-				# ファイル入力不可
-				self.m_fileVmd.Disable()
-				self.m_fileOrgPmx.Disable()
-				self.m_fileRepPmx.Disable()
-				self.m_fileOutputVmd.Disable()
-				# 履歴ボタン押下不可
-				self.m_btnHistoryVmd.Disable()
-				self.m_btnHistoryOrgPmx.Disable()
-				self.m_btnHistoryRepPmx.Disable()
-				# 実行ボタン押下不可
-				self.m_btnExec.Disable()
-				self.m_btnCheck.Disable()
 
 				# 出力ファイルパスがなければ生成
 				if not self.m_fileOutputVmd.GetPath():
