@@ -16,6 +16,7 @@ import time
 import re
 import csv
 import json
+import copy
 from pathlib import Path
 from threading import Thread, Event
 import traceback
@@ -33,7 +34,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00_β69", pos = wx.DefaultPosition, size = wx.Size( 600,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00_β72", pos = wx.DefaultPosition, size = wx.Size( 600,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -519,15 +520,16 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_csv_fileVmd.Bind( wx.EVT_FILEPICKER_CHANGED, lambda event: self.OnChangeFile(event, self.m_csv_fileVmd, self.m_csv_staticText1, ".vmd"))
 
 		# ファイル履歴ボタン押下時の処理
-		self.m_btnHistoryVmd.Bind(wx.EVT_BUTTON, lambda event: self.OnShowHistory(event, self.file_hitories["vmd"], self.file_hitories["max"], self.m_fileVmd, self.m_staticText9, ".vmd"))
-		self.m_btnHistoryOrgPmx.Bind(wx.EVT_BUTTON, lambda event: self.OnShowHistory(event, self.file_hitories["org_pmx"], self.file_hitories["max"], self.m_fileOrgPmx, self.m_staticText10, ".pmx"))
-		self.m_btnHistoryRepPmx.Bind(wx.EVT_BUTTON, lambda event: self.OnShowHistory(event, self.file_hitories["rep_pmx"], self.file_hitories["max"], self.m_fileRepPmx, self.m_staticText11, ".pmx"))
+		self.m_btnHistoryVmd.Bind(wx.EVT_BUTTON, lambda event: self.OnShowHistory(event, self.file_hitories["vmd"], self.file_hitories["max"]+1, self.m_fileVmd, self.m_staticText9, ".vmd"))
+		self.m_btnHistoryOrgPmx.Bind(wx.EVT_BUTTON, lambda event: self.OnShowHistory(event, self.file_hitories["org_pmx"], self.file_hitories["max"]+1, self.m_fileOrgPmx, self.m_staticText10, ".pmx"))
+		self.m_btnHistoryRepPmx.Bind(wx.EVT_BUTTON, lambda event: self.OnShowHistory(event, self.file_hitories["rep_pmx"], self.file_hitories["max"]+1, self.m_fileRepPmx, self.m_staticText11, ".pmx"))
 
 		# ファイル入力欄で全選択イベント
 		self.m_fileVmd.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_fileVmd.GetTextCtrl()))
 		self.m_fileOrgPmx.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_fileOrgPmx.GetTextCtrl()))
 		self.m_fileRepPmx.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_fileRepPmx.GetTextCtrl()))
 		self.m_fileOutputVmd.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_fileOutputVmd.GetTextCtrl()))
+		self.m_csv_fileVmd.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_csv_fileVmd.GetTextCtrl()))
 
 		# タブ押下時の処理
 		self.m_note.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.OnTabChange)
@@ -560,20 +562,19 @@ class VmdSizingForm3 ( wx.Frame ):
 		event.Skip()		
 
 	def OnCsvExec( self, event ):
+		self.DisableInput()
+
+		self.m_csv_txtConsole.Clear()
+		wx.GetApp().Yield()
+
 		# CSVコンソールに切り替え
 		sys.stdout = self.m_csv_txtConsole
 
-		# 実行ボタン押下不可
-		self.m_csv_btnExec.Disable()
-		# ファイル入力不可
-		self.m_csv_fileVmd.Disable()
+		self.DisableInput()
 
 		if wrapperutils.is_valid_file(self.m_csv_fileVmd.GetPath(), "VMDファイル", ".vmd", True) == False:
 
-			# 実行ボタン押下許可
-			self.m_csv_btnExec.Enable()
-			# ファイル入力可
-			self.m_csv_fileVmd.Enable()
+			self.EnableInput()
 			# プログレス非表示
 			self.m_csv_Gauge.SetValue(0)
 
@@ -596,8 +597,12 @@ class VmdSizingForm3 ( wx.Frame ):
 
 
 	def OnShowHistory(self, event, hitories, maxc, target_ctrl, label_ctrl, ext):
+		# 入力行を伸ばす
+		hs = copy.deepcopy(hitories)
+		hs.extend(["" for x in range(maxc)])
+
 		with wx.SingleChoiceDialog(self, "ファイルを選んでダブルクリック、またはOKボタンをクリックしてください。", caption ="ファイル履歴選択",
-							choices=hitories[:maxc],
+							choices=hs[:maxc],
 							style=wx.CAPTION|wx.CLOSE_BOX|wx.SYSTEM_MENU|wx.OK|wx.CANCEL|wx.CENTRE) as choiceDialog:
 
 			if choiceDialog.ShowModal() == wx.ID_CANCEL:
@@ -932,14 +937,125 @@ class VmdSizingForm3 ( wx.Frame ):
 			
 			self.gridMorphSizer.Layout()
 			self.m_scrolledMorph.Layout()
+
+
 	
 	def LoadFiles(self, is_print=True):
-		is_vmd = self.LoadOneFile(self.m_fileVmd, self.m_staticText9, ".vmd", is_print)
-		is_org_pmx = self.LoadOneFile(self.m_fileOrgPmx, self.m_staticText10, ".pmx", is_print)
-		is_rep_pmx = self.LoadOneFile(self.m_fileRepPmx, self.m_staticText11, ".pmx", is_print)
+		is_pre_vmd = self.PreLoadOneFile(self.m_fileVmd, self.m_staticText9, ".vmd", is_print)
+		is_pre_org_pmx = self.PreLoadOneFile(self.m_fileOrgPmx, self.m_staticText10, ".pmx", is_print)
+		is_pre_rep_pmx = self.PreLoadOneFile(self.m_fileRepPmx, self.m_staticText11, ".pmx", is_print)
 
-		# 全ファイル一括チェック
-		return is_vmd and is_org_pmx and is_rep_pmx
+		if is_pre_vmd and is_pre_org_pmx and is_pre_rep_pmx:
+			is_vmd = self.LoadOneFile(self.m_fileVmd, self.m_staticText9, ".vmd", is_print)
+			is_org_pmx = self.LoadOneFile(self.m_fileOrgPmx, self.m_staticText10, ".pmx", is_print)
+			is_rep_pmx = self.LoadOneFile(self.m_fileRepPmx, self.m_staticText11, ".pmx", is_print)
+
+			# 全ファイル一括チェック
+			return is_vmd and is_org_pmx and is_rep_pmx and self.checkOutputVmdPath()
+		
+		return False
+	
+	def checkOutputVmdPath(self):
+		output_vmd_path = self.m_fileOutputVmd.GetPath()
+
+		# 出力ファイルパスがなければ設定
+		if not output_vmd_path:
+			output_vmd_path = wrapperutils.create_output_path(self.m_fileVmd.GetPath(), self.m_fileRepPmx.GetPath(), self.m_radioAvoidance.GetValue(), self.m_radioArmIK.GetValue(), (self.vmd_choices and len(self.vmd_choices) > 0))
+			self.m_fileOutputVmd.SetPath(output_vmd_path)
+		
+		if not output_vmd_path:
+			print("■■■■■■■■■■■■■■■■■")
+			print("■　**ERROR**　")
+			print("■　出力ファイルパスの生成に失敗しました")
+			print("■　生成予定パス: "+ output_vmd_path )
+			print("■■■■■■■■■■■■■■■■■")
+			return False
+
+		if len(output_vmd_path) >= 255 and os.name == "nt":
+			print("■■■■■■■■■■■■■■■■■")
+			print("■　**ERROR**　")
+			print("■　出力ファイルパスがWindowsの制限を超えているため、処理を中断します。")
+			print("■　出力ファイルパス: "+ output_vmd_path )
+			print("■■■■■■■■■■■■■■■■■")
+			return False
+		
+		dir_path = str(Path(output_vmd_path).resolve().parents[0])
+
+		if not dir_path or not os.path.exists(dir_path) or not os.path.isdir(dir_path):
+			print("■■■■■■■■■■■■■■■■■")
+			print("■　**ERROR**　")
+			print("■　出力ファイルパスのフォルダ構成が正しくないため、処理を中断します。")
+			print("■　出力ファイルパス: "+ output_vmd_path )
+			print("■■■■■■■■■■■■■■■■■")
+			return False
+
+		if dir_path and not os.access(dir_path, os.W_OK):
+			print("■■■■■■■■■■■■■■■■■")
+			print("■　**ERROR**　")
+			print("■　出力ファイルパスの親フォルダに書き込み権限がありません。")
+			print("■　出力ファイルパス: "+ output_vmd_path )
+			print("■■■■■■■■■■■■■■■■■")
+			return False
+
+		if output_vmd_path and not os.access(output_vmd_path, os.W_OK):
+			print("■■■■■■■■■■■■■■■■■")
+			print("■　**ERROR**　")
+			print("■　出力ファイルパスに書き込み権限がありません。")
+			print("■　出力ファイルパス: "+ output_vmd_path )
+			print("■■■■■■■■■■■■■■■■■")
+			return False
+
+		return True
+
+	def PreLoadOneFile(self, target_ctrl, label_ctrl, ext, is_print=True):
+		# 先頭と末尾の改行は除去
+		target_path = target_ctrl.GetPath().strip()
+		logger.debug("target_ctrl.GetPath(): %s", target_ctrl.GetPath())
+
+		# 先頭と末尾のダブルクォーテーションは除去
+		target_path = re.sub(r'^\\+\"(\w)\\', r'\1:\\', target_ctrl.GetPath())
+		target_path = target_path.strip("\"")
+		logger.debug("target_path: %s", target_path)
+
+		target_ctrl.SetPath(target_path)
+
+		# メインスレッドで読み込む
+		if target_ctrl == self.m_fileVmd:
+			if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, is_print):
+				logger.debug("vmd_data クリア: %s", target_ctrl.GetPath())
+				# 読み込めるファイルではない場合、オブジェクトをクリアして終了
+				self.vmd_data = None
+
+				if is_print:
+					print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+
+				return False
+			else:
+				return True
+
+		if target_ctrl == self.m_fileOrgPmx:
+			if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, is_print):
+				logger.debug("org_pmx_data クリア: %s", target_ctrl.GetPath())
+				self.org_pmx_data = None
+
+				if is_print:
+					print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+
+				return False
+			else:
+				return True
+
+		if target_ctrl == self.m_fileRepPmx:
+			if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, is_print):
+				logger.debug("rep_pmx_data クリア: %s", target_ctrl.GetPath())
+				self.rep_pmx_data = None
+
+				if is_print:
+					print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+
+				return False
+			else:
+				return True
 
 	def LoadOneFile(self, target_ctrl, label_ctrl, ext, is_print=True):
 		# 先頭と末尾の改行は除去
@@ -960,14 +1076,27 @@ class VmdSizingForm3 ( wx.Frame ):
 				# 読み込めるファイルではない場合、オブジェクトをクリアして終了
 				self.vmd_data = None
 
+				if is_print:
+					print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+
 				return False
 			else:
 				logger.debug("vmd_data 読み込み: %s", target_ctrl.GetPath())
 				# VMD読み込む
-				self.vmd_data = wrapperutils.read_vmd(target_ctrl.GetPath(), label_ctrl.GetLabel(), is_print)
+				new_vmd_data = wrapperutils.read_vmd(target_ctrl.GetPath(), label_ctrl.GetLabel(), is_print)
 
-				# 出力ファイル以外はモーフも変わるので初期化
-				self.ClearMorph()
+				if not self.vmd_data or not new_vmd_data or (self.vmd_data and new_vmd_data and self.vmd_data.digest != new_vmd_data.digest):
+					# ハッシュが違う場合、データが違うとみなして更新
+					self.vmd_data = new_vmd_data
+
+					# 出力ファイル以外はモーフも変わるので初期化
+					self.ClearMorph()
+
+				if is_print:
+					if new_vmd_data:
+						print("%s 読み込み成功: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+					else:
+						print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
 
 				return True
 
@@ -976,14 +1105,27 @@ class VmdSizingForm3 ( wx.Frame ):
 				logger.debug("org_pmx_data クリア: %s", target_ctrl.GetPath())
 				self.org_pmx_data = None
 
+				if is_print:
+					print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+
 				return False
 			else:
 				logger.debug("org_pmx_data 読み込み: %s", target_ctrl.GetPath())
 				# 元PMX読み込む
-				self.org_pmx_data = wrapperutils.read_pmx(target_ctrl.GetPath(), label_ctrl.GetLabel(), is_print)
+				new_org_pmx_data = wrapperutils.read_pmx(target_ctrl.GetPath(), label_ctrl.GetLabel(), is_print)
 
-				# 出力ファイル以外はモーフも変わるので初期化
-				self.ClearMorph()
+				if not self.org_pmx_data or not new_org_pmx_data or (self.org_pmx_data and new_org_pmx_data and self.org_pmx_data.digest != new_org_pmx_data.digest):
+					# ハッシュが違う場合、データが違うとみなして更新
+					self.org_pmx_data = new_org_pmx_data
+
+					# 出力ファイル以外はモーフも変わるので初期化
+					self.ClearMorph()
+
+				if is_print:
+					if new_org_pmx_data:
+						print("%s 読み込み成功: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+					else:
+						print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
 
 				return True
 
@@ -992,14 +1134,27 @@ class VmdSizingForm3 ( wx.Frame ):
 				logger.debug("rep_pmx_data クリア: %s", target_ctrl.GetPath())
 				self.rep_pmx_data = None
 
+				if is_print:
+					print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+
 				return False
 			else:
 				logger.debug("rep_pmx_data 読み込み: %s", target_ctrl.GetPath())
 				# 先PMX読み込む
-				self.rep_pmx_data = wrapperutils.read_pmx(target_ctrl.GetPath(), label_ctrl.GetLabel(), is_print)
+				new_rep_pmx_data = wrapperutils.read_pmx(target_ctrl.GetPath(), label_ctrl.GetLabel(), is_print)
 
-				# 出力ファイル以外はモーフも変わるので初期化
-				self.ClearMorph()
+				if not self.rep_pmx_data or not new_rep_pmx_data or (self.rep_pmx_data and new_rep_pmx_data and self.rep_pmx_data.digest != new_rep_pmx_data.digest):
+					# ハッシュが違う場合、データが違うとみなして更新
+					self.rep_pmx_data = new_rep_pmx_data
+
+					# 出力ファイル以外はモーフも変わるので初期化
+					self.ClearMorph()
+
+				if is_print:
+					if new_rep_pmx_data:
+						print("%s 読み込み成功: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+					else:
+						print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
 
 				return True
 
@@ -1018,33 +1173,19 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		target_ctrl.SetPath(target_path)
 
-		if not target_path or not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, False):
-			# 読み込めるファイルではない場合、オブジェクトをクリアして終了
-
-			if target_ctrl == self.m_fileVmd:
-				self.vmd_data = None
-
-			if target_ctrl == self.m_fileOrgPmx:
-				self.org_pmx_data = None
-
-			if target_ctrl == self.m_fileRepPmx:
-				self.rep_pmx_data = None
-
-			event.Skip()
-			return
-
-		# 出力ファイル以外はモーフも変わるので初期化
-		self.ClearMorph()
-
 		# 一旦出力ファイル設定
 		self.OnCreateOutputVmd(event)
 
-		# ファイルの読み込み処理は行わない
-		# """Start Computation."""
-		# # Trigger the worker thread unless it's already busy
-		# # 別スレッドで読み込み処理実行
-		# self.read_workers.append(ReadWorkerThread(self, target_ctrl, label_ctrl))
+		if target_ctrl == self.m_fileVmd:
+			self.vmd_data = None
 
+		if target_ctrl == self.m_fileOrgPmx:
+			self.org_pmx_data = None
+
+		if target_ctrl == self.m_fileRepPmx:
+			self.rep_pmx_data = None
+
+		event.Skip()
 		return
 
 	# 待機中はゲージを動かす
@@ -1060,9 +1201,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_txtConsole.Clear()
 		wx.GetApp().Yield()
 		
-		self.m_Gauge.Pulse()
-
-		# 全件読み込み		
+		# 全件読み込み	
 		if not self.LoadFiles(True):
 			self.m_Gauge.SetValue(0)
 			return False
@@ -1114,42 +1253,67 @@ class VmdSizingForm3 ( wx.Frame ):
 		
 		return 	vmd_choice_values, rep_choice_values, rep_rate_values
 
+	def DisableInput(self):
+		# ファイル入力不可
+		self.m_fileVmd.Disable()
+		self.m_fileOrgPmx.Disable()
+		self.m_fileRepPmx.Disable()
+		self.m_fileOutputVmd.Disable()
+		# 履歴ボタン押下不可
+		self.m_btnHistoryVmd.Disable()
+		self.m_btnHistoryOrgPmx.Disable()
+		self.m_btnHistoryRepPmx.Disable()
+		# 実行ボタン押下不可
+		self.m_btnExec.Disable()
+		self.m_btnCheck.Disable()
 
+		# CSV
+		# 実行ボタン押下不可
+		self.m_csv_btnExec.Disable()
+		# ファイル入力不可
+		self.m_csv_fileVmd.Disable()
+	
+	def EnableInput(self):
+		# ファイル入力可
+		self.m_fileVmd.Enable()
+		self.m_fileOrgPmx.Enable()
+		self.m_fileRepPmx.Enable()
+		self.m_fileOutputVmd.Enable()
+		# 履歴ボタン押下可
+		self.m_btnHistoryVmd.Enable()
+		self.m_btnHistoryOrgPmx.Enable()
+		self.m_btnHistoryRepPmx.Enable()
+		# 実行ボタン押下許可
+		self.m_btnExec.Enable()
+		self.m_btnCheck.Enable()
+
+		# CSV
+		# 実行ボタン押下可
+		self.m_csv_btnExec.Enable()
+		# ファイル入力可
+		self.m_csv_fileVmd.Enable()
+	
 	# 実行ボタン押下
 	def OnExec(self, event):
 		if not self.worker:
-			# ファイル入力不可
-			self.m_fileVmd.Disable()
-			self.m_fileOrgPmx.Disable()
-			self.m_fileRepPmx.Disable()
-			self.m_fileOutputVmd.Disable()
-			# 履歴ボタン押下不可
-			self.m_btnHistoryVmd.Disable()
-			self.m_btnHistoryOrgPmx.Disable()
-			self.m_btnHistoryRepPmx.Disable()
-			# 実行ボタン押下不可
-			self.m_btnExec.Disable()
-			self.m_btnCheck.Disable()
+			self.DisableInput()
 
 			self.m_txtConsole.Clear()
 			wx.GetApp().Yield()
 
+			self.DisableInput()
+
 			# 全件読み込み		
-			if not self.LoadFiles(True):
-				# 実行ボタン押下許可
-				self.m_btnExec.Enable()
-				self.m_btnCheck.Enable()
-				# ファイル入力可
-				self.m_fileVmd.Enable()
-				self.m_fileOrgPmx.Enable()
-				self.m_fileRepPmx.Enable()
-				self.m_fileOutputVmd.Enable()
-				# 履歴ボタン押下可
-				self.m_btnHistoryVmd.Enable()
-				self.m_btnHistoryOrgPmx.Enable()
-				self.m_btnHistoryRepPmx.Enable()
-				# プログレス非表示
-				self.m_Gauge.SetValue(0)
+			try:
+				if not self.LoadFiles(True):
+					self.EnableInput()
+					# プログレス非表示
+					self.m_Gauge.SetValue(0)
+
+					return False
+			except Exception:
+				# 読み込みエラーが起きたら有効化
+				self.EnableInput()
 
 				return False
 
@@ -1208,18 +1372,8 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		# スレッド削除
 		self.worker = None
-		# 実行ボタン押下許可
-		self.m_btnExec.Enable()
-		self.m_btnCheck.Enable()
-		# ファイル入力可
-		self.m_fileVmd.Enable()
-		self.m_fileOrgPmx.Enable()
-		self.m_fileRepPmx.Enable()
-		self.m_fileOutputVmd.Enable()
-		# 履歴ボタン押下可
-		self.m_btnHistoryVmd.Enable()
-		self.m_btnHistoryOrgPmx.Enable()
-		self.m_btnHistoryRepPmx.Enable()
+		# 入力有効化
+		self.EnableInput()
 		# プログレス非表示
 		self.m_Gauge.SetValue(0)
 		# モーフ置換配列クリア
@@ -1230,19 +1384,11 @@ class VmdSizingForm3 ( wx.Frame ):
 		# self.OnCreateOutputVmd(wx.EVT_FILEPICKER_CHANGED)
 
 	# スレッド実行結果
-	def OnReadResult(self, event):
-		# プログレス非表示
-		self.m_Gauge.SetValue(0)
-
-	# スレッド実行結果
 	def OnCsvResult(self, event):
 		# スレッド削除
 		self.csv_worker = None
-
-		# 実行ボタン押下許可
-		self.m_csv_btnExec.Enable()
-		# ファイル入力可
-		self.m_csv_fileVmd.Enable()
+		# 入力有効化
+		self.EnableInput()
 		# プログレス非表示
 		self.m_csv_Gauge.SetValue(0)
 

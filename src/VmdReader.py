@@ -4,6 +4,7 @@ import struct
 import logging
 import re
 import copy
+import hashlib
 from PyQt5.QtGui import QQuaternion, QVector3D
 from VmdWriter import VmdBoneFrame, VmdMorphFrame, VmdCameraFrame, VmdLightFrame, VmdShadowFrame, VmdShowIkFrame, VmdInfoIk
 from PmxModel import ParseException
@@ -38,6 +39,8 @@ class VmdMotion():
         self.ik_cnt = 0
         # モデル表示・IK on/off：VmdShowIkFrameの配列
         self.showiks = []
+        # ハッシュ値
+        self.digest = None
 
 class VmdReader():
     def __init__(self):
@@ -46,9 +49,9 @@ class VmdReader():
         self.encoding = None
 
     # モデル名だけ取得
-    def read_vmd_file_modelname(self, filename):
+    def read_vmd_file_modelname(self, filepath):
         # VMDファイルをバイナリ読み込み
-        self.buffer = open(filename, "rb").read()
+        self.buffer = open(filepath, "rb").read()
         
         # vmdバージョン
         signature = self.unpack(30, "30s")
@@ -60,9 +63,9 @@ class VmdReader():
 
         return model_name
 
-    def read_vmd_file(self, filename):
+    def read_vmd_file(self, filepath):
         # VMDファイルをバイナリ読み込み
-        self.buffer = open(filename, "rb").read()
+        self.buffer = open(filepath, "rb").read()
         
         # vmdバージョン
         signature = self.unpack(30, "30s")
@@ -71,7 +74,7 @@ class VmdReader():
         motion = VmdMotion()
         
         # モーションパス
-        motion.path = filename
+        motion.path = filepath
 
         # モデル名
         model_bname, model_name = self.read_text(20)
@@ -334,8 +337,23 @@ class VmdReader():
             # 昔のMMD（MMDv7.39.x64以前）はIK情報がないため、catchして握りつぶす
             motion.ik_cnt = 0
         
+        # ハッシュを設定
+        motion.digest = self.hexdigest(filepath)
+        logger.info("motion: %s, hash: %s", motion.path, motion.digest)
+
         return motion            
                     
+
+    def hexdigest(self, filepath):
+        sha1 = hashlib.sha1()
+
+        with open(filepath, 'rb') as f:
+            for chunk in iter(lambda: f.read(2048 * sha1.block_size), b''):
+                sha1.update(chunk)
+
+        sha1.update(chunk)
+
+        return sha1.hexdigest()      
     
     
     def read_text(self, format_size):

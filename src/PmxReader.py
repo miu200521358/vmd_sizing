@@ -3,6 +3,7 @@
 
 import logging
 import struct
+import hashlib
 from collections import OrderedDict
 from PyQt5.QtGui import QQuaternion, QVector4D, QVector3D, QVector2D, QColor
 
@@ -25,9 +26,10 @@ class PmxReader():
         self.morph_index_size = 0
         self.rigidbody_index_size = 0
         
-    def read_pmx_file(self, filename):
+    def read_pmx_file(self, filepath):
         # PMXファイルをバイナリ読み込み
-        self.buffer = open(filename, "rb").read()
+        self.buffer = open(filepath, "rb").read()
+        # logger.info("hashlib.algorithms_available: %s", hashlib.algorithms_available)
         
         # pmx宣言
         signature = self.unpack(4, "4s")        
@@ -87,7 +89,7 @@ class PmxReader():
         
         # Pmxモデル生成
         pmx = PmxModel()
-        pmx.path = filename
+        pmx.path = filepath
         
         # モデル名（日本語）
         pmx.name = self.read_text()
@@ -385,8 +387,24 @@ class PmxReader():
 
         logger.debug("len(joints): %s", len(pmx.joints))
 
-        return pmx
+        # ハッシュを設定
+        pmx.digest = self.hexdigest(filepath)
+        logger.info("pmx: %s, hash: %s", pmx.name, pmx.digest)
 
+        return pmx
+                 
+    def hexdigest(self, filepath):
+        sha1 = hashlib.sha1()
+
+        with open(filepath, 'rb') as f:
+            for chunk in iter(lambda: f.read(2048 * sha1.block_size), b''):
+                sha1.update(chunk)
+
+        sha1.update(chunk)
+
+        return sha1.hexdigest()      
+    
+    
     def calc_bone_length(self, bones, bone_indexes):
         for k, v in bones.items():
             if k in ["左足ＩＫ", "右足ＩＫ", "右足ＩＫ親" ,"左足ＩＫ親"] and v.getIkFlag() == True:

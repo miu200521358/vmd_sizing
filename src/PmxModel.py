@@ -39,6 +39,8 @@ class PmxModel():
         self.rigidbodies = {}
         # ジョイントデータ
         self.joints = {}
+        # ハッシュ値
+        self.digest = None
 
     # 上半身の頂点を取得する
     def get_upper_vertices(self, head_links):
