@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from PyQt5.QtGui import QQuaternion, QVector3D
 import re
+import sys
 
 import main
 from PmxModel import PmxModel, SizingException
@@ -367,3 +368,11 @@ def is_decimal(value):
     :rtype: チェック対象文字列が、整数または小数の場合 True True
     """
     return re.match(r"^[0-9]*[.]?[0-9]+$", value) is not None
+
+
+def get_mypath(filename):
+    dir_path = Path(sys.argv[0]).parent if hasattr(sys, "frozen") else Path(__file__).parent
+    file_path = os.path.join(dir_path, filename)
+    logger.info("get_mypath: %s", file_path)
+
+    return file_path
