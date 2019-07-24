@@ -17,9 +17,6 @@ logger = logging.getLogger(__name__)
 
 def main(vmd_path):
 
-    if wrapperutils.is_valid_file(vmd_path, "VMDファイル", ".vmd", True) == False:
-        return
-
     try:
         # VMD読み込み
         motion = VmdReader().read_vmd_file(vmd_path)
@@ -38,7 +35,7 @@ def main(vmd_path):
                     f.write(s)
                     f.write("\n")
 
-        print("出力成功: %s" % bone_fpath)
+        print("ボーンCSV出力成功: %s" % bone_fpath)
 
         # モーフ出力
         morph_fpath = re.sub(r'\.vmd$', "_morph.csv", vmd_path)
@@ -54,7 +51,7 @@ def main(vmd_path):
                     f.write(s)
                     f.write("\n")
 
-        print("出力成功: %s" % morph_fpath)
+        print("モーフCSV出力成功: %s" % morph_fpath)
 
     except Exception:
         print("■■■■■■■■■■■■■■■■■")
@@ -70,5 +67,8 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--vmd_path', dest='vmd_path', help='input vmd', type=str)
     args = parser.parse_args()
+
+    if wrapperutils.is_valid_file(args.vmd_path, "VMDファイル", ".vmd", True) == False:
+        sys.exit(-1)
 
     main(args.vmd_path)

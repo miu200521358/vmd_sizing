@@ -21,6 +21,7 @@ from threading import Thread, Event
 import traceback
 
 import wrapperutils
+import convert_vmd
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VmdSizing").getChild(__name__)
@@ -32,7 +33,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00_β67", pos = wx.DefaultPosition, size = wx.Size( 600,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00_β68", pos = wx.DefaultPosition, size = wx.Size( 600,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -55,6 +56,8 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		# スレッド用
 		self.worker = None
+		# CSVスレッド用
+		self.csv_worker = None
 
 		# ファイル履歴
 		self.file_hitories = {"vmd":[],"org_pmx":[],"rep_pmx":[],"max":20}
@@ -383,6 +386,50 @@ class VmdSizingForm3 ( wx.Frame ):
 		bSizer13.Fit( self.m_panelArm )
 		self.m_note.AddPage( self.m_panelArm, u"腕", False )
 
+		# CSV ------------------------------------
+
+		self.m_panelCsv = wx.Panel( self.m_note, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+
+		bSizerCsv3 = wx.BoxSizer( wx.VERTICAL )
+
+		bSizerCsv4 = wx.BoxSizer( wx.VERTICAL )
+
+		self.m_csv_staticText7 = wx.StaticText( self.m_panelCsv, wx.ID_ANY, u"指定されたVMDファイルの解析結果を、ボーンとモーフに分けてCSVファイルとして出力します。", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_csv_staticText7.Wrap( -1 )
+
+		bSizerCsv4.Add( self.m_csv_staticText7, 0, wx.ALL, 5 )
+
+		self.m_csv_staticline5 = wx.StaticLine( self.m_panelCsv, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
+		bSizerCsv4.Add( self.m_csv_staticline5, 0, wx.EXPAND |wx.ALL, 5 )
+
+		self.m_csv_staticText1 = wx.StaticText( self.m_panelCsv, wx.ID_ANY, u"VMDファイル", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_csv_staticText1.Wrap( -1 )
+
+		bSizerCsv4.Add( self.m_csv_staticText1, 0, wx.ALL, 5 )
+
+		self.m_csv_fileVmd = wx.FilePickerCtrl( self.m_panelCsv, wx.ID_ANY, wx.EmptyString, u"VMDファイルを選択してください", u"*.vmd", wx.DefaultPosition, wx.Size( -1,-1 ), wx.FLP_DEFAULT_STYLE )
+		self.m_csv_fileVmd.GetPickerCtrl().SetLabel("開く")
+		bSizerCsv4.Add( self.m_csv_fileVmd, 0, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_csv_btnExec = wx.Button( self.m_panelCsv, wx.ID_ANY, u"CSV変換実行", wx.DefaultPosition, wx.Size( 200,50 ), 0 )
+		bSizerCsv4.Add( self.m_csv_btnExec, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+		self.m_csv_txtConsole = wx.TextCtrl( self.m_panelCsv, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( -1,370 ), wx.TE_MULTILINE|wx.TE_READONLY|wx.BORDER_NONE|wx.HSCROLL|wx.VSCROLL|wx.WANTS_CHARS )
+		self.m_csv_txtConsole.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_3DLIGHT ) )
+
+		bSizerCsv4.Add( self.m_csv_txtConsole, 1, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_csv_Gauge = wx.Gauge( self.m_panelCsv, wx.ID_ANY, 100, wx.DefaultPosition, wx.DefaultSize, wx.GA_HORIZONTAL )
+		self.m_csv_Gauge.SetValue( 0 )
+		bSizerCsv4.Add( self.m_csv_Gauge, 0, wx.ALL|wx.EXPAND, 5 )
+	
+		bSizerCsv3.Add( bSizerCsv4, 0, wx.EXPAND, 5 )
+
+		self.m_panelCsv.SetSizer( bSizerCsv3 )
+		self.m_panelCsv.Layout()
+		bSizerCsv3.Fit( self.m_panelCsv )
+		self.m_note.AddPage( self.m_panelCsv, u"CSV", False )
+
 		# FAQ ------------------------------------
 
 		self.m_scrolledFAQ = wx.ScrolledWindow( self.m_note, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.VSCROLL )
@@ -454,33 +501,37 @@ class VmdSizingForm3 ( wx.Frame ):
 		# redirect text here
 		sys.stdout = self.m_txtConsole
 
-		# Connect Events
+		# ボタン押下時の処理
 		self.m_btnCheck.Bind( wx.EVT_BUTTON, self.OnCheck )
 		self.m_btnExec.Bind( wx.EVT_BUTTON, self.OnExec )
 		self.m_btnAddLine.Bind( wx.EVT_BUTTON, self.OnAddMorphLine )
 		self.m_btnMorphExport.Bind( wx.EVT_BUTTON, self.OnMorphExport )
 		self.m_btnMorphImport.Bind( wx.EVT_BUTTON, self.OnMorphImport )
+		self.m_csv_btnExec.Bind( wx.EVT_BUTTON, self.OnCsvExec )
 		
 		self.Bind(wx.EVT_IDLE, self.OnIdle)
 
 		# Set up event handler for any worker thread results
 		EVT_RESULT(self, self.OnResult)
 		READ_EVT_RESULT(self, self.OnReadResult)
+		CSV_EVT_RESULT(self, self.OnCsvResult)
 
 		# And indicate we don't have a worker thread yet
 		self.worker = None
-		self.read_workers = []
+		self.csv_worker = None
 
 		# D&Dの実装
 		self.m_fileVmd.SetDropTarget(MyFileDropTarget(self, self.m_fileVmd, self.m_staticText9, ".vmd"))
 		self.m_fileOrgPmx.SetDropTarget(MyFileDropTarget(self, self.m_fileOrgPmx, self.m_staticText10, ".pmx"))
 		self.m_fileRepPmx.SetDropTarget(MyFileDropTarget(self, self.m_fileRepPmx, self.m_staticText11, ".pmx"))
 		self.m_fileOutputVmd.SetDropTarget(MyFileDropTarget(self, self.m_fileOutputVmd, self.m_staticText12, ".vmd"))
+		self.m_csv_fileVmd.SetDropTarget(MyFileDropTarget(self, self.m_csv_fileVmd, self.m_csv_staticText1, ".vmd"))
 
 		# ファイルパス変更時の処理
 		self.m_fileVmd.Bind( wx.EVT_FILEPICKER_CHANGED, lambda event: self.OnChangeFile(event, self.m_fileVmd, self.m_staticText9, ".vmd"))
 		self.m_fileOrgPmx.Bind( wx.EVT_FILEPICKER_CHANGED, lambda event: self.OnChangeFile(event, self.m_fileOrgPmx, self.m_staticText10, ".pmx"))
 		self.m_fileRepPmx.Bind( wx.EVT_FILEPICKER_CHANGED, lambda event: self.OnChangeFile(event, self.m_fileRepPmx, self.m_staticText11, ".pmx"))
+		self.m_csv_fileVmd.Bind( wx.EVT_FILEPICKER_CHANGED, lambda event: self.OnChangeFile(event, self.m_csv_fileVmd, self.m_csv_staticText1, ".vmd"))
 		# self.m_fileOutputVmd.Bind( wx.EVT_FILEPICKER_CHANGED, self.OnCreateOutputVmd)
 
 		# ファイル履歴ボタン押下時の処理
@@ -526,7 +577,43 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.Layout()
 
 		self.Centre( wx.BOTH )
-	
+
+	def OnCsvExec( self, event ):
+		# CSVコンソールに切り替え
+		sys.stdout = self.m_csv_txtConsole
+
+		# 実行ボタン押下不可
+		self.m_csv_btnExec.Disable()
+		# ファイル入力不可
+		self.m_csv_fileVmd.Disable()
+
+		if wrapperutils.is_valid_file(self.m_csv_fileVmd.GetPath(), "VMDファイル", ".vmd", True) == False:
+
+			# 実行ボタン押下許可
+			self.m_csv_btnExec.Enable()
+			# ファイル入力可
+			self.m_csv_fileVmd.Enable()
+			# プログレス非表示
+			self.m_csv_Gauge.SetValue(0)
+
+			# 元に戻す
+			sys.stdout = self.m_txtConsole
+
+			event.Skip()
+			return
+
+		if not self.csv_worker:
+			# スレッド実行
+			self.csv_worker = CsvWorkerThread(self)
+			self.csv_worker.start()
+			self.csv_worker.stop_event.set()
+		else:
+			print("まだ処理が実行中です。終了してから再度実行してください。")
+
+			# 元に戻す
+			sys.stdout = self.m_txtConsole
+
+
 	def OnShowHistory(self, event, hitories, maxc, target_ctrl, label_ctrl, ext):
 		with wx.SingleChoiceDialog(self, "ファイルを選んでダブルクリック、またはOKボタンをクリックしてください。", caption ="ファイル履歴選択",
 							choices=hitories[:maxc],
@@ -555,6 +642,11 @@ class VmdSizingForm3 ( wx.Frame ):
 			# スレッドを止める
 			self.worker.stop()
 			self.worker = None
+		
+		if self.csv_worker:
+			# スレッドを止める
+			self.csv_worker.stop()
+			self.csv_worker = None
 
 		# 入力履歴を保存		
 		try:
@@ -576,6 +668,11 @@ class VmdSizingForm3 ( wx.Frame ):
 			self.worker.stop()
 			self.worker = None
 	
+		if self.csv_worker:
+			# スレッドを止める
+			self.csv_worker.stop()
+			self.csv_worker = None
+
 	# 接触回避で処理対象を変えたら、親の選択有効
 	def OnChangeAvoidanceTarget(self, event):
 		self.m_radioAvoidance.SetValue(1)
@@ -588,6 +685,12 @@ class VmdSizingForm3 ( wx.Frame ):
 		if self.worker:
 			# サイジング実行時はタブ移動不可
 			self.m_note.SetSelection(0)
+			event.Skip()
+			return 
+
+		if self.csv_worker:
+			# CSVコンバート時はタブ移動不可
+			self.m_note.SetSelection(3)
 			event.Skip()
 			return 
 
@@ -950,7 +1053,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		target_ctrl.SetPath(target_path)
 
-		if not target_path or not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, True):
+		if not target_path or not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, False):
 			# 読み込めるファイルではない場合、オブジェクトをクリアして終了
 
 			if target_ctrl == self.m_fileVmd:
@@ -983,6 +1086,9 @@ class VmdSizingForm3 ( wx.Frame ):
 	def OnIdle(self, event):
 		if self.worker:
 			self.m_Gauge.Pulse()
+
+		if self.csv_worker:
+			self.m_csv_Gauge.Pulse()
 
 	# チェックボタン押下
 	def OnCheck(self, event):
@@ -1149,10 +1255,6 @@ class VmdSizingForm3 ( wx.Frame ):
 
 	# スレッド実行結果
 	def OnResult(self, event):
-		if len(self.read_workers) > 0:
-			# 読み込みスレッドが動いている場合、delする
-			del self.read_workers[0]
-			logger.debug("read_workers: %s", len(self.read_workers))
 
 		# スレッド削除
 		self.worker = None
@@ -1179,13 +1281,23 @@ class VmdSizingForm3 ( wx.Frame ):
 
 	# スレッド実行結果
 	def OnReadResult(self, event):
-		if len(self.read_workers) > 0:
-			# 読み込みスレッドが動いている場合、delする
-			del self.read_workers[0]
-			logger.debug("read_workers: %s", len(self.read_workers))
-
 		# プログレス非表示
 		self.m_Gauge.SetValue(0)
+
+	# スレッド実行結果
+	def OnCsvResult(self, event):
+		# スレッド削除
+		self.csv_worker = None
+
+		# 実行ボタン押下許可
+		self.m_csv_btnExec.Enable()
+		# ファイル入力可
+		self.m_csv_fileVmd.Enable()
+		# プログレス非表示
+		self.m_csv_Gauge.SetValue(0)
+
+		# コンソールを元に戻す
+		sys.stdout = self.m_txtConsole		
 		
 	def ShowTraceModel(self, event):
 		if wrapperutils.is_valid_file(self.m_fileVmd.GetPath(), "調整対象VMDファイル", ".vmd", False) == False:
@@ -1221,6 +1333,7 @@ class VmdSizingForm3 ( wx.Frame ):
 # Define notification event for thread completion
 EVT_RESULT_ID = wx.NewId()
 READ_EVT_RESULT_ID = wx.NewId()
+CSV_EVT_RESULT_ID = wx.NewId()
 
 def EVT_RESULT(win, func):
 	"""Define Result Event."""
@@ -1229,6 +1342,10 @@ def EVT_RESULT(win, func):
 def READ_EVT_RESULT(win, func):
 	"""Define Result Event."""
 	win.Connect(-1, -1, READ_EVT_RESULT_ID, func)
+
+def CSV_EVT_RESULT(win, func):
+	"""Define Result Event."""
+	win.Connect(-1, -1, CSV_EVT_RESULT_ID, func)
 
 class ResultEvent(wx.PyEvent):
 	"""Simple event to carry arbitrary result data."""
@@ -1248,6 +1365,14 @@ class ReadResultEvent(wx.PyEvent):
 			print("■解析成功　{0}: {1}".format(label_ctrl.GetLabel(), target_ctrl.GetPath()))
 		else:
 			print("■解析失敗　{0}: {1}".format(label_ctrl.GetLabel(), target_ctrl.GetPath()))
+
+class CsvResultEvent(wx.PyEvent):
+	"""Simple event to carry arbitrary result data."""
+	def __init__(self, data):
+		"""Init Result Event."""
+		wx.PyEvent.__init__(self)
+		self.SetEventType(CSV_EVT_RESULT_ID)
+
 
 # Thread class that executes processing
 class ReadWorkerThread(Thread):
@@ -1361,6 +1486,42 @@ class ExecWorkerThread(Thread):
 		# example fixed result of the number 10, but it could be
 		# any Python object)
 		wx.PostEvent(self._notify_window, ResultEvent(None))
+
+	def abort(self):
+		"""abort worker thread."""
+		# Method for use by main thread to signal an abort
+		self._want_abort = 1
+
+
+# Thread class that executes processing
+# http://nobunaga.hatenablog.jp/entry/2016/06/03/204450
+class CsvWorkerThread(Thread):
+	"""Worker Thread Class."""
+	def __init__(self, notify_window):
+		"""Init Worker Thread Class."""
+		Thread.__init__(self)
+		self._notify_window = notify_window
+		self._want_abort = 0
+		self.stop_event = Event()
+		# メイン終了時にもスレッド終了する
+		self.daemon = True
+
+	def stop(self):
+		self.stop_event.set()
+
+	def run(self):
+		"""Run Worker Thread."""
+		# This is the code executing in the new thread. Simulation of
+		# a long process (well, 10s here) as a simple loop - you will
+		# need to structure your processing so that you periodically
+		# peek at the abort variable
+
+		convert_vmd.main(self._notify_window.m_csv_fileVmd.GetPath())
+
+		# Here's where the result would be returned (this is an
+		# example fixed result of the number 10, but it could be
+		# any Python object)
+		wx.PostEvent(self._notify_window, CsvResultEvent(None))
 
 	def abort(self):
 		"""abort worker thread."""
