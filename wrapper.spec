@@ -3,8 +3,8 @@
 block_cipher = None
 
 
-a = Analysis(['src\\converter_wrapper.py'],
-             pathex=[],
+a = Analysis(['src\\wrapper.py'],
+             pathex=['c:\\MMD\\vmd_sizing'],
              binaries=[],
              datas=[],
              hiddenimports=[],
@@ -23,10 +23,10 @@ exe = EXE(pyz,
           a.zipfiles,
           a.datas,
           [],
-          name='VmdConverter_1.00_32bit',
+          name='wrapper',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
           upx=True,
           runtime_tmpdir=None,
-          console=False )
+          console=False , icon='src\\vmdsizing.ico')

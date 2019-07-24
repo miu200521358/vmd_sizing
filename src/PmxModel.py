@@ -196,7 +196,10 @@ class PmxModel():
             right_links, right_indexes = self.create_link_2_top("右" + start_type_bone_second)
             return { "左": left_links, "右": right_links }, { "左": left_indexes, "右": right_indexes }
 
-        print("ボーンリンク生成失敗: start_type_bone: %s, start_type_bone_second: %s", start_type_bone, start_type_bone_second )
+        if not start_type_bone_second:
+            raise SizingException("ボーンリンクの生成に失敗しました。モデル「%s」に「%s」のボーンがあるか確認してください。" % ( self.name, start_type_bone) )
+        else:
+            raise SizingException("ボーンリンクの生成に失敗しました。モデル「%s」に「%s」もしくは「%s」のボーンがあるか確認してください。" % (self.name, start_type_bone, start_type_bone_second) )
 
         return None
 
@@ -211,7 +214,10 @@ class PmxModel():
             # logger.debug("second start_type_bone: %s", start_type_bone_second)
             return self.create_link_2_top(start_type_bone_second)
 
-        print("ボーンリンク生成失敗: start_type_bone: %s, start_type_bone_second: %s", start_type_bone, start_type_bone_second )
+        if not start_type_bone_second:
+            raise SizingException("ボーンリンクの生成に失敗しました。モデル「%s」に「%s」のボーンがあるか確認してください。" % ( self.name, start_type_bone) )
+        else:
+            raise SizingException("ボーンリンクの生成に失敗しました。モデル「%s」に「%s」もしくは「%s」のボーンがあるか確認してください。" % (self.name, start_type_bone, start_type_bone_second) )
 
         return None
 
@@ -222,7 +228,7 @@ class PmxModel():
             ik_links = []
             ik_indexes = OrderedDict()
 
-        if start_bone not in self.bones:
+        if start_bone not in self.bones or start_bone not in self.PARENT_BORN_PAIR:
             # 開始ボーン名がなければ終了
             return ik_links, ik_indexes
         
@@ -272,18 +278,23 @@ class PmxModel():
         , "左親指０": ["左手首"]
         , "左親指１": ["左親指０", "左手首"]
         , "左親指２": ["左親指１"]
+        , "左親指先": ["左親指２"]
         , "左人指１": ["左手首"]
         , "左人指２": ["左人指１"]
         , "左人指３": ["左人指２"]
+        , "左人指先": ["左人指３"]
         , "左中指１": ["左手首"]
         , "左中指２": ["左中指１"]
         , "左中指３": ["左中指２"]
+        , "左中指先": ["左中指３"]
         , "左薬指１": ["左手首"]
         , "左薬指２": ["左薬指１"]
         , "左薬指３": ["左薬指２"]
+        , "左薬指先": ["左薬指３"]
         , "左小指１": ["左手首"]
         , "左小指２": ["左小指１"]
         , "左小指３": ["左小指２"]
+        , "左小指先": ["左小指３"]
         , "左足": ["下半身"]
         , "左ひざ": ["左足"]
         , "左足首": ["左ひざ"]

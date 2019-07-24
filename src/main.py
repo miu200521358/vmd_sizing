@@ -126,7 +126,7 @@ if __name__=="__main__":
         # 腕IKによる位置調整
         is_hand_ik = True if args.hand_ik == 1 else False
 
-        main(motion, org_pmx, rep_pmx, output_vmd_path, is_avoidance, True, is_hand_ik, args.hand_distance, [], [], [], error_file_handler, None) 
+        main(motion, org_pmx, rep_pmx, output_vmd_path, is_avoidance, True, is_hand_ik, args.hand_distance, [], [], []) 
 
     except SizingException as e:
         print("■■■■■■■■■■■■■■■■■")
