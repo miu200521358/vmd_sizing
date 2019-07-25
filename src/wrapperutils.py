@@ -57,7 +57,7 @@ def is_valid_file(file_path, file_type, ext, is_print=True):
         return False
     
     # ボーンCSVファイル名・拡張子
-    file_name, test_ext = os.path.splitext(os.path.basename(file_path))
+    _, test_ext = os.path.splitext(os.path.basename(file_path))
     # logger.debug("file_name: %s, test_ext: %s", file_name, test_ext)
 
     if ext.lower() != test_ext.lower():
@@ -110,7 +110,7 @@ def is_all_sizing(motion, org_pmx, rep_pmx, output_vmd_path=None):
         # 何かしら不足しているか
         is_shortage = False
         
-        error_file_logger = error_file_handler = None
+        error_file_logger = None
 
         if len(not_org_bones) > 0 or (not output_vmd_path and len(not_org_morphs) > 0):
             if output_vmd_path:
@@ -162,7 +162,7 @@ def read_vmd(path, filetype="vmd", is_print=True):
     reader = VmdReader()
     try:
         vmd = reader.read_vmd_file(path)
-    except Exception as e:
+    except Exception:
         print("■■■■■■■■■■■■■■■■■")
         print("■　**ERROR**　")
         print("■　VMDデータの解析に失敗しました。")
@@ -181,7 +181,7 @@ def read_vmd_modelname(path):
     reader = VmdReader()
     try:
         model_name = reader.read_vmd_file_modelname(path)
-    except Exception as e:
+    except Exception:
         print("■■■■■■■■■■■■■■■■■")
         print("■　**ERROR**　")
         print("■　VMDデータの解析に失敗しました。")
@@ -201,7 +201,7 @@ def read_pmx(path, filetype="pmx", is_print=True):
     reader = PmxReader()
     try:
         pmx = reader.read_pmx_file(path)
-    except Exception as e:
+    except Exception:
         print("■■■■■■■■■■■■■■■■■")
         print("■　**ERROR**　")
         print("■　PMXデータの解析に失敗しました。")
@@ -241,6 +241,8 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
                 print("■■■■■■■■■■■■■■■■■")
 
                 return False
+        
+        logger.info("フォルダ生成終了")
 
         # VMD読み込み
         if not motion:
@@ -261,6 +263,22 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
             # 実処理実行
             # 読み込んだモーションデータそのものを弄らないよう、コピーした結果を渡す
             main.main(copy.deepcopy(motion), org_pmx, rep_pmx, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, vmd_choice_values, rep_choice_values, rep_rate_values)
+
+            # 実行後、出力ファイル存在チェック
+            try:
+                Path(output_vmd_path).resolve(True)
+            except FileNotFoundError as e:
+                print("■■■■■■■■■■■■■■■■■")
+                print("■　**ERROR**　")
+                print("■　出力VMDファイルが正常に作成されなかったようです。")
+                print("■　パスを確認してください。")
+                print("■　出力VMDファイルパス: "+ output_vmd_path )
+                print("■■■■■■■■■■■■■■■■■")
+                print("")
+                print(e.with_traceback(sys.exc_info()[2]))
+
+                return False
+
         else:
             print("ファイルデータが正しく読み込まれていないようです。\nもう一度ボタンをクリックしてみてください。")
             return False
@@ -313,7 +331,7 @@ def create_output_morph_path(vmd_path, org_pmx_path, rep_pmx_path):
     # ボーンCSVファイル名・拡張子
     rep_bone_filename, _ = os.path.splitext(os.path.basename(rep_pmx_path))
 
-    output_moprh_path = os.path.join(str(Path(vmd_path).resolve().parents[0]), os.path.basename(vmd_path).replace(".vmd", "_{0}_{1}.csv".format(org_bone_filename, rep_bone_filename)))
+    output_moprh_path = os.path.join(get_dir_path(vmd_path), os.path.basename(vmd_path).replace(".vmd", "_{0}_{1}.csv".format(org_bone_filename, rep_bone_filename)))
 
     if len(output_moprh_path) >= 255 and os.name == "nt":
         print("■■■■■■■■■■■■■■■■■")
@@ -348,7 +366,7 @@ def create_output_path(vmd_path, replace_pmx_path, is_avoidance, is_arm_ik, is_m
     morph_suffix = ""
     if is_morph: morph_suffix = "M"
 
-    output_vmd_path = os.path.join(str(Path(vmd_path).resolve().parents[0]), os.path.basename(vmd_path).replace(".vmd", "_{1}{2}{3}_{0:%Y%m%d_%H%M%S}.vmd".format(datetime.now(), bone_filename, morph_suffix, arm_suffix)))
+    output_vmd_path = os.path.join(get_dir_path(vmd_path), os.path.basename(vmd_path).replace(".vmd", "_{1}{2}{3}_{0:%Y%m%d_%H%M%S}.vmd".format(datetime.now(), bone_filename, morph_suffix, arm_suffix)))
 
     if len(output_vmd_path) >= 255 and os.name == "nt":
         print("■■■■■■■■■■■■■■■■■")
@@ -376,3 +394,19 @@ def get_mypath(filename):
     logger.info("get_mypath: %s", file_path)
 
     return file_path
+
+def get_dir_path(filepath, is_print=True):
+    try:
+        # ファイルパスをオブジェクトとして解決し、親を取得する
+        return str(Path(filepath).resolve().parents[0])
+    except Exception as e:
+        print("■■■■■■■■■■■■■■■■■")
+        print("■　**ERROR**　")
+        print("■　ファイルパスの解析に失敗しました。")
+        print("■　パスに使えない文字がないか確認してください。")
+        print("■　ファイルパス: "+ filepath )
+        print("■■■■■■■■■■■■■■■■■")
+        print("")
+        print(e.with_traceback(sys.exc_info()[2]))
+        raise e
+

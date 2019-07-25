@@ -34,7 +34,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00_β72", pos = wx.DefaultPosition, size = wx.Size( 600,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00_β74", pos = wx.DefaultPosition, size = wx.Size( 600,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -611,7 +611,8 @@ class VmdSizingForm3 ( wx.Frame ):
 			# ファイルピッカーに選択したパスを設定
 			target_ctrl.SetPath(choiceDialog.GetStringSelection())
 			target_ctrl.UpdatePickerFromTextCtrl()
-			target_ctrl.SetInitialDirectory(str(Path(choiceDialog.GetStringSelection()).resolve().parents[0]))
+			target_ctrl.SetInitialDirectory(wrapperutils.get_dir_path(choiceDialog.GetStringSelection()))
+
 			# ファイル変更処理
 			self.OnChangeFile(event, target_ctrl, label_ctrl, ext)
 
@@ -853,7 +854,7 @@ class VmdSizingForm3 ( wx.Frame ):
 	def OnMorphImport(self, event):
 		# モーフ入力パス
 		input_moprh_path = wrapperutils.create_output_morph_path(self.m_fileVmd.GetPath(), self.m_fileOrgPmx.GetPath(), self.m_fileRepPmx.GetPath())
-		input_morph_dir_path = str(Path(input_moprh_path).resolve().parents[0])
+		input_morph_dir_path = wrapperutils.get_dir_path(input_moprh_path)
 
 		with wx.FileDialog(self, "モーフ組み合わせCSVを読み込む", wildcard="*.csv",
 							defaultDir=input_morph_dir_path,
@@ -873,9 +874,9 @@ class VmdSizingForm3 ( wx.Frame ):
 					rep_choice_values = morph_lines[1]
 					rep_rate_values = morph_lines[2]
 					
-					logger.debug("vmd_choice_values: %s", vmd_choice_values)
-					logger.debug("rep_choice_values: %s", rep_choice_values)
-					logger.debug("rep_rate_values: %s", rep_rate_values)
+					logger.info("vmd_choice_values: %s", vmd_choice_values)
+					logger.info("rep_choice_values: %s", rep_choice_values)
+					logger.info("rep_rate_values: %s", rep_rate_values)
 
 					if len(vmd_choice_values) == 0 or len(rep_choice_values) == 0 or len(rep_rate_values) == 0:
 						return
@@ -925,7 +926,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.rep_choice_values = []
 		self.rep_rate_values = []
 
-		logger.debug("ClearMorph: size: %s", self.gridMorphSizer.GetItemCount())
+		logger.info("ClearMorph: size: %s", self.gridMorphSizer.GetItemCount())
 		
 		inner_item_count = self.gridMorphSizer.GetItemCount()
 		if inner_item_count > 4:
@@ -966,7 +967,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		if not output_vmd_path:
 			print("■■■■■■■■■■■■■■■■■")
 			print("■　**ERROR**　")
-			print("■　出力ファイルパスの生成に失敗しました")
+			print("■　出力ファイルパスがありません")
 			print("■　生成予定パス: "+ output_vmd_path )
 			print("■■■■■■■■■■■■■■■■■")
 			return False
@@ -979,7 +980,12 @@ class VmdSizingForm3 ( wx.Frame ):
 			print("■■■■■■■■■■■■■■■■■")
 			return False
 		
-		dir_path = str(Path(output_vmd_path).resolve().parents[0])
+		logger.debug("文字超制限OK")
+		
+		# 親ディレクトリ取得
+		dir_path = wrapperutils.get_dir_path(output_vmd_path)
+
+		logger.debug("ディレクトリパス生成")
 
 		if not dir_path or not os.path.exists(dir_path) or not os.path.isdir(dir_path):
 			print("■■■■■■■■■■■■■■■■■")
@@ -997,7 +1003,7 @@ class VmdSizingForm3 ( wx.Frame ):
 			print("■■■■■■■■■■■■■■■■■")
 			return False
 
-		if output_vmd_path and not os.access(output_vmd_path, os.W_OK):
+		if output_vmd_path and os.path.exists(output_vmd_path) and not os.access(output_vmd_path, os.W_OK):
 			print("■■■■■■■■■■■■■■■■■")
 			print("■　**ERROR**　")
 			print("■　出力ファイルパスに書き込み権限がありません。")
@@ -1015,14 +1021,14 @@ class VmdSizingForm3 ( wx.Frame ):
 		# 先頭と末尾のダブルクォーテーションは除去
 		target_path = re.sub(r'^\\+\"(\w)\\', r'\1:\\', target_ctrl.GetPath())
 		target_path = target_path.strip("\"")
-		logger.debug("target_path: %s", target_path)
+		logger.info("target_path: %s", target_path)
 
 		target_ctrl.SetPath(target_path)
 
 		# メインスレッドで読み込む
 		if target_ctrl == self.m_fileVmd:
 			if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, is_print):
-				logger.debug("vmd_data クリア: %s", target_ctrl.GetPath())
+				logger.info("vmd_data クリア: %s", target_ctrl.GetPath())
 				# 読み込めるファイルではない場合、オブジェクトをクリアして終了
 				self.vmd_data = None
 
@@ -1035,7 +1041,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		if target_ctrl == self.m_fileOrgPmx:
 			if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, is_print):
-				logger.debug("org_pmx_data クリア: %s", target_ctrl.GetPath())
+				logger.info("org_pmx_data クリア: %s", target_ctrl.GetPath())
 				self.org_pmx_data = None
 
 				if is_print:
@@ -1047,7 +1053,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		if target_ctrl == self.m_fileRepPmx:
 			if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, is_print):
-				logger.debug("rep_pmx_data クリア: %s", target_ctrl.GetPath())
+				logger.info("rep_pmx_data クリア: %s", target_ctrl.GetPath())
 				self.rep_pmx_data = None
 
 				if is_print:
@@ -1065,14 +1071,14 @@ class VmdSizingForm3 ( wx.Frame ):
 		# 先頭と末尾のダブルクォーテーションは除去
 		target_path = re.sub(r'^\\+\"(\w)\\', r'\1:\\', target_ctrl.GetPath())
 		target_path = target_path.strip("\"")
-		logger.debug("target_path: %s", target_path)
+		logger.info("target_path: %s", target_path)
 
 		target_ctrl.SetPath(target_path)
 
 		# メインスレッドで読み込む
 		if target_ctrl == self.m_fileVmd:
 			if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, is_print):
-				logger.debug("vmd_data クリア: %s", target_ctrl.GetPath())
+				logger.info("vmd_data クリア: %s", target_ctrl.GetPath())
 				# 読み込めるファイルではない場合、オブジェクトをクリアして終了
 				self.vmd_data = None
 
@@ -1081,7 +1087,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 				return False
 			else:
-				logger.debug("vmd_data 読み込み: %s", target_ctrl.GetPath())
+				logger.info("vmd_data 読み込み: %s", target_ctrl.GetPath())
 				# VMD読み込む
 				new_vmd_data = wrapperutils.read_vmd(target_ctrl.GetPath(), label_ctrl.GetLabel(), is_print)
 
@@ -1102,7 +1108,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		if target_ctrl == self.m_fileOrgPmx:
 			if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, is_print):
-				logger.debug("org_pmx_data クリア: %s", target_ctrl.GetPath())
+				logger.info("org_pmx_data クリア: %s", target_ctrl.GetPath())
 				self.org_pmx_data = None
 
 				if is_print:
@@ -1110,7 +1116,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 				return False
 			else:
-				logger.debug("org_pmx_data 読み込み: %s", target_ctrl.GetPath())
+				logger.info("org_pmx_data 読み込み: %s", target_ctrl.GetPath())
 				# 元PMX読み込む
 				new_org_pmx_data = wrapperutils.read_pmx(target_ctrl.GetPath(), label_ctrl.GetLabel(), is_print)
 
@@ -1131,7 +1137,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		if target_ctrl == self.m_fileRepPmx:
 			if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, is_print):
-				logger.debug("rep_pmx_data クリア: %s", target_ctrl.GetPath())
+				logger.info("rep_pmx_data クリア: %s", target_ctrl.GetPath())
 				self.rep_pmx_data = None
 
 				if is_print:
@@ -1139,7 +1145,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 				return False
 			else:
-				logger.debug("rep_pmx_data 読み込み: %s", target_ctrl.GetPath())
+				logger.info("rep_pmx_data 読み込み: %s", target_ctrl.GetPath())
 				# 先PMX読み込む
 				new_rep_pmx_data = wrapperutils.read_pmx(target_ctrl.GetPath(), label_ctrl.GetLabel(), is_print)
 
@@ -1169,7 +1175,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		# 先頭と末尾のダブルクォーテーションは除去
 		target_path = re.sub(r'^\\+\"(\w)\\', r'\1:\\', target_ctrl.GetPath())
 		target_path = target_path.strip("\"")
-		logger.debug("target_path: %s", target_path)
+		logger.info("target_path: %s", target_path)
 
 		target_ctrl.SetPath(target_path)
 
@@ -1247,9 +1253,9 @@ class VmdSizingForm3 ( wx.Frame ):
 					# ペアとして登録する
 					morph_pair[(vcv,rcv)] = True							
 
-		logger.debug("vmd_choice_values: %s", vmd_choice_values)
-		logger.debug("rep_choice_values: %s", rep_choice_values)
-		logger.debug("rep_rate_values: %s", rep_rate_values)
+		logger.info("vmd_choice_values: %s", vmd_choice_values)
+		logger.info("rep_choice_values: %s", rep_choice_values)
+		logger.info("rep_rate_values: %s", rep_rate_values)
 		
 		return 	vmd_choice_values, rep_choice_values, rep_rate_values
 
@@ -1380,8 +1386,6 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.vmd_choice_values = []
 		self.rep_choice_values = []
 		self.rep_rate_values = []
-		# 一旦出力ファイル設定
-		# self.OnCreateOutputVmd(wx.EVT_FILEPICKER_CHANGED)
 
 	# スレッド実行結果
 	def OnCsvResult(self, event):
