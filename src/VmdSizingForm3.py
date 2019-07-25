@@ -34,7 +34,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00_β75", pos = wx.DefaultPosition, size = wx.Size( 600,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00", pos = wx.DefaultPosition, size = wx.Size( 600,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -1406,9 +1406,9 @@ class VmdSizingForm3 ( wx.Frame ):
 		# モデル名表示追加
 		model_name = wrapperutils.read_vmd_modelname(self.m_fileVmd.GetPath())
 		if model_name == None:
-			self.m_vmdTraceTxt.SetValue("　（トレース元モデル取得失敗）")
+			self.m_vmdTraceTxt.SetValue("　（VMD登録モデル取得失敗）")
 		else:
-			self.m_vmdTraceTxt.SetValue("　（トレース元: "+ model_name +"）")
+			self.m_vmdTraceTxt.SetValue("　（VMD登録モデル: "+ model_name +"）")
 
 	# 出力ファイルパスの生成
 	def OnCreateOutputVmd(self, event):	
@@ -1568,7 +1568,7 @@ class MyFileDropTarget(wx.FileDropTarget):
 				self.window.OnCreateOutputVmd(wx.EVT_FILEPICKER_CHANGED)
 			
 			if self.target_ctrl == self.window.m_fileVmd:
-				# VMDファイルの場合、トレース元モデル表示
+				# VMDファイルの場合、VMD登録モデル表示
 				self.window.ShowTraceModel(wx.EVT_FILEPICKER_CHANGED)
 
 			# オブジェクトクリア
