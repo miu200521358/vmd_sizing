@@ -58,7 +58,7 @@ def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
 # 頭の中に入っているか
 def is_inner_upper(upper_pos, elbow_pos, finger_pos, replace_model, upper_vertex_pos, direction, bf):
 
-    logger.debug("is_inner_upper sh: %s, el: %s, fi: %s", upper_pos.y(), elbow_pos.y(), finger_pos.y() )
+    # logger.debug("is_inner_upper sh: %s, el: %s, fi: %s", upper_pos.y(), elbow_pos.y(), finger_pos.y() )
 
     # if upper_pos.y() > finger_pos.y():
     #     # 上半身Yより指が下ならとりあえずFalse
@@ -80,12 +80,12 @@ def is_inner_upper(upper_pos, elbow_pos, finger_pos, replace_model, upper_vertex
                     #     logger.debug("指Z接触: d: %s, u: %s, wf: %s", direction, uv.x(), finger_pos.x())
 
                     if direction == "左" and finger_pos.x() <= uv.x() + 0.2:
-                        logger.debug("左頭-指接触: v: %s, f: %s", uv, finger_pos)
+                        # logger.debug("左頭-指接触: v: %s, f: %s", uv, finger_pos)
                         # 左手で上半身より内側ならTrue
                         return True
                     if direction == "右" and uv.x() - 0.2 <= finger_pos.x():
                         # 右手で上半身より内側ならTrue
-                        logger.debug("右頭-指接触: v: %s, wf: %s", uv, finger_pos)
+                        # logger.debug("右頭-指接触: v: %s, wf: %s", uv, finger_pos)
                         return True
 
                     # ひじを除外対象にするとガクッとなるので保留。
@@ -115,9 +115,9 @@ def calc_hand_pos(model, wrist_links, frames, bf):
     elbow_pos = QVector3D()
     finger_pos = QVector3D()
 
-    logger.debug("--------------")
+    # logger.debug("--------------")
     for lidx, lbone in enumerate(reversed(wrist_links)):
-        logger.debug("frame: %s: lidx: %s, %s, %s", bf.frame, lidx, lbone.name, global_3ds[lidx])
+        # logger.debug("frame: %s: lidx: %s, %s, %s", bf.frame, lidx, lbone.name, global_3ds[lidx])
 
         if "上半身" == lbone.name:
             # 上半身固定
@@ -144,7 +144,7 @@ def adjust_by_hand(replace_model, direction, wrist_links, frames, bf, upper_vert
     # logger.debug("finger_pos: %s", finger_pos)
 
     if is_inner_upper(upper_pos, elbow_pos, finger_pos, replace_model, upper_vertex_pos, direction, bf) == False:
-        logger.debug("接触無し frame: %s, finger: %s", bf.frame, finger_pos)
+        # logger.debug("接触無し frame: %s, finger: %s", bf.frame, finger_pos)
         return
 
     # 腕調整
