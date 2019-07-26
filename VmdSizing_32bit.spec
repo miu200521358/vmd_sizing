@@ -4,7 +4,7 @@ block_cipher = None
 
 
 a = Analysis(['src\\wrapper.py'],
-             pathex=['c:\\MMD\\vmd_sizing'],
+             pathex=[],
              binaries=[],
              datas=[],
              hiddenimports=['wx._adv', 'wx._html'],
@@ -17,16 +17,19 @@ a = Analysis(['src\\wrapper.py'],
              noarchive=False)
 pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
+a.datas += [('.\\src\\vmdsizing.ico','.\\src\\vmdsizing.ico', 'Data')]
 exe = EXE(pyz,
           a.scripts,
           a.binaries,
           a.zipfiles,
           a.datas,
           [],
-          name='VmdSizing_2.02_32bit',
+          name='VmdSizing_3.00_32bit',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
           upx=True,
           runtime_tmpdir=None,
-          console=False )
+          console=False,
+          icon='.\\src\\vmdsizing.ico')
+3

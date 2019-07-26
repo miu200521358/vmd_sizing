@@ -3,11 +3,13 @@
 
 import logging
 import struct
+import hashlib
+from collections import OrderedDict
 from PyQt5.QtGui import QQuaternion, QVector4D, QVector3D, QVector2D, QColor
 
 from PmxModel import PmxModel, ParseException
 
-logger = logging.getLogger("__main__").getChild(__name__)
+logger = logging.getLogger("VmdSizing").getChild(__name__)
 handler = logging.StreamHandler()
 handler.setLevel(logging.INFO)
 logger.setLevel(logging.INFO)
@@ -24,10 +26,10 @@ class PmxReader():
         self.morph_index_size = 0
         self.rigidbody_index_size = 0
         
-    
-    def read_pmx_file(self, filename):
+    def read_pmx_file(self, filepath):
         # PMXファイルをバイナリ読み込み
-        self.buffer = open(filename, "rb").read()
+        self.buffer = open(filepath, "rb").read()
+        # logger.info("hashlib.algorithms_available: %s", hashlib.algorithms_available)
         
         # pmx宣言
         signature = self.unpack(4, "4s")        
@@ -37,7 +39,7 @@ class PmxReader():
         version = self.read_float()        
         logger.debug("version: %s (%s)", version, self.offset)
         
-        if signature != b"PMX " or ( version != 2.0 and version != 2.1 ):
+        if signature[:3] != b"PMX" or ( version != 2.0 and version != 2.1 ):
             # 整合性チェック
             raise ParseException("PMX2.0/2.1形式外のデータです。signature: {0}, version: {1} ".format(signature, version))
         
@@ -87,6 +89,7 @@ class PmxReader():
         
         # Pmxモデル生成
         pmx = PmxModel()
+        pmx.path = filepath
         
         # モデル名（日本語）
         pmx.name = self.read_text()
@@ -237,6 +240,15 @@ class PmxReader():
         # ボーンの長さを計算する
         self.calc_bone_length(pmx.bones, pmx.bone_indexes)
 
+        # 操作パネル (PMD:カテゴリ) 1:眉(左下) 2:目(左上) 3:口(右上) 4:その他(右下)
+        morphs_by_panel = OrderedDict()
+        morphs_by_panel[2] = [] # 目
+        morphs_by_panel[1] = [] # 眉
+        morphs_by_panel[3] = [] # 口
+        morphs_by_panel[4] = [] # 他
+        morphs_by_panel[0] = [] # システム予約
+
+        morph_idx = 0
         # モーフデータリスト
         for _ in range(self.read_int(4)):      
             morph = PmxModel.Morph(
@@ -278,7 +290,20 @@ class PmxReader():
             else:
                 raise ParseException("unknown morph type: {0}".format(morph.morph_type))
 
-            pmx.morphs[morph.name] = morph
+            # モーフのINDEXは、先頭から順番に設定
+            morph.index = morph_idx
+            morph_idx += 1
+
+            if not morph.panel in morphs_by_panel.keys():
+                # ないと思うが念のためパネル情報がなければ追加
+                morphs_by_panel[morph.panel] = 0
+
+            morphs_by_panel[morph.panel].append(morph)
+
+        # モーフのパネル順に並び替えてモーフを登録していく
+        for _, mlist in morphs_by_panel.items():
+            for m in mlist:
+                pmx.morphs[m.name] = m
 
         logger.debug("len(morphs): %s", len(pmx.morphs))
 
@@ -295,9 +320,20 @@ class PmxReader():
             for _ in range(display_count):
                 display_type=self.read_int(1)
                 if display_type==0:
-                    display_slot.references.append((display_type, self.read_bone_index_size()))
+                    born_idx = self.read_bone_index_size()
+                    display_slot.references.append((display_type, born_idx))
+                    # ボーン表示ON
+                    for v in pmx.bones.values():
+                        if v.index == born_idx:
+                            v.display = True
                 elif display_type==1:
-                    display_slot.references.append((display_type, self.read_morph_index_size()))
+                    morph_idx = self.read_morph_index_size()
+                    display_slot.references.append((display_type, morph_idx))
+                    # モーフ表示ON
+                    for v in pmx.morphs.values():
+                        if v.index == morph_idx:
+                            v.display = True
+                        # logger.debug("v: %s, display: %s", v.name, v.display)
                 else:
                     raise ParseException("unknown display_type: {0}".format(display_type))
 
@@ -351,11 +387,27 @@ class PmxReader():
 
         logger.debug("len(joints): %s", len(pmx.joints))
 
-        return pmx
+        # ハッシュを設定
+        pmx.digest = self.hexdigest(filepath)
+        logger.info("pmx: %s, hash: %s", pmx.name, pmx.digest)
 
+        return pmx
+                 
+    def hexdigest(self, filepath):
+        sha1 = hashlib.sha1()
+
+        with open(filepath, 'rb') as f:
+            for chunk in iter(lambda: f.read(2048 * sha1.block_size), b''):
+                sha1.update(chunk)
+
+        sha1.update(chunk)
+
+        return sha1.hexdigest()      
+    
+    
     def calc_bone_length(self, bones, bone_indexes):
         for k, v in bones.items():
-            if k in ["左足ＩＫ", "右足ＩＫ"] and v.getIkFlag() == True:
+            if k in ["左足ＩＫ", "右足ＩＫ", "右足ＩＫ親" ,"左足ＩＫ親"] and v.getIkFlag() == True:
                 #   足IKの場合、ひざボーンの位置を採用する
                 knee_pos = QVector3D(0,0,0)
                 for l in v.ik.link:
@@ -377,24 +429,35 @@ class PmxReader():
                 # 最も大きな値（離れている）のを採用
                 v.len = farer_pos.length()
 
-            elif k in ["グルーブ", "センター"]:
+            elif k in ["グルーブ", "センター", "腰"]:
                 # 親がグルーブの場合、センターとの連動は行わない
                 v.len = v.position.length()
+                if k == "センター":
+                    v.len_3d = QVector3D(1, v.position.length(), 1)
+                else:
+                    v.len_3d = QVector3D(1, 1, 1)
             else:
                 # IK以外の場合、親ボーンとの間の長さを「親ボーン」に設定する
-                if v.parent_index is not None and v.parent_index in bone_indexes and not bone_indexes[v.parent_index] in ["グルーブ", "センター", "左足ＩＫ", "右足ＩＫ", "左つま先ＩＫ", "右つま先ＩＫ"]:
+                if v.parent_index is not None and v.parent_index in bone_indexes and not bone_indexes[v.parent_index] in ["腰", "グルーブ", "センター", "左足ＩＫ", "右足ＩＫ", "左つま先ＩＫ", "右つま先ＩＫ", "右足ＩＫ親" ,"左足ＩＫ親"]:
                     # 親ボーンを採用
                     pos = v.position - bones[bone_indexes[v.parent_index]].position
                     if v.len > 0:
                         # 既にある場合、平均値を求めて設定する
                         bones[bone_indexes[v.parent_index]].len = (v.len + pos.length()) / 2
+                        bones[bone_indexes[v.parent_index]].len_3d = (v.len_3d + pos) / 2
                     else:
                         # 0の場合はそのまま追加
                         bones[bone_indexes[v.parent_index]].len = pos.length()
+                        bones[bone_indexes[v.parent_index]].len_3d = pos
+
+                    logger.debug("bone: %s, len_3d: %s", bone_indexes[v.parent_index], bones[bone_indexes[v.parent_index]].len_3d)
                 else:
                     # 自分が最親の場合、そのまま長さ
                     v.len = v.position.length()
+                    v.len_3d = v.position
 
+                    logger.debug("bone: %s, len_3d: %s", v.name, v.len_3d)
+                
     def read_group_morph_data(self):
         return PmxModel.GroupMorphData(
                 self.read_morph_index_size(), 
@@ -419,18 +482,19 @@ class PmxReader():
                 )
 
     def read_material_morph_data(self):
+        # 材質モーフはRGB(A)に負数が入る場合があるので、Vector型で保持
         return PmxModel.MaterialMorphData(
                 self.read_material_index_size(),
                 self.read_int(1),
-                self.read_RGBA(),
-                self.read_RGB(),
+                self.read_Vector4D(),
+                self.read_Vector3D(),
                 self.read_float(),
-                self.read_RGB(),
-                self.read_RGBA(),
+                self.read_Vector3D(),
+                self.read_Vector4D(),
                 self.read_float(),
-                self.read_RGBA(),
-                self.read_RGBA(),
-                self.read_RGBA()
+                self.read_Vector4D(),
+                self.read_Vector4D(),
+                self.read_Vector4D()
                 )
 
 
