@@ -36,19 +36,19 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
     is_success = True
 
     # 移動系ボーン縮尺処理
-    is_success = is_success and sub_move.exec(motion, trace_model, replace_model, output_vmd_path)
+    is_success = sub_move.exec(motion, trace_model, replace_model, output_vmd_path) and is_success
 
     # 腕スタンス補正処理
-    is_success = is_success and sub_arm_stance.exec(motion, trace_model, replace_model, output_vmd_path)
+    is_success = sub_arm_stance.exec(motion, trace_model, replace_model, output_vmd_path) and is_success
 
     # 頭部と腕の接触回避処理
-    is_success = is_success and sub_avoidance.exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik)
+    is_success = sub_avoidance.exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik) and is_success
 
     # 腕IK処理
-    is_success = is_success and sub_arm_ik.exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_hand_ik, hand_distance, org_motion_frames)
+    is_success = sub_arm_ik.exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_hand_ik, hand_distance, org_motion_frames) and is_success
 
     # モーフ処理
-    is_success = is_success and sub_morph.exec(motion, trace_model, replace_model, output_vmd_path, vmd_choice_values, rep_choice_values, rep_rate_values)
+    is_success = sub_morph.exec(motion, trace_model, replace_model, output_vmd_path, vmd_choice_values, rep_choice_values, rep_rate_values) and is_success
 
     if motion.camera_cnt > 0:
         print("カメラ調整未対応")
