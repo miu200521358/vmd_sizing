@@ -10,6 +10,7 @@ from VmdReader import VmdReader
 from PmxModel import PmxModel, SizingException
 from PmxReader import PmxReader
 import utils
+from typing import Union
 
 logger = logging.getLogger("VmdSizing").getChild(__name__)
 
@@ -166,5 +167,75 @@ def compare_length(trace_model, replace_model):
     
     return lengths
 
+# ------------------------------------------------------------
+# モデル間の目ボーンの高さを求める
+#
+#  シンメトリとは限らないので、左右の目の中間の高さ
+#  (高さの平均)を採用する。
+#  @todo 片目だけある場合をスマートに書けていない。
+# ------------------------------------------------------------
+def calc_eye_level(model: PmxModel) -> Union[float, None]:
+    if "左目" not in model.bones and "右目" not in model.bones:
+        # 両目共にボーンがない場合はNone
+        return None
 
+    left_eye_level = right_eye_level = 0 # type: float
+    if "左目" not in model.bones:
+        # 左目がなければ右目の値を採用できるか
+        if "右目" in model.bones:
+            left_eye_level = right_eye_level = model.bones["右目"].position.y()
+        # 両目がないパターンは最初にチェック済み
+    else :
+        # 素直に左目の値を採用できる
+        left_eye_level = model.bones["左目"].position.y()
 
+    if "右目" not in model.bones:
+        # 右目がなければ左目の値を採用する(ここに来る時は左目の値は確定している)
+        right_eye_level = left_eye_level
+    else :
+        # 素直に右目の値を採用できる
+        right_eye_level = model.bones["右目"].position.y()
+
+    # 右目左目の高さの平均を求める
+    # どちらか片方しかない場合は同値が入ってくるので略
+    eye_average_level = (left_eye_level + right_eye_level) / 2 # type: float
+
+    print("モデル: %s 両目の中間の高さ: %s" % (model.name, eye_average_level))
+
+    return eye_average_level
+
+# ------------------------------------------------------------
+# モデル間の目ボーンの高さ比率を求める
+# ------------------------------------------------------------
+def calc_eye_level_ratio(trace_model: PmxModel, replace_model: PmxModel) -> Union[float, None]:
+    replace_eye_level = calc_eye_level(replace_model) # type: float
+    trace_eye_level = calc_eye_level(trace_model) # type: float
+
+    # 両モデルまたは片方に目ボーンがない場合は倍率を求められない
+    if replace_eye_level is None or trace_eye_level is None:
+        print("どちらかのモデルに目ボーンがないので目線での高さの調節ができません")
+        return None
+
+    # Y比率(目ボーン中間の高さ比率)
+    eye_level_ratio = replace_eye_level / trace_eye_level # type: float
+
+    print("目の高さ比率: %s" % eye_level_ratio)
+
+    return eye_level_ratio
+
+# ------------------------------------------------------------
+# モデル間の頭ボーンの高さ比率を求める
+# ------------------------------------------------------------
+def calc_head_ratio(trace_model, replace_model) -> float:
+    if "頭" not in trace_model.bones or "頭" not in replace_model.bones:
+        # 頭ボーンがない場合は倍率を求められない
+        return None
+
+    # Y比率(頭ボーンのY差)
+    replace_head_height = replace_model.bones["頭"].position.y() # type: float
+    trace_head_height = trace_model.bones["頭"].position.y() # type: float
+    y_ratio = replace_head_height / trace_head_height #type: float
+
+    logger.debug("y_ratio replace_head_height: %s, trace_head_height: %s", replace_head_height, trace_head_height)
+
+    return y_ratio
