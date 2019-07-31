@@ -35,7 +35,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00", pos = wx.DefaultPosition, size = wx.Size( 600,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.01_β01", pos = wx.DefaultPosition, size = wx.Size( 600,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -705,7 +705,7 @@ class VmdSizingForm3 ( wx.Frame ):
 			target_ctrl.SetInitialDirectory(wrapperutils.get_dir_path(choiceDialog.GetStringSelection()))
 
 			# ファイル変更処理
-			self.OnChangeFile(event, target_ctrl, label_ctrl, ext)
+			self.OnChangeFile(wx.FileDirPickerEvent(), target_ctrl, label_ctrl, ext)
 
 	def OnClose(self, event):
 		for h in logger.handlers:
@@ -1584,8 +1584,11 @@ class VmdSizingForm3 ( wx.Frame ):
 		logger.info("OnCreateOutputVmd")
 		logger.info("m_fileVmd: %s " , self.m_fileVmd.GetPath())
 		logger.info("m_fileRepPmx: %s ",  self.m_fileRepPmx.GetPath())
+		logger.info("event: %s ",  type(event))
+		logger.info("wx.EVT_FILEPICKER_CHANGED: %s ",  type(wx.EVT_FILEPICKER_CHANGED))
+		logger.info("isinstance(event, wx.EVT_FILEPICKER_CHANGED): %s ", isinstance(event, wx.FileDirPickerEvent))
 
-		if wrapperutils.is_auto_output_path(self.m_fileOutputVmd.GetPath(), self.m_fileVmd.GetPath(), self.m_fileRepPmx.GetPath(), event == wx.EVT_FILEPICKER_CHANGED):
+		if wrapperutils.is_auto_output_path(self.m_fileOutputVmd.GetPath(), self.m_fileVmd.GetPath(), self.m_fileRepPmx.GetPath(), isinstance(event, wx.FileDirPickerEvent)):
 			# モーフ出力の組み合わせ取得
 			vmd_choice_values, _, _ = self.create_morph_data()
 			logger.info("vmd_choice_values: %s", len(vmd_choice_values))
@@ -1794,7 +1797,7 @@ class MyFileDropTarget(wx.FileDropTarget):
 
 			if self.target_ctrl == self.window.m_fileVmd or self.target_ctrl == self.window.m_fileRepPmx:
 				# 出力パス生成対象コントロールの場合、VMD生成処理を走らせる
-				self.window.OnCreateOutputVmd(wx.EVT_FILEPICKER_CHANGED)
+				self.window.OnCreateOutputVmd(wx.FileDirPickerEvent())
 			
 			# if self.target_ctrl == self.window.m_fileVmd:
 			# 	# VMDファイルの場合、VMD登録モデル表示
