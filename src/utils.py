@@ -260,7 +260,7 @@ def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False
 
     # ボーン登録がなければ初期値
     if bone_name not in frames:
-        fillbf.name = bone_name.encode('shift-jis')
+        fillbf.name = bone_name.encode('cp932').decode('shift_jis').encode('shift_jis')
         fillbf.format_name = bone_name
         fillbf.frame = frameno
         return fillbf

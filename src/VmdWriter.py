@@ -169,7 +169,7 @@ class VmdWriter():
         if len(bone_frames) > 0 or len(morph_frames) > 0 or len(showik_frames) > 0:
             
             # モデル名を20byteで切る
-            model_bname = model_name.encode('shift-jis')[:20]
+            model_bname = model_name.encode('cp932').decode('shift_jis').encode('shift_jis')[:20]
             # print("model_bname: %s, model_bname_len: %s" % (model_bname, len(model_bname)))
 
             # 20文字に満たなかった場合、埋める
@@ -211,6 +211,13 @@ class VmdWriter():
         else:
             # カメラ・照明
             fout.write(b'\x83J\x83\x81\x83\x89\x81E\x8f\xc6\x96\xbe\x00on Data')
+        
+        print("len(bone_frames): %s" % len(bone_frames))
+        print("len(morph_frames): %s" % len(morph_frames))
+        print("len(camera_frames): %s" % len(camera_frames))
+        print("len(light_frames): %s" % len(light_frames))
+        print("len(shadow_frames): %s" % len(shadow_frames))
+        print("len(showik_frames): %s" % len(showik_frames))
 
         # bone frames
         fout.write(struct.pack('<L', len(bone_frames))) # ボーンフレーム数
