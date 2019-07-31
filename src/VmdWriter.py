@@ -212,12 +212,12 @@ class VmdWriter():
             # カメラ・照明
             fout.write(b'\x83J\x83\x81\x83\x89\x81E\x8f\xc6\x96\xbe\x00on Data')
         
-        print("len(bone_frames): %s" % len(bone_frames))
-        print("len(morph_frames): %s" % len(morph_frames))
-        print("len(camera_frames): %s" % len(camera_frames))
-        print("len(light_frames): %s" % len(light_frames))
-        print("len(shadow_frames): %s" % len(shadow_frames))
-        print("len(showik_frames): %s" % len(showik_frames))
+        # print("len(bone_frames): %s" % len(bone_frames))
+        # print("len(morph_frames): %s" % len(morph_frames))
+        # print("len(camera_frames): %s" % len(camera_frames))
+        # print("len(light_frames): %s" % len(light_frames))
+        # print("len(shadow_frames): %s" % len(shadow_frames))
+        # print("len(showik_frames): %s" % len(showik_frames))
 
         # bone frames
         fout.write(struct.pack('<L', len(bone_frames))) # ボーンフレーム数
