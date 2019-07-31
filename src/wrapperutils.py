@@ -344,8 +344,6 @@ def create_output_morph_path(vmd_path, org_pmx_path, rep_pmx_path):
     return output_moprh_path
 
 
-
-
 def create_output_path(vmd_path, replace_pmx_path, is_avoidance, is_arm_ik, is_morph):
     # print("vmd_path: %s " % vmd_path)
     # print("replace_pmx_path: %s" % replace_pmx_path)
@@ -377,6 +375,34 @@ def create_output_path(vmd_path, replace_pmx_path, is_avoidance, is_arm_ik, is_m
         return None
     
     return output_vmd_path
+
+def is_auto_output_path(output_vmd_path, vmd_path, replace_pmx_path, force=False):
+    if not output_vmd_path:
+        # 空のパスの場合、自動生成対象とみなす
+        logger.info("空パス: %s", output_vmd_path)
+        return True
+
+    # ボーンCSVファイル名・拡張子
+    bone_filename, _ = os.path.splitext(os.path.basename(replace_pmx_path))
+
+    now_output_vmd_path = os.path.join(get_dir_path(vmd_path), os.path.basename(vmd_path).replace(".vmd", "_{0}".format(bone_filename)))
+    logger.info("now_output_vmd_path: %s", now_output_vmd_path)
+    logger.info("force: %s", force)
+    logger.info("output_vmd_path: %s", output_vmd_path)
+
+    if force and now_output_vmd_path not in output_vmd_path:
+        # 強制変更が必要かつパスが変わっている場合、自動生成対象とみなす
+        logger.info("force変更あり: %s", now_output_vmd_path)
+        return True
+    
+    now_output_vmd_path = now_output_vmd_path.replace("\\", "\\\\")
+    logger.info("now_output_vmd_path: %s", now_output_vmd_path)
+
+    output_vmd_pattern = re.compile(r'^%s\w?\w?_\d{8}_\d{6}.vmd$' % (now_output_vmd_path) )
+    logger.info("output_vmd_pattern: %s", output_vmd_pattern)
+    logger.info("re.match(output_vmd_pattern, output_vmd_path): %s", re.match(output_vmd_pattern, output_vmd_path))
+
+    return re.match(output_vmd_pattern, output_vmd_path) is not None
 
 def is_decimal(value):
     """
