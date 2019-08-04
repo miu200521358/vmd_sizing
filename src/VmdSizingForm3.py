@@ -35,7 +35,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.01_β05", pos = wx.DefaultPosition, size = wx.Size( 600,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.01_β08", pos = wx.DefaultPosition, size = wx.Size( 600,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -47,7 +47,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.vmd_data = None
 		self.org_pmx_data = None
 		self.rep_pmx_data = None
-		self.vmd_camera_data = None
+		self.camera_vmd_data = None
 
 		# モーフプルダウン
 		self.vmd_morphs = None
@@ -1051,14 +1051,23 @@ class VmdSizingForm3 ( wx.Frame ):
 		is_pre_vmd = self.PreLoadOneFile(self.m_fileVmd, self.m_staticText9, ".vmd", is_print)
 		is_pre_org_pmx = self.PreLoadOneFile(self.m_fileOrgPmx, self.m_staticText10, ".pmx", is_print)
 		is_pre_rep_pmx = self.PreLoadOneFile(self.m_fileRepPmx, self.m_staticText11, ".pmx", is_print)
+		# カメラは初期値OKとする
+		is_pre_camera_vmd = True
+		if self.m_camera_fileVmd.GetPath():
+			# パスが指定してあってNGの場合、結果保持
+			is_pre_camera_vmd = self.PreLoadOneFile(self.m_camera_fileVmd, self.m_camera_staticText9, ".vmd", is_print)
 
-		if is_pre_vmd and is_pre_org_pmx and is_pre_rep_pmx:
+		if is_pre_vmd and is_pre_org_pmx and is_pre_rep_pmx and is_pre_camera_vmd:
 			is_vmd = self.LoadOneFile(self.m_fileVmd, self.m_staticText9, ".vmd", is_print)
 			is_org_pmx = self.LoadOneFile(self.m_fileOrgPmx, self.m_staticText10, ".pmx", is_print)
 			is_rep_pmx = self.LoadOneFile(self.m_fileRepPmx, self.m_staticText11, ".pmx", is_print)
 
+			is_camera_vmd = True
+			if self.m_camera_fileVmd.GetPath():
+				is_camera_vmd = self.LoadOneFile(self.m_camera_fileVmd, self.m_camera_staticText9, ".vmd", is_print)
+
 			# 全ファイル一括チェック
-			return is_vmd and is_org_pmx and is_rep_pmx and self.checkOutputVmdPath()
+			return is_vmd and is_org_pmx and is_rep_pmx and is_camera_vmd and self.checkOutputVmdPath()
 		
 		return False
 	
@@ -1162,6 +1171,20 @@ class VmdSizingForm3 ( wx.Frame ):
 			else:
 				return True
 
+		# メインスレッドで読み込む
+		if target_ctrl == self.m_camera_fileVmd:
+			if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, is_print):
+				logger.debug("camera_vmd_data クリア: %s", target_ctrl.GetPath())
+				# 読み込めるファイルではない場合、オブジェクトをクリアして終了
+				self.camera_vmd_data = None
+
+				if is_print:
+					print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+
+				return False
+			else:
+				return True
+
 	def LoadOneFile(self, target_ctrl, label_ctrl, ext, is_print=True):
 		# 先頭と末尾の改行は除去
 		target_path = target_ctrl.GetPath().strip()
@@ -1202,6 +1225,7 @@ class VmdSizingForm3 ( wx.Frame ):
 						print("%s 読み込み成功: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
 					else:
 						print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+						return False
 
 				return True
 
@@ -1231,6 +1255,7 @@ class VmdSizingForm3 ( wx.Frame ):
 						print("%s 読み込み成功: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
 					else:
 						print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+						return False
 
 				return True
 
@@ -1260,9 +1285,38 @@ class VmdSizingForm3 ( wx.Frame ):
 						print("%s 読み込み成功: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
 					else:
 						print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+						return False
 
 				return True
 
+		# メインスレッドで読み込む
+		if target_ctrl == self.m_camera_fileVmd:
+			if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, is_print):
+				logger.debug("camera_vmd_data クリア: %s", target_ctrl.GetPath())
+				# 読み込めるファイルではない場合、オブジェクトをクリアして終了
+				self.camera_vmd_data = None
+
+				if is_print:
+					print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+
+				return False
+			else:
+				logger.debug("camera_vmd_data 読み込み: %s", target_ctrl.GetPath())
+				# VMD読み込む
+				new_camera_vmd_data = wrapperutils.read_vmd(target_ctrl.GetPath(), label_ctrl.GetLabel(), is_print)
+
+				if not self.camera_vmd_data or not new_camera_vmd_data or (self.camera_vmd_data and new_camera_vmd_data and self.camera_vmd_data.digest != new_camera_vmd_data.digest):
+					# ハッシュが違う場合、データが違うとみなして更新
+					self.camera_vmd_data = new_camera_vmd_data
+
+				if is_print:
+					if new_camera_vmd_data:
+						print("%s 読み込み成功: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+					else:
+						print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+						return False
+
+				return True
 
 
 	# ファイル切り替え処理実行
@@ -1292,7 +1346,7 @@ class VmdSizingForm3 ( wx.Frame ):
 			self.rep_pmx_data = None
 
 		if target_ctrl == self.m_camera_fileVmd:
-			self.vmd_camera_data = None
+			self.camera_vmd_data = None
 
 		event.Skip()
 		return
@@ -1319,7 +1373,7 @@ class VmdSizingForm3 ( wx.Frame ):
 			return False
 
 		# 読み込み処理が終わったらサイジングできるかチェック
-		wrapperutils.is_all_sizing(self.vmd_data, self.org_pmx_data, self.rep_pmx_data)
+		wrapperutils.is_all_sizing(self.vmd_data, self.org_pmx_data, self.rep_pmx_data, self.camera_vmd_data)
 
 		self.m_Gauge.SetValue(0)
 
@@ -1732,7 +1786,7 @@ class ExecWorkerThread(Thread):
 			, self._notify_window.vmd_choice_values
 			, self._notify_window.rep_choice_values			
 			, self._notify_window.rep_rate_values
-			, self._notify_window.vmd_camera_data
+			, self._notify_window.camera_vmd_data
 			, self._notify_window.m_camera_fileVmd.GetPath()
 			, self._notify_window.m_camera_fileOutputVmd.GetPath()
 		)

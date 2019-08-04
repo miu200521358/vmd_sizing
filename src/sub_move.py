@@ -110,12 +110,16 @@ def cal_center_z_offset(trace_model, replace_model, bone_name):
         # トレース変換先の重心
         replace_center_gravity = (replace_leg_z - replace_ankle_z) / (replace_toe_z - replace_ankle_z)
         logger.info("replace_center_gravity %s, replace_leg_zlength: %s", replace_center_gravity, replace_leg_zlength)
+        
+        # 生成元と同じ重心で、変換先モデルのサイズに合わせて算出
+        replace_model.bones[bone_name].offset_z = replace_ankle_z - (trace_center_gravity * replace_leg_zlength)
+        logger.info("(trace_center_gravity * replace_leg_zlength) %s", (trace_center_gravity * replace_leg_zlength))
+        logger.info("offset_z %s", replace_model.bones[bone_name].offset_z)
        
-        replace_model.bones[bone_name].offset_z = (replace_center_gravity - trace_center_gravity)
-        if replace_leg_zlength < trace_leg_zlength:
-            # 小さい子は、オフセットを小さくする
-            replace_model.bones[bone_name].offset_z *= ( replace_leg_zlength / trace_leg_zlength )
-
+        # replace_model.bones[bone_name].offset_z = (replace_center_gravity - trace_center_gravity) * ( replace_leg_zlength / trace_leg_zlength )
+        # if replace_leg_zlength < trace_leg_zlength:
+        #     # 小さい子は、オフセットを小さくする
+            # replace_model.bones[bone_name].offset_z *= ( replace_leg_zlength / trace_leg_zlength )
 
         print("Zオフセット: %s: %s" % ( bone_name, replace_model.bones[bone_name].offset_z))
 

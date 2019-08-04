@@ -92,13 +92,6 @@ def main(motion, trace_model, replace_model, output_vmd_path, \
 
         writer.write_vmd_file(output_camera_vmd_path, replace_model.name, [], [], camera_frames, motion.lights, motion.shadows, [])
 
-    if not is_success:
-        print("■■■■■■■■■■■■■■■■■")
-        print("■　サイジングに失敗している箇所があります。")
-        print("■　ログを確認してください。")
-        print("■■■■■■■■■■■■■■■■■")
-        print("")
-
     print("■■■■■■■■■■■■■■■■■")
     print("■　変換出力完了: %s" % output_vmd_path)
 
@@ -106,6 +99,8 @@ def main(motion, trace_model, replace_model, output_vmd_path, \
         print("■　カメラ変換出力完了: %s" % output_camera_vmd_path)
 
     print("■■■■■■■■■■■■■■■■■")
+
+    return is_success
 
 
 

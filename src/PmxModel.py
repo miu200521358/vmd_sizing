@@ -84,6 +84,10 @@ class PmxModel():
         logger.info("a_parent_bone_names: %s" , a_parent_bone_names)
 
         for apbn in all_parent_bones:
+            if "肩" in apbn.name:
+                logger.info("肩まできたら終了: %s", apbn.name)
+                break
+
             # ボーンリンクが既定ボーンリンクリストに含まれていない場合
             if apbn.name not in ss_parent_bone_names:
                 # かつ、許容範囲のボーン名ではない場合（準標準ボーンまで）
@@ -96,7 +100,12 @@ class PmxModel():
                             break
 
                     if not is_adjust:
-                        print("サイジング可能範囲外表示ボーン: %s" % apbn.name)
+                        print("■■■■■■■■■■■■■■■■■")
+                        print("■　**WARNING**　")
+                        print("■　モデルの腕系ボーンにサイジング可能範囲外のボーンがあります。")
+                        print("■　モデル: %s" % self.name)
+                        print("■　ボーン: %s" % apbn.name)
+                        print("■■■■■■■■■■■■■■■■■")
                         return False
         
         # ボーンチェックがOKの場合、準標準ボーンのウェイト位置チェック
@@ -117,7 +126,12 @@ class PmxModel():
             # ボーンの位置と頂点位置が一致している場合、TRUE
             if parent_name and child_name and not self.is_in_range_bone_vertex(b_name, parent_name, child_name):
                 logger.info("ボーン位置と頂点位置がずれている: %s", b_name)
-                print("ボーンと頂点がズレている可能性があります。ボーン名: %s" % b_name)
+                print("■■■■■■■■■■■■■■■■■")
+                print("■　**WARNING**　")
+                print("■　ボーンと頂点がズレている可能性があります。")
+                print("■　モデル: %s" % self.name)
+                print("■　ボーン: %s" % b_name)
+                print("■■■■■■■■■■■■■■■■■")
                 return False
             else:
                 logger.info("ボーン位置と頂点位置が一致: %s", b_name)

@@ -59,10 +59,21 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
         # 作成元モデルの最も近いボーン名と同じボーンの位置を、変換先モデルから取得する
         rep_bone_global_pos = create_bone_global_3ds(replace_model, motion.frames, rep_body_links, cf.frame, rep_link_names, org_nearest_bone_name)
 
-        # 最も近いボーンの相対位置を、変換先モデルの縮尺に合わせる
-        cf.position.setX( rep_bone_global_pos.x() + (org_nearest_bone_relative_pos.x() * xz_ratio) )
-        cf.position.setY( rep_bone_global_pos.y() + (org_nearest_bone_relative_pos.y() * height_ratio) )
-        cf.position.setZ( rep_bone_global_pos.z() + (org_nearest_bone_relative_pos.z() * xz_ratio) )
+        if cf.length == 0 and height_ratio < 1:
+            # 距離０の場合、とりあえず比率をかけないで、距離を維持する
+            cf.position.setX( rep_bone_global_pos.x() + org_nearest_bone_relative_pos.x() )
+            cf.position.setY( rep_bone_global_pos.y() + org_nearest_bone_relative_pos.y() )
+            cf.position.setZ( rep_bone_global_pos.z() + org_nearest_bone_relative_pos.z() )
+
+            # 角度を調整する
+            cf.euler.setX( cf.euler.x() * xz_ratio )
+            cf.euler.setY( cf.euler.y() * height_ratio )
+            cf.euler.setZ( cf.euler.z() * xz_ratio )
+        else:
+            # 最も近いボーンの相対位置を、変換先モデルの縮尺に合わせる
+            cf.position.setX( rep_bone_global_pos.x() + (org_nearest_bone_relative_pos.x() * xz_ratio) )
+            cf.position.setY( rep_bone_global_pos.y() + (org_nearest_bone_relative_pos.y() * height_ratio) )
+            cf.position.setZ( rep_bone_global_pos.z() + (org_nearest_bone_relative_pos.z() * xz_ratio) )
 
         # 距離の行列計算
         mat = QMatrix4x4()
@@ -78,7 +89,7 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
         # camera_pos = mat.map(QVector3D())
         # ローカルZ方向に離れる
         logger.info("cf.length: %s", cf.length)
-        if cf.length > 0 and head_ratio < 1 and height_ratio < 1:
+        if cf.length >= 0 and head_ratio < 1 and height_ratio < 1:
             # マイナス距離で、頭身が小さい場合、符号を逆転させた倍率で距離を調整する
             minus_length_ratio = height_ratio - head_ratio if head_ratio > height_ratio else head_ratio - height_ratio
             logger.info("minus_length_ratio: %s", minus_length_ratio)
@@ -254,4 +265,4 @@ def get_head_height(model):
         # 顔の大きさ / 全身の高さ　で頭身算出
         return total_height / face_length, face_length, total_height, model.bones["頭"].position.y()
     
-    return 1, 1, 1
+    return 1, 1, 1, 1

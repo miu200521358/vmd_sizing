@@ -73,7 +73,8 @@ def is_valid_file(file_path, file_type, ext, is_print=True):
     
     return True
 
-def is_all_sizing(motion, org_pmx, rep_pmx, output_vmd_path=None):
+def is_all_sizing(motion, org_pmx, rep_pmx, camera_motion, output_vmd_path=None):
+    
     if org_pmx and rep_pmx and motion:
         not_org_bones = []
         not_org_morphs = []
@@ -171,6 +172,8 @@ def is_all_sizing(motion, org_pmx, rep_pmx, output_vmd_path=None):
                 print_method("■　腕スタンス補正・手首位置合わせ処理をスキップします。")
                 print_method("■■■■■■■■■■■■■■■■■")
         
+            is_shortage = True
+
         if not rep_pmx.can_arm_sizing:
             # 変換先モデルの腕構造チェック
             print_methods = []
@@ -186,11 +189,42 @@ def is_all_sizing(motion, org_pmx, rep_pmx, output_vmd_path=None):
                 print_method("■　変換先モデルの腕構造が標準・準標準ボーン構造でない可能性があります。")
                 print_method("■　腕スタンス補正・手首位置合わせ処理をスキップします。")
                 print_method("■■■■■■■■■■■■■■■■■")
+        
+            is_shortage = True
 
-        if is_shortage == False and not output_vmd_path:
-            return True
+        if motion.motion_cnt == 0:
+            print_methods = []
+            if output_vmd_path:
+                error_file_logger = utils.create_error_file_logger(motion, org_pmx, rep_pmx, output_vmd_path)
+                print_methods = [print, error_file_logger.info]
+            else:
+                print_methods = [print]
 
-    return False
+            for print_method in print_methods:
+                print_method("■■■■■■■■■■■■■■■■■")
+                print_method("■　**WARNING**　")
+                print_method("■　ボーンモーションデータにキーフレームが登録されていません。")
+                print_method("■■■■■■■■■■■■■■■■■")
+        
+            is_shortage = True
+
+        if camera_motion and camera_motion.camera_cnt == 0:
+            print_methods = []
+            if output_vmd_path:
+                error_file_logger = utils.create_error_file_logger(motion, org_pmx, rep_pmx, output_vmd_path)
+                print_methods = [print, error_file_logger.info]
+            else:
+                print_methods = [print]
+
+            for print_method in print_methods:
+                print_method("■■■■■■■■■■■■■■■■■")
+                print_method("■　**WARNING**　")
+                print_method("■　カメラモーションデータにキーフレームが登録されていません。")
+                print_method("■■■■■■■■■■■■■■■■■")
+
+            is_shortage = True
+
+    return is_shortage
 
 def read_vmd(path, filetype="vmd", is_print=True):
     if is_valid_file(path, filetype, ".vmd", is_print) == False:
@@ -317,18 +351,25 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
         # カメラVMD読み込み
         if not camera_motion and camera_vmd_path and os.path.exists(camera_vmd_path):
             camera_motion = read_vmd(camera_vmd_path)
-        else:
-            camera_motion = None
         
         if motion and org_pmx and rep_pmx:
             # ファイル出力タイプでサイジングチェック
-            is_all_sizing(motion, org_pmx, rep_pmx, output_vmd_path)
+            is_shortage = is_all_sizing(motion, org_pmx, rep_pmx, camera_motion, output_vmd_path)
 
             # 実処理実行
             # 読み込んだモーションデータそのものを弄らないよう、コピーした結果を渡す
-            main.main(copy.deepcopy(motion), org_pmx, rep_pmx, output_vmd_path, \
+            is_success = main.main(copy.deepcopy(motion), org_pmx, rep_pmx, output_vmd_path, \
                 is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, vmd_choice_values, rep_choice_values, rep_rate_values, \
                 camera_motion, camera_vmd_path, output_camera_vmd_path)
+
+            logger.info("is_shortage: %s, is_success: %s", is_shortage, is_success)
+
+            if is_shortage or not is_success:
+                print("■■■■■■■■■■■■■■■■■")
+                print("■　サイジングに失敗している箇所があります。")
+                print("■　ログを確認してください。")
+                print("■■■■■■■■■■■■■■■■■")
+                print("")
 
             # 実行後、出力ファイル存在チェック
             try:
