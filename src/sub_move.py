@@ -77,7 +77,7 @@ def exec(motion, trace_model, replace_model, output_vmd_path):
 
 
 def cal_center_z_offset(trace_model, replace_model, bone_name):
-    if bone_name in trace_model.bones and bone_name in replace_model.bones and "左足首" in trace_model.bones and "左足首" in replace_model.bones and "左足" in trace_model.bones and "左足" in replace_model.bones and "左つま先" in trace_model.bones and "左つま先" in replace_model.bones:
+    if bone_name in trace_model.bones and bone_name in replace_model.bones and "左足首" in trace_model.bones and "左足首" in replace_model.bones and "左足" in trace_model.bones and "左足" in replace_model.bones:
         # 移植元にも移植先にも対象ボーンがある場合
         # 作成元左足首のZ位置
         trace_ankle_z = trace_model.bones["左足首"].position.z()
@@ -110,8 +110,12 @@ def cal_center_z_offset(trace_model, replace_model, bone_name):
         # トレース変換先の重心
         replace_center_gravity = (replace_leg_z - replace_ankle_z) / (replace_toe_z - replace_ankle_z)
         logger.info("replace_center_gravity %s, replace_leg_zlength: %s", replace_center_gravity, replace_leg_zlength)
-        
-        replace_model.bones[bone_name].offset_z = (replace_center_gravity - trace_center_gravity) * ( replace_leg_zlength / trace_leg_zlength )
+       
+        replace_model.bones[bone_name].offset_z = (replace_center_gravity - trace_center_gravity)
+        if replace_leg_zlength < trace_leg_zlength:
+            # 小さい子は、オフセットを小さくする
+            replace_model.bones[bone_name].offset_z *= ( replace_leg_zlength / trace_leg_zlength )
+
 
         print("Zオフセット: %s: %s" % ( bone_name, replace_model.bones[bone_name].offset_z))
 

@@ -110,13 +110,14 @@ class PmxModel():
                 continue
 
             # 親ボーン名(次の要素)
-            parent_name = None if b_idx >= len(a_parent_bone_names) - 1 else a_parent_bone_names[b_idx + 1]
+            parent_name = None if b_idx >= len(ss_parent_bone_names) - 1 else ss_parent_bone_names[b_idx + 1]
             # 子ボーン名(前の要素)
-            child_name = None if b_idx == 0 else a_parent_bone_names[b_idx - 1]
+            child_name = None if b_idx == 0 else ss_parent_bone_names[b_idx - 1]
             logger.info("b: %s, p: %s, c: %s", b_name, parent_name, child_name)
             # ボーンの位置と頂点位置が一致している場合、TRUE
             if parent_name and child_name and not self.is_in_range_bone_vertex(b_name, parent_name, child_name):
                 logger.info("ボーン位置と頂点位置がずれている: %s", b_name)
+                print("ボーンと頂点がズレている可能性があります。ボーン名: %s" % b_name)
                 return False
             else:
                 logger.info("ボーン位置と頂点位置が一致: %s", b_name)
@@ -339,9 +340,10 @@ class PmxModel():
         # 指定ボーン名を含むボーンINDEXリスト
         bone_idx_list = []
         for bk, bv in self.bones.items():
-            if ("左つま先" in bk or "左足" in bk) and bv.index in self.vertices:
+            if ("左つま先" in bk or "左足" in bk) and not "指" in bk and bv.index in self.vertices:
                 # print("bk: %s, idx: %s v: %s" % (bk, bv.index, bv.index in self.vertices))
                 # ボーン名が指定文字列を含んでおり、かつそのボーンにウェイトが乗っている頂点がある場合、対象
+                # 明示的に指にウェイトが乗っている場合、除外する
                 bone_idx_list.append(bv.index)
 
         logger.info("bone_idx_list: %s", bone_idx_list)
@@ -350,6 +352,10 @@ class PmxModel():
             # ウェイトボーンがない場合、つま先ボーン位置
             if "左つま先" in self.bones:
                 return self.bones["左つま先"].position
+            elif "左つま先ＩＫ" in self.bones:
+                return self.bones["左つま先ＩＫ"].position
+            elif "左足首" in self.bones:
+                return self.bones["左足首"].position
             else:
                 return QVector3D()
 
@@ -378,6 +384,10 @@ class PmxModel():
             if "左つま先" in self.bones:
                 # 結果的に頂点が見つからなかった場合、つま先ボーン位置
                 return self.bones["左つま先"].position
+            elif "左つま先ＩＫ" in self.bones:
+                return self.bones["左つま先ＩＫ"].position
+            elif "左足首" in self.bones:
+                return self.bones["左足首"].position
             else:
                 # つま先ボーンがない場合、ボーンリストの0番目の位置を返す
                 return self.bones[self.bone_indexes[bone_idx_list[0]]].position
