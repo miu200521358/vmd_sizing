@@ -19,8 +19,8 @@ class PmxModel():
         self.english_name = ''
         self.comment = ''
         self.english_comment = ''
-        # 頂点データ
-        self.vertices = []
+        # 頂点データ（キー：ボーンINDEX、値：頂点データリスト）
+        self.vertices = {}
         # 面データ
         self.indices = []
         # テクスチャデータ
@@ -41,6 +41,8 @@ class PmxModel():
         self.joints = {}
         # ハッシュ値
         self.digest = None
+        # 腕がサイジング可能（標準・準標準ボーン構造）か
+        self.can_arm_sizing = True
 
     # 上半身の頂点を取得する
     def get_upper_vertices(self, head_links):
@@ -53,16 +55,176 @@ class PmxModel():
                 break
             # if l.position.y() < min_upper_y and l.name not in ["センター", "グルーブ"]:
             #     min_upper_y = l.position.y()
-            
-        for v in self.vertices:
-            for l in head_links:
-                if v.deform.index0 == l.index and v.position.y() > min_upper_y:
-                    # 上半身系のボーンにウェイトが乗っていて、かつウェイトボーンのY位置より上の場合、頂点追加
-                    upper_vertices.append(v)
 
-                    break
+        for l in head_links:
+            if l.index in self.vertices:
+                for v in self.vertices[l.index]:
+                    if v.position.y() > min_upper_y:
+                        # 上半身系のボーンにウェイトが乗っていて、かつウェイトボーンのY位置より上の場合、頂点追加
+                        upper_vertices.append(v)
 
         return upper_vertices
+    
+    # 腕系ボーンがサイジング可能かチェック
+    def check_arm_bone_can_sizing(self):
+        if "左人指１" in self.bones:
+            ss_parent_bones, _ = self.create_link_2_top("左人指１")
+            all_parent_bones, _ = self.create_link_2_top_all("左人指１")
+        elif "左手首" in self.bones:
+            # 指がない場合、手首まででチェック
+            ss_parent_bones, _ = self.create_link_2_top("左手首")
+            all_parent_bones, _ = self.create_link_2_top_all("左手首")
+        else:
+            # 手首も指もない場合、サイジング不可
+            return False
+
+        ss_parent_bone_names = [p.name for p in ss_parent_bones]
+        logger.info("ss_parent_bone_names: %s" , ss_parent_bone_names)
+        a_parent_bone_names = [p.name for p in all_parent_bones]
+        logger.info("a_parent_bone_names: %s" , a_parent_bone_names)
+
+        for apbn in all_parent_bones:
+            # ボーンリンクが既定ボーンリンクリストに含まれていない場合
+            if apbn.name not in ss_parent_bone_names:
+                # かつ、許容範囲のボーン名ではない場合（準標準ボーンまで）
+                if apbn.name not in ["左肩C", "グルーブ"] and self.bones[apbn.name].display == True:
+                    # 既定ボーンリストと同じ位置のボーンである場合、調整系とみなしてスルー
+                    is_adjust = False
+                    for spbn in ss_parent_bones:
+                        if spbn.position == apbn.position:
+                            is_adjust = True
+                            break
+
+                    if not is_adjust:
+                        print("サイジング可能範囲外表示ボーン: %s" % apbn.name)
+                        return False
+        
+        # ボーンチェックがOKの場合、準標準ボーンのウェイト位置チェック
+        for b_idx, b_name in enumerate(ss_parent_bone_names):
+            if "肩" in b_name:
+                logger.info("肩まできたら終了: %s", b_name)
+                break
+
+            if self.bones[b_name].fixed_axis != QVector3D():
+                logger.info("軸制限ボーンは対象外: %s", b_name)
+                continue
+
+            # 親ボーン名(次の要素)
+            parent_name = None if b_idx >= len(a_parent_bone_names) - 1 else a_parent_bone_names[b_idx + 1]
+            # 子ボーン名(前の要素)
+            child_name = None if b_idx == 0 else a_parent_bone_names[b_idx - 1]
+            logger.info("b: %s, p: %s, c: %s", b_name, parent_name, child_name)
+            # ボーンの位置と頂点位置が一致している場合、TRUE
+            if parent_name and child_name and not self.is_in_range_bone_vertex(b_name, parent_name, child_name):
+                logger.info("ボーン位置と頂点位置がずれている: %s", b_name)
+                return False
+            else:
+                logger.info("ボーン位置と頂点位置が一致: %s", b_name)
+        
+        # 全部許容範囲内ならOK
+        return True
+
+    # 頭ボーンのウェイトが乗っている頂点を取得する
+    def get_head_upper_vertex_position(self):
+        # 頭の頂点位置
+        max_head_upper_pos, _ = self.get_bone_vertex_position("頭", self.bones["頭"].position, define_is_target_head_upper())
+
+        return max_head_upper_pos
+    
+    # 指定ボーンとそのウェイト頂点が一致していなければFalse終了
+    def is_in_range_bone_vertex(self, bone_name, parent_name, child_name):
+        # ボーン位置
+        bone_pos = self.bones[bone_name].position
+        # 親ボーン位置
+        parent_bone_pos = self.bones[parent_name].position
+        # 子ボーン位置
+        child_bone_pos = self.bones[child_name].position
+        # ボーンと表示先の間の位置をチェック対象とする
+        target_pos_max = bone_pos + ((parent_bone_pos - bone_pos) / 2) - QVector3D(-0.1, -0.1, 0)
+        target_pos_min = bone_pos + ((child_bone_pos - bone_pos) / 2) + QVector3D(-0.1, -0.1, 0)
+
+        logger.info("bone_name: %s", bone_name)
+        logger.info("bone_pos: %s", bone_pos)
+        logger.info("parent_bone_pos: %s", parent_bone_pos)
+        logger.info("child_bone_pos: %s", child_bone_pos)
+        logger.info("target_pos_min: %s", target_pos_min)
+        logger.info("target_pos_max: %s", target_pos_max)
+
+        # logger.info("self.vertices: %s", self.vertices.keys())
+
+        # 指定ボーン名を含むボーンINDEXリスト
+        bone_idx_list = []
+        for bk, bv in self.bones.items():
+            if (bone_name == bk or parent_name == bk or child_name == bk \
+                    or (bone_pos.x() - 0.1 <= bv.position.x() <= bone_pos.x() + 0.1 \
+                        and bone_pos.y() - 0.1 <= bv.position.y() <= bone_pos.y() + 0.1 \
+                        and bone_pos.z() - 0.1 <= bv.position.z() <= bone_pos.z() + 0.1 ) ) \
+                and bv.index in self.vertices:
+                # ボーン名が自身か親か子の場合、対象
+                # ほぼ同じ位置のボーン名の場合、対象
+                bone_idx_list.append(bv.index)
+        
+        if len(bone_idx_list) == 0:
+            logger.info("bone_name: %s, ウェイト頂点がない", bone_name)
+            # ウェイトボーンがない場合、チェック対象外でOK
+            return True
+        
+        logger.info("bone_idx_list: %s", bone_idx_list)
+        
+        for bone_idx in bone_idx_list:
+            for v in self.vertices[bone_idx]:
+                v_pos = v.position
+                # 頂点が、表示範囲内であればOK
+                if target_pos_min.y() <= v_pos.y() <= target_pos_max.y():
+                    logger.info("表示範囲内頂点あり: %s, pos: %s", v.index, v.position)
+                    return True
+                # else:
+                #     logger.info("表示範囲外頂点: %s, pos: %s", v.index, v.position)
+
+        return False
+
+    # 指定ボーンのウェイトの最下と最上頂点の位置を取得する
+    def get_bone_vertex_position(self, bone_name, bone_pos, is_target=None, is_only=False):
+        # 指定ボーン名を含むボーンINDEXリスト
+        bone_idx_list = []
+        for bk, bv in self.bones.items():
+            if ((not is_only and bone_name in bk) or (is_only and bone_name == bk)) and bv.index in self.vertices :
+                # ボーン名が指定文字列を含んでおり、かつそのボーンにウェイトが乗っている頂点がある場合、対象
+                # 特定ボーンのみの場合、ボーン名が一致していることが条件
+                bone_idx_list.append(bv.index)
+
+        if len(bone_idx_list) == 0:
+            logger.info("bone_name: %s, ウェイト頂点がない", bone_name)
+            # ウェイトボーンがない場合、初期値
+            return QVector3D(), QVector3D()        
+
+        logger.info("bone_name: %s, bone_idx_list:%s", bone_name, bone_idx_list)
+        
+        max_bone_upper_pos = QVector3D(0, -99999, 0)
+        min_bone_below_pos = QVector3D(0, 99999, 0)
+        for is_x in [True, False]:
+            for bone_idx in bone_idx_list:
+                # X範囲を制限するか否か
+                for v in self.vertices[bone_idx]:
+                    v_pos = v.position
+                    if ((is_x and v_pos.x() - 0.1 <= bone_pos.x() <= v_pos.x() + 0.1) or not is_x) and ( is_target and is_target(v) or not is_target):
+                        if v_pos.y() < min_bone_below_pos.y() :
+                            # 指定ボーンにウェイトが乗っていて、かつ最下の頂点より下の場合、保持
+                            min_bone_below_pos = v_pos
+                            # print("min_bone_below_pos: %s, %s, %s, %s, %s" % (l.index, l.name, v.index, v.position, v_pos))
+                        
+                        if v_pos.y() > max_bone_upper_pos.y():
+                            # 指定ボーンにウェイトが乗っていて、かつ最上の頂点より上の場合、保持
+                            max_bone_upper_pos = v_pos
+                    
+            if min_bone_below_pos == QVector3D(0, 99999, 0) or max_bone_upper_pos == QVector3D(0, -99999, 0):
+                # X制限をして見つからなかった場合、制限しないでチェック
+                continue
+            else:
+                # X制限をして見つかった場合、終了
+                break
+
+        return max_bone_upper_pos, min_bone_below_pos
     
     # 左右の手首の厚みを取得する
     def get_wrist_thickness_lr(self):
@@ -97,21 +259,31 @@ class PmxModel():
     
     # 手首ウェイトの最下と最上頂点の位置を取得する
     def get_wrist_vertex_position(self, direction, arm_qq, wrist_pos):
-        
+        # 指定ボーン名を含むボーンINDEXリスト
+        bone_idx_list = []
+        for bk, bv in self.bones.items():
+            if "{0}手首".format(direction) in bk and bv.index in self.vertices:
+                # ボーン名が指定文字列を含んでおり、かつそのボーンにウェイトが乗っている頂点がある場合、対象
+                bone_idx_list.append(bv.index)
+
+        if len(bone_idx_list) == 0:
+            # ウェイトボーンがない場合、初期値
+            return QVector3D(), QVector3D()
+
         max_wrist_upper_pos = QVector3D(0, -99999, 0)
         min_wrist_below_pos = QVector3D(0, 99999, 0)
         for is_x in [True, False]:
             # X範囲を制限するか否か
-            for v in self.vertices:
-                # 一旦水平にしたときの頂点位置を算出
-                # mat = QMatrix4x4()
-                # mat.rotate(arm_qq.inverted())
-                # v_pos = mat.mapVector(v.position - self.bones["{0}ひじ".format(direction)].position)
-                v_pos = arm_qq.inverted().rotatedVector(v.position - self.bones["{0}ひじ".format(direction)].position)
-                # logger.debug("v_pos: %s", v_pos)
+            for bone_idx in bone_idx_list:            
+                for v in self.vertices[bone_idx]:
+                    # 一旦水平にしたときの頂点位置を算出
+                    # mat = QMatrix4x4()
+                    # mat.rotate(arm_qq.inverted())
+                    # v_pos = mat.mapVector(v.position - self.bones["{0}ひじ".format(direction)].position)
+                    v_pos = arm_qq.inverted().rotatedVector(v.position - self.bones["{0}ひじ".format(direction)].position)
+                    # logger.debug("v_pos: %s", v_pos)
 
-                for l in self.bones.values():
-                    if "{0}手首".format(direction) in l.name and v.is_deform_index(l.index) and ((is_x and v_pos.x() - 0.1 <= wrist_pos.x() <= v_pos.x() + 0.1) or not is_x):
+                    if ((is_x and v_pos.x() - 0.1 <= wrist_pos.x() <= v_pos.x() + 0.1) or not is_x):
                         if v_pos.y() < min_wrist_below_pos.y() :
                             # if type(v.deform) is PmxModel.Bdef1:
                             #     logger.debug("Bdef1: idx: %s, target: %s, index0: %s", v.index, l.index, v.deform.index0)
@@ -161,29 +333,57 @@ class PmxModel():
             logger.debug("d: %s, from_qq: %s", direction, from_qq.toEulerAngles())
         
         return from_qq
+    
+    # つま先ウェイトの最前頂点の位置を取得する
+    def get_toe_front_vertex_position(self):
+        # 指定ボーン名を含むボーンINDEXリスト
+        bone_idx_list = []
+        for bk, bv in self.bones.items():
+            if ("左つま先" in bk or "左足" in bk) and bv.index in self.vertices:
+                # print("bk: %s, idx: %s v: %s" % (bk, bv.index, bv.index in self.vertices))
+                # ボーン名が指定文字列を含んでおり、かつそのボーンにウェイトが乗っている頂点がある場合、対象
+                bone_idx_list.append(bv.index)
 
-    # 上半身ウェイトの最前頂点の位置を取得する
-    def get_upper_front_position(self, from_bone_name, to_bone_name):
+        logger.info("bone_idx_list: %s", bone_idx_list)
 
-        x_from = self.bones["上半身"].position.x() + ((self.bones[from_bone_name].position.x() - self.bones["上半身"].position.x()) / 2) - 0.1
-        x_to = self.bones["上半身"].position.x() + ((self.bones[to_bone_name].position.x() - self.bones["上半身"].position.x()) / 2) + 0.1
-        # logger.debug("x_from: %s, x_to: %s", x_from, x_to)
+        if len(bone_idx_list) == 0:
+            # ウェイトボーンがない場合、つま先ボーン位置
+            if "左つま先" in self.bones:
+                return self.bones["左つま先"].position
+            else:
+                return QVector3D()
 
-        max_upper_front_pos = QVector3D(0, 0, -1)
-        min_upper_front_pos = QVector3D(0, 0, 99999)
-        for v in self.vertices:
-            for l in self.bones.values():
-                if l.name in ["上半身", "上半身2"] and v.is_deform_index(l.index) and x_from <= v.position.x() <= x_to:
-                    if v.position.z() < self.bones["上半身"].position.z() and v.position.z() < min_upper_front_pos.z():
-                        # 上半身か上半身2のボーンにウェイトが乗っていて、かつ最下の頂点より下の場合、保持
-                        min_upper_front_pos = v.position
-                        logger.debug("min_wrist_below_pos: %s, %s, %s, %s", l.index, l.name, v.index, v.position)
-                    if v.position.z() < self.bones["上半身"].position.z() and v.position.z() > max_upper_front_pos.z():
-                        # 上半身か上半身2のボーンにウェイトが乗っていて、かつ最下の頂点より上の場合、保持
-                        max_upper_front_pos = v.position
-                        logger.debug("max_wrist_below_pos: %s, %s, %s, %s", l.index, l.name, v.index, v.position)
+        min_toe_front_pos = QVector3D(0, 0, 99999)
+        for is_x in [True, False]:
+            # X範囲を制限するか否か
+            for bone_idx in bone_idx_list:            
+                for v in self.vertices[bone_idx]:
+                    v_pos = v.position
+                    if ((is_x and v_pos.x() - 0.1 <= v_pos.x() <= v_pos.x() + 0.1) or not is_x):
+                        if v_pos.z() < min_toe_front_pos.z() :
+                            # つま先のボーンにウェイトが乗っていて、かつ最前の頂点より前の場合、保持
+                            min_toe_front_pos = v_pos
+                            # print("min_wrist_below_pos: %s, %s, %s, %s, %s" % (l.index, l.name, v.index, v.position, v_pos))
 
-        return min_upper_front_pos, max_upper_front_pos
+            if min_toe_front_pos == QVector3D(0, 0, 99999):
+                # X制限をして見つからなかった場合、制限しないでチェック
+                continue
+            else:
+                # X制限をして見つかった場合、終了
+                break
+
+        # print("min_toe_front_pos: %s", min_toe_front_pos)
+
+        if min_toe_front_pos == QVector3D(0, 0, 99999):
+            if "左つま先" in self.bones:
+                # 結果的に頂点が見つからなかった場合、つま先ボーン位置
+                return self.bones["左つま先"].position
+            else:
+                # つま先ボーンがない場合、ボーンリストの0番目の位置を返す
+                return self.bones[self.bone_indexes[bone_idx_list[0]]].position
+
+        # つま先頂点が見つかった場合、頂点位置
+        return min_toe_front_pos
 
     # 左右のボーンリンクを生成する
     def create_link_2_top_lr(self, start_type_bone, start_type_bone_second=None):
@@ -224,6 +424,7 @@ class PmxModel():
         return None
 
     # ボーンリンクを生成する
+    # 親子関係は標準＋準標準まで
     def create_link_2_top(self, start_bone, ik_links=None, ik_indexes=None):
         if not ik_links:
             # 順番を保持した辞書
@@ -335,6 +536,36 @@ class PmxModel():
         , "右つま先ＩＫ": ["右足ＩＫ"]
     }
     
+    # すべてのボーン情報からボーンリンクを生成する
+    def create_link_2_top_all(self, start_bone, ik_links=None, ik_indexes=None):
+        if not ik_links:
+            # 順番を保持した辞書
+            ik_links = []
+            ik_indexes = OrderedDict()
+        
+        start_type_bone = start_bone
+        if start_bone.startswith("右") or start_bone.startswith("左"):
+            # 左右から始まってたらそれは除く
+            start_type_bone = start_bone[1:]
+        
+        # 自分をリンクに登録
+        ik_indexes[start_type_bone] = len(ik_indexes)
+        ik_links.append(self.bones[start_bone])
+
+        parent_name = None
+        if self.bones[start_bone].parent_index >= 0:
+            # 親ボーンが存在している場合
+            parent_name = self.bone_indexes[self.bones[start_bone].parent_index]
+        else:
+            # 親ボーンが存在していない場合、終了
+            return ik_links, ik_indexes
+        
+        logger.debug("start_bone: %s. parent_name: %s, start_type_bone: %s", start_bone, parent_name, start_type_bone)
+        
+        # 親をたどる
+        return self.create_link_2_top_all(parent_name, ik_links, ik_indexes )    
+
+
     # 頂点構造 ----------------------------
     class Vertex():
         def __init__(self, index, position, normal, uv, extended_uvs, deform, edge_factor):
@@ -406,6 +637,9 @@ class PmxModel():
     class Bdef1():
         def __init__(self, index0):
             self.index0 = index0
+        
+        def get_idx_list(self):
+            return [self.index0]
             
         def __str__(self):
             return "<Bdef1 {0}>".format(self.index0)
@@ -415,6 +649,9 @@ class PmxModel():
             self.index0 = index0
             self.index1 = index1
             self.weight0 = weight0
+            
+        def get_idx_list(self):
+            return [self.index0, self.index1]
             
         def __str__(self):
             return "<Bdef2 {0}, {1}, {2}>".format(self.index0, self.index1, self.weight0)
@@ -430,6 +667,9 @@ class PmxModel():
             self.weight2 = weight2
             self.weight3 = weight3
             
+        def get_idx_list(self):
+            return [self.index0, self.index1, self.index2, self.index3]
+
         def __str__(self):
             return "<Bdef4 {0}:{1}, {2}:{3}, {4}:{5}, {6}:{7}>".format(
                     self.index0, self.index1, self.index2, self.index3,
@@ -444,6 +684,9 @@ class PmxModel():
             self.sdef_r0 = sdef_r0
             self.sdef_r1 = sdef_r1        
             
+        def get_idx_list(self):
+            return [self.index0, self.index1]
+
         def __str__(self):
             return "<Sdef {0}, {1}, {2}, {3} {4} {5}>".format(
                     self.index0, self.index1, self.weight0, 
@@ -458,6 +701,9 @@ class PmxModel():
             self.sdef_r0 = sdef_r0
             self.sdef_r1 = sdef_r1        
             
+        def get_idx_list(self):
+            return [self.index0, self.index1]
+
         def __str__(self):
             return "<Sdef {0}, {1}, {2}, {3} {4} {5}>".format(
                     self.index0, self.index1, self.weight0, 
@@ -842,3 +1088,10 @@ class SizingException(Exception):
     def __init__(self, message):
         self.message=message
 
+
+# 頭部頂点の合致条件
+# ウェイトがすべて頭に乗っている頂点。
+def define_is_target_head_upper():
+    def is_target(v):
+        return type(v.deform) is PmxModel.Bdef1
+    return is_target

@@ -18,6 +18,10 @@ def exec(motion, trace_model, replace_model, output_vmd_path):
     if motion.motion_cnt > 0:
         # -----------------------------------------------------------------
         # 腕の角度補正
+
+        if not trace_model.can_arm_sizing or not replace_model.can_arm_sizing:
+            # 腕構造チェックがFALSEの場合、スタンス補正なし
+            return False
                     
         # センターから手首までの位置(作成元モデル)
         all_org_wrist_links, _ = trace_model.create_link_2_top_lr("手首")
@@ -75,6 +79,7 @@ def exec(motion, trace_model, replace_model, output_vmd_path):
                         if bf.key == True:
                             bf.rotation = bf.rotation * arm_stance_qqs["手首"]
 
+    print("腕スタンス補正終了")
     return True
 
 

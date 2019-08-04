@@ -14,7 +14,7 @@ from VmdWriter import VmdWriter, VmdBoneFrame
 from VmdReader import VmdReader
 from PmxModel import PmxModel, SizingException
 from PmxReader import PmxReader
-import utils, sub_move, sub_arm_stance, sub_avoidance, sub_arm_ik, sub_morph, sub_camera
+import utils, sub_move, sub_arm_stance, sub_avoidance, sub_arm_ik, sub_morph, sub_camera, sub_camera2
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VmdSizing").getChild(__name__)
@@ -24,8 +24,12 @@ level = {0:logging.ERROR,
             2:logging.INFO,
             3:logging.DEBUG}
 
-def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, vmd_choice_values, rep_choice_values, rep_rate_values):   
+def main(motion, trace_model, replace_model, output_vmd_path, \
+    is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, vmd_choice_values, rep_choice_values, rep_rate_values, \
+    camera_motion, camera_vmd_path, output_camera_vmd_path):   
     print("モーション: %s" % motion.path)
+    if camera_motion:
+        print("カメラモーション: %s" % camera_motion.path)
     print("作成元: %s" % trace_model.path)
     print("変換先: %s" % replace_model.path)
 
@@ -41,17 +45,18 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
     # 腕スタンス補正処理
     is_success = sub_arm_stance.exec(motion, trace_model, replace_model, output_vmd_path) and is_success
 
-    # 頭部と腕の接触回避処理
-    is_success = sub_avoidance.exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik) and is_success
-
     # 腕IK処理
     is_success = sub_arm_ik.exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_hand_ik, hand_distance, org_motion_frames) and is_success
 
+    # カメラ処理
+    # is_success = sub_camera.exec(motion, trace_model, replace_model, output_vmd_path) and is_success
+    is_success = sub_camera2.exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, camera_motion) and is_success
+
+    # 頭部と腕の接触回避処理
+    is_success = sub_avoidance.exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik) and is_success
+
     # モーフ処理
     is_success = sub_morph.exec(motion, trace_model, replace_model, output_vmd_path, vmd_choice_values, rep_choice_values, rep_rate_values) and is_success
-
-    # カメラ処理
-    is_success = sub_camera.exec(motion, trace_model, replace_model, output_vmd_path) and is_success
 
     # ディクショナリ型の疑似二次元配列から、一次元配列に変換
     bone_frames = []
@@ -70,16 +75,22 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
             # logger.debug("k: %s, mf: %s, %s", k, mf.frame, mf.ratio)
             morph_frames.append(mf)
 
-    camera_frames = []
-    for cf in motion.cameras:
-        camera_frames.append(cf)
-
     logger.debug("bone_frames: %s", len(bone_frames))
     logger.debug("morph_frames: %s", len(morph_frames))
-    logger.debug("motion.cameras: %s", len(motion.cameras))
 
     writer = VmdWriter()
-    writer.write_vmd_file(output_vmd_path, replace_model.name, bone_frames, morph_frames, motion.cameras, motion.lights, motion.shadows, motion.showiks)
+    
+    # ボーンモーション生成
+    writer.write_vmd_file(output_vmd_path, replace_model.name, bone_frames, morph_frames, [], [], [], motion.showiks)
+
+    camera_frames = []
+    
+    if camera_motion:
+        # カメラモーション生成
+        for cf in camera_motion.cameras:
+            camera_frames.append(cf)
+
+        writer.write_vmd_file(output_camera_vmd_path, replace_model.name, [], [], camera_frames, motion.lights, motion.shadows, [])
 
     if not is_success:
         print("■■■■■■■■■■■■■■■■■")
@@ -90,6 +101,10 @@ def main(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
 
     print("■■■■■■■■■■■■■■■■■")
     print("■　変換出力完了: %s" % output_vmd_path)
+
+    if camera_motion:
+        print("■　カメラ変換出力完了: %s" % output_camera_vmd_path)
+
     print("■■■■■■■■■■■■■■■■■")
 
 

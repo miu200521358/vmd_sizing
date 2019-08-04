@@ -34,6 +34,9 @@ def exec(motion, trace_model, replace_model, output_vmd_path):
     # サイズ比較
     # lengths = compare_length(trace_model, replace_model)
 
+    # # 元モデルのセンターのリンク生成
+    # org_center_links, _ = trace_model.create_link_2_top_one( "センター" )
+
     if motion.motion_cnt > 0:
         # -----------------------------------------------------------------
         # 移動ボーン縮尺
@@ -49,46 +52,74 @@ def exec(motion, trace_model, replace_model, output_vmd_path):
                         # Zオフセットが入っている場合、オフセット調整
                         bf.position.setZ(bf.position.z() + replace_model.bones[k].offset_z) 
 
-                print("調整終了: %s" % k)
+                        # logger.info("offset f: %s", bf.frame)
+                        # # 元モデルの向いている回転量
+                        # org_upper_direction_qq = utils.calc_upper_direction_qq(trace_model, org_center_links, motion.frames, bf)
+                        # logger.info("org_upper_direction_qq: %s", org_upper_direction_qq.toEulerAngles())
+                        # # 正面向きのセンター位置
+                        # mat = QMatrix4x4()
+                        # mat.rotate(org_upper_direction_qq.inverted())
+                        # front_center_pos = mat.mapVector(bf.position)
+                        # logger.info("front_center_pos: %s", front_center_pos)
+                        # front_center_pos.setZ(front_center_pos.z() + replace_model.bones[k].offset_z)
+                        # logger.info("front_center_pos offset: %s", front_center_pos)
+                        # # 元の向きに戻した時のセンター位置
+                        # mat = QMatrix4x4()
+                        # mat.rotate(org_upper_direction_qq)
+                        # center_pos = mat.mapVector(front_center_pos)
+                        # logger.info("center_pos: %s", center_pos)
+                        # bf.position = center_pos
+
+                print("移動補正: %s" % k)
 
     return True
 
 
 
 def cal_center_z_offset(trace_model, replace_model, bone_name):
-    if bone_name in trace_model.bones and bone_name in replace_model.bones and "左足首" in trace_model.bones and "左足首" in replace_model.bones and "左足" in trace_model.bones and "左足" in replace_model.bones and "左つま先ＩＫ" in trace_model.bones and "左つま先ＩＫ" in replace_model.bones:
+    if bone_name in trace_model.bones and bone_name in replace_model.bones and "左足首" in trace_model.bones and "左足首" in replace_model.bones and "左足" in trace_model.bones and "左足" in replace_model.bones and "左つま先" in trace_model.bones and "左つま先" in replace_model.bones:
         # 移植元にも移植先にも対象ボーンがある場合
         # 作成元左足首のZ位置
         trace_ankle_z = trace_model.bones["左足首"].position.z()
+        logger.info("trace_ankle_z: %s", trace_ankle_z)
         # 作成元左足のZ位置
         trace_leg_z = trace_model.bones["左足"].position.z()
-        # 作成元つま先IKのZ位置
-        trace_toe_z = trace_model.bones["左つま先ＩＫ"].position.z()
+        logger.info("trace_leg_z: %s", trace_leg_z)
+        # 作成元つま先のZ位置
+        trace_toe_z = trace_model.get_toe_front_vertex_position().z()
+        logger.info("trace_toe_z: %s", trace_toe_z)
 
         # トレース変換先左足首のZ位置
         replace_ankle_z = replace_model.bones["左足首"].position.z()
+        logger.info("replace_ankle_z: %s", replace_ankle_z)
         # トレース変換先左足のZ位置
         replace_leg_z = replace_model.bones["左足"].position.z()
-        # トレース変換先つま先IKのZ位置
-        replace_toe_z = replace_model.bones["左つま先ＩＫ"].position.z()
+        logger.info("replace_leg_z: %s", replace_leg_z)
+        # トレース変換先つま先のZ位置
+        replace_toe_z = replace_model.get_toe_front_vertex_position().z()
+        logger.info("replace_toe_z: %s", replace_toe_z)
 
         # 作成元の足の長さ
         trace_leg_zlength = trace_ankle_z - trace_toe_z
         # 作成元の重心
         trace_center_gravity = (trace_leg_z - trace_ankle_z) / (trace_toe_z - trace_ankle_z)
-        logger.debug("trace_center_gravity %s, trace_leg_zlength: %s", trace_center_gravity, trace_leg_zlength)
+        logger.info("trace_center_gravity %s, trace_leg_zlength: %s", trace_center_gravity, trace_leg_zlength)
         
         # トレース変換先の足の長さ
         replace_leg_zlength = replace_ankle_z - replace_toe_z
         # トレース変換先の重心
         replace_center_gravity = (replace_leg_z - replace_ankle_z) / (replace_toe_z - replace_ankle_z)
-        logger.debug("replace_center_gravity %s, replace_leg_zlength: %s", replace_center_gravity, replace_leg_zlength)
+        logger.info("replace_center_gravity %s, replace_leg_zlength: %s", replace_center_gravity, replace_leg_zlength)
         
         replace_model.bones[bone_name].offset_z = (replace_center_gravity - trace_center_gravity) * ( replace_leg_zlength / trace_leg_zlength )
 
         print("Zオフセット: %s: %s" % ( bone_name, replace_model.bones[bone_name].offset_z))
+
+        return True
     else:
         print("Zオフセットなし: %s: %s" % ( bone_name, replace_model.bones[bone_name].offset_z))
+
+        return False
 
 def calc_leg_ik_ratio(trace_model, replace_model):
     if "左足" in trace_model.bones and "左足" in replace_model.bones and "左ひざ" in trace_model.bones and "左ひざ" in replace_model.bones and "左足首" in trace_model.bones and "左足首" in replace_model.bones and "センター" in trace_model.bones and "センター" in replace_model.bones:
@@ -118,7 +149,7 @@ def calc_leg_ik_ratio(trace_model, replace_model):
 
         return xz_ratio, y_ratio, {"左": 1, "右": 1}
 
-    print("足、ひざ、足首、センターのいずれかのボーンが不足しているため、足の長さの比率が測れませんでした")
+    print("「足」「ひざ」「足首」「センター」のいずれかのボーンが不足しているため、足の長さの比率が測れませんでした")
     return 1, 1, {"左": 1, "右": 1}
 
 def adjust_center(trace_model, replace_model, bone_name):

@@ -23,6 +23,11 @@ def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_h
     # -----------------------------------------------------------------
     # 手首位置合わせ処理
     if motion.motion_cnt > 0 and not is_avoidance and is_hand_ik:
+
+        if not trace_model.can_arm_sizing or not replace_model.can_arm_sizing:
+            # 腕構造チェックがFALSEの場合、スタンス補正なし
+            return False
+                
         # センターから手首までの位置(トレース先モデル)
         all_rep_wrist_links, _ = replace_model.create_link_2_top_lr("手首")
 

@@ -53,6 +53,21 @@ def main(vmd_path):
 
         print("モーフCSV出力成功: %s" % morph_fpath)
 
+        # カメラ出力
+        camera_fpath = re.sub(r'\.vmd$', "_camera.csv", vmd_path)
+        with open(camera_fpath, encoding='cp932', mode='w') as f:
+            
+            s = "フレーム,位置X,位置Y,位置Z,回転X,回転Y,回転Z,距離,視野角,補間曲線"
+            f.write(s)
+            f.write("\n")
+
+            for cf in motion.cameras:
+                s = "{0},{1},{2},{3},{4},{5},{6},{7},{8},{9}".format(cf.frame, cf.position.x(), cf.position.y(), cf.position.z(), cf.euler.x(), cf.euler.y(), cf.euler.z(), cf.length, cf.angle,','.join([str(i) for i in cf.complement]))
+                f.write(s)
+                f.write("\n")
+
+        print("カメラCSV出力成功: %s" % camera_fpath)
+
     except Exception:
         print("■■■■■■■■■■■■■■■■■")
         print("■　**ERROR**　")
