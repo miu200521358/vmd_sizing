@@ -35,7 +35,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.01_β08", pos = wx.DefaultPosition, size = wx.Size( 600,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.01_β09", pos = wx.DefaultPosition, size = wx.Size( 600,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -1067,55 +1067,56 @@ class VmdSizingForm3 ( wx.Frame ):
 				is_camera_vmd = self.LoadOneFile(self.m_camera_fileVmd, self.m_camera_staticText9, ".vmd", is_print)
 
 			# 全ファイル一括チェック
-			return is_vmd and is_org_pmx and is_rep_pmx and is_camera_vmd and self.checkOutputVmdPath()
+			return is_vmd and is_org_pmx and is_rep_pmx and is_camera_vmd \
+				and self.checkOutputVmdPath(self.m_fileOutputVmd, self.m_staticText12) \
+				and ((not self.m_camera_fileOutputVmd) or \
+					(self.m_camera_fileOutputVmd and self.checkOutputVmdPath(self.m_camera_fileOutputVmd, self.m_camera_staticText12)))
 		
 		return False
 	
-	def checkOutputVmdPath(self):
-		if not self.m_fileOutputVmd.GetPath():
-			print("■■■■■■■■■■■■■■■■■")
-			print("■　**ERROR**　")
-			print("■　出力ファイルパスがありません")
-			print("■　生成予定パス: "+ self.m_fileOutputVmd.GetPath() )
-			print("■■■■■■■■■■■■■■■■■")
-			return False
+	def checkOutputVmdPath(self, target_ctrl, label_ctrl):
+		if not target_ctrl.GetPath():
+			# ファイルパスがない場合、生成
+			self.OnCreateOutputVmd(wx.EVT_FILEPICKER_CHANGED)
+		
+		label_text = label_ctrl.GetLabel().strip("（変更可）")
 
-		if len(self.m_fileOutputVmd.GetPath()) >= 255 and os.name == "nt":
+		if len(target_ctrl.GetPath()) >= 255 and os.name == "nt":
 			print("■■■■■■■■■■■■■■■■■")
 			print("■　**ERROR**　")
-			print("■　出力ファイルパスがWindowsの制限を超えているため、処理を中断します。")
-			print("■　出力ファイルパス: "+ self.m_fileOutputVmd.GetPath() )
+			print("■　"+ label_text +"がWindowsの制限を超えているため、処理を中断します。")
+			print("■　"+ label_text +"パス: "+ target_ctrl.GetPath() )
 			print("■■■■■■■■■■■■■■■■■")
 			return False
 		
 		logger.debug("文字超制限OK")
 		
 		# 親ディレクトリ取得
-		dir_path = wrapperutils.get_dir_path(self.m_fileOutputVmd.GetPath())
+		dir_path = wrapperutils.get_dir_path(target_ctrl.GetPath())
 
 		logger.debug("ディレクトリパス生成")
 
 		if not dir_path or not os.path.exists(dir_path) or not os.path.isdir(dir_path):
 			print("■■■■■■■■■■■■■■■■■")
 			print("■　**ERROR**　")
-			print("■　出力ファイルパスのフォルダ構成が正しくないため、処理を中断します。")
-			print("■　出力ファイルパス: "+ self.m_fileOutputVmd.GetPath() )
+			print("■　"+ label_text +"パスのフォルダ構成が正しくないため、処理を中断します。")
+			print("■　"+ label_text +"パス: "+ target_ctrl.GetPath() )
 			print("■■■■■■■■■■■■■■■■■")
 			return False
 
 		if dir_path and not os.access(dir_path, os.W_OK):
 			print("■■■■■■■■■■■■■■■■■")
 			print("■　**ERROR**　")
-			print("■　出力ファイルパスの親フォルダに書き込み権限がありません。")
-			print("■　出力ファイルパス: "+ self.m_fileOutputVmd.GetPath() )
+			print("■　"+ label_text +"パスの親フォルダに書き込み権限がありません。")
+			print("■　"+ label_text +"パス: "+ target_ctrl.GetPath() )
 			print("■■■■■■■■■■■■■■■■■")
 			return False
 
-		if self.m_fileOutputVmd.GetPath() and os.path.exists(self.m_fileOutputVmd.GetPath()) and not os.access(self.m_fileOutputVmd.GetPath(), os.W_OK):
+		if target_ctrl.GetPath() and os.path.exists(target_ctrl.GetPath()) and not os.access(target_ctrl.GetPath(), os.W_OK):
 			print("■■■■■■■■■■■■■■■■■")
 			print("■　**ERROR**　")
-			print("■　出力ファイルパスに書き込み権限がありません。")
-			print("■　出力ファイルパス: "+ self.m_fileOutputVmd.GetPath() )
+			print("■　"+ label_text +"パスに書き込み権限がありません。")
+			print("■　"+ label_text +"パス: "+ target_ctrl.GetPath() )
 			print("■■■■■■■■■■■■■■■■■")
 			return False
 

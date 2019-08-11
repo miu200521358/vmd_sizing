@@ -40,7 +40,7 @@ def exec(motion, trace_model, replace_model, output_vmd_path):
     if motion.motion_cnt > 0:
         # -----------------------------------------------------------------
         # 移動ボーン縮尺
-        for k in ["右足ＩＫ親" ,"左足ＩＫ親", "右足ＩＫ" ,"左足ＩＫ", "右つま先ＩＫ" ,"左つま先ＩＫ", "センター", "グルーブ", "全ての親"]:
+        for k in ["右足ＩＫ親" ,"左足ＩＫ親", "右足IK親" ,"左足IK親", "右足ＩＫ" ,"左足ＩＫ", "右つま先ＩＫ" ,"左つま先ＩＫ", "センター", "グルーブ", "全ての親"]:
             if k in motion.frames and k in replace_model.bones:
                 for bf in motion.frames[k]:
                     # IK比率をそのまま掛ける

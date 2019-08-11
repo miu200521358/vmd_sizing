@@ -785,6 +785,13 @@ class PmxModel():
                     )
         
     # ボーン構造-----------------------
+
+    # 親ボーンを返す
+    def get_parent_bone(self, target_bone_name):
+        if target_bone_name in self.bones and self.bones[target_bone_name].parent_index in self.bone_indexes:
+            return self.bones[self.bone_indexes[self.bones[target_bone_name].parent_index]]
+        
+        return None
     
     class Bone():
         def __init__(self,

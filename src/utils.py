@@ -356,11 +356,14 @@ def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False
             
             return fillbf
 
-    if frameno == 5217:
-        logger.debug("calc_bone_by_complement 見つからなかった: %s, %s", frameno, bone_name)
+    logger.debug("calc_bone_by_complement 見つからなかった: %s, %s", frameno, bone_name)
 
-    # 最後まで行っても見つからなければ、最終項目を返す
-    return copy.deepcopy(frames[bone_name][-1])
+    # 最後まで行っても見つからなければ、最終項目を該当フレーム用に設定して返す
+    fillbf = copy.deepcopy(frames[bone_name][-1])
+    fillbf.name = bone_name.encode('cp932').decode('shift_jis').encode('shift_jis')
+    fillbf.format_name = bone_name
+    fillbf.frame = frameno
+    return fillbf
 
 
 # 3次ベジェ曲線の分割
@@ -541,7 +544,7 @@ def calc_interpolate_bezier_by_t(x1v, y1v, x2v, y2v, start, end, t):
 
     return x3, y
 
-# 標準FKボーン＋上半身2のボーン名リスト
+# 標準ボーン＋上半身2のボーン名リスト
 STANDARD_BONE_NAMES = [
 "上半身2",
 "上半身",
@@ -594,4 +597,8 @@ STANDARD_BONE_NAMES = [
 "右足首",
 "両目",
 "左つま先",
-"右つま先"]
+"右つま先",
+"左足ＩＫ",
+"左つま先ＩＫ",
+"右足ＩＫ",
+"右つま先ＩＫ"]

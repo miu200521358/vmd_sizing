@@ -48,8 +48,17 @@ def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_h
             # 補間曲線再設定
             reset_complement(motion, arm_links)
 
+            # 必要なキーだけ残す
+            leave_valid_key_frames(motion, arm_links)
+
     return not is_error_outputed
 
+# 必要なキーだけ残す
+def leave_valid_key_frames(motion, arm_links):
+    for direction in ["左", "右"]:
+        for al in arm_links[direction]:
+            # 有効なキーのみのリストを再設定
+            motion.frames[al.name] = [x for x in motion.frames[al.name] if x.key == True]
 
 # 腕IK調整後始末
 def reset_complement(motion, arm_links):

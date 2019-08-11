@@ -37,3 +37,7 @@ VmdSizingSelfAll2.bat
 rivision.txt
 setting.json
 history.json
+leg_fk.vmd
+leg_fk_bone.csv
+leg_fk_camera.csv
+leg_fk_morph.csv

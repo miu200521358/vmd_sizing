@@ -360,7 +360,7 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
             # 読み込んだモーションデータそのものを弄らないよう、コピーした結果を渡す
             is_success = main.main(copy.deepcopy(motion), org_pmx, rep_pmx, output_vmd_path, \
                 is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, vmd_choice_values, rep_choice_values, rep_rate_values, \
-                camera_motion, camera_vmd_path, output_camera_vmd_path)
+                copy.deepcopy(camera_motion), camera_vmd_path, output_camera_vmd_path)
 
             logger.info("is_shortage: %s, is_success: %s", is_shortage, is_success)
 
@@ -486,30 +486,53 @@ def create_output_path(vmd_path, replace_pmx_path, is_avoidance, is_arm_ik, is_m
 def is_auto_output_path(output_vmd_path, vmd_path, replace_pmx_path, force=False):
     if not output_vmd_path:
         # 空のパスの場合、自動生成対象とみなす
-        logger.info("空パス: %s", output_vmd_path)
+        logger.debug("空パス: %s", output_vmd_path)
         return True
 
     # ボーンCSVファイル名・拡張子
     bone_filename, _ = os.path.splitext(os.path.basename(replace_pmx_path))
 
-    now_output_vmd_path = os.path.join(get_dir_path(vmd_path), os.path.basename(vmd_path).replace(".vmd", "_{0}".format(bone_filename)))
-    logger.info("now_output_vmd_path: %s", now_output_vmd_path)
-    logger.info("force: %s", force)
-    logger.info("output_vmd_path: %s", output_vmd_path)
+    # 新しく設定賞としている自動生成出力ファイルパス
+    new_output_vmd_path = os.path.join(get_dir_path(vmd_path), os.path.basename(vmd_path).replace(".vmd", "_{0}".format(bone_filename)))
+    logger.debug("new_output_vmd_path: %s", new_output_vmd_path)
+    logger.debug("force: %s", force)
+    logger.debug("output_vmd_path: %s", output_vmd_path)
 
-    if force and now_output_vmd_path not in output_vmd_path:
+    if force and new_output_vmd_path not in output_vmd_path:
         # 強制変更が必要かつパスが変わっている場合、自動生成対象とみなす
-        logger.info("force変更あり: %s", now_output_vmd_path)
+        logger.debug("force変更あり: %s", new_output_vmd_path)
         return True
-    
-    now_output_vmd_path = now_output_vmd_path.replace("\\", "\\\\")
-    logger.info("now_output_vmd_path: %s", now_output_vmd_path)
 
-    output_vmd_pattern = re.compile(r'^%s\w?\w?_\d{8}_\d{6}.vmd$' % (now_output_vmd_path) )
-    logger.info("output_vmd_pattern: %s", output_vmd_pattern)
-    logger.info("re.match(output_vmd_pattern, output_vmd_path): %s", re.match(output_vmd_pattern, output_vmd_path))
+    # 新しく設定しようとしている出力ファイルパスの正規表現    
+    new_output_vmd_path = escape_filepath(new_output_vmd_path)
+    logger.info("new_output_vmd_path: %s", new_output_vmd_path)
 
-    return re.match(output_vmd_pattern, output_vmd_path) is not None
+    new_output_vmd_pattern = re.compile(r'^%s%s.vmd$' % (new_output_vmd_path, r"\w?\w?_\d{8}_\d{6}"))
+    logger.info("new_output_vmd_pattern: %s", new_output_vmd_pattern)
+    logger.info("re.match(new_output_vmd_pattern, output_vmd_path): %s", re.match(new_output_vmd_pattern, output_vmd_path))
+
+    return re.match(new_output_vmd_pattern, output_vmd_path) is not None
+
+def escape_filepath(path):
+    path = path.replace("\\", r"\\")
+    path = path.replace("*", "\\*")
+    path = path.replace("+", "\\+")
+    path = path.replace(".", "\\.")
+    path = path.replace("?", "\\?")
+    path = path.replace("{", "\\{")
+    path = path.replace("}", "\\}")
+    path = path.replace("(", "\\(")
+    path = path.replace(")", "\\)")
+    path = path.replace("[", "\\[")
+    path = path.replace("]", "\\]")
+    path = path.replace("{", "\\{")
+    path = path.replace("^", "\\^")
+    path = path.replace("$", "\\$")
+    path = path.replace("-", "\\-")
+    path = path.replace("|", "\\|")
+    path = path.replace("/", "\\/")
+
+    return path
 
 def create_output_camera_path(camera_vmd_path, replace_pmx_path):
     # print("camera_vmd_path: %s " % camera_vmd_path)
