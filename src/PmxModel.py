@@ -142,7 +142,7 @@ class PmxModel():
     # 頭ボーンのウェイトが乗っている頂点を取得する
     def get_head_upper_vertex_position(self):
         # 頭の頂点位置
-        max_head_upper_pos, _ = self.get_bone_vertex_position("頭", self.bones["頭"].position, define_is_target_head_upper())
+        max_head_upper_pos, _, _, _ = self.get_bone_vertex_position("頭", self.bones["頭"].position, define_is_target_head_upper())
 
         return max_head_upper_pos
     
@@ -217,6 +217,8 @@ class PmxModel():
         
         max_bone_upper_pos = QVector3D(0, -99999, 0)
         min_bone_below_pos = QVector3D(0, 99999, 0)
+        front_bone_upper_pos = QVector3D(0, 99999, 0)
+        back_bone_below_pos = QVector3D(0, -99999, 0)
         for is_x in [True, False]:
             for bone_idx in bone_idx_list:
                 # X範囲を制限するか否か
@@ -231,15 +233,25 @@ class PmxModel():
                         if v_pos.y() > max_bone_upper_pos.y():
                             # 指定ボーンにウェイトが乗っていて、かつ最上の頂点より上の場合、保持
                             max_bone_upper_pos = v_pos
+
+                        if v_pos.z() < front_bone_upper_pos.z() :
+                            # 指定ボーンにウェイトが乗っていて、かつ最前の頂点より下の場合、保持
+                            front_bone_upper_pos = v_pos
+                            # print("min_bone_below_pos: %s, %s, %s, %s, %s" % (l.index, l.name, v.index, v.position, v_pos))
+                        
+                        if v_pos.z() > back_bone_below_pos.z():
+                            # 指定ボーンにウェイトが乗っていて、かつ最後の頂点より上の場合、保持
+                            back_bone_below_pos = v_pos
                     
-            if min_bone_below_pos == QVector3D(0, 99999, 0) or max_bone_upper_pos == QVector3D(0, -99999, 0):
+            if min_bone_below_pos == QVector3D(0, 99999, 0) or max_bone_upper_pos == QVector3D(0, -99999, 0) \
+                or front_bone_upper_pos == QVector3D(0, 99999, 0) or back_bone_below_pos == QVector3D(0, -99999, 0):
                 # X制限をして見つからなかった場合、制限しないでチェック
                 continue
             else:
                 # X制限をして見つかった場合、終了
                 break
 
-        return max_bone_upper_pos, min_bone_below_pos
+        return max_bone_upper_pos, min_bone_below_pos, front_bone_upper_pos, back_bone_below_pos
     
     # 左右の手首の厚みを取得する
     def get_wrist_thickness_lr(self):

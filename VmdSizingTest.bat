@@ -9,6 +9,7 @@ cd /d %~dp0
 cls
 
 rem ---  python é¿çs
+rem python test/test_camera2.py
 python test/test_utils.py
 python test/test_arm_ik.py
 python test/test_morph.py
