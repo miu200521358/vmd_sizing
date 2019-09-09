@@ -58,6 +58,8 @@ class VmdBoneFrame():
         fout.write(struct.pack('<f', v.z()))
         fout.write(struct.pack('<f', v.w()))
 
+        # print("f: %s, n: %s" % (self.frame, self.format_name))
+
         # print(self.complement)
         # print(b''.join(self.complement))
         # print([ c.encode() for c in self.complement ])
