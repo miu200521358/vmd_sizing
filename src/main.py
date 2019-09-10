@@ -50,7 +50,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, \
 
     # カメラ処理
     # is_success = sub_camera.exec(motion, trace_model, replace_model, output_vmd_path) and is_success
-    is_success = sub_camera2.exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, camera_motion) and is_success
+    is_success = sub_camera.exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, camera_motion) and is_success
 
     # 頭部と腕の接触回避処理
     is_success = sub_avoidance.exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik) and is_success

@@ -36,7 +36,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.01_β10", pos = wx.DefaultPosition, size = wx.Size( 600,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.01_β11", pos = wx.DefaultPosition, size = wx.Size( 600,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -575,7 +575,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		bSizerVmd4 = wx.BoxSizer( wx.VERTICAL )
 
-		self.m_vmd_staticText7 = wx.StaticText( self.m_panelVmd, wx.ID_ANY, u"指定されたCSVファイルを、VMDファイルとして出力します。", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_vmd_staticText7 = wx.StaticText( self.m_panelVmd, wx.ID_ANY, u"指定されたCSVファイル（ボーン＋モーフ or カメラ）を、VMDファイルとして出力します。\nモデルモーション（ボーン・モーフ）とカメラモーション（カメラ）は別々に出力できます。\nCSVのフォーマットは、CSVタブで出力したデータと同じものを定義してください。", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_vmd_staticText7.Wrap( -1 )
 
 		bSizerVmd4.Add( self.m_vmd_staticText7, 0, wx.ALL, 5 )
@@ -591,6 +591,30 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_vmd_fileCsvBone = wx.FilePickerCtrl( self.m_panelVmd, wx.ID_ANY, wx.EmptyString, u"CSVファイルを選択してください", u"CSVファイル (*.csv)|*.csv|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.Size( -1,-1 ), wx.FLP_DEFAULT_STYLE )
 		self.m_vmd_fileCsvBone.GetPickerCtrl().SetLabel("開く")
 		bSizerVmd4.Add( self.m_vmd_fileCsvBone, 0, wx.ALL|wx.EXPAND, 5 )
+
+
+		self.m_vmd_morph_staticText1 = wx.StaticText( self.m_panelVmd, wx.ID_ANY, u"CSVファイル（モーフ）", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_vmd_morph_staticText1.Wrap( -1 )
+
+		bSizerVmd4.Add( self.m_vmd_morph_staticText1, 0, wx.ALL, 5 )
+
+		self.m_vmd_fileCsvMorph = wx.FilePickerCtrl( self.m_panelVmd, wx.ID_ANY, wx.EmptyString, u"CSVファイルを選択してください", u"CSVファイル (*.csv)|*.csv|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.Size( -1,-1 ), wx.FLP_DEFAULT_STYLE )
+		self.m_vmd_fileCsvMorph.GetPickerCtrl().SetLabel("開く")
+		bSizerVmd4.Add( self.m_vmd_fileCsvMorph, 0, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_vmd_staticline6 = wx.StaticLine( self.m_panelVmd, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
+		bSizerVmd4.Add( self.m_vmd_staticline6, 0, wx.EXPAND |wx.ALL, 5 )
+
+		self.m_vmd_camera_staticText1 = wx.StaticText( self.m_panelVmd, wx.ID_ANY, u"CSVファイル（カメラ）", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_vmd_camera_staticText1.Wrap( -1 )
+
+		bSizerVmd4.Add( self.m_vmd_camera_staticText1, 0, wx.ALL, 5 )
+
+		self.m_vmd_fileCsvCamera = wx.FilePickerCtrl( self.m_panelVmd, wx.ID_ANY, wx.EmptyString, u"CSVファイルを選択してください", u"CSVファイル (*.csv)|*.csv|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.Size( -1,-1 ), wx.FLP_DEFAULT_STYLE )
+		self.m_vmd_fileCsvCamera.GetPickerCtrl().SetLabel("開く")
+		bSizerVmd4.Add( self.m_vmd_fileCsvCamera, 0, wx.ALL|wx.EXPAND, 5 )
+
+
 
 		self.m_vmd_btnExec = wx.Button( self.m_panelVmd, wx.ID_ANY, u"VMD変換実行", wx.DefaultPosition, wx.Size( 200,50 ), 0 )
 		bSizerVmd4.Add( self.m_vmd_btnExec, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
@@ -653,6 +677,8 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_camera_fileOutputVmd.SetDropTarget(MyFileDropTarget(self, self.m_camera_fileOutputVmd, self.m_camera_staticText12, ".vmd"))
 		self.m_csv_fileVmd.SetDropTarget(MyFileDropTarget(self, self.m_csv_fileVmd, self.m_csv_staticText1, ".vmd"))
 		self.m_vmd_fileCsvBone.SetDropTarget(MyFileDropTarget(self, self.m_vmd_fileCsvBone, self.m_vmd_staticText1, ".csv"))
+		self.m_vmd_fileCsvMorph.SetDropTarget(MyFileDropTarget(self, self.m_vmd_fileCsvMorph, self.m_vmd_morph_staticText1, ".csv"))
+		self.m_vmd_fileCsvCamera.SetDropTarget(MyFileDropTarget(self, self.m_vmd_fileCsvCamera, self.m_vmd_camera_staticText1, ".csv"))
 		# self.m_blend_filePmx.SetDropTarget(MyFileDropTarget(self, self.m_blend_filePmx, self.m_staticText11, ".pmx"))
 
 		# ファイルパス変更時の処理
@@ -675,6 +701,8 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_camera_fileVmd.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_camera_fileVmd.GetTextCtrl()))
 		self.m_csv_fileVmd.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_csv_fileVmd.GetTextCtrl()))
 		self.m_vmd_fileCsvBone.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_vmd_fileCsvBone.GetTextCtrl()))
+		self.m_vmd_fileCsvMorph.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_vmd_fileCsvMorph.GetTextCtrl()))
+		self.m_vmd_fileCsvCamera.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_vmd_fileCsvCamera.GetTextCtrl()))
 		# self.m_blend_filePmx.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_blend_filePmx.GetTextCtrl()))
 
 		# タブ押下時の処理
@@ -753,7 +781,31 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		self.DisableInput()
 
-		if wrapperutils.is_valid_file(self.m_vmd_fileCsvBone.GetPath(), "CSVファイル", ".csv", True) == False:
+		if len(self.m_vmd_fileCsvBone.GetPath()) == 0 \
+			and len(self.m_vmd_fileCsvMorph.GetPath()) == 0 \
+			and len(self.m_vmd_fileCsvCamera.GetPath()) == 0:
+
+			print("■■■■■■■■■■■■■■■■■")
+			print("■　**ERROR**　")
+			print("■　CSVファイルが1件も指定されていません。")
+			print("■■■■■■■■■■■■■■■■■")
+
+			self.EnableInput()
+			# プログレス非表示
+			self.m_vmd_Gauge.SetValue(0)
+
+			# 元に戻す
+			sys.stdout = self.m_txtConsole
+
+			event.Skip()
+			return
+
+		if (len(self.m_vmd_fileCsvBone.GetPath()) > 0 and \
+			wrapperutils.is_valid_file(self.m_vmd_fileCsvBone.GetPath(), "ボーンCSVファイル", ".csv", True) == False) or \
+			(len(self.m_vmd_fileCsvMorph.GetPath()) > 0 and \
+			wrapperutils.is_valid_file(self.m_vmd_fileCsvMorph.GetPath(), "モーフCSVファイル", ".csv", True) == False) or \
+			(len(self.m_vmd_fileCsvCamera.GetPath()) > 0 and \
+			wrapperutils.is_valid_file(self.m_vmd_fileCsvCamera.GetPath(), "カメラCSVファイル", ".csv", True) == False):
 
 			self.EnableInput()
 			# プログレス非表示
@@ -1543,6 +1595,8 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_vmd_btnExec.Disable()
 		# ファイル入力不可
 		self.m_vmd_fileCsvBone.Disable()
+		self.m_vmd_fileCsvMorph.Disable()
+		self.m_vmd_fileCsvCamera.Disable()
 
 		# カメラ
 		self.m_camera_fileVmd.Disable()
@@ -1574,6 +1628,8 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_csv_btnExec.Enable()
 		# ファイル入力可
 		self.m_csv_fileVmd.Enable()
+		self.m_vmd_fileCsvMorph.Enable()
+		self.m_vmd_fileCsvCamera.Enable()
 
 		# VMD
 		# 実行ボタン押下可
@@ -1998,7 +2054,11 @@ class VmdWorkerThread(Thread):
 		# need to structure your processing so that you periodically
 		# peek at the abort variable
 
-		convert_vmd.main(self._notify_window.m_vmd_fileCsvBone.GetPath())
+		convert_vmd.main(
+			self._notify_window.m_vmd_fileCsvBone.GetPath(),
+			self._notify_window.m_vmd_fileCsvMorph.GetPath(),
+			self._notify_window.m_vmd_fileCsvCamera.GetPath()
+		)
 
 		# Here's where the result would be returned (this is an
 		# example fixed result of the number 10, but it could be
