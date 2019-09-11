@@ -23,11 +23,11 @@ STANDARD_BONE_RATIOS = {
     "上半身2": {"x":"body", "y":"body", "z":"body", "l":"body"},
     "上半身": {"x":"body", "y":"body", "z":"body", "l":"body"},
     "下半身": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "首": {"x":"body", "y":"body", "z":"head", "l":"head"},
-    "頭": {"x":"body", "y":"body", "z":"head", "l":"head"},
-    "左目": {"x":"body", "y":"body", "z":"head", "l":"head"},
-    "右目": {"x":"body", "y":"body", "z":"head", "l":"head"},
-    "両目": {"x":"body", "y":"body", "z":"head", "l":"head"},
+    "首": {"x":"head", "y":"head", "z":"head", "l":"head"},
+    "頭": {"x":"head", "y":"head", "z":"head", "l":"head"},
+    "左目": {"x":"head", "y":"head", "z":"head", "l":"head"},
+    "右目": {"x":"head", "y":"head", "z":"head", "l":"head"},
+    "両目": {"x":"head", "y":"head", "z":"head", "l":"head"},
     "左肩": {"x":"body", "y":"body", "z":"body", "l":"body"},
     "左腕": {"x":"body", "y":"body", "z":"body", "l":"body"},
     "左ひじ": {"x":"body", "y":"body", "z":"body", "l":"body"},
@@ -72,9 +72,9 @@ STANDARD_BONE_RATIOS = {
     # "右足首",
     # "左つま先",
     # "右つま先",
-    "左足ＩＫ": {"x":"leg", "y":"body", "z":"body", "l":"body"},
+    "左足ＩＫ": {"x":"legxz", "y":"body", "z":"body", "l":"body"},
     # "左つま先ＩＫ": {"x":"leg", "y":"body", "z":"leg", "l":"body"},
-    "右足ＩＫ": {"x":"leg", "y":"body", "z":"body", "l":"body"},
+    "右足ＩＫ": {"x":"legxz", "y":"body", "z":"body", "l":"body"},
     # "右つま先ＩＫ": {"x":"leg", "y":"body", "z":"leg", "l":"body"},
 }
 #
@@ -94,21 +94,20 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
     leg_xz_ratio, _, _ = sub_move.calc_leg_ik_ratio(trace_model, replace_model)
     
     # 身体の比率
-    body_ratio, head_ratio = calc_body_head_ratio(trace_model, replace_model)
+    body_ratio, head_ratio, _ = calc_body_head_ratio(trace_model, replace_model)
 
-    # 腕の比率
     arm_ratio = calc_arm_ratio(trace_model, replace_model)
 
     # 比率辞書
     ratio_dict = {
         "body": body_ratio,
-        "leg": leg_xz_ratio,
-        "arm": arm_ratio,
-        "head": head_ratio
+        "legxz": leg_xz_ratio,
+        "head": head_ratio,
+        "arm": arm_ratio
     }
 
     # 情報提供
-    print("カメラ補正: 胴体=%s, 頭=%s, 腕=%s, 足=%s" % (body_ratio, head_ratio, arm_ratio, leg_xz_ratio))
+    print("カメラ補正: 全長=%s, 頭=%s, 腕=%s, 足=%s" % (body_ratio, head_ratio, arm_ratio, leg_xz_ratio))
 
     # 作成元モデル：全身のリンク
     org_body_links, org_link_names = create_body_links(trace_model)
@@ -141,7 +140,7 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
         org_body_global_3ds = create_body_global_3ds(trace_model, org_motion_frames, org_body_links, cf.frame, rep_link_names)
 
         # 作成元モデルのどのボーンに最も近いか
-        org_nearest_bone_name, org_nearest_bone_global_pos = calc_nearest_bone(org_body_global_3ds, cf)
+        org_nearest_bone_name, org_nearest_relative_pos = calc_nearest_bone(org_body_global_3ds, cf)
 
         # 作成元モデルの最も近いボーン名と同じボーンの位置を、変換先モデルから取得する
         rep_bone_global_pos = create_bone_global_3ds(replace_model, motion.frames, rep_body_links, cf.frame, rep_link_names, org_nearest_bone_name)
@@ -150,7 +149,7 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
         prev_cf_pos = copy.deepcopy(cf.position)
 
         # 新しいカメラを生成
-        create_camera_frame(org_nearest_bone_name, org_nearest_bone_global_pos, rep_bone_global_pos, ratio_dict, cf )
+        create_camera_frame(org_nearest_bone_name, org_nearest_relative_pos, rep_bone_global_pos, ratio_dict, cf )
 
         # 前回の注視点を保持
         prev_org_nearest_bone_name = org_nearest_bone_name
@@ -194,13 +193,13 @@ def calc_arm_ratio(trace_model, replace_model):
 
 # 身体の比率算出
 def calc_body_head_ratio(trace_model, replace_model):
-    trace_head_ratio, trace_face_length, trace_total_height, trace_head_height = get_head_height(trace_model)
+    trace_head_ratio, trace_face_length, trace_total_height, trace_head_height, trace_neck_height = get_head_height(trace_model)
     logger.debug("trace_head_ratio: %s", trace_head_ratio)
     logger.debug("trace_face_length: %s", trace_face_length)
     logger.debug("trace_total_height: %s", trace_total_height)
     logger.debug("trace_head_height: %s", trace_head_height)
 
-    replace_head_ratio, replace_face_length, replace_total_height, replace_head_height = get_head_height(replace_model)
+    replace_head_ratio, replace_face_length, replace_total_height, replace_head_height, replace_neck_height = get_head_height(replace_model)
     logger.debug("replace_head_ratio: %s", replace_head_ratio)
     logger.debug("replace_face_length: %s", replace_face_length)
     logger.debug("replace_total_height: %s", replace_total_height)
@@ -212,10 +211,14 @@ def calc_body_head_ratio(trace_model, replace_model):
 
     # 頭身比率
     # 作成元の頭の大きさで、変換先の頭身に合わせて全長を計算
-    head_ratio = trace_head_ratio / replace_head_ratio
+    # head_ratio = trace_head_ratio / replace_head_ratio
+    head_ratio = (replace_face_length * trace_head_ratio) / trace_total_height
     logger.debug("head_ratio: %s", head_ratio)
 
-    return body_ratio, head_ratio
+    # 首までの身長比率
+    neck_ratio = replace_neck_height / trace_neck_height
+
+    return body_ratio, head_ratio, neck_ratio
 
 # 頭身取得
 def get_head_height(model):
@@ -243,17 +246,19 @@ def get_head_height(model):
         logger.debug("face_length: %s, total_height: %s", face_length, total_height)
         
         # 顔の大きさ / 全身の高さ　で頭身算出
-        return total_height / face_length, face_length, total_height, model.bones["頭"].position.y()
+        return total_height / face_length, face_length, total_height, model.bones["頭"].position.y(), model.bones["首"].position.y()
     
-    return 1, 1, 1, 1
+    return 1, 1, 1, 1, 1
 
 
 # 全身のリンク作成
 def create_body_links(model):
     # logger.debug("------------------------------")
     # logger.debug("create_body_links: %s", model.name)
-    # 頭までのリンク生成
-    head_links, _ = model.create_link_2_top("頭")
+    # 左目までのリンク生成
+    left_eye_links, _ = model.create_link_2_top_one("左目", "頭")
+    # 右目までのリンク生成
+    right_eye_links, _ = model.create_link_2_top_one("右目", "頭")
     # logger.debug("head_links: %s", [ "{0}: {1}\n".format(x.name, x.position) for x in head_links])    
     # 左人差し指までのリンク
     left_finger_links, _ = model.create_link_2_top_one("左人指３", "左手首")
@@ -268,7 +273,7 @@ def create_body_links(model):
 
     # ボーン名のリスト（全身）
     link_names = {}
-    for lidx, links in enumerate([head_links, left_finger_links, right_finger_links, left_toe_ik_all_links, right_toe_ik_all_links]):
+    for lidx, links in enumerate([left_eye_links, right_eye_links, left_finger_links, right_finger_links, left_toe_ik_all_links, right_toe_ik_all_links]):
         for l in links:
             # 該当ボーンを含んでいるリンクのINDEXを保持
             # 標準＋上半身2のみ判定対象とする
@@ -277,7 +282,7 @@ def create_body_links(model):
 
     logger.debug("link_names: %s", link_names)
 
-    return [head_links, left_finger_links, right_finger_links, left_toe_ik_all_links, right_toe_ik_all_links], link_names
+    return [left_eye_links, right_eye_links, left_finger_links, right_finger_links, left_toe_ik_all_links, right_toe_ik_all_links], link_names
 
 # ----------------------------------
 
@@ -336,73 +341,85 @@ def calc_nearest_bone(body_global_3ds, cf):
 
     nearest_distance = 0
     nearest_bone_name = None
-    nearest_global_pos = QVector3D()
+    nearest_relative_pos = QVector3D()
 
-    camera_pos = calc_global_camera_pos(cf)
+    # # カメラ座標
+    # camera_matrix = calc_camera_matrix(cf)
+    # logger.info("camera_matrix: %s", camera_matrix)
 
     for idx, (k, v) in enumerate(body_global_3ds.items()):
-        # カメラの奥行きだと最近位置の算出に失敗する場合があるので、Zの位置はとりあえずボーンの位置
-        # dp = QVector3D(camera_pos.x(), camera_pos.y(), v.z()).distanceToPoint(v)
-        dp = camera_pos.distanceToPoint(v)
-        logger.debug("k: %s, dp: %s", k, dp)
-        logger.debug("camera_pos: %s", camera_pos)
-        logger.debug("v: %s", v)
-        logger.debug("camera_pos - v: %s", camera_pos - v)
+        # カメラ座標系の位置を算出
+        camera_coordinate_pos = calc_camera_coordinate_pos(cf, v)
+
+        # # 画像座標系
+        # image_coordinate_pos = QVector3D(camera_coordinate_pos.x()/camera_coordinate_pos.z(), \
+        #     camera_coordinate_pos.y()/camera_coordinate_pos.z(), 1)
+
+        # カメラの位置は見た目上2D
+        dp = QVector2D(cf.position.x(), cf.position.y()).distanceToPoint(QVector2D(camera_coordinate_pos.x(), camera_coordinate_pos.y()))
+
+        # 中央からの距離
+        # camera_mvp = calc_camera_mvp(cf, v)
+        # dp = camera_mvp.distanceToPoint(QVector3D())
+
+        if cf.frame <= 1177:
+            logger.info("%s (%s) ------------", k, cf.frame)
+            logger.info("cf.position: %s", cf.position)
+            # logger.info("camera_world_pos: %s", camera_world_pos)
+            logger.info("v: %s", v)
+            logger.info("camera_coordinate_pos: %s", camera_coordinate_pos)
+            logger.info("dp: %s", dp)
+            # logger.info("image_coordinate_pos: %s", image_coordinate_pos)
+
         if dp < nearest_distance or not nearest_bone_name:
             # logger.debug("dp: %s", dp)
             # カメラの位置により近いボーン位置である場合、上書き
-
             nearest_distance = dp
             nearest_bone_name = k
-            nearest_global_pos = v
+            nearest_relative_pos = cf.position - camera_coordinate_pos # カメラ座標系の位置を保持する
 
-    logger.debug("nearest: b: %s, d: %s", nearest_bone_name, nearest_distance)
-    logger.debug("nearest: g: %s", nearest_global_pos)
+    # logger.info("nearest: b: %s, d: %s", nearest_bone_name, nearest_distance)
+    # logger.info("nearest: g: %s", nearest_relative_pos)
     
-    return nearest_bone_name, nearest_global_pos
+    return nearest_bone_name, nearest_relative_pos
 
-# カメラのグローバル位置
-def calc_global_camera_pos(cf):
-    camera_pos = cf.position
-    # カメラの角度
+# カメラ座標系の位置を算出
+def calc_camera_coordinate_pos(cf, global_pos):
     camera_qq = QQuaternion.fromEulerAngles(degrees(cf.euler.x()), degrees(cf.euler.y()), degrees(cf.euler.z()))
-    logger.debug("cf.euler: %s", cf.euler)
-    logger.debug("camera_qq: %s", camera_qq.toEulerAngles())
-    logger.debug("cf.position: %s", cf.position)
-    logger.debug("cf.length: %s", cf.length)
 
+    # カメラ座標系
     mat = QMatrix4x4()
-    
-    # カメラの回転
+
+    # カメラの姿勢(回転行列)
     mat.rotate(camera_qq)
-    # 初期位置
+    mat.translate(QVector3D(0, 0, cf.length))
     mat.translate(cf.position)
 
-    camera_pos = mat * QVector3D()
+    # 世界座標点に回転行列を掛ける
+    camera_mat_pos = mat * global_pos
 
-    logger.debug("camera_pos cf.position: %s", cf.position)
-    logger.debug("camera_pos mat: %s", camera_pos)
+    # 世界座標系の原点とカメラ座標系の原点を揃える
+    camera_coordinate_pos = camera_mat_pos - cf.position - QVector3D(0, 0, cf.length)
 
-    return camera_pos
+    return camera_coordinate_pos
+
 
 # ----------------------------------
 
 
 # 変換先用カメラを作成する
-def create_camera_frame( org_nearest_bone_name, org_nearest_bone_global_pos, rep_bone_global_pos, ratio_dict, cf ):
+def create_camera_frame( org_nearest_bone_name, org_nearest_relative_pos, rep_bone_global_pos, ratio_dict, cf ):
     
     logger.debug("camera %s ----------------", cf.frame)
 
-    logger.debug("cf.position: %s", cf.position)
-    logger.debug("org_nearest_bone_global_pos: %s", org_nearest_bone_global_pos)
+    logger.info("cf.position: %s", cf.position)
+    logger.debug("org_nearest_relative_pos: %s", org_nearest_relative_pos)
 
-    camera_pos = calc_camera_pos(cf)
-    logger.debug("global_camera_pos: %s", camera_pos)
-
-    org_nearest_bone_relative_pos = camera_pos - org_nearest_bone_global_pos
-
-    logger.info("b: %s, p: %s", org_nearest_bone_name, org_nearest_bone_relative_pos)
+    logger.info("b: %s, p: %s", org_nearest_bone_name, org_nearest_relative_pos)
     logger.info("l: %s, r: %s", cf.length, rep_bone_global_pos)
+
+    rep_camera_pos = calc_camera_coordinate_pos(cf, rep_bone_global_pos)
+    logger.debug("rep_camera_pos: %s", rep_camera_pos)
 
     if cf.length > 0:
         # 距離が0未満の場合、カメラ位置に縮尺をかける
@@ -413,13 +430,32 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_bone_global_pos, rep
         cf.length = cf.length * ratio_dict[STANDARD_BONE_RATIOS[org_nearest_bone_name]["l"]]
     else:
         # 最も近いボーンの相対位置を、変換先モデルの縮尺に合わせる
-        cf.position.setX( rep_bone_global_pos.x() + (org_nearest_bone_relative_pos.x() * ratio_dict[STANDARD_BONE_RATIOS[org_nearest_bone_name]["x"]]) )
-        cf.position.setY( rep_bone_global_pos.y() + (org_nearest_bone_relative_pos.y() * ratio_dict[STANDARD_BONE_RATIOS[org_nearest_bone_name]["y"]]) )
+        cf.position.setX( rep_camera_pos.x() + (org_nearest_relative_pos.x() * ratio_dict[STANDARD_BONE_RATIOS[org_nearest_bone_name]["x"]]) )
+        cf.position.setY( rep_camera_pos.y() + (org_nearest_relative_pos.y() * ratio_dict[STANDARD_BONE_RATIOS[org_nearest_bone_name]["y"]]) )
+        cf.position.setZ( rep_camera_pos.z() + (org_nearest_relative_pos.z() * ratio_dict[STANDARD_BONE_RATIOS[org_nearest_bone_name]["z"]]) )
         
-        # Zは相対位置ではなく、元々の位置の比率
-        cf.position.setZ(cf.position.z() * ratio_dict[STANDARD_BONE_RATIOS[org_nearest_bone_name]["z"]])
+        # # Zは相対位置ではなく、元々の位置の比率
+        # cf.position.setZ(cf.position.z() * ratio_dict[STANDARD_BONE_RATIOS[org_nearest_bone_name]["z"]])
             
         cf.length = cf.length * ratio_dict[STANDARD_BONE_RATIOS[org_nearest_bone_name]["l"]]
+
+def calc_camera_relative_pos(org_nearest_bone_global_pos, cf):
+    # カメラの角度
+    camera_qq = QQuaternion.fromEulerAngles(degrees(cf.euler.x()), degrees(cf.euler.y()), degrees(cf.euler.z()))
+
+    camera_pos = calc_camera_pos(cf)
+    logger.info("camera_pos: %s", camera_pos)
+    
+    mat = QMatrix4x4()
+    
+    # カメラの逆回転で正面に
+    mat.rotate(camera_qq.inverted())
+    # 相対位置
+    mat.translate(camera_pos - org_nearest_bone_global_pos)
+    # カメラの回転を再設定
+    mat.rotate(camera_qq)
+
+    return mat * QVector3D()
 
 # カメラの位置（Z位置調整）
 def calc_camera_pos(cf):
