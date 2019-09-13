@@ -27,11 +27,11 @@ level = {0:logging.ERROR,
 def main(motion, trace_model, replace_model, output_vmd_path, \
     is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, vmd_choice_values, rep_choice_values, rep_rate_values, \
     camera_motion, camera_vmd_path, output_camera_vmd_path):   
-    print("モーション: %s" % motion.path)
-    if camera_motion:
-        print("カメラモーション: %s" % camera_motion.path)
-    print("作成元: %s" % trace_model.path)
-    print("変換先: %s" % replace_model.path)
+    # print("モーション: %s" % motion.path)
+    # if camera_motion:
+    #     print("カメラモーション: %s" % camera_motion.path)
+    # print("作成元: %s" % trace_model.path)
+    # print("変換先: %s" % replace_model.path)
 
     # 変換前のオリジナルモーションを保持
     org_motion_frames = copy.deepcopy(motion.frames)

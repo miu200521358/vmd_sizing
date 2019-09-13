@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 from math import acos, degrees, sin, isnan
 from PyQt5.QtGui import QQuaternion, QVector3D, QVector2D, QMatrix4x4, QVector4D
+from PyQt5.QtCore import QRect
 
 from VmdWriter import VmdWriter, VmdBoneFrame, VmdCameraFrame
 from VmdReader import VmdReader
@@ -140,7 +141,7 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
         org_body_global_3ds = create_body_global_3ds(trace_model, org_motion_frames, org_body_links, cf.frame, rep_link_names)
 
         # 作成元モデルのどのボーンに最も近いか
-        org_nearest_bone_name, org_nearest_relative_pos = calc_nearest_bone(org_body_global_3ds, cf)
+        org_nearest_bone_name, org_nearest_global_pos, org_nearest_project_pos = calc_nearest_bone(org_body_global_3ds, cf)
 
         # 作成元モデルの最も近いボーン名と同じボーンの位置を、変換先モデルから取得する
         rep_bone_global_pos = create_bone_global_3ds(replace_model, motion.frames, rep_body_links, cf.frame, rep_link_names, org_nearest_bone_name)
@@ -149,7 +150,7 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
         prev_cf_pos = copy.deepcopy(cf.position)
 
         # 新しいカメラを生成
-        create_camera_frame(org_nearest_bone_name, org_nearest_relative_pos, rep_bone_global_pos, ratio_dict, cf )
+        create_camera_frame(org_nearest_bone_name, org_nearest_global_pos, org_nearest_project_pos, rep_bone_global_pos, ratio_dict, cf )
 
         # 前回の注視点を保持
         prev_org_nearest_bone_name = org_nearest_bone_name
@@ -341,33 +342,27 @@ def calc_nearest_bone(body_global_3ds, cf):
 
     nearest_distance = 0
     nearest_bone_name = None
-    nearest_relative_pos = QVector3D()
+    nearest_global_pos = QVector3D()
+    nearest_project_pos = QVector3D()
 
     # # カメラ座標
     # camera_matrix = calc_camera_matrix(cf)
     # logger.info("camera_matrix: %s", camera_matrix)
 
     for idx, (k, v) in enumerate(body_global_3ds.items()):
-        # カメラ座標系の位置を算出
-        camera_coordinate_pos = calc_camera_coordinate_pos(cf, v)
-
-        # # 画像座標系
-        # image_coordinate_pos = QVector3D(camera_coordinate_pos.x()/camera_coordinate_pos.z(), \
-        #     camera_coordinate_pos.y()/camera_coordinate_pos.z(), 1)
+        # 正規化デバイス座標系の位置を算出
+        project_pos = calc_project_pos(v, cf)
 
         # カメラの位置は見た目上2D
-        dp = QVector2D(cf.position.x(), cf.position.y()).distanceToPoint(QVector2D(camera_coordinate_pos.x(), camera_coordinate_pos.y()))
-
         # 中央からの距離
-        # camera_mvp = calc_camera_mvp(cf, v)
-        # dp = camera_mvp.distanceToPoint(QVector3D())
+        dp = QVector2D().distanceToPoint(QVector2D(project_pos.x(), project_pos.y()))
 
         if cf.frame <= 1177:
             logger.info("%s (%s) ------------", k, cf.frame)
             logger.info("cf.position: %s", cf.position)
             # logger.info("camera_world_pos: %s", camera_world_pos)
             logger.info("v: %s", v)
-            logger.info("camera_coordinate_pos: %s", camera_coordinate_pos)
+            logger.info("project_pos: %s", project_pos)
             logger.info("dp: %s", dp)
             # logger.info("image_coordinate_pos: %s", image_coordinate_pos)
 
@@ -376,12 +371,74 @@ def calc_nearest_bone(body_global_3ds, cf):
             # カメラの位置により近いボーン位置である場合、上書き
             nearest_distance = dp
             nearest_bone_name = k
-            nearest_relative_pos = cf.position - camera_coordinate_pos # カメラ座標系の位置を保持する
+            nearest_project_pos = project_pos # プロジェクション座標系の位置を保持する
+            nearest_global_pos = v # グローバル座標系の位置を保持する
 
     # logger.info("nearest: b: %s, d: %s", nearest_bone_name, nearest_distance)
-    # logger.info("nearest: g: %s", nearest_relative_pos)
+    # logger.info("nearest: g: %s", nearest_project_pos)
     
-    return nearest_bone_name, nearest_relative_pos
+    return nearest_bone_name, nearest_global_pos, nearest_project_pos
+
+def calc_unproject_pos(project_pos, cf):
+    # モデル座標系
+    model_view = create_model_view(cf)
+
+    # プロジェクション座標系
+    projection_view = create_projection_view(cf)
+
+    # viewport
+    viewport_rect = QRect(-1, -1, 2, 2)
+
+    global_pos = project_pos.unproject(model_view, projection_view, viewport_rect)
+
+    return global_pos
+
+def calc_project_pos(global_pos, cf):
+    # モデル座標系
+    model_view = create_model_view(cf)
+
+    # プロジェクション座標系
+    projection_view = create_projection_view(cf)
+
+    # viewport
+    viewport_rect = QRect(-1, -1, 2, 2)
+
+    project_pos = global_pos.project(model_view, projection_view, viewport_rect)
+
+    return project_pos
+
+
+def create_model_view(cf):
+    # モデル座標系（原点を見るため、単位行列）
+    model_view = QMatrix4x4()
+    model_view.setToIdentity()
+
+    # カメラ角度
+    camera_qq = QQuaternion.fromEulerAngles(degrees(cf.euler.x()), degrees(cf.euler.y()), degrees(cf.euler.z()))
+
+    # カメラの原点（グローバル座標）
+    mat_origin = QMatrix4x4()
+    mat_origin.rotate(camera_qq.inverted())
+    mat_origin.translate(QVector3D(0, 0, -cf.length))
+    mat_origin.translate(cf.position)
+    camera_origin = mat_origin * QVector3D()
+
+    if cf.frame <= 500:
+        logger.info("camera_origin: %s", camera_origin)
+
+    # カメラ座標系の行列
+    # eye: カメラの原点（グローバル座標）
+    # center: カメラの注視点（グローバル座標）
+    # up: カメラの上方向ベクトル
+    model_view.lookAt(camera_origin, cf.position, QVector3D(0,1,0))
+
+    return model_view
+
+def create_projection_view(cf):
+    mat = QMatrix4x4()
+    mat.perspective(cf.angle, 16/9, 0.1, 100)
+
+    return mat
 
 # カメラ座標系の位置を算出
 def calc_camera_coordinate_pos(cf, global_pos):
@@ -408,18 +465,29 @@ def calc_camera_coordinate_pos(cf, global_pos):
 
 
 # 変換先用カメラを作成する
-def create_camera_frame( org_nearest_bone_name, org_nearest_relative_pos, rep_bone_global_pos, ratio_dict, cf ):
+def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_nearest_project_pos, rep_bone_global_pos, ratio_dict, cf ):
     
     logger.debug("camera %s ----------------", cf.frame)
 
     logger.info("cf.position: %s", cf.position)
-    logger.debug("org_nearest_relative_pos: %s", org_nearest_relative_pos)
-
-    logger.info("b: %s, p: %s", org_nearest_bone_name, org_nearest_relative_pos)
+    logger.info("b: %s, p: %s", org_nearest_bone_name, org_nearest_global_pos)
     logger.info("l: %s, r: %s", cf.length, rep_bone_global_pos)
 
-    rep_camera_pos = calc_camera_coordinate_pos(cf, rep_bone_global_pos)
-    logger.debug("rep_camera_pos: %s", rep_camera_pos)
+    # camera_pos = calc_camera_pos(cf)
+    # logger.info("camera_pos: %s", camera_pos)
+
+    org_nearest_relative_pos = cf.position - org_nearest_global_pos
+    logger.debug("org_nearest_relative_pos: %s", org_nearest_relative_pos)
+
+    # # カメラ座標系の位置を算出
+    # org_camera_coordinate_pos = calc_camera_coordinate_pos(cf, org_nearest_global_pos)
+    # logger.debug("org_camera_coordinate_pos: %s", org_camera_coordinate_pos)
+
+    # org_nearest_relative_pos = cf.position - org_camera_coordinate_pos
+    # logger.debug("org_nearest_relative_pos: %s", org_nearest_relative_pos)
+
+    # rep_camera_pos = calc_camera_coordinate_pos(cf, rep_bone_global_pos)
+    # logger.debug("rep_camera_pos: %s", rep_camera_pos)
 
     if cf.length > 0:
         # 距離が0未満の場合、カメラ位置に縮尺をかける
@@ -430,9 +498,13 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_relative_pos, rep_bo
         cf.length = cf.length * ratio_dict[STANDARD_BONE_RATIOS[org_nearest_bone_name]["l"]]
     else:
         # 最も近いボーンの相対位置を、変換先モデルの縮尺に合わせる
-        cf.position.setX( rep_camera_pos.x() + (org_nearest_relative_pos.x() * ratio_dict[STANDARD_BONE_RATIOS[org_nearest_bone_name]["x"]]) )
-        cf.position.setY( rep_camera_pos.y() + (org_nearest_relative_pos.y() * ratio_dict[STANDARD_BONE_RATIOS[org_nearest_bone_name]["y"]]) )
-        cf.position.setZ( rep_camera_pos.z() + (org_nearest_relative_pos.z() * ratio_dict[STANDARD_BONE_RATIOS[org_nearest_bone_name]["z"]]) )
+        cf.position.setX( rep_bone_global_pos.x() + (org_nearest_relative_pos.x() * ratio_dict[STANDARD_BONE_RATIOS[org_nearest_bone_name]["x"]]) )        
+        cf.position.setY( rep_bone_global_pos.y() + (org_nearest_relative_pos.y() * ratio_dict[STANDARD_BONE_RATIOS[org_nearest_bone_name]["y"]]) )        
+        cf.position.setZ( rep_bone_global_pos.z() + (org_nearest_relative_pos.z() * ratio_dict[STANDARD_BONE_RATIOS[org_nearest_bone_name]["z"]]) )        
+        
+        # cf.position.setX( rep_camera_pos.x() + (org_nearest_relative_pos.x() * ratio_dict[STANDARD_BONE_RATIOS[org_nearest_bone_name]["x"]]) )
+        # cf.position.setY( rep_camera_pos.y() + (org_nearest_relative_pos.y() * ratio_dict[STANDARD_BONE_RATIOS[org_nearest_bone_name]["y"]]) )
+        # cf.position.setZ( rep_camera_pos.z() + (org_nearest_relative_pos.z() * ratio_dict[STANDARD_BONE_RATIOS[org_nearest_bone_name]["z"]]) )
         
         # # Zは相対位置ではなく、元々の位置の比率
         # cf.position.setZ(cf.position.z() * ratio_dict[STANDARD_BONE_RATIOS[org_nearest_bone_name]["z"]])
