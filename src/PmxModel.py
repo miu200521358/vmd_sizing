@@ -486,9 +486,15 @@ class PmxModel():
             if pname in self.bones:
                 parent_name = pname
                 break
-                
+
         if not parent_name:
             # 親ボーンがボーンインデックスリストになければ終了
+
+            if "原点" in self.PARENT_BORN_PAIR[start_bone]:
+                # 原点が親ボーンリストにある場合、原点を登録
+                ik_indexes["原点"] = len(ik_indexes)
+                ik_links.append(self.Bone("原点", None, QVector3D(), -1, 0, 0))
+
             return ik_links, ik_indexes
         
         logger.debug("start_bone: %s. parent_name: %s, start_type_bone: %s", start_bone, parent_name, start_type_bone)
@@ -539,7 +545,7 @@ class PmxModel():
         , "左足首": ["左ひざ"]
         , "左つま先": ["左足首"]
         , "左足IK親": ["全ての親"]
-        , "左足ＩＫ": ["左足IK親", "全ての親"]
+        , "左足ＩＫ": ["左足IK親", "全ての親", "原点"]
         , "左つま先ＩＫ": ["左足ＩＫ"]
         , "右肩P": ["上半身2", "上半身"]
         , "右肩": ["右肩P", "上半身2", "上半身"]
@@ -568,7 +574,7 @@ class PmxModel():
         , "右足首": ["右ひざ"]
         , "右つま先": ["右足首"]
         , "右足IK親": ["全ての親"]
-        , "右足ＩＫ": ["右足IK親", "全ての親"]
+        , "右足ＩＫ": ["右足IK親", "全ての親", "原点"]
         , "右つま先ＩＫ": ["右足ＩＫ"]
         , "左目": ["頭"]
         , "右目": ["頭"]
