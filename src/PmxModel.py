@@ -444,7 +444,7 @@ class PmxModel():
     # 一方向のボーンリンクを生成する
     def create_link_2_top_one(self, start_type_bone, start_type_bone_second=None):
 
-        if start_type_bone in self.bones:
+        if start_type_bone in self.bones or "足底辺" in start_type_bone:
             # logger.debug("first start_type_bone: %s", start_type_bone)
             return self.create_link_2_top(start_type_bone)
 
@@ -467,18 +467,29 @@ class PmxModel():
             ik_links = []
             ik_indexes = OrderedDict()
 
-        if start_bone not in self.bones or start_bone not in self.PARENT_BORN_PAIR:
-            # 開始ボーン名がなければ終了
-            return ik_links, ik_indexes
-        
-        start_type_bone = start_bone
-        if start_bone.startswith("右") or start_bone.startswith("左"):
-            # 左右から始まってたらそれは除く
+        # print("start_bone: %s" % start_bone)
+
+        if "足底辺" in start_bone:
+            direction = start_bone[0:1]
+            # print("direction: %s" % direction)
+            # 左足底辺が親ボーンリストにある場合、左足底辺を登録
+            ik_indexes["{0}足底辺".format(direction)] = len(ik_indexes)
+            ik_links.append(self.Bone("{0}足底辺".format(direction), None, QVector3D(self.bones["{0}足ＩＫ".format(direction)].position.x(), 0, self.bones["{0}足ＩＫ".format(direction)].position.z()), -1, 0, 0))
+
             start_type_bone = start_bone[1:]
-        
-        # 自分をリンクに登録
-        ik_indexes[start_type_bone] = len(ik_indexes)
-        ik_links.append(self.bones[start_bone])
+        else:
+            if start_bone not in self.bones or start_bone not in self.PARENT_BORN_PAIR:
+                # 開始ボーン名がなければ終了
+                return ik_links, ik_indexes
+            
+            start_type_bone = start_bone
+            if start_bone.startswith("右") or start_bone.startswith("左"):
+                # 左右から始まってたらそれは除く
+                start_type_bone = start_bone[1:]
+            
+            # 自分をリンクに登録
+            ik_indexes[start_type_bone] = len(ik_indexes)
+            ik_links.append(self.bones[start_bone])
 
         parent_name = None
         for pname in self.PARENT_BORN_PAIR[start_bone]:
@@ -547,6 +558,7 @@ class PmxModel():
         , "左足IK親": ["全ての親"]
         , "左足ＩＫ": ["左足IK親", "全ての親", "原点"]
         , "左つま先ＩＫ": ["左足ＩＫ"]
+        , "左足底辺": ["左つま先ＩＫ", "左足ＩＫ"]
         , "右肩P": ["上半身2", "上半身"]
         , "右肩": ["右肩P", "上半身2", "上半身"]
         , "右腕": ["右肩"]
@@ -576,6 +588,7 @@ class PmxModel():
         , "右足IK親": ["全ての親"]
         , "右足ＩＫ": ["右足IK親", "全ての親", "原点"]
         , "右つま先ＩＫ": ["右足ＩＫ"]
+        , "右足底辺": ["右つま先ＩＫ", "右足ＩＫ"]
         , "左目": ["頭"]
         , "右目": ["頭"]
     }
@@ -1144,5 +1157,14 @@ class SizingException(Exception):
 # ウェイトがすべて頭に乗っている頂点。
 def define_is_target_head_upper():
     def is_target(v):
-        return type(v.deform) is PmxModel.Bdef1
+        if type(v.deform) is PmxModel.Bdef1:
+            return True
+        elif type(v.deform) is PmxModel.Bdef2:
+            return v.deform.weight0 == 1
+        elif type(v.deform) is PmxModel.Bdef4:
+            return v.deform.weight0 == 1 or v.deform.weight2 == 1 or v.deform.weight3 == 1
+        elif type(v.deform) is PmxModel.Sdef:
+            return v.deform.weight0 == 1
+        elif type(v.deform) is PmxModel.Qdef:
+            return v.deform.weight0 == 1            
     return is_target
