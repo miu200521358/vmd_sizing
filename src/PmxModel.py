@@ -471,12 +471,13 @@ class PmxModel():
 
         if "足底辺" in start_bone:
             direction = start_bone[0:1]
-            # print("direction: %s" % direction)
-            # 左足底辺が親ボーンリストにある場合、左足底辺を登録
-            ik_indexes["{0}足底辺".format(direction)] = len(ik_indexes)
-            ik_links.append(self.Bone("{0}足底辺".format(direction), None, QVector3D(self.bones["{0}足ＩＫ".format(direction)].position.x(), 0, self.bones["{0}足ＩＫ".format(direction)].position.z()), -1, 0, 0))
-
             start_type_bone = start_bone[1:]
+
+            # print("direction: %s" % direction)
+            # 足底辺が指定されている場合、足底辺を登録
+            # 位置は足IKのY0位置とする
+            ik_indexes[start_type_bone] = len(ik_indexes)
+            ik_links.append(self.Bone("{0}足底辺".format(direction), None, QVector3D(self.bones["{0}足ＩＫ".format(direction)].position.x(), 0, self.bones["{0}足ＩＫ".format(direction)].position.z()), -1, 0, 0))
         else:
             if start_bone not in self.bones or start_bone not in self.PARENT_BORN_PAIR:
                 # 開始ボーン名がなければ終了

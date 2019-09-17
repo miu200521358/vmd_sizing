@@ -287,7 +287,7 @@ def read_pmx(path, filetype="pmx", is_print=True):
 
 def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_vmd_path, \
         is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, vmd_choice_values, rep_choice_values, rep_rate_values, \
-        camera_motion, camera_vmd_path, output_camera_vmd_path):
+        camera_motion, camera_vmd_path, output_camera_vmd_path, camera_y_offset):
     print("■■■■■■■■■■■■■■■■■")
     print("■　VMDサイジング処理実行")
     print("■■■■■■■■■■■■■■■■■")
@@ -360,7 +360,7 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
             # 読み込んだモーションデータそのものを弄らないよう、コピーした結果を渡す
             is_success = main.main(copy.deepcopy(motion), org_pmx, rep_pmx, output_vmd_path, \
                 is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, vmd_choice_values, rep_choice_values, rep_rate_values, \
-                copy.deepcopy(camera_motion), camera_vmd_path, output_camera_vmd_path)
+                copy.deepcopy(camera_motion), camera_vmd_path, output_camera_vmd_path, camera_y_offset)
 
             logger.info("is_shortage: %s, is_success: %s", is_shortage, is_success)
 

@@ -26,7 +26,7 @@ level = {0:logging.ERROR,
 
 def main(motion, trace_model, replace_model, output_vmd_path, \
     is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, vmd_choice_values, rep_choice_values, rep_rate_values, \
-    camera_motion, camera_vmd_path, output_camera_vmd_path):   
+    camera_motion, camera_vmd_path, output_camera_vmd_path, camera_y_offset):   
     # print("モーション: %s" % motion.path)
     # if camera_motion:
     #     print("カメラモーション: %s" % camera_motion.path)
@@ -50,7 +50,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, \
 
     # カメラ処理
     # is_success = sub_camera.exec(motion, trace_model, replace_model, output_vmd_path) and is_success
-    is_success = sub_camera.exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, camera_motion) and is_success
+    is_success = sub_camera.exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, camera_motion, camera_y_offset) and is_success
 
     # 頭部と腕の接触回避処理
     is_success = sub_avoidance.exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik) and is_success
@@ -140,7 +140,7 @@ if __name__=="__main__":
         # 腕IKによる位置調整
         is_hand_ik = True if args.hand_ik == 1 else False
 
-        main(motion, org_pmx, rep_pmx, output_vmd_path, is_avoidance, True, is_hand_ik, args.hand_distance, [], [], []) 
+        main(motion, org_pmx, rep_pmx, output_vmd_path, is_avoidance, True, is_hand_ik, args.hand_distance, [], [], [], 0) 
 
     except SizingException as e:
         print("■■■■■■■■■■■■■■■■■")

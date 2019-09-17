@@ -36,7 +36,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.01_β19", pos = wx.DefaultPosition, size = wx.Size( 600,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.01_β20", pos = wx.DefaultPosition, size = wx.Size( 600,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -518,6 +518,21 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		bSizerCamera4.Add( self.m_camera_fileOutputVmd, 0, wx.ALL|wx.EXPAND, 5 )
 	
+		self.m_camera_staticline5 = wx.StaticLine( self.m_panelCamera, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
+		bSizerCamera4.Add( self.m_camera_staticline5, 0, wx.EXPAND |wx.ALL, 5 )
+
+		# 全長Yオフセット
+		self.m_camera_staticText8 = wx.StaticText( self.m_panelCamera, wx.ID_ANY, u"全長Yオフセット値", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_camera_staticText8.SetToolTip( u"全長Yオフセット値" )
+		self.m_camera_staticText8.Wrap( -1 )
+		bSizerCamera4.Add( self.m_camera_staticText8, 0, wx.ALL, 5 )
+
+		self.m_camera_staticText11 = wx.StaticText( self.m_panelCamera, wx.ID_ANY,  u"カメラに映す変換先モデルの全長を調整するオフセット値を指定できます。\n変換先モデルの全長は、頭ボーンにウェイトが100%乗っている頂点のうち最も上にある頂点を計算対象とします。\nそのため、帽子や角など、頭に付属しているパーツで全長に含めたくないパーツがある場合、\nその分をマイナス値で入力してください。\n逆にアホ毛等を全長に含めたい場合、その分をプラス値で入力してください。\n-1000から1000の間で設定できます。（小数点可）", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizerCamera4.Add( self.m_camera_staticText11, 0, wx.ALL, 5 )
+
+		self.m_camera_spinYoffset = wx.SpinCtrlDouble( self.m_panelCamera, id=wx.ID_ANY, size=wx.Size( 80,-1 ), min=-1000, max=1000, initial=0.0, inc=0.1 )
+		bSizerCamera4.Add( self.m_camera_spinYoffset, 0, wx.ALL, 5 )
+
 		self.m_panelCamera.SetSizer( bSizerCamera4 )
 		self.m_panelCamera.Layout()
 		bSizerCamera4.Fit( self.m_panelCamera )
@@ -1981,6 +1996,7 @@ class ExecWorkerThread(Thread):
 			, self._notify_window.camera_vmd_data
 			, self._notify_window.m_camera_fileVmd.GetPath()
 			, self._notify_window.m_camera_fileOutputVmd.GetPath()
+			, self._notify_window.m_camera_spinYoffset.GetValue()
 		)
 
 		# Here's where the result would be returned (this is an
