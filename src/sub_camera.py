@@ -125,6 +125,9 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
     # 作成元のカメラ
     org_camera_motion = copy.deepcopy(camera_motion)
 
+    # ログ出力用商
+    prev_log_cnt = 0
+
     # 移動縮尺
     for cf_idx, cf in enumerate(camera_motion.cameras):
         if cf_idx > 0 and org_camera_motion.cameras[cf_idx - 1].position == org_camera_motion.cameras[cf_idx].position \
@@ -173,6 +176,10 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
         logger.info("[after] cf.position: %s", cf.position )
         logger.info("[after] cf.euler: %s, %s, %s", calc_camera_euler(cf.euler.x(), cf), calc_camera_euler(-cf.euler.y(), cf), calc_camera_euler(-cf.euler.z(), cf) )
         logger.info("[after] cf.length: %s", cf.length )
+
+        if cf.frame // 1000 > prev_log_cnt:
+            print("カメラ調整: %s" % cf.frame)
+            prev_log_cnt = cf.frame // 1000
 
         # if cf.frame > 540:
         #     break
