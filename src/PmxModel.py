@@ -92,10 +92,14 @@ class PmxModel():
             if apbn.name not in ss_parent_bone_names:
                 # かつ、許容範囲のボーン名ではない場合（準標準ボーンまで）
                 if apbn.name not in ["左肩C", "グルーブ"] and self.bones[apbn.name].display == True:
-                    # 既定ボーンリストと同じ位置のボーンである場合、調整系とみなしてスルー
                     is_adjust = False
                     for spbn in ss_parent_bones:
+                        # 既定ボーンリストと同じ位置のボーンである場合、調整系とみなしてスルー
                         if spbn.position == apbn.position:
+                            is_adjust = True
+                            break
+                        # 既定ボーンの拡張の場合、調整系とみなしてスルー
+                        if spbn.name in apbn.name:
                             is_adjust = True
                             break
 
