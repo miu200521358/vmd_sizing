@@ -17,68 +17,67 @@ import utils, sub_move
 
 logger = logging.getLogger("VmdSizing").getChild(__name__)
 
-# 標準ボーン＋上半身2のボーン名と対応縮尺の辞書
+# 標準ボーン＋上半身2のボーン名とねんどろ対応縮尺の辞書
 # 足FKは位置が算出できないので、とりあえず対象外
 # つま先IKは位置がモデルによって違うのでとりあえず除外
 STANDARD_BONE_RATIOS = {
-    "上半身2": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "上半身": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "下半身": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "首": {"x":"head", "y":"head", "z":"head", "l":"head"},
-    "頭": {"x":"head", "y":"head", "z":"head", "l":"head"},
-    "左目": {"x":"head", "y":"head", "z":"head", "l":"head"},
-    "右目": {"x":"head", "y":"head", "z":"head", "l":"head"},
-    "両目": {"x":"head", "y":"head", "z":"head", "l":"head"},
-    "左肩": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "左腕": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "左ひじ": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "左手首": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "左親指１": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "左親指２": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "左人指１": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "左人指２": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "左人指３": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "左中指１": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "左中指２": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "左中指３": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "左薬指１": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "左薬指２": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "左薬指３": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "左小指１": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "左小指２": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "左小指３": {"x":"body", "y":"body", "z":"body", "l":"body"},
+    "上半身2": "上半身2",
+    "上半身": "上半身",
+    "首": "首",
+    "頭": "頭",
+    "左目": "左目",
+    "右目": "右目",
+    "両目": "両目",
+    "左肩": "左肩",
+    "左腕": "左腕",
+    "左ひじ": "左ひじ",
+    "左手首": "左手首",
+    "左親指１": "左親指１",
+    "左親指２": "左親指２",
+    "左人指１": "左人指１",
+    "左人指２": "左人指２",
+    "左人指３": "左人指３",
+    "左中指１": "左中指１",
+    "左中指２": "左中指２",
+    "左中指３": "左中指３",
+    "左薬指１": "左薬指１",
+    "左薬指２": "左薬指２",
+    "左薬指３": "左薬指３",
+    "左小指１": "左小指１",
+    "左小指２": "左小指２",
+    "左小指３": "左小指３",
     # "左足",
     # "左ひざ",
     # "左足首",
-    "右肩": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "右腕": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "右ひじ": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "右手首": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "右親指１": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "右親指２": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "右人指１": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "右人指２": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "右人指３": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "右中指１": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "右中指２": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "右中指３": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "右薬指１": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "右薬指２": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "右薬指３": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "右小指１": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "右小指２": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "右小指３": {"x":"body", "y":"body", "z":"body", "l":"body"},
+    "右肩": "右肩",
+    "右腕": "右腕",
+    "右ひじ": "右ひじ",
+    "右手首": "右手首",
+    "右親指１": "右親指１",
+    "右親指２": "右親指２",
+    "右人指１": "右人指１",
+    "右人指２": "右人指２",
+    "右人指３": "右人指３",
+    "右中指１": "右中指１",
+    "右中指２": "右中指２",
+    "右中指３": "右中指３",
+    "右薬指１": "右薬指１",
+    "右薬指２": "右薬指２",
+    "右薬指３": "右薬指３",
+    "右小指１": "右小指１",
+    "右小指２": "右小指２",
+    "右小指３": "右小指３",
     # "右足",
     # "右ひざ",
     # "右足首",
     # "左つま先",
     # "右つま先",
-    "左足ＩＫ": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    # "左つま先ＩＫ": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "右足ＩＫ": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    # "右つま先ＩＫ": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "左足底辺": {"x":"body", "y":"body", "z":"body", "l":"body"},
-    "右足底辺": {"x":"body", "y":"body", "z":"body", "l":"body"},
+    "左足ＩＫ": "左足ＩＫ",
+    # "左つま先ＩＫ": "左つま先ＩＫ",
+    "右足ＩＫ": "右足ＩＫ",
+    # "右つま先ＩＫ": "右つま先ＩＫ",
+    "左足底辺": "左足底辺",
+    "右足底辺": "右足底辺",
 }
 
 
@@ -99,7 +98,7 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
     # leg_xz_ratio, leg_y_ratio, _ = sub_move.calc_leg_ik_ratio(trace_model, replace_model)
     
     # 身体の比率
-    body_ratio, head_ratio, _ = calc_body_head_ratio(trace_model, replace_model, camera_y_offset)
+    body_ratio, head_ratio, head_ratio_small, org_face_length, replace_head_ratio = calc_body_head_ratio(trace_model, replace_model, camera_y_offset)
 
     # arm_ratio = calc_arm_ratio(trace_model, replace_model)
 
@@ -109,11 +108,12 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
         # "legxz": leg_xz_ratio,
         # "legy": leg_y_ratio,
         "head": head_ratio,
-        # "arm": arm_ratio
+        # "arm": arm_ratio,
+        "head_small": head_ratio_small
     }
 
     # 情報提供
-    print("カメラ補正値 全長: %s(Yオフセット: %s), 頭: %s" % (body_ratio, camera_y_offset, head_ratio))
+    print("カメラ補正値 全長: %s(Yオフセット: %s), 頭: %s(%s)" % (body_ratio, camera_y_offset, head_ratio, head_ratio_small))
     # print("　足XZ: %s, 足Y: %s" % (leg_xz_ratio, leg_y_ratio))
 
     # 作成元モデル：全身のリンク
@@ -153,7 +153,7 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
         # 作成元モデルのどのボーンが最も注視点に近いか
         org_nearest_bone_name, org_nearest_global_pos, org_nearest_project_pos, \
             org_bottom_bone_name, org_bottom_global_pos, org_bottom_project_pos, \
-            org_top_bone_name, org_top_global_pos, org_top_project_pos = calc_nearest_bone(org_body_global_3ds, ratio_dict, cf)
+            org_top_bone_name, org_top_global_pos, org_top_project_pos = calc_nearest_bone(org_body_global_3ds, ratio_dict, replace_head_ratio, cf)
 
         # 作成元モデルの最も近いボーン名と同じボーンの位置を、変換先モデルから取得する
         rep_nearest_global_pos = create_bone_global_3ds(replace_model, motion.frames, rep_body_links, cf.frame, rep_link_names, org_nearest_bone_name)
@@ -164,13 +164,17 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
         create_camera_frame(org_nearest_bone_name, org_nearest_global_pos, org_nearest_project_pos, \
             org_bottom_bone_name, org_bottom_global_pos, org_bottom_project_pos, \
             org_top_bone_name, org_top_global_pos, org_top_project_pos, \
-             rep_nearest_global_pos, rep_bottom_global_pos, rep_top_global_pos, ratio_dict, cf )
+             rep_nearest_global_pos, rep_bottom_global_pos, rep_top_global_pos, ratio_dict, org_face_length, replace_head_ratio, cf )
 
-        # if cf_idx > 0 and org_camera_motion.cameras[cf_idx - 1].length == org_camera_motion.cameras[cf_idx].length:
-        #     # 前回と同じカメラ距離の場合、カメラ距離コピー
-        #     logger.debug("カメラ距離コピー")
-        #     # 実際にコピーするのは、サイジングした距離
-        #     cf.length = copy.deepcopy(camera_motion.cameras[cf_idx - 1].length)
+        # if 611 <= cf.frame <= 611:
+        #     # 変換先モデルの各ボーングローバル位置
+        #     rep_body_global_3ds = create_body_global_3ds(trace_model, motion.frames, rep_body_links, cf.frame, rep_link_names)
+
+        #     # 変換先モデルのどのボーンが最も注視点に近いか
+        #     rep_nearest_bone_name, rep_nearest_global_pos, rep_nearest_project_pos, \
+        #         rep_bottom_bone_name, rep_bottom_global_pos, rep_bottom_project_pos, \
+        #         rep_top_bone_name, rep_top_global_pos, rep_top_project_pos = calc_nearest_bone(rep_body_global_3ds, ratio_dict, replace_head_ratio, cf)
+
 
         logger.info("[after] cf.frame: %s", cf.frame )
         logger.info("[after] cf.position: %s", cf.position )
@@ -215,13 +219,13 @@ def calc_arm_ratio(trace_model, replace_model):
 
 # 身体の比率算出
 def calc_body_head_ratio(trace_model, replace_model, camera_y_offset):
-    trace_head_ratio, trace_face_length, trace_total_height, trace_head_height, trace_neck_height = get_head_height(trace_model, 0)
+    trace_head_ratio, trace_face_length, trace_total_height, trace_head_height, trace_eye_length = get_head_height(trace_model, 0)
     logger.info("trace_head_ratio: %s", trace_head_ratio)
     logger.info("trace_face_length: %s", trace_face_length)
     logger.info("trace_total_height: %s", trace_total_height)
     logger.info("trace_head_height: %s", trace_head_height)
 
-    replace_head_ratio, replace_face_length, replace_total_height, replace_head_height, replace_neck_height = get_head_height(replace_model, camera_y_offset)
+    replace_head_ratio, replace_face_length, replace_total_height, replace_head_height, replace_eye_length = get_head_height(replace_model, camera_y_offset)
     logger.info("replace_head_ratio: %s", replace_head_ratio)
     logger.info("replace_face_length: %s", replace_face_length)
     logger.info("replace_total_height: %s", replace_total_height)
@@ -234,25 +238,31 @@ def calc_body_head_ratio(trace_model, replace_model, camera_y_offset):
     # 頭身比率
 
     # head_ratio = (replace_face_length * trace_head_ratio) / (trace_face_length / replace_head_ratio)
-    # logger.info("replace_face_length * trace_head_ratio) / (trace_face_length / replace_head_ratio): %s", (replace_face_length * trace_head_ratio) / (trace_face_length / replace_head_ratio))
+    logger.info("replace_face_length * trace_head_ratio) / (trace_face_length / replace_head_ratio): %s", (replace_face_length * trace_head_ratio) / (trace_face_length / replace_head_ratio))
 
     # head_ratio = (replace_head_height * trace_head_ratio) / trace_head_height
-    # logger.info("replace_head_height * trace_head_ratio) / trace_head_height: %s", (replace_head_height * trace_head_ratio) / trace_head_height)
+    logger.info("replace_head_height * trace_head_ratio) / trace_head_height: %s", (replace_head_height * trace_head_ratio) / trace_head_height)
+
+    # head_ratio = (trace_face_length * replace_head_ratio) / replace_total_height
+    logger.info("replace_head_ratio / trace_head_ratio: %s", replace_head_ratio / trace_head_ratio)
+    logger.info("trace_head_ratio / replace_head_ratio: %s", trace_head_ratio / replace_head_ratio)
 
     # 作成元の頭の大きさで、変換先の頭身に合わせて全長を計算
     head_ratio = (replace_face_length * trace_head_ratio) / trace_total_height
     logger.info("replace_face_length * trace_head_ratio) / trace_total_height: %s", (replace_face_length * trace_head_ratio) / trace_total_height)
 
-    # head_ratio = (trace_face_length * replace_head_ratio) / replace_total_height
-    # logger.info("(trace_face_length * replace_head_ratio) / replace_total_height: %s", (trace_face_length * replace_head_ratio) / replace_total_height)
+    # 頭身低い用の顔アップ用(頭ボーンから目ボーンまでの長さの比率)
+    head_ratio_small = replace_eye_length / trace_eye_length
+    logger.info("replace_eye_length / trace_eye_length: %s", replace_eye_length / trace_eye_length)
 
-    # head_ratio = trace_head_ratio / replace_head_ratio
-    # logger.info("trace_head_ratio / replace_head_ratio: %s", trace_head_ratio / replace_head_ratio)
+    # # 首までの身長比率
+    # neck_ratio = replace_neck_height / trace_neck_height
 
-    # 首までの身長比率
-    neck_ratio = replace_neck_height / trace_neck_height
+    # 情報提供
+    print("作成元モデル 全長: %s, 頭身: %s, 顔の大きさ: %s" % (trace_total_height, trace_head_ratio, trace_face_length))
+    print("変換先モデル 全長: %s, 頭身: %s, 顔の大きさ: %s" % (replace_total_height, replace_head_ratio, replace_face_length))
 
-    return body_ratio, head_ratio, neck_ratio
+    return body_ratio, head_ratio, head_ratio_small, trace_face_length, replace_head_ratio
 
 # 頭身取得
 def get_head_height(model, camera_y_offset):
@@ -280,9 +290,17 @@ def get_head_height(model, camera_y_offset):
         total_height = head_tail_pos.y()
 
         logger.debug("face_length: %s, total_height: %s", face_length, total_height)
+
+        # 目から頭ボーンまでの長さ
+        if "左目" in model.bones:
+            eye_length = model.bones["左目"].position.y() - model.bones["頭"].position.y()
+        elif "左目" in model.bones:
+            eye_length = model.bones["右目"].position.y() - model.bones["頭"].position.y()
+        else:
+            eye_length = face_length
         
         # 顔の大きさ / 全身の高さ　で頭身算出
-        return total_height / face_length, face_length, total_height, model.bones["頭"].position.y(), model.bones["首"].position.y()
+        return total_height / face_length, face_length, total_height, model.bones["頭"].position.y(), eye_length
     
     return 1, 1, 1, 1, 1
 
@@ -318,8 +336,6 @@ def create_body_links(model):
     # 右小指までのリンク
     right_little_finger_links, _ = model.create_link_2_top_one("右小指３", "右手首")
     # logger.debug("finger_links: %s", [ "{0}: {1}\n".format(x.name, x.position) for x in right_fore_finger_links])    
-    # 下半身までのリンク
-    lower_body_all_links, _ = model.create_link_2_top_one("下半身")
     # 左足底辺までのリンク
     left_leg_ik_all_links, _ = model.create_link_2_top_one("左足底辺", "左足ＩＫ")
     # 右足底辺までのリンク
@@ -328,7 +344,7 @@ def create_body_links(model):
 
     # ボーン名のリスト（全身）
     link_names = {}
-    for lidx, links in enumerate([left_eye_links, right_eye_links, lower_body_all_links, left_leg_ik_all_links, right_leg_ik_all_links, \
+    for lidx, links in enumerate([left_eye_links, right_eye_links, left_leg_ik_all_links, right_leg_ik_all_links, \
         left_thumb_finger_links, left_fore_finger_links, left_middle_finger_links, left_third_finger_links, left_little_finger_links, \
         right_thumb_finger_links, right_fore_finger_links, right_middle_finger_links, right_third_finger_links, right_little_finger_links]):
         for l in links:
@@ -339,7 +355,7 @@ def create_body_links(model):
 
     logger.debug("link_names: %s", link_names)
 
-    return [left_eye_links, right_eye_links, lower_body_all_links, left_leg_ik_all_links, right_leg_ik_all_links, \
+    return [left_eye_links, right_eye_links, left_leg_ik_all_links, right_leg_ik_all_links, \
         left_thumb_finger_links, left_fore_finger_links, left_middle_finger_links, left_third_finger_links, left_little_finger_links, \
         right_thumb_finger_links, right_fore_finger_links, right_middle_finger_links, right_third_finger_links, right_little_finger_links], link_names
 
@@ -399,7 +415,7 @@ def create_bone_global_3ds(model, motion_frames, body_links, frame, link_names, 
     return QVector3D()
 
 # 最も近いボーン名とボーン位置を返す
-def calc_nearest_bone(body_global_3ds, ratio_dict, cf):
+def calc_nearest_bone(body_global_3ds, ratio_dict, replace_head_ratio, cf):
     logger.debug("frame: %s ---------------------", cf.frame)
 
     nearest_distance = 0
@@ -408,49 +424,51 @@ def calc_nearest_bone(body_global_3ds, ratio_dict, cf):
     nearest_project_pos = QVector3D(99999,99999,0)
     nearest_project_square_pos = QVector3D(99999,99999,0)
     bottom_bone_name = None
-    bottom_global_pos = QVector3D(0,99999,0)
-    bottom_project_pos = QVector3D(0,99999,0)
-    bottom_project_square_pos = QVector3D(0,99999,0)
+    bottom_global_pos = QVector3D(0,-99999,0)
+    bottom_project_pos = QVector3D(0,-99999,0)
+    bottom_project_square_pos = QVector3D(0,-99999,0)
     top_bone_name = None
-    top_global_pos = QVector3D(0,-99999,0)
-    top_project_pos = QVector3D(0,-99999,0)
-    top_project_square_pos = QVector3D(0,-99999,0)
+    top_global_pos = QVector3D(0,99999,0)
+    top_project_pos = QVector3D(0,99999,0)
+    top_project_square_pos = QVector3D(0,99999,0)
 
     # # カメラ座標
     # camera_matrix = calc_camera_matrix(cf)
     # logger.info("camera_matrix: %s", camera_matrix)
 
+    # 体幹と直近ボーンとの差分（頭身によって切り分け）
+    trunk_diff = 1.5 if replace_head_ratio <= 3 else 1
+
     for idx, (k, v) in enumerate(body_global_3ds.items()):
+        if 611 <= cf.frame <= 611:
+            logger.info("%s (%s) ------------", k, cf.frame)
+
         # 正規化デバイス座標系の位置を算出
         project_pos = calc_project_pos(v, cf)
 
         project_square_pos = QVector2D()
-        project_square_pos.setX(project_pos.x() / 16)
-        project_square_pos.setY(project_pos.y() / 9)
+        project_square_pos.setX((-project_pos.x() + 16) / 16)
+        project_square_pos.setY((-project_pos.y() + 9) / 9)
 
         # カメラの位置は見た目上2D
         # 中央からの距離
         dp = QVector2D(16/2, 9/2).distanceToPoint(QVector2D(project_pos.x(), project_pos.y()))
         # dp = abs(project_pos.x()) + abs(project_pos.y())
 
-        if 281 <= cf.frame <= 281:
-            logger.info("%s (%s) ------------", k, cf.frame)
-            logger.info("cf.position: %s", cf.position)
-            # logger.info("camera_world_pos: %s", camera_world_pos)
-            logger.info("v: %s", v)
-            logger.info("project_pos: %s", project_pos)
+        if 611 <= cf.frame <= 611:
             logger.info("project_square_pos: %s", project_square_pos)
             logger.info("dp: %s", dp)
             # logger.info("image_coordinate_pos: %s", image_coordinate_pos)
 
-        if project_square_pos.y() < bottom_project_square_pos.y() and project_square_pos.y() >= -0.1:
+        if project_square_pos.y() > bottom_project_square_pos.y() and \
+            ( project_square_pos.y() <= 1 or ( k in ["左足ＩＫ", "右足ＩＫ", "左つま先ＩＫ", "右つま先ＩＫ", "左足底辺", "右足底辺"] and project_square_pos.y() <= 1.2 )):
             # 画面内ちょっとはみ出るくらいに映っていて、かつ底辺ボーンより下の場合、保持
             bottom_bone_name = k
             bottom_project_pos = project_pos # プロジェクション座標系の位置を保持する
             bottom_project_square_pos = project_square_pos # プロジェクション座標系の位置を保持する
             bottom_global_pos = v # グローバル座標系の位置を保持する
 
-        if project_square_pos.y() > top_project_square_pos.y() and project_square_pos.y() <= 1:
+        if project_square_pos.y() < top_project_square_pos.y() and project_square_pos.y() >= 0:
             # 画面内に映っていて、かつ上辺ボーンより上の場合、保持
             top_bone_name = k
             top_project_pos = project_pos # プロジェクション座標系の位置を保持する
@@ -471,12 +489,12 @@ def calc_nearest_bone(body_global_3ds, ratio_dict, cf):
             # 頭と体幹が現在直近で、かつほとんど位置が変わらない場合、頭を優先
             if nearest_bone_name in ["首", "頭", "左目", "右目", "両目", "上半身", "上半身2", "下半身"] and \
                 k not in ["首", "頭", "左目", "右目", "両目", "上半身", "上半身2", "下半身"] and \
-                abs(dp - nearest_distance) <= 1:
-                if 281 <= cf.frame <= 281:
-                    logger.info("体幹付近を優先: n: %s, v: %s, d: %s, r: %s", nearest_distance, dp, dp - nearest_distance, ratio_dict["body"] * 2)
+                abs(dp - nearest_distance) <= trunk_diff:
+                if 611 <= cf.frame <= 611:
+                    logger.info("体幹付近を優先: n: %s, v: %s, d: %s, t: %s", nearest_distance, dp, dp - nearest_distance, trunk_diff)
                 continue
 
-            if 281 <= cf.frame <= 281:
+            if 611 <= cf.frame <= 611:
                 logger.info("直近採用 k: %s, dp: %s", k, dp)
 
             # if k in ["左足ＩＫ", "右足ＩＫ"] and project_pos.y() < -0.5:
@@ -502,7 +520,9 @@ def calc_nearest_bone(body_global_3ds, ratio_dict, cf):
     logger.info("top: p: %s", top_project_pos)
     logger.info("top: s: %s", top_project_square_pos)
     
-    return nearest_bone_name, nearest_global_pos, nearest_project_pos, bottom_bone_name, bottom_global_pos, bottom_project_pos, top_bone_name, top_global_pos, top_project_pos
+    return nearest_bone_name, copy.deepcopy(nearest_global_pos), copy.deepcopy(nearest_project_pos), \
+        bottom_bone_name, copy.deepcopy(bottom_global_pos), copy.deepcopy(bottom_project_pos), \
+        top_bone_name, copy.deepcopy(top_global_pos), copy.deepcopy(top_project_pos)
 
 def calc_unproject_pos(project_pos, cf):
     # モデル座標系
@@ -534,6 +554,12 @@ def calc_project_pos(global_pos, cf):
 
     project_pos = global_pos.project(model_view, projection_view, viewport_rect)
 
+    if 611 <= cf.frame <= 611:
+        logger.info("%s ------------", cf.frame)
+        logger.info("l: %s, p: %s", cf.length, cf.position)
+        logger.info("global_pos: %s", global_pos)
+        logger.info("project_pos: %s", project_pos)
+
     return project_pos
 
 
@@ -559,9 +585,9 @@ def create_model_view(cf):
     mat_up.rotate(camera_qq)
     camera_up = mat_up * QVector3D(0, 1, 0)  
 
-    if 281 <= cf.frame <= 281:
-        logger.info("camera_origin: %s", camera_origin)
-        logger.info("camera_up: %s", camera_up)
+    # if 611 <= cf.frame <= 611:
+    #     logger.info("camera_origin: %s", camera_origin)
+    #     logger.info("camera_up: %s", camera_up)
 
     # カメラ座標系の行列
     # eye: カメラの原点（グローバル座標）
@@ -572,12 +598,16 @@ def create_model_view(cf):
     return model_view
 
 def create_projection_view(cf):
+    # # 視野角が小さい時に映す範囲がより小さくなる？
+    # angle_diff = 0 if abs(cf.length) >= 15 else (cf.length + 15) / 15
+    
+    # if 611 <= cf.frame <= 611:
+    #     logger.info("angle_diff: %s", angle_diff)
+
     mat = QMatrix4x4()
-    # if cf.angle <= 20:
-    #     # 視野角が狭い場合、半分？
-    #     mat.perspective(cf.angle/2, 16/9, 0.1, 5000)
-    # else:
-    mat.perspective(cf.angle, 16/9, 0.1, 5000)
+    # MMDの縦の視野角。
+    # https://ch.nicovideo.jp/t-ebiing/blomaga/ar510610
+    mat.perspective(cf.angle * 0.95, 16/9, 0.1, 5000)
 
     return mat
 
@@ -605,17 +635,17 @@ def calc_camera_qq(cf):
 
     qq = QQuaternion.fromEulerAngles(calc_camera_euler(-cf.euler.x(), cf), calc_camera_euler(cf.euler.y(), cf), calc_camera_euler(cf.euler.z(), cf))
 
-    # if 281 <= cf.frame <= 281:
+    # if 611 <= cf.frame <= 611:
     #     logger.info("qq: %s", qq)
     #     # logger.info("qq.inverted(): %s", qq.inverted())
     #     logger.info("qq.inverted().euler: %s", qq.inverted().toEulerAngles())
     #     # logger.info("calc_camera_qq: -z: %s, z: %s", calc_camera_euler(-cf.euler.z(), cf), calc_camera_euler(cf.euler.z(), cf))
 
     # if qq.y() < 0 or qq.z() < 0:
-    # qq.setX(qq.x() * -1)
+    qq.setX(qq.x() * -1)
     # qq.setY(qq.y() * -1)
     # qq.setZ(qq.z() * -1)
-    # qq.setScalar(qq.scalar() * -1)
+    qq.setScalar(qq.scalar() * -1)
 
     return qq
 
@@ -624,7 +654,7 @@ def calc_camera_euler(euler, cf):
     
     degree = degrees(euler)
 
-    # if 281 <= cf.frame <= 281:
+    # if 611 <= cf.frame <= 611:
     #     logger.info("euler: %s, degree: %s", euler, degree)
 
     # if abs(degree) < 0.0001:
@@ -647,7 +677,7 @@ def calc_camera_euler(euler, cf):
 def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_nearest_project_pos, \
     org_bottom_bone_name, org_bottom_global_pos, org_bottom_project_pos, \
     org_top_bone_name, org_top_global_pos, org_top_project_pos, \
-    rep_nearest_global_pos, rep_bottom_global_pos, rep_top_global_pos, ratio_dict, cf ):
+    rep_nearest_global_pos, rep_bottom_global_pos, rep_top_global_pos, ratio_dict, org_face_length, replace_head_ratio, cf ):
     
     logger.debug("camera %s ----------------", cf.frame)
 
@@ -661,8 +691,11 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
 
     # 最も近いボーンの相対位置を、変換先モデルの縮尺に合わせる
     org_nearest_relative_pos = cf.position - org_nearest_global_pos
-    if 281 <= cf.frame <= 281:
+    if 611 <= cf.frame <= 611:
         logger.info("org_nearest_relative_pos: %s", org_nearest_relative_pos)
+        logger.info("rep_nearest_global_pos: %s", rep_nearest_global_pos)
+        logger.info("rep_bottom_global_pos: %s", rep_bottom_global_pos)
+        logger.info("rep_top_global_pos: %s", rep_top_global_pos)
 
     # # カメラ座標系の位置を算出
     # org_camera_coordinate_pos = calc_camera_coordinate_pos(cf, org_nearest_global_pos)
@@ -675,10 +708,32 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
     # logger.debug("rep_camera_pos: %s", rep_camera_pos)
 
     # 変換先モデルの縮尺（アップ時のみ顔比率）
-    ratio = ratio_dict["head"] if org_nearest_bone_name in ["首", "頭", "左目", "右目", "両目"] and (cf.angle <= 20 and abs(cf.length) + cf.angle <= 30) else ratio_dict["body"]
+    if replace_head_ratio <= 3:
+        if org_nearest_bone_name in ["首", "頭", "左目", "右目", "両目", "上半身2"] or org_top_bone_name in ["頭", "左目", "右目", "両目"]:
+            if abs(cf.length) + cf.angle <= (13 * org_face_length):
+                logger.info("head合致: a: %s, l: %s, s: %s, d: %s", cf.angle, cf.length, abs(cf.length) + cf.angle, (15 * org_face_length))
+
+                ratio = ratio_dict["head"]
+            elif abs(cf.length) + cf.angle <= (18 * org_face_length):
+                logger.info("head_small合致: a: %s, l: %s, s: %s, d: %s", cf.angle, cf.length, abs(cf.length) + cf.angle, (20 * org_face_length))
+
+                ratio = ratio_dict["head_small"]
+            else:
+                logger.info("head合致なし: a: %s, l: %s, s: %s, dh: %s, dhs: %s", cf.angle, cf.length, abs(cf.length) + cf.angle, (15 * org_face_length), (20 * org_face_length))
+
+                ratio = ratio_dict["body"]
+        else:
+            logger.info("nearest合致なし: a: %s, l: %s", cf.angle, cf.length)
+
+            ratio = ratio_dict["body"]
+
+        # ratio = ratio_dict["head"] if org_nearest_bone_name in ["首", "頭", "左目", "右目", "両目", "上半身2", "上半身"] and (cf.angle <= 20 and abs(cf.length) + cf.angle <= (30 / ratio_dict["head"]) ) else ratio_dict["body"]
+    else:
+        # 3頭身より大きい
+        ratio = ratio_dict["head"] if org_nearest_bone_name in ["首", "頭", "左目", "右目", "両目"] and (cf.angle <= 20 and abs(cf.length) + cf.angle <= (13 * org_face_length)) else ratio_dict["body"]
 
     logger.info("l: %s, p: %s", cf.length, cf.position)
-    logger.info("b: %s, r: %s", org_nearest_bone_name, ratio)
+    logger.info("b: %s, a: %s, r: %s", org_nearest_bone_name, cf.angle, ratio)
 
     # if cf.length > 0:
     #     # 距離が0未満の場合、カメラ位置に縮尺をかける
@@ -717,14 +772,14 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
             logger.info("cf.position fixed: %s", cf.position)
             logger.info("cf.length fixed: %s", cf.length)
 
-        # 上辺が顔系で下辺が足系ではない場合、位置合わせ
-        if rep_top_global_pos and org_top_bone_name and org_top_bone_name in ["左目", "右目", "両目", "顔"] \
+        # 上辺が顔系で下辺が足系ではない場合、位置合わせ(3頭身未満はとりあえず除外)
+        if replace_head_ratio > 3 and rep_top_global_pos and org_top_bone_name and org_top_bone_name in ["左目", "右目", "両目", "顔", "首"] \
             and org_bottom_bone_name and org_bottom_bone_name not in ["左足ＩＫ", "右足ＩＫ", "左つま先ＩＫ", "右つま先ＩＫ", "左足底辺", "右足底辺"]:
 
             rep_top_project_pos = calc_project_pos(rep_top_global_pos, cf)
             rep_start_top_project_pos = calc_project_pos(rep_top_global_pos, cf)
 
-            if 281 <= cf.frame <= 281:
+            if 611 <= cf.frame <= 611:
                 logger.info("-----------")
                 logger.info("org_top_project_pos: %s", org_top_project_pos)
                 logger.info("rep_top_project_pos: %s", rep_top_project_pos)
@@ -732,56 +787,55 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
             if rep_top_project_pos.y() >= org_top_project_pos.y():
                 # 映っている領域の位置
                 for _ in range(100):
-                    if 281 <= cf.frame <= 281:
-                        logger.info("-----------")
-                        logger.info("org_top_project_pos: %s", org_top_project_pos)
-                        logger.info("rep_top_project_pos: %s", rep_top_project_pos)
-
                     # Yを動かす
                     cf.position.setY(cf.position.y() + 0.1)
 
                     # 変換先上辺ボーンのプロジェクション位置
                     rep_top_project_pos = calc_project_pos(rep_top_global_pos, cf)
 
-                    # 変換先上辺ボーン位置が元々の位置より上に行った場合、とりあえず変なので終了
+                    if 611 <= cf.frame <= 611:
+                        logger.info("rep > org -----------")
+                        logger.info("org_top_project_pos: %s", org_top_project_pos)
+                        logger.info("rep_top_project_pos: %s", rep_top_project_pos)
+                        logger.info("cf.position while: %s", cf.position)
+
+                    # 変換先上辺ボーン位置が元々の位置より上に行った場合、とりあえず変なので元に戻して終了
                     if rep_top_project_pos.y() >= rep_start_top_project_pos.y():
+                        cf.position.setY(cf.position.y() - 0.1)
                         break
 
                     # 作成元のプロジェクション位置を下回った場合、ループ終了
                     if rep_top_project_pos.y() <= org_top_project_pos.y():
                         break
 
-                    if 281 <= cf.frame <= 281:
-                        logger.info("cf.position while: %s", cf.position)
             else:
                 # 映っている領域の位置
                 for _ in range(100):
-                    if 281 <= cf.frame <= 281:
-                        logger.info("-----------")
-                        logger.info("org_top_project_pos: %s", org_top_project_pos)
-                        logger.info("rep_top_project_pos: %s", rep_top_project_pos)
-
                     # Yを動かす
                     cf.position.setY(cf.position.y() - 0.1)
 
                     # 変換先上辺ボーンのプロジェクション位置
                     rep_top_project_pos = calc_project_pos(rep_top_global_pos, cf)
 
-                    # 変換先上辺ボーン位置が元々の位置より上に行った場合、とりあえず変なので終了
+                    if 611 <= cf.frame <= 611:
+                        logger.info("rep < org -----------")
+                        logger.info("org_top_project_pos: %s", org_top_project_pos)
+                        logger.info("rep_top_project_pos: %s", rep_top_project_pos)
+                        logger.info("cf.position while: %s", cf.position)
+
+                    # 変換先上辺ボーン位置が元々の位置より上に行った場合、とりあえず変なので元に戻して終了
                     if rep_top_project_pos.y() <= rep_start_top_project_pos.y():
+                        cf.position.setY(cf.position.y() + 0.1)
                         break
 
                     # 作成元のプロジェクション位置を下回った場合、ループ終了
                     if rep_top_project_pos.y() >= org_top_project_pos.y():
                         break
 
-                    if 281 <= cf.frame <= 281:
-                        logger.info("cf.position while: %s", cf.position)
-
             # else:
             #     # 映っている領域の位置
             #     for _ in range(100):
-            #         if 281 <= cf.frame <= 281:
+            #         if 611 <= cf.frame <= 611:
             #             logger.info("-----------")
             #             logger.info("org_top_project_pos: %s", org_top_project_pos)
             #             logger.info("rep_top_project_pos: %s", rep_top_project_pos)
@@ -796,7 +850,7 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
             #         if rep_top_project_pos.y() >= org_top_project_pos.y():
             #             break
 
-            #         if 281 <= cf.frame <= 281:
+            #         if 611 <= cf.frame <= 611:
             #             logger.info("cf.position while: %s", cf.position)
 
         if rep_bottom_global_pos and org_bottom_bone_name and org_bottom_bone_name in ["左足ＩＫ", "右足ＩＫ", "左つま先ＩＫ", "右つま先ＩＫ", "左足底辺", "右足底辺"] \
@@ -806,24 +860,22 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
 
             # 下辺が足系の場合、位置合わせ（俯瞰時は位置合わせしない）
             if rep_bottom_project_pos.y() >= org_bottom_project_pos.y():
-                if 281 <= cf.frame <= 281:
+                if 611 <= cf.frame <= 611:
                     logger.info("下位置合わせ（下方向）-----------")
                     logger.info("org_bottom_project_pos: %s", org_bottom_project_pos)
                     logger.info("rep_bottom_project_pos: %s", rep_bottom_project_pos)
                 # 映っている領域の位置
                 for _ in range(100):
-                    if 281 <= cf.frame <= 281:
-                        logger.info("-----------")
-                        logger.info("org_bottom_project_pos: %s", org_bottom_project_pos)
-                        logger.info("rep_bottom_project_pos: %s", rep_bottom_project_pos)
-
                     # Yを動かす
                     cf.position.setY(cf.position.y() + 0.1)
 
                     # 変換先下辺ボーンのプロジェクション位置
                     rep_bottom_project_pos = calc_project_pos(rep_bottom_global_pos, cf)
 
-                    if 281 <= cf.frame <= 281:
+                    if 611 <= cf.frame <= 611:
+                        logger.info("rep > org -----------")
+                        logger.info("org_bottom_project_pos: %s", org_bottom_project_pos)
+                        logger.info("rep_bottom_project_pos: %s", rep_bottom_project_pos)
                         logger.info("cf.position while: %s", cf.position)
 
                     # 変換先下辺ボーン位置が元々の位置より上に行った場合、とりあえず変なので終了
@@ -833,29 +885,28 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
                     # 作成元のプロジェクション位置を下回った場合、ループ終了
                     if rep_bottom_project_pos.y() <= org_bottom_project_pos.y():
                         break
+
             elif rep_bottom_project_pos.y() <= org_bottom_project_pos.y() and org_nearest_bone_name in ["下半身"]:
                 rep_bottom_project_pos = calc_project_pos(rep_bottom_global_pos, cf)
                 rep_start_bottom_project_pos = calc_project_pos(rep_bottom_global_pos, cf)
 
-                if 281 <= cf.frame <= 281:
+                if 611 <= cf.frame <= 611:
                     logger.info("下位置合わせ（上方向）-----------")
                     logger.info("org_bottom_project_pos: %s", org_bottom_project_pos)
                     logger.info("rep_bottom_project_pos: %s", rep_bottom_project_pos)
 
                 # 映っている領域の位置
                 for _ in range(100):
-                    if 281 <= cf.frame <= 281:
-                        logger.info("-----------")
-                        logger.info("org_bottom_project_pos: %s", org_bottom_project_pos)
-                        logger.info("rep_bottom_project_pos: %s", rep_bottom_project_pos)
-
                     # Yを動かす
                     cf.position.setY(cf.position.y() - 0.1)
 
                     # 変換先下辺ボーンのプロジェクション位置
                     rep_bottom_project_pos = calc_project_pos(rep_bottom_global_pos, cf)
 
-                    if 281 <= cf.frame <= 281:
+                    if 611 <= cf.frame <= 611:
+                        logger.info("rep < org -----------")
+                        logger.info("org_bottom_project_pos: %s", org_bottom_project_pos)
+                        logger.info("rep_bottom_project_pos: %s", rep_bottom_project_pos)
                         logger.info("cf.position while: %s", cf.position)
 
                     # 変換先下辺ボーン位置が元々の位置より下に行った場合、とりあえず変なので終了
@@ -879,7 +930,7 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
             # else:
             #     # 映っている領域の位置
             #     for _ in range(100):
-            #         if 281 <= cf.frame <= 281:
+            #         if 611 <= cf.frame <= 611:
             #             logger.info("-----------")
             #             logger.info("org_bottom_project_pos: %s", org_bottom_project_pos)
             #             logger.info("rep_bottom_project_pos: %s", rep_bottom_project_pos)
@@ -894,7 +945,7 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
             #         if rep_bottom_project_pos.y() >= org_bottom_project_pos.y():
             #             break
 
-            #         if 281 <= cf.frame <= 281:
+            #         if 611 <= cf.frame <= 611:
             #             logger.info("cf.position while: %s", cf.position)
 
             # # 映っている領域の大きさ
@@ -908,7 +959,7 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
             #     # 変換先の底辺と上辺のボーンの距離
             #     rep_project_diff_pos = rep_top_project_pos - rep_bottom_project_pos
 
-            #     if 281 <= cf.frame <= 281:
+            #     if 611 <= cf.frame <= 611:
             #         logger.info("-----------")
             #         logger.info("rep_bottom_project_pos: %s", rep_bottom_project_pos)
             #         logger.info("rep_top_project_pos: %s", rep_top_project_pos)
@@ -922,7 +973,7 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
             #     # 距離を動かす
             #     cf.length += 0.1
 
-            #     if 281 <= cf.frame <= 281:
+            #     if 611 <= cf.frame <= 611:
             #         logger.info("cf.length while: %s", cf.length)
 
             # if abs(1-org_top_project_pos.y()) < abs(-1+org_bottom_project_pos.y()):
@@ -932,7 +983,7 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
             #         # 変換先上辺ボーンのプロジェクション位置
             #         rep_top_project_pos = calc_project_pos(rep_top_global_pos, cf)
 
-            #         if 281 <= cf.frame <= 281:
+            #         if 611 <= cf.frame <= 611:
             #             logger.info("-----------")
             #             logger.info("rep_top_project_pos: %s", rep_top_project_pos)
 
@@ -943,7 +994,7 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
             #         # Yを動かす
             #         cf.position.setY(cf.position.y() - 0.1)
 
-            #         if 281 <= cf.frame <= 281:
+            #         if 611 <= cf.frame <= 611:
             #             logger.info("cf.position while: %s", cf.position)
             # else:
 
@@ -953,7 +1004,7 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
             #         # 変換先下辺ボーンのプロジェクション位置
             #         rep_bottom_project_pos = calc_project_pos(rep_bottom_global_pos, cf)
 
-            #         if 281 <= cf.frame <= 281:
+            #         if 611 <= cf.frame <= 611:
             #             logger.info("-----------")
             #             logger.info("rep_bottom_project_pos: %s", rep_bottom_project_pos)
 
@@ -964,7 +1015,7 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
             #         # Yを動かす
             #         cf.position.setY(cf.position.y() - 0.1)
 
-            #         if 281 <= cf.frame <= 281:
+            #         if 611 <= cf.frame <= 611:
             #             logger.info("cf.position while: %s", cf.position)
 
 
