@@ -79,13 +79,13 @@ class PmxModel():
             return False
 
         ss_parent_bone_names = [p.name for p in ss_parent_bones]
-        logger.info("ss_parent_bone_names: %s" , ss_parent_bone_names)
+        logger.debug("ss_parent_bone_names: %s" , ss_parent_bone_names)
         a_parent_bone_names = [p.name for p in all_parent_bones]
-        logger.info("a_parent_bone_names: %s" , a_parent_bone_names)
+        logger.debug("a_parent_bone_names: %s" , a_parent_bone_names)
 
         for apbn in all_parent_bones:
             if "肩" in apbn.name:
-                logger.info("肩まできたら終了: %s", apbn.name)
+                logger.debug("肩まできたら終了: %s", apbn.name)
                 break
 
             # ボーンリンクが既定ボーンリンクリストに含まれていない場合
@@ -115,21 +115,21 @@ class PmxModel():
         # ボーンチェックがOKの場合、準標準ボーンのウェイト位置チェック
         for b_idx, b_name in enumerate(ss_parent_bone_names):
             if "肩" in b_name:
-                logger.info("肩まできたら終了: %s", b_name)
+                logger.debug("肩まできたら終了: %s", b_name)
                 break
 
             if self.bones[b_name].fixed_axis != QVector3D():
-                logger.info("軸制限ボーンは対象外: %s", b_name)
+                logger.debug("軸制限ボーンは対象外: %s", b_name)
                 continue
 
             # 親ボーン名(次の要素)
             parent_name = None if b_idx >= len(ss_parent_bone_names) - 1 else ss_parent_bone_names[b_idx + 1]
             # 子ボーン名(前の要素)
             child_name = None if b_idx == 0 else ss_parent_bone_names[b_idx - 1]
-            logger.info("b: %s, p: %s, c: %s", b_name, parent_name, child_name)
+            logger.debug("b: %s, p: %s, c: %s", b_name, parent_name, child_name)
             # ボーンの位置と頂点位置が一致している場合、TRUE
             if parent_name and child_name and not self.is_in_range_bone_vertex(b_name, parent_name, child_name):
-                logger.info("ボーン位置と頂点位置がずれている: %s", b_name)
+                logger.debug("ボーン位置と頂点位置がずれている: %s", b_name)
                 print("■■■■■■■■■■■■■■■■■")
                 print("■　**WARNING**　")
                 print("■　ボーンと頂点がズレている可能性があります。")
@@ -138,7 +138,7 @@ class PmxModel():
                 print("■■■■■■■■■■■■■■■■■")
                 return False
             else:
-                logger.info("ボーン位置と頂点位置が一致: %s", b_name)
+                logger.debug("ボーン位置と頂点位置が一致: %s", b_name)
         
         # 全部許容範囲内ならOK
         return True
@@ -162,14 +162,14 @@ class PmxModel():
         target_pos_max = bone_pos + ((parent_bone_pos - bone_pos) / 2) - QVector3D(-0.1, -0.1, 0)
         target_pos_min = bone_pos + ((child_bone_pos - bone_pos) / 2) + QVector3D(-0.1, -0.1, 0)
 
-        logger.info("bone_name: %s", bone_name)
-        logger.info("bone_pos: %s", bone_pos)
-        logger.info("parent_bone_pos: %s", parent_bone_pos)
-        logger.info("child_bone_pos: %s", child_bone_pos)
-        logger.info("target_pos_min: %s", target_pos_min)
-        logger.info("target_pos_max: %s", target_pos_max)
+        logger.debug("bone_name: %s", bone_name)
+        logger.debug("bone_pos: %s", bone_pos)
+        logger.debug("parent_bone_pos: %s", parent_bone_pos)
+        logger.debug("child_bone_pos: %s", child_bone_pos)
+        logger.debug("target_pos_min: %s", target_pos_min)
+        logger.debug("target_pos_max: %s", target_pos_max)
 
-        # logger.info("self.vertices: %s", self.vertices.keys())
+        # logger.debug("self.vertices: %s", self.vertices.keys())
 
         # 指定ボーン名を含むボーンINDEXリスト
         bone_idx_list = []
@@ -184,21 +184,21 @@ class PmxModel():
                 bone_idx_list.append(bv.index)
         
         if len(bone_idx_list) == 0:
-            logger.info("bone_name: %s, ウェイト頂点がない", bone_name)
+            logger.debug("bone_name: %s, ウェイト頂点がない", bone_name)
             # ウェイトボーンがない場合、チェック対象外でOK
             return True
         
-        logger.info("bone_idx_list: %s", bone_idx_list)
+        logger.debug("bone_idx_list: %s", bone_idx_list)
         
         for bone_idx in bone_idx_list:
             for v in self.vertices[bone_idx]:
                 v_pos = v.position
                 # 頂点が、表示範囲内であればOK
                 if target_pos_min.y() <= v_pos.y() <= target_pos_max.y():
-                    logger.info("表示範囲内頂点あり: %s, pos: %s", v.index, v.position)
+                    logger.debug("表示範囲内頂点あり: %s, pos: %s", v.index, v.position)
                     return True
                 # else:
-                #     logger.info("表示範囲外頂点: %s, pos: %s", v.index, v.position)
+                #     logger.debug("表示範囲外頂点: %s, pos: %s", v.index, v.position)
 
         return False
 
@@ -213,11 +213,11 @@ class PmxModel():
                 bone_idx_list.append(bv.index)
 
         if len(bone_idx_list) == 0:
-            logger.info("bone_name: %s, ウェイト頂点がない", bone_name)
+            logger.debug("bone_name: %s, ウェイト頂点がない", bone_name)
             # ウェイトボーンがない場合、初期値
             return QVector3D(), QVector3D()        
 
-        logger.info("bone_name: %s, bone_idx_list:%s", bone_name, bone_idx_list)
+        logger.debug("bone_name: %s, bone_idx_list:%s", bone_name, bone_idx_list)
         
         max_bone_upper_pos = QVector3D(0, -99999, 0)
         min_bone_below_pos = QVector3D(0, 99999, 0)
@@ -376,7 +376,7 @@ class PmxModel():
                 # 明示的に指にウェイトが乗っている場合、除外する
                 bone_idx_list.append(bv.index)
 
-        logger.info("bone_idx_list: %s", bone_idx_list)
+        logger.debug("bone_idx_list: %s", bone_idx_list)
 
         if len(bone_idx_list) == 0:
             # ウェイトボーンがない場合、つま先ボーン位置
