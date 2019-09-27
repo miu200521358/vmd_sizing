@@ -17,14 +17,14 @@ import utils, sub_move
 
 logger = logging.getLogger("VmdSizing").getChild(__name__)
 
-summary_file_logger = logging.getLogger("summary")
-summary_file_logger.addHandler(logging.FileHandler("summary.csv"))
+# summary_file_logger = logging.getLogger("summary")
+# summary_file_logger.addHandler(logging.FileHandler("summary.csv"))
 
-parts_file_logger = logging.getLogger("parts")
-parts_file_logger.addHandler(logging.FileHandler("parts.csv"))
+# parts_file_logger = logging.getLogger("parts")
+# parts_file_logger.addHandler(logging.FileHandler("parts.csv"))
 
-rep_file_logger = logging.getLogger("rep")
-rep_file_logger.addHandler(logging.FileHandler("rep.csv"))
+# rep_file_logger = logging.getLogger("rep")
+# rep_file_logger.addHandler(logging.FileHandler("rep.csv"))
 
 # 標準ボーン＋上半身2のボーン名とねんどろ対応縮尺の辞書
 # 足FKは位置が算出できないので、とりあえず対象外
@@ -146,18 +146,18 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
     # 作成元のカメラ
     org_camera_motion = copy.deepcopy(camera_motion)
 
-    # ログ出力用商
-    prev_log_cnt = 0
+    # # ログ出力用商
+    # prev_log_cnt = 0
 
-    summary_file_logger.info("frame,nearest,nearest.x,nearest.y,nearest.z,nearest_project.x,nearest_project.y,nearest_project_square.x,nearest_project_square.y," +
-    "top,top.x,top.y,top.z,top_project.x,top_project.y,top_project_square.x,top_project_square.y," +
-    "bottom,bottom.x,bottom.y,bottom.z,bottom_project.x,bottom_project.y,bottom_project_square.x,bottom_project_square.y"
-    )
+    # summary_file_logger.info("frame,nearest,nearest.x,nearest.y,nearest.z,nearest_project.x,nearest_project.y,nearest_project_square.x,nearest_project_square.y," +
+    # "top,top.x,top.y,top.z,top_project.x,top_project.y,top_project_square.x,top_project_square.y," +
+    # "bottom,bottom.x,bottom.y,bottom.z,bottom_project.x,bottom_project.y,bottom_project_square.x,bottom_project_square.y"
+    # )
 
-    parts_file_logger.info("frame,bone_name,global_pos.x,global_pos.y,global_pos.z,project_pos.x,project_pos.y,project_pos.z," +
-        "project_square_pos.x,project_square_pos.y,dp")
+    # parts_file_logger.info("frame,bone_name,global_pos.x,global_pos.y,global_pos.z,project_pos.x,project_pos.y,project_pos.z," +
+    #     "project_square_pos.x,project_square_pos.y,dp")
 
-    rep_file_logger.info("frame,bone_name,ratio,global_pos.x,global_pos.y,global_pos.z,cf.position.x,cf.position.y,cf.position.z,cf.length")
+    # rep_file_logger.info("frame,bone_name,ratio,global_pos.x,global_pos.y,global_pos.z,cf.position.x,cf.position.y,cf.position.z,cf.length")
 
     # 移動縮尺
     for cf_idx, cf in enumerate(camera_motion.cameras):
@@ -495,9 +495,9 @@ def calc_nearest_bone(body_global_3ds, ratio_dict, replace_head_ratio, cf):
         dp = QVector2D(16/2, 9/2).distanceToPoint(QVector2D(project_pos.x(), project_pos.y()))
         # dp = abs(project_pos.x()) + abs(project_pos.y())
 
-        parts_file_logger.info("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s", cf.frame,k,v.x(),v.y(),v.z(), \
-            project_pos.x(),project_pos.y(),project_pos.z(), \
-            project_square_pos.x(),project_square_pos.y(),dp)
+        # parts_file_logger.info("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s", cf.frame,k,v.x(),v.y(),v.z(), \
+        #     project_pos.x(),project_pos.y(),project_pos.z(), \
+        #     project_square_pos.x(),project_square_pos.y(),dp)
 
         if 0 <= cf.frame <= 40:
             logger.info("project_square_pos: %s", project_square_pos)
@@ -581,16 +581,16 @@ def calc_nearest_bone(body_global_3ds, ratio_dict, replace_head_ratio, cf):
     logger.info("top: p: %s", top_project_pos)
     logger.info("top: s: %s", top_project_square_pos)
 
-    summary_file_logger.info("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s", cf.frame, \
-        nearest_bone_name,nearest_global_pos.x(),nearest_global_pos.y(),nearest_global_pos.z(), \
-        nearest_project_pos.x(),nearest_project_pos.y(), \
-        nearest_project_square_pos.x(),nearest_project_square_pos.y(), \
-        top_bone_name,top_global_pos.x(),top_global_pos.y(),top_global_pos.z(), \
-        top_project_pos.x(),top_project_pos.y(), \
-        top_project_square_pos.x(),top_project_square_pos.y(), \
-        bottom_bone_name,bottom_global_pos.x(),bottom_global_pos.y(),bottom_global_pos.z(), \
-        bottom_project_pos.x(),bottom_project_pos.y(), \
-        bottom_project_square_pos.x(),bottom_project_square_pos.y())
+    # summary_file_logger.info("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s", cf.frame, \
+    #     nearest_bone_name,nearest_global_pos.x(),nearest_global_pos.y(),nearest_global_pos.z(), \
+    #     nearest_project_pos.x(),nearest_project_pos.y(), \
+    #     nearest_project_square_pos.x(),nearest_project_square_pos.y(), \
+    #     top_bone_name,top_global_pos.x(),top_global_pos.y(),top_global_pos.z(), \
+    #     top_project_pos.x(),top_project_pos.y(), \
+    #     top_project_square_pos.x(),top_project_square_pos.y(), \
+    #     bottom_bone_name,bottom_global_pos.x(),bottom_global_pos.y(),bottom_global_pos.z(), \
+    #     bottom_project_pos.x(),bottom_project_pos.y(), \
+    #     bottom_project_square_pos.x(),bottom_project_square_pos.y())
     
     return nearest_bone_name, copy.deepcopy(nearest_global_pos), copy.deepcopy(nearest_project_pos), \
         bottom_bone_name, copy.deepcopy(bottom_global_pos), copy.deepcopy(bottom_project_pos), \
@@ -827,8 +827,8 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
     logger.info("l: %s, p: %s", cf.length, cf.position)
     logger.info("b: %s, a: %s, r: %s", org_nearest_bone_name, cf.angle, ratio)
 
-    rep_file_logger.info("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s", cf.frame,org_nearest_bone_name,ratio,rep_nearest_global_pos.x(),rep_nearest_global_pos.y(),rep_nearest_global_pos.z(), \
-        cf.position.x(),cf.position.y(),cf.position.z(),cf.length)
+    # rep_file_logger.info("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s", cf.frame,org_nearest_bone_name,ratio,rep_nearest_global_pos.x(),rep_nearest_global_pos.y(),rep_nearest_global_pos.z(), \
+    #     cf.position.x(),cf.position.y(),cf.position.z(),cf.length)
 
     print("%sフレーム目　注視点直近: %s, 縮尺比率: %s" % (cf.frame, org_nearest_bone_name.ljust(8), ratio))
 
