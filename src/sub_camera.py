@@ -134,7 +134,7 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
     }
 
     # 情報提供
-    print("カメラ補正値 全長: %s(Yオフセット: %s)" % (body_ratio, camera_y_offset))
+    print("カメラ補正値 全長: %s(Yオフセット: %s), 変換先頭身: %s" % (body_ratio, camera_y_offset, replace_head_ratio))
     # print("　足XZ: %s, 足Y: %s" % (leg_xz_ratio, leg_y_ratio))
 
     # 作成元モデル：全身のリンク
@@ -169,6 +169,7 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
             # 実際にコピーするのは、サイジングした位置情報
             cf.position = copy.deepcopy(camera_motion.cameras[cf_idx - 1].position)
             cf.length = copy.deepcopy(camera_motion.cameras[cf_idx - 1].length)
+            print("%sフレーム目 前位置・距離キーコピー" % (cf.frame))
 
             continue
 
@@ -784,11 +785,11 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
 
 
     # 元モデルの映っている領域の上から下まで
-    org_y_diff = org_top_global_pos.y() - org_bottom_global_pos.y()
+    org_y_diff = abs(org_top_global_pos.y() - org_bottom_global_pos.y())
 
     if rep_top_global_pos and rep_bottom_global_pos and ( org_bottom_bone_name not in LEG_BONE_NAMES ) :
         # 先モデルの同じ領域の上から下まで
-        rep_y_diff = rep_top_global_pos.y() - rep_bottom_global_pos.y()
+        rep_y_diff = abs(rep_top_global_pos.y() - rep_bottom_global_pos.y())
 
         if rep_y_diff <= 0:
             # 差分が0という事は同じパーツのみが映っているということで、とりあえず全身比率
@@ -830,7 +831,7 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
     # rep_file_logger.info("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s", cf.frame,org_nearest_bone_name,ratio,rep_nearest_global_pos.x(),rep_nearest_global_pos.y(),rep_nearest_global_pos.z(), \
     #     cf.position.x(),cf.position.y(),cf.position.z(),cf.length)
 
-    print("%sフレーム目　注視点直近: %s, 縮尺比率: %s" % (cf.frame, org_nearest_bone_name.ljust(8), ratio))
+    print("%sフレーム目 縮尺比率: %s, 注視点: %s, 上辺: %s, 下辺: %s" % (cf.frame, ratio, org_nearest_bone_name, org_top_bone_name, org_bottom_bone_name))
 
     # if cf.length > 0:
     #     # 距離が0未満の場合、カメラ位置に縮尺をかける
