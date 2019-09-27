@@ -831,7 +831,8 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
     # rep_file_logger.info("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s", cf.frame,org_nearest_bone_name,ratio,rep_nearest_global_pos.x(),rep_nearest_global_pos.y(),rep_nearest_global_pos.z(), \
     #     cf.position.x(),cf.position.y(),cf.position.z(),cf.length)
 
-    print("%sフレーム目 縮尺比率: %s, 注視点: %s, 上辺: %s, 下辺: %s" % (cf.frame, ratio, org_nearest_bone_name, org_top_bone_name, org_bottom_bone_name))
+    top_offset = 0
+    bottom_offset = 0
 
     # if cf.length > 0:
     #     # 距離が0未満の場合、カメラ位置に縮尺をかける
@@ -887,6 +888,7 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
                 for _ in range(100):
                     # Yを動かす
                     cf.position.setY(cf.position.y() + 0.1)
+                    top_offset += 0.1
 
                     # 変換先上辺ボーンのプロジェクション位置
                     rep_top_project_pos = calc_project_pos(rep_top_global_pos, cf)
@@ -911,6 +913,7 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
                 for _ in range(100):
                     # Yを動かす
                     cf.position.setY(cf.position.y() - 0.1)
+                    top_offset -= 0.1
 
                     # 変換先上辺ボーンのプロジェクション位置
                     rep_top_project_pos = calc_project_pos(rep_top_global_pos, cf)
@@ -966,6 +969,7 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
                 for _ in range(100):
                     # Yを動かす
                     cf.position.setY(cf.position.y() + 0.1)
+                    bottom_offset += 0.1
 
                     # 変換先下辺ボーンのプロジェクション位置
                     rep_bottom_project_pos = calc_project_pos(rep_bottom_global_pos, cf)
@@ -997,6 +1001,7 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
                 for _ in range(100):
                     # Yを動かす
                     cf.position.setY(cf.position.y() - 0.1)
+                    bottom_offset -= 0.1
 
                     # 変換先下辺ボーンのプロジェクション位置
                     rep_bottom_project_pos = calc_project_pos(rep_bottom_global_pos, cf)
@@ -1017,6 +1022,8 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
 
 
 
+
+    print("%sフレーム目 縮尺比率: %s, 注視点: %s, 上辺: %s, 下辺: %s, 上辺調整: %s, 下辺調整: %s" % (cf.frame, ratio, org_nearest_bone_name, org_top_bone_name, org_bottom_bone_name, top_offset, bottom_offset))
 
 
 
