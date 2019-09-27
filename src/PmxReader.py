@@ -29,7 +29,7 @@ class PmxReader():
     def read_pmx_file(self, filepath):
         # PMXファイルをバイナリ読み込み
         self.buffer = open(filepath, "rb").read()
-        # logger.info("hashlib.algorithms_available: %s", hashlib.algorithms_available)
+        # logger.debug("hashlib.algorithms_available: %s", hashlib.algorithms_available)
         
         # pmx宣言
         signature = self.unpack(4, "4s")        
@@ -398,11 +398,11 @@ class PmxReader():
 
         # ハッシュを設定
         pmx.digest = self.hexdigest(filepath)
-        logger.info("pmx: %s, hash: %s", pmx.name, pmx.digest)
+        logger.debug("pmx: %s, hash: %s", pmx.name, pmx.digest)
 
         # 腕がサイジング可能かチェック
         pmx.can_arm_sizing = pmx.check_arm_bone_can_sizing()
-        logger.info("pmx: %s, can_arm_sizing: %s", pmx.name, pmx.can_arm_sizing)
+        logger.debug("pmx: %s, can_arm_sizing: %s", pmx.name, pmx.can_arm_sizing)
 
         return pmx
                  

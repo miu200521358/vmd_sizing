@@ -448,7 +448,7 @@ class PmxModel():
     # 一方向のボーンリンクを生成する
     def create_link_2_top_one(self, start_type_bone, start_type_bone_second=None):
 
-        if start_type_bone in self.bones or "足底辺" in start_type_bone:
+        if start_type_bone in self.bones or "足底辺" in start_type_bone or "頭頂" in start_type_bone:
             # logger.debug("first start_type_bone: %s", start_type_bone)
             return self.create_link_2_top(start_type_bone)
 
@@ -482,6 +482,16 @@ class PmxModel():
             # 位置は足IKのY0位置とする
             ik_indexes[start_type_bone] = len(ik_indexes)
             ik_links.append(self.Bone("{0}足底辺".format(direction), None, QVector3D(self.bones["{0}足ＩＫ".format(direction)].position.x(), 0, self.bones["{0}足ＩＫ".format(direction)].position.z()), -1, 0, 0))
+        elif "頭頂" in start_bone:
+            start_type_bone = start_bone
+
+            # 頭の頂点を取得する
+            head_tail_pos = self.get_head_upper_vertex_position()
+
+            # print("direction: %s" % direction)
+            # 頭頂が指定されている場合、頭のボーンの上を登録
+            ik_indexes[start_type_bone] = len(ik_indexes)
+            ik_links.append(self.Bone("頭頂", None, QVector3D(head_tail_pos.x(), head_tail_pos.y(), head_tail_pos.z()), -1, 0, 0))
         else:
             if start_bone not in self.bones or start_bone not in self.PARENT_BORN_PAIR:
                 # 開始ボーン名がなければ終了
@@ -529,6 +539,7 @@ class PmxModel():
         , "上半身2": ["上半身"]
         , "首": ["上半身2", "上半身"]
         , "頭": ["首"]
+        , "頭頂": ["頭"]
         , "左肩P": ["上半身2", "上半身"]
         , "左肩": ["左肩P", "上半身2", "上半身"]
         , "左腕": ["左肩"]

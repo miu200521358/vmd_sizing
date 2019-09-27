@@ -339,7 +339,7 @@ class VmdReader():
         
         # ハッシュを設定
         motion.digest = self.hexdigest(filepath)
-        logger.info("motion: %s, hash: %s", motion.path, motion.digest)
+        logger.debug("motion: %s, hash: %s", motion.path, motion.digest)
 
         return motion            
                     
