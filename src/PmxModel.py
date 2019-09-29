@@ -146,9 +146,9 @@ class PmxModel():
     # 頭ボーンのウェイトが乗っている頂点を取得する
     def get_head_upper_vertex_position(self):
         # 頭の頂点位置
-        max_head_upper_pos, _, _, _ = self.get_bone_vertex_position("頭", self.bones["頭"].position, define_is_target_head_upper())
+        max_head_upper_pos, _, _, _, max_head_upper_vertex, _, _, _ = self.get_bone_vertex_position("頭", self.bones["頭"].position, define_is_target_head_upper())
 
-        return max_head_upper_pos
+        return max_head_upper_pos, max_head_upper_vertex
     
     # 指定ボーンとそのウェイト頂点が一致していなければFalse終了
     def is_in_range_bone_vertex(self, bone_name, parent_name, child_name):
@@ -223,6 +223,11 @@ class PmxModel():
         min_bone_below_pos = QVector3D(0, 99999, 0)
         front_bone_upper_pos = QVector3D(0, 99999, 0)
         back_bone_below_pos = QVector3D(0, -99999, 0)
+        max_bone_upper_vertex = 0
+        min_bone_below_vertex = 0
+        front_bone_upper_vertex = 0
+        back_bone_below_vertex = 0
+
         for is_x in [True, False]:
             for bone_idx in bone_idx_list:
                 # X範囲を制限するか否か
@@ -232,20 +237,24 @@ class PmxModel():
                         if v_pos.y() < min_bone_below_pos.y() :
                             # 指定ボーンにウェイトが乗っていて、かつ最下の頂点より下の場合、保持
                             min_bone_below_pos = v_pos
+                            min_bone_below_vertex = v.index
                             # print("min_bone_below_pos: %s, %s, %s, %s, %s" % (l.index, l.name, v.index, v.position, v_pos))
                         
                         if v_pos.y() > max_bone_upper_pos.y():
                             # 指定ボーンにウェイトが乗っていて、かつ最上の頂点より上の場合、保持
                             max_bone_upper_pos = v_pos
+                            max_bone_upper_vertex = v.index
 
                         if v_pos.z() < front_bone_upper_pos.z() :
                             # 指定ボーンにウェイトが乗っていて、かつ最前の頂点より下の場合、保持
                             front_bone_upper_pos = v_pos
+                            front_bone_upper_vertex = v.index
                             # print("min_bone_below_pos: %s, %s, %s, %s, %s" % (l.index, l.name, v.index, v.position, v_pos))
                         
                         if v_pos.z() > back_bone_below_pos.z():
                             # 指定ボーンにウェイトが乗っていて、かつ最後の頂点より上の場合、保持
                             back_bone_below_pos = v_pos
+                            back_bone_below_vertex = v.index
                     
             if min_bone_below_pos == QVector3D(0, 99999, 0) or max_bone_upper_pos == QVector3D(0, -99999, 0) \
                 or front_bone_upper_pos == QVector3D(0, 99999, 0) or back_bone_below_pos == QVector3D(0, -99999, 0):
@@ -255,7 +264,8 @@ class PmxModel():
                 # X制限をして見つかった場合、終了
                 break
 
-        return max_bone_upper_pos, min_bone_below_pos, front_bone_upper_pos, back_bone_below_pos
+        return max_bone_upper_pos, min_bone_below_pos, front_bone_upper_pos, back_bone_below_pos, \
+            max_bone_upper_vertex, min_bone_below_vertex, front_bone_upper_vertex, back_bone_below_vertex
     
     # 左右の手首の厚みを取得する
     def get_wrist_thickness_lr(self):
@@ -486,7 +496,7 @@ class PmxModel():
             start_type_bone = start_bone
 
             # 頭の頂点を取得する
-            head_tail_pos = self.get_head_upper_vertex_position()
+            head_tail_pos, _ = self.get_head_upper_vertex_position()
 
             # print("direction: %s" % direction)
             # 頭頂が指定されている場合、頭のボーンの上を登録
@@ -534,8 +544,8 @@ class PmxModel():
         , "センター": ["全ての親"]
         , "グルーブ": ["センター"]
         , "腰": ["グルーブ", "センター"]
-        , "下半身": ["腰", "センター"]
-        , "上半身": ["腰", "センター"]
+        , "下半身": ["腰", "グルーブ", "センター"]
+        , "上半身": ["腰", "グルーブ", "センター"]
         , "上半身2": ["上半身"]
         , "首": ["上半身2", "上半身"]
         , "頭": ["首"]
