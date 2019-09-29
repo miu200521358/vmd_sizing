@@ -487,11 +487,12 @@ class PmxModel():
             direction = start_bone[0:1]
             start_type_bone = start_bone[1:]
 
-            # print("direction: %s" % direction)
-            # 足底辺が指定されている場合、足底辺を登録
-            # 位置は足IKのY0位置とする
-            ik_indexes[start_type_bone] = len(ik_indexes)
-            ik_links.append(self.Bone("{0}足底辺".format(direction), None, QVector3D(self.bones["{0}足ＩＫ".format(direction)].position.x(), 0, self.bones["{0}足ＩＫ".format(direction)].position.z()), -1, 0, 0))
+            if "{0}足ＩＫ".format(direction) in self.bones:
+                # print("direction: %s" % direction)
+                # 足底辺が指定されている場合、足底辺を登録
+                # 位置は足IKのY0位置とする
+                ik_indexes[start_type_bone] = len(ik_indexes)
+                ik_links.append(self.Bone("{0}足底辺".format(direction), None, QVector3D(self.bones["{0}足ＩＫ".format(direction)].position.x(), 0, self.bones["{0}足ＩＫ".format(direction)].position.z()), -1, 0, 0))
         elif "頭頂" in start_bone:
             start_type_bone = start_bone
 
