@@ -108,6 +108,9 @@ ARM_BONE_NAMES = ["左肩", "左腕", "左ひじ", "左手首", "左親指１", 
 # 指系ボーン名
 FINGER_BONE_NAMES = ["左親指１", "左親指２", "左人指１", "左人指２", "左人指３", "左中指１", "左中指２", "左中指３", "左薬指１", "左薬指２", "左薬指３", "左小指１", "左小指２", "左小指３", \
     "右親指１", "右親指２", "右人指１", "右人指２", "右人指３", "右中指１", "右中指２", "右中指３", "右薬指１", "右薬指２", "右薬指３", "右小指１", "右小指２", "右小指３"]
+# 手系ボーン名
+HAND_BONE_NAMES = ["左手首", "左親指１", "左親指２", "左人指１", "左人指２", "左人指３", "左中指１", "左中指２", "左中指３", "左薬指１", "左薬指２", "左薬指３", "左小指１", "左小指２", "左小指３", \
+    "右手首", "右親指１", "右親指２", "右人指１", "右人指２", "右人指３", "右中指１", "右中指２", "右中指３", "右薬指１", "右薬指２", "右薬指３", "右小指１", "右小指２", "右小指３"]
 
 
 #
@@ -525,7 +528,7 @@ def calc_nearest_bone(body_global_3ds, ratio_dict, replace_head_ratio, cf):
 
         if project_square_pos.y() > bottom_project_square_pos.y() and project_square_pos.y() <= 1.1 and -0.2 <= project_square_pos.x() <= 1.2:
             
-            if k in FINGER_BONE_NAMES or (replace_head_ratio <= 3 and k in ARM_BONE_NAMES):
+            if (replace_head_ratio <= 3 and k in ARM_BONE_NAMES):
                 # 指系はBOTTOM判定に入れない
                 pass
             else:                
@@ -537,7 +540,7 @@ def calc_nearest_bone(body_global_3ds, ratio_dict, replace_head_ratio, cf):
 
         if project_square_pos.y() < top_project_square_pos.y() and project_square_pos.y() >= -0.1 and -0.2 <= project_square_pos.x() <= 1.2:
             
-            if k in FINGER_BONE_NAMES or (replace_head_ratio <= 3 and k in ARM_BONE_NAMES):
+            if (replace_head_ratio <= 3 and k in ARM_BONE_NAMES):
                 # 指系はTOP判定に入れない
                 pass
             else:
@@ -981,8 +984,9 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
         length_offset_unit = ratio_dict["body"] * 0.2 if replace_head_ratio <= 3 else 0
 
         # 距離がマイナスではない場合のみ位置合わせ
-        if ((org_nearest_bone_name in HEAD_BONE_NAMES or org_nearest_bone_name == org_top_bone_name or org_nearest_bone_name == org_bottom_bone_name) \
-            and (not org_bottom_bone_name or (org_bottom_bone_name and org_bottom_bone_name in UPPER_BONE_NAMES and org_bottom_bone_name != "頭頂"))):
+        if (((org_nearest_bone_name in HEAD_BONE_NAMES or org_nearest_bone_name == org_top_bone_name or org_nearest_bone_name == org_bottom_bone_name) \
+            and (not org_bottom_bone_name or (org_bottom_bone_name and org_bottom_bone_name in UPPER_BONE_NAMES and org_bottom_bone_name != "頭頂"))) \
+            or (org_nearest_bone_name in HAND_BONE_NAMES and ( (org_top_bone_name and org_top_bone_name in HAND_BONE_NAMES) or (org_bottom_bone_name and org_bottom_bone_name in HAND_BONE_NAMES) ))):
             # 注視点が顔の場合かパーツのみの場合、注視点で位置合わせ(3頭身以下の場合、距離調整も一緒に行う)
             vertical_type = "中"
 
