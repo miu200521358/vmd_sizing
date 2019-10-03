@@ -143,10 +143,26 @@ class PmxModel():
         # 全部許容範囲内ならOK
         return True
 
+    # 頭部頂点の合致条件
+    # ウェイトがすべて頭に乗っている頂点。
+    def define_is_target_full_vertex(self):
+        def is_target(v):
+            if type(v.deform) is PmxModel.Bdef1:
+                return True
+            elif type(v.deform) is PmxModel.Bdef2:
+                return v.deform.weight0 == 1
+            elif type(v.deform) is PmxModel.Bdef4:
+                return v.deform.weight0 == 1 or v.deform.weight2 == 1 or v.deform.weight3 == 1
+            elif type(v.deform) is PmxModel.Sdef:
+                return v.deform.weight0 == 1
+            elif type(v.deform) is PmxModel.Qdef:
+                return v.deform.weight0 == 1            
+        return is_target
+
     # 頭ボーンのウェイトが乗っている頂点を取得する
     def get_head_upper_vertex_position(self):
         # 頭の頂点位置
-        max_head_upper_pos, _, _, _, max_head_upper_vertex, _, _, _ = self.get_bone_vertex_position("頭", self.bones["頭"].position, define_is_target_head_upper())
+        max_head_upper_pos, _, _, _, max_head_upper_vertex, _, _, _ = self.get_bone_vertex_position("頭", self.bones["頭"].position, self.define_is_target_full_vertex())
 
         return max_head_upper_pos, max_head_upper_vertex
     
@@ -203,7 +219,7 @@ class PmxModel():
         return False
 
     # 指定ボーンのウェイトの最下と最上頂点の位置を取得する
-    def get_bone_vertex_position(self, bone_name, bone_pos, is_target=None, is_only=False):
+    def get_bone_vertex_position(self, bone_name, bone_pos, is_target=None, is_only=False, is_x_target=True):
         # 指定ボーン名を含むボーンINDEXリスト
         bone_idx_list = []
         for bk, bv in self.bones.items():
@@ -215,7 +231,7 @@ class PmxModel():
         if len(bone_idx_list) == 0:
             logger.debug("bone_name: %s, ウェイト頂点がない", bone_name)
             # ウェイトボーンがない場合、初期値
-            return QVector3D(), QVector3D()        
+            return QVector3D(), QVector3D(), QVector3D(), QVector3D(), None, None, None, None        
 
         logger.debug("bone_name: %s, bone_idx_list:%s", bone_name, bone_idx_list)
         
@@ -228,7 +244,9 @@ class PmxModel():
         front_bone_upper_vertex = 0
         back_bone_below_vertex = 0
 
-        for is_x in [True, False]:
+        is_x_list = [True, False] if is_x_target else [False]
+
+        for is_x in is_x_list:
             for bone_idx in bone_idx_list:
                 # X範囲を制限するか否か
                 for v in self.vertices[bone_idx]:
@@ -1186,20 +1204,3 @@ class ParseException(Exception):
 class SizingException(Exception):
     def __init__(self, message):
         self.message=message
-
-
-# 頭部頂点の合致条件
-# ウェイトがすべて頭に乗っている頂点。
-def define_is_target_head_upper():
-    def is_target(v):
-        if type(v.deform) is PmxModel.Bdef1:
-            return True
-        elif type(v.deform) is PmxModel.Bdef2:
-            return v.deform.weight0 == 1
-        elif type(v.deform) is PmxModel.Bdef4:
-            return v.deform.weight0 == 1 or v.deform.weight2 == 1 or v.deform.weight3 == 1
-        elif type(v.deform) is PmxModel.Sdef:
-            return v.deform.weight0 == 1
-        elif type(v.deform) is PmxModel.Qdef:
-            return v.deform.weight0 == 1            
-    return is_target

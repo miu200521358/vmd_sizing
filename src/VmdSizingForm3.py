@@ -36,7 +36,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.01_β37", pos = wx.DefaultPosition, size = wx.Size( 600,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.01_β38", pos = wx.DefaultPosition, size = wx.Size( 600,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -359,12 +359,17 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		bSizer13.Add( self.m_staticText911, 0, wx.ALL, 5 )
 
-		self.m_staticText93 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"両手を合わせるなどのモーションを、変換先モデルの手首位置に合わせて調整します。\n手首間の距離を調整することで、位置合わせの適用範囲を調整することができます。\nサイジング実行時、手首間の距離がメッセージ欄に出てますので、参考にしてください。", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText93 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"両手を合わせるなどのモーションを、変換先モデルの手首位置に合わせて調整します。\n手首間の距離を調整することで、位置合わせの適用範囲を調整することができます。\nサイジング実行時、手首間の距離がメッセージ欄に出てますので、参考にしてください。\n床位置合わせオプションをONにした場合、床との手首位置合わせも一緒に行います。", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText93.Wrap( -1 )
 
 		bSizer13.Add( self.m_staticText93, 0, wx.ALL, 5 )
 
 		bSizer13.Add( self.m_radioArmIK, 0, wx.ALL, 5 )
+
+		# 床位置合わせ
+		self.m_checkFloorArmDistance = wx.CheckBox( self.m_panelArm, wx.ID_ANY, u"床との位置合わせも一緒に行う", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_checkFloorArmDistance.SetToolTip( u"手首が床に沈み込んだり浮いてたりする場合、元モデルに合わせて手首の位置を調整します。\nセンター位置も一緒に調整します。" )
+		bSizer13.Add( self.m_checkFloorArmDistance, 0, wx.ALL, 5 )
 
 		bSizer15 = wx.BoxSizer( wx.HORIZONTAL )
 
@@ -727,6 +732,9 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_radioArmNone.Bind(wx.EVT_RADIOBUTTON, self.OnCreateOutputVmd)
 		self.m_radioAvoidance.Bind(wx.EVT_RADIOBUTTON, self.OnCreateOutputVmd)
 		self.m_radioArmIK.Bind(wx.EVT_RADIOBUTTON, self.OnCreateOutputVmd)
+
+		# 床位置合わせのチェックボックス切り替え
+		self.m_checkFloorArmDistance.Bind(wx.EVT_CHECKBOX, self.OnCreateOutputVmd)
 
 		# 接触回避のラジオボタンの切り替え
 		self.m_radioAvoidanceFinger.Bind(wx.EVT_RADIOBUTTON, self.OnChangeAvoidanceTarget)
@@ -1990,6 +1998,7 @@ class ExecWorkerThread(Thread):
 			, self._notify_window.m_radioAvoidanceFinger.GetValue()
 			, self._notify_window.m_radioArmIK.GetValue()
 			, self._notify_window.m_sliderHandDistance.GetValue()
+			, self._notify_window.m_checkFloorArmDistance.GetValue()
 			, self._notify_window.vmd_choice_values
 			, self._notify_window.rep_choice_values			
 			, self._notify_window.rep_rate_values

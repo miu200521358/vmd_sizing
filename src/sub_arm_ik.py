@@ -17,7 +17,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 # file_logger = logging.getLogger("message")
 # file_logger.addHandler(logging.FileHandler("test.csv"))
 
-def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_hand_ik, hand_distance, org_motion_frames):
+def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_hand_ik, hand_distance, is_floor_hand, org_motion_frames):
     is_error_outputed = False
 
     # -----------------------------------------------------------------
@@ -39,186 +39,75 @@ def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_h
         # logger.debug("left_arm_links: %s", [ x.name for x in arm_links["左"]])    
         
         # 事前準備
-        prepare(motion, arm_links, hand_distance)
+        prepare(motion, arm_links, hand_distance, is_floor_hand)
 
         if hand_distance >= 0:
             # 手首位置合わせ処理実行
-            is_error_outputed = exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distance, org_motion_frames, all_rep_wrist_links, arm_links)
+            is_error_outputed = exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distance, is_floor_hand, org_motion_frames, all_rep_wrist_links, arm_links)
 
             # 補間曲線再設定
-            reset_complement(motion, arm_links)
+            reset_complement(motion, arm_links, is_floor_hand)
 
             # 必要なキーだけ残す
-            leave_valid_key_frames(motion, arm_links)
+            leave_valid_key_frames(motion, arm_links, is_floor_hand)
 
     return not is_error_outputed
 
 # 必要なキーだけ残す
-def leave_valid_key_frames(motion, arm_links):
+def leave_valid_key_frames(motion, arm_links, is_floor_hand):
+    if is_floor_hand:
+        # 有効なキーのみのリストを再設定
+        motion.frames["センター"] = [x for x in motion.frames["センター"] if x.key == True]
+        motion.frames["上半身"] = [x for x in motion.frames["上半身"] if x.key == True]
+
     for direction in ["左", "右"]:
         for al in arm_links[direction]:
             # 有効なキーのみのリストを再設定
             motion.frames[al.name] = [x for x in motion.frames[al.name] if x.key == True]
 
 # 腕IK調整後始末
-def reset_complement(motion, arm_links):
+def reset_complement(motion, arm_links, is_floor_hand):
     # 補間曲線を有効なキーだけに揃える
     
     for direction in ["左", "右"]:
         for al in arm_links[direction]:
             for bf_idx, bf in enumerate(motion.frames[al.name]):
-                now_bf = motion.frames[al.name][bf_idx]
-
-                if now_bf.key == False or now_bf.read == True or now_bf.split_complement == True:
-                    # 現在キーが無効もしくは、読み込みキーか再分割追加キーの場合、処理スルー
-                    # logger.debug("処理スルー: %s, key: %s, read: %s", now_bf.frame, now_bf.key, now_bf.read)
-                    continue
-
-                # 前回のキー情報をクリア
-                prev_bf = next_bf = None
-                
-                # 読み込んだ時か補間曲線分割で追加した次のキー
-                for nbf_idx in range(bf_idx + 1, len(motion.frames[al.name])):
-                    if (motion.frames[al.name][nbf_idx].read == True or motion.frames[al.name][nbf_idx].split_complement == True) and motion.frames[al.name][nbf_idx].frame > now_bf.frame:
-                        next_bf = motion.frames[al.name][nbf_idx]
-                        break
-
-                # 有効な前のキー
-                for pbf_idx in range(bf_idx - 1, -1, -1):
-                    if motion.frames[al.name][pbf_idx].key == True and motion.frames[al.name][pbf_idx].frame < now_bf.frame:
-                        prev_bf = motion.frames[al.name][pbf_idx]
-                        break
-                
-                if prev_bf and next_bf:
-                    # 前後がある場合、補間曲線を分割する
-                    next_x1v = next_bf.complement[utils.R_x1_idxs[3]]
-                    next_y1v = next_bf.complement[utils.R_y1_idxs[3]]
-                    next_x2v = next_bf.complement[utils.R_x2_idxs[3]]
-                    next_y2v = next_bf.complement[utils.R_y2_idxs[3]]
-                    
-                    split_complement(motion, next_x1v, next_y1v, next_x2v, next_y2v, prev_bf, next_bf, now_bf, al, ",")
+                reset_complement_frame(motion, al.name, bf_idx)
 
             print("手首位置合わせ事後調整 b: %s" % al.name)
 
+def reset_complement_frame(motion, link_name, bf_idx):
+    now_bf = motion.frames[link_name][bf_idx]
 
-# 補間曲線を分割する
-def split_complement(motion, next_x1v, next_y1v, next_x2v, next_y2v, prev_bf, next_bf, now_bf, al, indent, resplit=True):
-    # 区切りキー位置
-    before_fill_bf = after_fill_bf = None
+    if now_bf.key == False or now_bf.read == True or now_bf.split_complement == True:
+        # 現在キーが無効もしくは、読み込みキーか再分割追加キーの場合、処理スルー
+        # logger.debug("処理スルー: %s, key: %s, read: %s", now_bf.frame, now_bf.key, now_bf.read)
+        return
 
-    # logger.debug("%s,【分割開始】: , %s, prev: %s, now: %s, next: %s, next_x1v: %s, next_y1v: %s, next_x2v: %s, next_y2v: %s", indent, al.name, prev_bf.frame, now_bf.frame, next_bf.frame, next_x1v, next_y1v, next_x2v, next_y2v)
+    # 前回のキー情報をクリア
+    prev_bf = next_bf = None
     
-    # ベジェ曲線を分割して新しい制御点を求める
-    t, x, y, bresult, aresult, before_bz, after_bz = utils.calc_bezier_split(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, next_bf.frame, now_bf.frame, al.name)
+    # 読み込んだ時か補間曲線分割で追加した次のキー
+    for nbf_idx in range(bf_idx + 1, len(motion.frames[link_name])):
+        if (motion.frames[link_name][nbf_idx].read == True or motion.frames[link_name][nbf_idx].split_complement == True) and motion.frames[link_name][nbf_idx].frame > now_bf.frame:
+            next_bf = motion.frames[link_name][nbf_idx]
+            break
 
-    # logger.debug(",%s, next_x1v: %s, next_y1v: %s, next_x2v: %s, next_y2v: %s, start: %s, now: %s, end: %s", indent, next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, now_bf.frame, next_bf.frame)
-    # logger.debug(",%s, before_bz: %s", indent, before_bz)
-    # logger.debug(",%s, after_bz: %s", indent, after_bz)
-
-    # 分割（今回キー）の始点は、前半のB
-    now_bf.complement[utils.R_x1_idxs[0]] = now_bf.complement[utils.R_x1_idxs[1]] = now_bf.complement[utils.R_x1_idxs[2]] = now_bf.complement[utils.R_x1_idxs[3]] = int(before_bz[1].x())
-    now_bf.complement[utils.R_y1_idxs[0]] = now_bf.complement[utils.R_y1_idxs[1]] = now_bf.complement[utils.R_y1_idxs[2]] = now_bf.complement[utils.R_y1_idxs[3]] = int(before_bz[1].y())
-
-    # 分割（今回キー）の終点は、後半のC
-    now_bf.complement[utils.R_x2_idxs[0]] = now_bf.complement[utils.R_x2_idxs[1]] = now_bf.complement[utils.R_x2_idxs[2]] = now_bf.complement[utils.R_x2_idxs[3]] = int(before_bz[2].x())
-    now_bf.complement[utils.R_y2_idxs[0]] = now_bf.complement[utils.R_y2_idxs[1]] = now_bf.complement[utils.R_y2_idxs[2]] = now_bf.complement[utils.R_y2_idxs[3]] = int(before_bz[2].y())
-
-    # 次回読み込みキーの始点は、後半のB
-    next_bf.complement[utils.R_x1_idxs[0]] = next_bf.complement[utils.R_x1_idxs[1]] = next_bf.complement[utils.R_x1_idxs[2]] = next_bf.complement[utils.R_x1_idxs[3]] = int(after_bz[1].x())
-    next_bf.complement[utils.R_y1_idxs[0]] = next_bf.complement[utils.R_y1_idxs[1]] = next_bf.complement[utils.R_y1_idxs[2]] = next_bf.complement[utils.R_y1_idxs[3]] = int(after_bz[1].y())
-
-    # 次回読み込みキーの終点は、後半のC
-    next_bf.complement[utils.R_x2_idxs[0]] = next_bf.complement[utils.R_x2_idxs[1]] = next_bf.complement[utils.R_x2_idxs[2]] = next_bf.complement[utils.R_x2_idxs[3]] = int(after_bz[2].x())
-    next_bf.complement[utils.R_y2_idxs[0]] = next_bf.complement[utils.R_y2_idxs[1]] = next_bf.complement[utils.R_y2_idxs[2]] = next_bf.complement[utils.R_y2_idxs[3]] = int(after_bz[2].y())
-
-    if bresult and aresult:
-        # logger.debug("%s, 【分割成功】: , %s,prev: %s, now: %s, next: %s", indent, al.name, prev_bf.frame, now_bf.frame, next_bf.frame)
+    # 有効な前のキー
+    for pbf_idx in range(bf_idx - 1, -1, -1):
+        if motion.frames[link_name][pbf_idx].key == True and motion.frames[link_name][pbf_idx].frame < now_bf.frame:
+            prev_bf = motion.frames[link_name][pbf_idx]
+            break
+    
+    if prev_bf and next_bf:
+        # 前後がある場合、補間曲線を分割する
+        next_x1v = next_bf.complement[utils.R_x1_idxs[3]]
+        next_y1v = next_bf.complement[utils.R_y1_idxs[3]]
+        next_x2v = next_bf.complement[utils.R_x2_idxs[3]]
+        next_y2v = next_bf.complement[utils.R_y2_idxs[3]]
         
-        return
-    else:
-        # 分割に失敗している場合、さらに分割する
+        split_complement(motion, next_x1v, next_y1v, next_x2v, next_y2v, prev_bf, next_bf, now_bf, link_name, ",")
 
-        if not bresult:
-            # logger.debug("%s, 【分割前半失敗開始】: ,%s, prev: %s, now: %s, next: %s", indent, al.name, prev_bf.frame, now_bf.frame, next_bf.frame)
-
-            # 前半用補間曲線
-            next_x1v = now_bf.complement[utils.R_x1_idxs[3]]
-            next_y1v = now_bf.complement[utils.R_y1_idxs[3]]
-            next_x2v = now_bf.complement[utils.R_x2_idxs[3]]
-            next_y2v = now_bf.complement[utils.R_y2_idxs[3]]
-
-            # 前半を区切る位置を求める(t=0.5で曲線を半分に分割する位置)
-            now, _ = utils.calc_interpolate_bezier_by_t(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, now_bf.frame, 0.5)
-            # logger.debug("%s, 【前半】, now: %s", indent, now)
-
-            if now > prev_bf.frame:
-                # ちゃんとキーが打てるような状態の場合、前半を再分割
-                before_fill_bf = recalc_bone_by_complement(motion, al, now)
-
-            if before_fill_bf:
-                # 分割キーが取得できた場合、前半の補間曲線を分割して求めなおす
-                split_complement(motion, next_x1v, next_y1v, next_x2v, next_y2v, prev_bf, now_bf, before_fill_bf, al, "{0},".format(indent))
-            else:
-                # 分割キーが取得できなかった場合、既にキーがあるので、さらに分割する
-
-
-                # 分割キーが取得できなかった場合、念のため補間曲線を0-127の間に収め直す
-                # 分割（今回キー）の始点は、前半のB
-                r_x1 = 0 if 0 > before_bz[1].x() else utils.COMPLEMENT_MMD_MAX if utils.COMPLEMENT_MMD_MAX < before_bz[1].x() else int(before_bz[1].x())
-                now_bf.complement[utils.R_x1_idxs[0]] = now_bf.complement[utils.R_x1_idxs[1]] = now_bf.complement[utils.R_x1_idxs[2]] = now_bf.complement[utils.R_x1_idxs[3]] = r_x1
-                r_y1 = 0 if 0 > before_bz[1].y() else utils.COMPLEMENT_MMD_MAX if utils.COMPLEMENT_MMD_MAX < before_bz[1].y() else int(before_bz[1].y())
-                now_bf.complement[utils.R_y1_idxs[0]] = now_bf.complement[utils.R_y1_idxs[1]] = now_bf.complement[utils.R_y1_idxs[2]] = now_bf.complement[utils.R_y1_idxs[3]] = r_y1
-
-                # 分割（今回キー）の終点は、後半のC
-                r_x2 = now_bf.complement[utils.R_x2_idxs[3]] = 0 if 0 > before_bz[2].x() else utils.COMPLEMENT_MMD_MAX if utils.COMPLEMENT_MMD_MAX < before_bz[2].x() else int(before_bz[2].x())
-                now_bf.complement[utils.R_x2_idxs[0]] = now_bf.complement[utils.R_x2_idxs[1]] = now_bf.complement[utils.R_x2_idxs[2]] = now_bf.complement[utils.R_x2_idxs[3]] = r_x2
-                r_y2 = 0 if 0 > before_bz[2].y() else utils.COMPLEMENT_MMD_MAX if utils.COMPLEMENT_MMD_MAX < before_bz[2].y() else int(before_bz[2].y())
-                now_bf.complement[utils.R_y2_idxs[0]] = now_bf.complement[utils.R_y2_idxs[1]] = now_bf.complement[utils.R_y2_idxs[2]] = now_bf.complement[utils.R_y2_idxs[3]] = r_y2
-
-                # logger.debug("%s,前半分割キー取得失敗,R_x1_idxs,%s,R_y1_idxs,%s,R_x2_idxs,%s,R_y2_idxs,%s,before_bz,%s", indent, now_bf.complement[utils.R_x1_idxs[3]], now_bf.complement[utils.R_y1_idxs[3]], now_bf.complement[utils.R_x2_idxs[3]], now_bf.complement[utils.R_x2_idxs[3]],before_bz)
-
-        if not aresult:
-            # logger.debug("%s, 【分割後半失敗開始】: ,%s, prev: %s, now: %s, next: %s", indent, al.name, prev_bf.frame, now_bf.frame, next_bf.frame)
-
-            # 後半用補間曲線
-            next_x1v = next_bf.complement[utils.R_x1_idxs[3]]
-            next_y1v = next_bf.complement[utils.R_y1_idxs[3]]
-            next_x2v = next_bf.complement[utils.R_x2_idxs[3]]
-            next_y2v = next_bf.complement[utils.R_y2_idxs[3]]
-
-            # 後半を区切る位置を求める
-            now, _ = utils.calc_interpolate_bezier_by_t(next_x1v, next_y1v, next_x2v, next_y2v, now_bf.frame, next_bf.frame, 0.5)
-            # logger.debug("%s, 【後半】, now: %s", indent, now)
-
-            if now > now_bf.frame:
-                # ちゃんとキーが打てるような状態の場合、後半を再分割
-                after_fill_bf = recalc_bone_by_complement(motion, al, now)
-
-            if after_fill_bf:
-                # 分割キーが取得できた場合、後半の補間曲線を分割して求めなおす
-                split_complement(motion, next_x1v, next_y1v, next_x2v, next_y2v, now_bf, next_bf, after_fill_bf, al, "{0},".format(indent))
-            else:
-                # 分割キーが取得できなかった場合、念のため補間曲線を0-127の間に収め直す
-
-                # 次回読み込みキーの始点は、後半のB
-                r_x1 = 0 if 0 > after_bz[1].x() else utils.COMPLEMENT_MMD_MAX if utils.COMPLEMENT_MMD_MAX < after_bz[1].x() else int(after_bz[1].x())
-                next_bf.complement[utils.R_x1_idxs[0]] = next_bf.complement[utils.R_x1_idxs[1]] = next_bf.complement[utils.R_x1_idxs[2]] = next_bf.complement[utils.R_x1_idxs[3]] = r_x1
-                r_y1 = 0 if 0 > after_bz[1].y() else utils.COMPLEMENT_MMD_MAX if utils.COMPLEMENT_MMD_MAX < after_bz[1].y() else int(after_bz[1].y())
-                next_bf.complement[utils.R_y1_idxs[0]] = next_bf.complement[utils.R_y1_idxs[1]] = next_bf.complement[utils.R_y1_idxs[2]] = next_bf.complement[utils.R_y1_idxs[3]] = r_y1
-
-                # 次回読み込みキーの終点は、後半のC
-                r_x2 = 0 if 0 > after_bz[2].x() else utils.COMPLEMENT_MMD_MAX if utils.COMPLEMENT_MMD_MAX < after_bz[2].x() else int(after_bz[2].x())
-                next_bf.complement[utils.R_x2_idxs[0]] = next_bf.complement[utils.R_x2_idxs[1]] = next_bf.complement[utils.R_x2_idxs[2]] = next_bf.complement[utils.R_x2_idxs[3]] = r_x2
-                r_y2 = 0 if 0 > after_bz[2].y() else utils.COMPLEMENT_MMD_MAX if utils.COMPLEMENT_MMD_MAX < after_bz[2].y() else int(after_bz[2].y())
-                next_bf.complement[utils.R_y2_idxs[0]] = next_bf.complement[utils.R_y2_idxs[1]] = next_bf.complement[utils.R_y2_idxs[2]] = next_bf.complement[utils.R_y2_idxs[3]] = r_y2
-
-                # logger.debug("%s,後半分割キー取得失敗,R_x1_idxs,%s,R_y1_idxs,%s,R_x2_idxs,%s,R_y2_idxs,%s,after_bz,%s", indent, next_bf.complement[utils.R_x1_idxs[3]], next_bf.complement[utils.R_y1_idxs[3]], next_bf.complement[utils.R_x2_idxs[3]], next_bf.complement[utils.R_x2_idxs[3]],after_bz)
-
-        # logger.debug("%s, 【分割失敗終了】: ,%s, prev: %s, now: %s, next: %s", indent, al.name, prev_bf.frame, now_bf.frame, next_bf.frame)
-        return
-    
-    # logger.debug("%s, 【分割終了】: ,%s, prev: %s, now: %s, next: %s, next_x1v: %s, next_y1v: %s, next_x2v: %s, next_y2v: %s", indent, al.name, prev_bf.frame, now_bf.frame, next_bf.frame, next_x1v, next_y1v, next_x2v, next_y2v)
-    return
 
 # キーの分割を再設定する
 def recalc_bone_by_complement(motion, al, now):    
@@ -250,8 +139,129 @@ def recalc_bone_by_complement(motion, al, now):
 
     return None
 
+# 補間曲線を分割する
+def split_complement(motion, next_x1v, next_y1v, next_x2v, next_y2v, prev_bf, next_bf, now_bf, link_name, indent, resplit=True):
+    # 区切りキー位置
+    before_fill_bf = after_fill_bf = None
+
+    # logger.debug("%s,【分割開始】: , %s, prev: %s, now: %s, next: %s, next_x1v: %s, next_y1v: %s, next_x2v: %s, next_y2v: %s", indent, link_name, prev_bf.frame, now_bf.frame, next_bf.frame, next_x1v, next_y1v, next_x2v, next_y2v)
+    
+    # ベジェ曲線を分割して新しい制御点を求める
+    t, x, y, bresult, aresult, before_bz, after_bz = utils.calc_bezier_split(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, next_bf.frame, now_bf.frame, link_name)
+
+    # logger.debug(",%s, next_x1v: %s, next_y1v: %s, next_x2v: %s, next_y2v: %s, start: %s, now: %s, end: %s", indent, next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, now_bf.frame, next_bf.frame)
+    # logger.debug(",%s, before_bz: %s", indent, before_bz)
+    # logger.debug(",%s, after_bz: %s", indent, after_bz)
+
+    # 分割（今回キー）の始点は、前半のB
+    now_bf.complement[utils.R_x1_idxs[0]] = now_bf.complement[utils.R_x1_idxs[1]] = now_bf.complement[utils.R_x1_idxs[2]] = now_bf.complement[utils.R_x1_idxs[3]] = int(before_bz[1].x())
+    now_bf.complement[utils.R_y1_idxs[0]] = now_bf.complement[utils.R_y1_idxs[1]] = now_bf.complement[utils.R_y1_idxs[2]] = now_bf.complement[utils.R_y1_idxs[3]] = int(before_bz[1].y())
+
+    # 分割（今回キー）の終点は、後半のC
+    now_bf.complement[utils.R_x2_idxs[0]] = now_bf.complement[utils.R_x2_idxs[1]] = now_bf.complement[utils.R_x2_idxs[2]] = now_bf.complement[utils.R_x2_idxs[3]] = int(before_bz[2].x())
+    now_bf.complement[utils.R_y2_idxs[0]] = now_bf.complement[utils.R_y2_idxs[1]] = now_bf.complement[utils.R_y2_idxs[2]] = now_bf.complement[utils.R_y2_idxs[3]] = int(before_bz[2].y())
+
+    # 次回読み込みキーの始点は、後半のB
+    next_bf.complement[utils.R_x1_idxs[0]] = next_bf.complement[utils.R_x1_idxs[1]] = next_bf.complement[utils.R_x1_idxs[2]] = next_bf.complement[utils.R_x1_idxs[3]] = int(after_bz[1].x())
+    next_bf.complement[utils.R_y1_idxs[0]] = next_bf.complement[utils.R_y1_idxs[1]] = next_bf.complement[utils.R_y1_idxs[2]] = next_bf.complement[utils.R_y1_idxs[3]] = int(after_bz[1].y())
+
+    # 次回読み込みキーの終点は、後半のC
+    next_bf.complement[utils.R_x2_idxs[0]] = next_bf.complement[utils.R_x2_idxs[1]] = next_bf.complement[utils.R_x2_idxs[2]] = next_bf.complement[utils.R_x2_idxs[3]] = int(after_bz[2].x())
+    next_bf.complement[utils.R_y2_idxs[0]] = next_bf.complement[utils.R_y2_idxs[1]] = next_bf.complement[utils.R_y2_idxs[2]] = next_bf.complement[utils.R_y2_idxs[3]] = int(after_bz[2].y())
+
+    if bresult and aresult:
+        # logger.debug("%s, 【分割成功】: , %s,prev: %s, now: %s, next: %s", indent, link_name, prev_bf.frame, now_bf.frame, next_bf.frame)
+        
+        return
+    else:
+        # 分割に失敗している場合、さらに分割する
+
+        if not bresult:
+            # logger.debug("%s, 【分割前半失敗開始】: ,%s, prev: %s, now: %s, next: %s", indent, link_name, prev_bf.frame, now_bf.frame, next_bf.frame)
+
+            # 前半用補間曲線
+            next_x1v = now_bf.complement[utils.R_x1_idxs[3]]
+            next_y1v = now_bf.complement[utils.R_y1_idxs[3]]
+            next_x2v = now_bf.complement[utils.R_x2_idxs[3]]
+            next_y2v = now_bf.complement[utils.R_y2_idxs[3]]
+
+            # 前半を区切る位置を求める(t=0.5で曲線を半分に分割する位置)
+            now, _ = utils.calc_interpolate_bezier_by_t(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, now_bf.frame, 0.5)
+            # logger.debug("%s, 【前半】, now: %s", indent, now)
+
+            if now > prev_bf.frame:
+                # ちゃんとキーが打てるような状態の場合、前半を再分割
+                before_fill_bf = recalc_bone_by_complement(motion, link_name, now)
+
+            if before_fill_bf:
+                # 分割キーが取得できた場合、前半の補間曲線を分割して求めなおす
+                split_complement(motion, next_x1v, next_y1v, next_x2v, next_y2v, prev_bf, now_bf, before_fill_bf, link_name, "{0},".format(indent))
+            else:
+                # 分割キーが取得できなかった場合、既にキーがあるので、さらに分割する
+
+
+                # 分割キーが取得できなかった場合、念のため補間曲線を0-127の間に収め直す
+                # 分割（今回キー）の始点は、前半のB
+                r_x1 = 0 if 0 > before_bz[1].x() else utils.COMPLEMENT_MMD_MAX if utils.COMPLEMENT_MMD_MAX < before_bz[1].x() else int(before_bz[1].x())
+                now_bf.complement[utils.R_x1_idxs[0]] = now_bf.complement[utils.R_x1_idxs[1]] = now_bf.complement[utils.R_x1_idxs[2]] = now_bf.complement[utils.R_x1_idxs[3]] = r_x1
+                r_y1 = 0 if 0 > before_bz[1].y() else utils.COMPLEMENT_MMD_MAX if utils.COMPLEMENT_MMD_MAX < before_bz[1].y() else int(before_bz[1].y())
+                now_bf.complement[utils.R_y1_idxs[0]] = now_bf.complement[utils.R_y1_idxs[1]] = now_bf.complement[utils.R_y1_idxs[2]] = now_bf.complement[utils.R_y1_idxs[3]] = r_y1
+
+                # 分割（今回キー）の終点は、後半のC
+                r_x2 = now_bf.complement[utils.R_x2_idxs[3]] = 0 if 0 > before_bz[2].x() else utils.COMPLEMENT_MMD_MAX if utils.COMPLEMENT_MMD_MAX < before_bz[2].x() else int(before_bz[2].x())
+                now_bf.complement[utils.R_x2_idxs[0]] = now_bf.complement[utils.R_x2_idxs[1]] = now_bf.complement[utils.R_x2_idxs[2]] = now_bf.complement[utils.R_x2_idxs[3]] = r_x2
+                r_y2 = 0 if 0 > before_bz[2].y() else utils.COMPLEMENT_MMD_MAX if utils.COMPLEMENT_MMD_MAX < before_bz[2].y() else int(before_bz[2].y())
+                now_bf.complement[utils.R_y2_idxs[0]] = now_bf.complement[utils.R_y2_idxs[1]] = now_bf.complement[utils.R_y2_idxs[2]] = now_bf.complement[utils.R_y2_idxs[3]] = r_y2
+
+                # logger.debug("%s,前半分割キー取得失敗,R_x1_idxs,%s,R_y1_idxs,%s,R_x2_idxs,%s,R_y2_idxs,%s,before_bz,%s", indent, now_bf.complement[utils.R_x1_idxs[3]], now_bf.complement[utils.R_y1_idxs[3]], now_bf.complement[utils.R_x2_idxs[3]], now_bf.complement[utils.R_x2_idxs[3]],before_bz)
+
+        if not aresult:
+            # logger.debug("%s, 【分割後半失敗開始】: ,%s, prev: %s, now: %s, next: %s", indent, link_name, prev_bf.frame, now_bf.frame, next_bf.frame)
+
+            # 後半用補間曲線
+            next_x1v = next_bf.complement[utils.R_x1_idxs[3]]
+            next_y1v = next_bf.complement[utils.R_y1_idxs[3]]
+            next_x2v = next_bf.complement[utils.R_x2_idxs[3]]
+            next_y2v = next_bf.complement[utils.R_y2_idxs[3]]
+
+            # 後半を区切る位置を求める
+            now, _ = utils.calc_interpolate_bezier_by_t(next_x1v, next_y1v, next_x2v, next_y2v, now_bf.frame, next_bf.frame, 0.5)
+            # logger.debug("%s, 【後半】, now: %s", indent, now)
+
+            if now > now_bf.frame:
+                # ちゃんとキーが打てるような状態の場合、後半を再分割
+                after_fill_bf = recalc_bone_by_complement(motion, link_name, now)
+
+            if after_fill_bf:
+                # 分割キーが取得できた場合、後半の補間曲線を分割して求めなおす
+                split_complement(motion, next_x1v, next_y1v, next_x2v, next_y2v, now_bf, next_bf, after_fill_bf, link_name, "{0},".format(indent))
+            else:
+                # 分割キーが取得できなかった場合、念のため補間曲線を0-127の間に収め直す
+
+                # 次回読み込みキーの始点は、後半のB
+                r_x1 = 0 if 0 > after_bz[1].x() else utils.COMPLEMENT_MMD_MAX if utils.COMPLEMENT_MMD_MAX < after_bz[1].x() else int(after_bz[1].x())
+                next_bf.complement[utils.R_x1_idxs[0]] = next_bf.complement[utils.R_x1_idxs[1]] = next_bf.complement[utils.R_x1_idxs[2]] = next_bf.complement[utils.R_x1_idxs[3]] = r_x1
+                r_y1 = 0 if 0 > after_bz[1].y() else utils.COMPLEMENT_MMD_MAX if utils.COMPLEMENT_MMD_MAX < after_bz[1].y() else int(after_bz[1].y())
+                next_bf.complement[utils.R_y1_idxs[0]] = next_bf.complement[utils.R_y1_idxs[1]] = next_bf.complement[utils.R_y1_idxs[2]] = next_bf.complement[utils.R_y1_idxs[3]] = r_y1
+
+                # 次回読み込みキーの終点は、後半のC
+                r_x2 = 0 if 0 > after_bz[2].x() else utils.COMPLEMENT_MMD_MAX if utils.COMPLEMENT_MMD_MAX < after_bz[2].x() else int(after_bz[2].x())
+                next_bf.complement[utils.R_x2_idxs[0]] = next_bf.complement[utils.R_x2_idxs[1]] = next_bf.complement[utils.R_x2_idxs[2]] = next_bf.complement[utils.R_x2_idxs[3]] = r_x2
+                r_y2 = 0 if 0 > after_bz[2].y() else utils.COMPLEMENT_MMD_MAX if utils.COMPLEMENT_MMD_MAX < after_bz[2].y() else int(after_bz[2].y())
+                next_bf.complement[utils.R_y2_idxs[0]] = next_bf.complement[utils.R_y2_idxs[1]] = next_bf.complement[utils.R_y2_idxs[2]] = next_bf.complement[utils.R_y2_idxs[3]] = r_y2
+
+                # logger.debug("%s,後半分割キー取得失敗,R_x1_idxs,%s,R_y1_idxs,%s,R_x2_idxs,%s,R_y2_idxs,%s,after_bz,%s", indent, next_bf.complement[utils.R_x1_idxs[3]], next_bf.complement[utils.R_y1_idxs[3]], next_bf.complement[utils.R_x2_idxs[3]], next_bf.complement[utils.R_x2_idxs[3]],after_bz)
+
+        # logger.debug("%s, 【分割失敗終了】: ,%s, prev: %s, now: %s, next: %s", indent, link_name, prev_bf.frame, now_bf.frame, next_bf.frame)
+        return
+    
+    # logger.debug("%s, 【分割終了】: ,%s, prev: %s, now: %s, next: %s, next_x1v: %s, next_y1v: %s, next_x2v: %s, next_y2v: %s", indent, link_name, prev_bf.frame, now_bf.frame, next_bf.frame, next_x1v, next_y1v, next_x2v, next_y2v)
+    return
+
+
+
 # 腕IK調整事前準備
-def prepare(motion, arm_links, hand_distance):
+def prepare(motion, arm_links, hand_distance, is_floor_hand):
 
     for d in ["左", "右"]:
         for al in arm_links[d]:
@@ -263,51 +273,26 @@ def prepare(motion, arm_links, hand_distance):
     for f in range(motion.last_motion_frame + 1):
         is_checked = False
 
-        for k in ["左腕", "左ひじ", "左手首", "右腕", "右ひじ", "右手首"]:
+        for k in ["センター", "上半身", "左腕", "左ひじ", "左手首", "右腕", "右ひじ", "右手首"]:
             for _, bf in enumerate(motion.frames[k]):
                 if bf.frame == f:
                     # 該当フレームの場合
                     for direction in ["左", "右"]:
                         for al in arm_links[direction]:
+                            if al.name == "左腕" and is_floor_hand:
+                                logger.debug("センターprepare_fill_frame %s", bf.frame)
+                                # 床位置合わせONの場合、センターと上半身にキー追加
+                                prepare_fill_frame(motion, "センター", bf, hand_distance)
+                                prepare_fill_frame(motion, "上半身", bf, hand_distance)
+
                             if al.name in motion.frames:
-                                is_added = False
-                                for tbf_idx, tbf in enumerate(motion.frames[al.name]):
-                                    if tbf.frame == bf.frame:
-                                        # とりあえず登録対象のキーが既存なので終了
-                                        # logger.debug("fill 既存あり: %s, i: %s, f: %s", al.name, tbf_idx, bf.frame)
-                                        is_checked = True
-                                        is_added = True
-                                        break
-                                    elif tbf.frame > bf.frame:
-                                        # 対象のキーがなくて次に行ってしまった場合、挿入
-                                        
-                                        # 補間曲線込みでキーフレーム生成
-                                        fillbf = utils.calc_bone_by_complement(motion.frames, al.name, bf.frame, True)
-                                        # 手首間の距離がマイナスの場合（デバッグ機能）で有効
-                                        # 普通の場合、とりあえず実際に登録はしない
-                                        fillbf.key = True if hand_distance < 0 else False
-
-                                        motion.frames[al.name].insert(tbf_idx, fillbf)
-                                        # logger.debug("fill insert: %s, i: %s, f: %s, key: %s", al.name, tbf_idx, fillbf.frame, fillbf.key)
-
-                                        is_checked = True
-                                        is_added = True
-                                        break
-                                
-                                if not is_added:
-                                    # 最後のフレームがなくてそのまま終了してしまった場合は、直前のキーを設定する
-                                    fillbf = copy.deepcopy(tbf)
-                                    # とりあえず実際に登録はしない
-                                    fillbf.key = False
-                                    # 読み込みキーではない
-                                    fillbf.read = False
-                                    # logger.debug("fill 今回なし: %s, i: %s, f: %s", al.name, tbf_idx, fillbf.frame)
-                                    motion.frames[al.name].insert(tbf_idx, fillbf)
+                                # 手首キーを埋める
+                                is_checked = prepare_fill_frame(motion, al.name, bf, hand_distance)
 
                     if is_checked:
                         # 両手が終わっててチェック済みならブレイク
                         break
-                
+
                 if is_checked:
                     # 両手が終わっててチェック済みならブレイク
                     break
@@ -321,8 +306,48 @@ def prepare(motion, arm_links, hand_distance):
 
     print("手首位置合わせ事前調整終了")
 
+def prepare_fill_frame(motion, link_name, bf, hand_distance):
+    is_added = False
+    is_checked = False
+
+    for tbf_idx, tbf in enumerate(motion.frames[link_name]):
+        if tbf.frame == bf.frame:
+            # とりあえず登録対象のキーが既存なので終了
+            logger.debug("fill 既存あり: %s, i: %s, f: %s", link_name, tbf_idx, bf.frame)
+            is_checked = True
+            is_added = True
+            break
+        elif tbf.frame > bf.frame:
+            # 対象のキーがなくて次に行ってしまった場合、挿入
+            
+            # 補間曲線込みでキーフレーム生成
+            fillbf = utils.calc_bone_by_complement(motion.frames, link_name, bf.frame, True)
+            # 手首間の距離がマイナスの場合（デバッグ機能）で有効
+            # 普通の場合、とりあえず実際に登録はしない
+            fillbf.key = True if hand_distance < 0 else False
+
+            motion.frames[link_name].insert(tbf_idx, fillbf)
+            logger.debug("fill insert: %s, i: %s, f: %s, key: %s", link_name, tbf_idx, fillbf.frame, fillbf.key)
+
+            is_checked = True
+            is_added = True
+            break
+    
+    if not is_added:
+        # 最後のフレームがなくてそのまま終了してしまった場合は、直前のキーを設定する
+        fillbf = copy.deepcopy(tbf)
+        # とりあえず実際に登録はしない
+        fillbf.key = False
+        # 読み込みキーではない
+        fillbf.read = False
+        # logger.debug("fill 今回なし: %s, i: %s, f: %s", link_name, tbf_idx, fillbf.frame)
+        motion.frames[link_name].insert(tbf_idx, fillbf)
+
+    return is_checked
+
+
 # 手首位置合わせ実行
-def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distance, org_motion_frames, all_rep_wrist_links, arm_links):    
+def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distance, is_floor_hand, org_motion_frames, all_rep_wrist_links, arm_links):    
     # 腕IKによる位置調整を行う場合
 
     # エラーを一度でも出力しているか(腕IK)
@@ -418,12 +443,52 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
     # キーフレーム分割済みのフレーム情報を別保持
     org_fill_motion_frames = copy.deepcopy(motion.frames)
 
+    if is_floor_hand:
+        # 足までの位置(作成元モデル)
+        all_org_leg_links, all_org_leg_indexes = trace_model.create_link_2_top_lr("足")
+        # logger.debug("all_org_leg_links: %s", [ "{0}: {1}\n".format(x.name, x.position) for x in all_org_leg_links["左"]])    
+        # logger.debug("all_org_leg_indexes: %s", [ x for x in all_org_leg_indexes["左"].keys()])    
+
+        # 足までの位置(トレース先モデル)
+        all_rep_leg_links, all_rep_leg_indexes = replace_model.create_link_2_top_lr("足")
+        # logger.debug("all_rep_leg_links: %s", all_rep_leg_indexes["右"].keys())
+
+        # 背面の厚み
+        org_back_thickness = 0
+        org_back_vertex = None
+        for al in (all_org_leg_links["左"] + all_org_leg_links["右"] + org_upper_links):
+            _, _, _, back_bone_below_pos, _, _, _, back_bone_below_vertex = trace_model.get_bone_vertex_position(al.name, al.position, trace_model.define_is_target_full_vertex(), True, False)
+            if org_back_thickness < back_bone_below_pos.z():
+                # より厚みのある頂点が取得できた場合、置き換え
+                org_back_thickness = back_bone_below_pos.z()
+                org_back_vertex = back_bone_below_vertex
+
+        rep_back_thickness = 0
+        rep_back_vertex = None
+        for al in (all_rep_leg_links["左"] + all_rep_leg_links["右"] + rep_upper_links):
+            _, _, _, back_bone_below_pos, _, _, _, back_bone_below_vertex = replace_model.get_bone_vertex_position(al.name, al.position, replace_model.define_is_target_full_vertex(), True, False)
+            if rep_back_thickness < back_bone_below_pos.z():
+                # より厚みのある頂点が取得できた場合、置き換え
+                rep_back_thickness = back_bone_below_pos.z()
+                rep_back_vertex = back_bone_below_vertex
+        
+        back_thickness = rep_back_thickness - org_back_thickness
+
+        # 手首と上半身のリンク生成(トレース先)
+        upper_links = {
+            "左": create_upper_links(replace_model, all_rep_finger_links, "左"), 
+            "右": create_upper_links(replace_model, all_rep_finger_links, "右")
+        }
+
+        print("背面の厚み: %s: 作成元: %s(%s), 変換先: %s(%s)" % ( back_thickness, org_back_thickness, org_back_vertex, rep_back_thickness, rep_back_vertex ))
+
+
     # 直前のキー
     prev_bf = None
     # 空白を挟んだ直前のキー
     prev_space_bf = None
     for f in range(motion.last_motion_frame + 1):
-        for k in ["左腕", "左ひじ", "左手首", "右腕", "右ひじ", "右手首"]:
+        for k in ["センター", "上半身", "左腕", "左ひじ", "左手首", "右腕", "右ひじ", "右手首"]:
             is_ik_adjust = False
 
             if k in motion.frames:
@@ -822,6 +887,188 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
 
                         else:
                             print("－手首近接なし: f: %s(%s), 手首間の距離: %s" % (bf.frame, org_direction, org_wrist_diff_rate ))
+                            
+                        if is_floor_hand and (bf_idx == 0 or (motion.frames["センター"][bf_idx - 1].frame + 1 < motion.frames["センター"][bf_idx].frame) or motion.frames["センター"][bf_idx].key == True):
+                            # 最初か1つ以上キーが離れているか元々あるキーの場合のみ調整
+
+                            # 手首のY位置
+                            org_wrist_y = org_finger_global_3ds[len(org_finger_global_3ds) - all_org_finger_indexes[org_direction]["手首"] - 1].y()
+                            org_reverse_wrist_y = org_reverse_finger_global_3ds[len(org_reverse_finger_global_3ds) - all_org_finger_indexes[reverse_org_direction]["手首"] - 1].y()
+
+                            # 足のY位置                            
+                            # 元モデルのIK計算前足までの情報
+                            # logger.debug("元モデルのIK計算前足までの情報")
+                            # logger.debug("all_org_leg_links[org_direction]: %s(%s)", all_org_leg_links[org_direction][all_org_leg_indexes[org_direction]["肩"]], all_org_leg_indexes[org_direction]["肩"])
+                            _, _, _, _, org_leg_global_3ds = utils.create_matrix_global(trace_model, all_org_leg_links[org_direction], org_motion_frames, bf, None)
+                            # logger.debug("org_leg_global_3ds ------------------------")
+                            # for n in range(len(all_org_leg_links[org_direction])):
+                            #     logger.debug("f: %s, org_leg_global_3ds %s, %s, %s", bf.frame, n, all_org_leg_links[org_direction][len(all_org_leg_links[org_direction]) - n - 1].name, org_leg_global_3ds[n])
+                            # logger.debug("org 手首 index: %s", len(org_leg_global_3ds) - all_org_leg_indexes[org_direction]["手首"] - 1)
+                            # logger.debug("元モデルの反対側の足までの情報")
+                            # 元モデルの反対側の足までの情報
+                            _, _, _, _, org_reverse_leg_global_3ds = utils.create_matrix_global(trace_model, all_org_leg_links[reverse_org_direction], org_motion_frames, bf, None)
+                            # logger.debug("org_reverse_leg_global_3ds ------------------------")
+                            # for n in range(len(all_org_leg_links[reverse_org_direction])):
+                            #     logger.debug("f: %s, org_reverse_leg_global_3ds %s, %s, %s", bf.frame, n, all_org_leg_links[reverse_org_direction][len(all_org_leg_links[reverse_org_direction]) - n - 1].name, org_reverse_leg_global_3ds[n])
+
+                            # 足のY位置
+                            org_leg_y = org_leg_global_3ds[len(org_leg_global_3ds) - all_org_leg_indexes[org_direction]["足"] - 1].y()
+                            org_reverse_leg_y = org_reverse_leg_global_3ds[len(org_reverse_leg_global_3ds) - all_org_leg_indexes[reverse_org_direction]["足"] - 1].y()
+
+                            logger.info("--------------")
+                            logger.info("%s hand_floor: p: %s, wy: %s, wyr: %s, ly: %s, lyr: %s", bf.frame, org_palm_length, org_wrist_y, org_reverse_wrist_y, org_leg_y, org_reverse_leg_y)
+
+                            if (org_wrist_y <= org_palm_length or org_reverse_wrist_y <= org_palm_length):
+
+                                # 変換先モデルのIK計算前指までの情報
+                                _, _, _, _, rep_finger_global_3ds = utils.create_matrix_global(replace_model, all_rep_finger_links[org_direction], motion.frames, bf, None)
+                                # logger.debug("rep_finger_global_3ds ------------------------")
+                                # for n in range(len(all_rep_finger_links[org_direction])):
+                                #     logger.debug("f: %s, rep_finger_global_3ds %s, %s, %s", bf.frame, n, all_rep_finger_links[org_direction][len(all_rep_finger_links[org_direction]) - n - 1].name, rep_finger_global_3ds[n])
+                                # 変換先モデルの反対側IK計算前指までの情報
+                                _, _, _, _, rep_reverse_finger_global_3ds = utils.create_matrix_global(replace_model, all_rep_finger_links[reverse_org_direction], motion.frames, bf, None)
+                                # logger.debug("rep_reverse_finger_global_3ds ------------------------")
+                                # for n in range(len(all_rep_finger_links[reverse_org_direction])):
+                                #     logger.debug("f: %s, rep_reverse_finger_global_3ds %s, %s, %s", bf.frame, n, all_rep_finger_links[reverse_org_direction][len(all_rep_finger_links[reverse_org_direction]) - n - 1].name, rep_reverse_finger_global_3ds[n])
+
+                                # 手首のY位置
+                                rep_wrist_y = rep_finger_global_3ds[len(rep_finger_global_3ds) - all_rep_finger_indexes[org_direction]["手首"] - 1].y()
+                                rep_reverse_wrist_y = rep_reverse_finger_global_3ds[len(rep_reverse_finger_global_3ds) - all_rep_finger_indexes[reverse_org_direction]["手首"] - 1].y()
+
+                                logger.info("hand_floor wrist: rwy: %s, rwyr: %s", rep_wrist_y, rep_reverse_wrist_y)
+                                logger.info("hand_floor wrist: (min(org_wrist_y, org_reverse_wrist_y) - min(rep_wrist_y, rep_reverse_wrist_y)): %s", (min(org_wrist_y, org_reverse_wrist_y) - min(rep_wrist_y, rep_reverse_wrist_y)))
+
+                                print("○手首床近接あり: f: %s, 手首のY位置: %s:%s, %s:%s" % (bf.frame, org_direction, org_wrist_y, reverse_org_direction, org_reverse_wrist_y))
+
+                                # 床位置合わせで、手首のY位置が大体手の大きさ以下の場合、手首と床の位置合わせ
+                                motion.frames["センター"][bf_idx].position.setY(motion.frames["センター"][bf_idx].position.y() + (min(org_wrist_y, org_reverse_wrist_y) - min(rep_wrist_y, rep_reverse_wrist_y)) + wrist_thickness["左"])
+                                motion.frames["センター"][bf_idx].key = True
+
+                                logger.info("hand_floor wrist: center: %s", motion.frames["センター"][bf_idx].position)
+
+                            if (org_leg_y <= org_palm_length or org_reverse_leg_y <= org_palm_length):
+                                print("○足床近接あり: f: %s, 足のY位置: %s:%s, %s:%s" % (bf.frame, org_direction, org_leg_y, reverse_org_direction, org_reverse_leg_y))
+
+                                # 変換先モデルのIK計算前足までの情報
+                                _, _, _, _, rep_leg_global_3ds = utils.create_matrix_global(replace_model, all_rep_leg_links[org_direction], motion.frames, bf, None)
+                                # logger.debug("rep_leg_global_3ds ------------------------")
+                                # for n in range(len(all_rep_leg_links[org_direction])):
+                                #     logger.debug("f: %s, rep_leg_global_3ds %s, %s, %s", bf.frame, n, all_rep_leg_links[org_direction][len(all_rep_leg_links[org_direction]) - n - 1].name, rep_leg_global_3ds[n])
+                                # 変換先モデルの反対側IK計算前足までの情報
+                                _, _, _, _, rep_reverse_leg_global_3ds = utils.create_matrix_global(replace_model, all_rep_leg_links[reverse_org_direction], motion.frames, bf, None)
+                                # logger.debug("rep_reverse_leg_global_3ds ------------------------")
+                                # for n in range(len(all_rep_leg_links[reverse_org_direction])):
+                                #     logger.debug("f: %s, rep_reverse_leg_global_3ds %s, %s, %s", bf.frame, n, all_rep_leg_links[reverse_org_direction][len(all_rep_leg_links[reverse_org_direction]) - n - 1].name, rep_reverse_leg_global_3ds[n])
+
+                                # 足のY位置
+                                rep_leg_y = rep_leg_global_3ds[len(rep_leg_global_3ds) - all_rep_leg_indexes[org_direction]["足"] - 1].y()
+                                rep_reverse_leg_y = rep_reverse_leg_global_3ds[len(rep_reverse_leg_global_3ds) - all_rep_leg_indexes[reverse_org_direction]["足"] - 1].y()
+
+                                logger.info("hand_floor leg: rly: %s, rlyr: %s", rep_leg_y, rep_reverse_leg_y)
+                                logger.info("hand_floor leg: (min(org_leg_y, org_reverse_leg_y) - min(rep_leg_y, rep_reverse_leg_y)): %s", (min(org_leg_y, org_reverse_leg_y) - min(rep_leg_y, rep_reverse_leg_y)))
+
+                                # 床位置合わせで、足のY位置が大体手の大きさ以下の場合、足と床の位置合わせ
+                                motion.frames["センター"][bf_idx].position.setY(motion.frames["センター"][bf_idx].position.y() + (min(org_leg_y, org_reverse_leg_y) - min(rep_leg_y, rep_reverse_leg_y)) + back_thickness)
+                                motion.frames["センター"][bf_idx].key = True
+
+                                logger.info("hand_floor leg: center: %s", motion.frames["センター"][bf_idx].position)
+
+                            # 手と足を調整して、手首が埋まっている場合、上半身を起こす
+
+                            if (org_wrist_y <= org_palm_length or org_reverse_wrist_y <= org_palm_length):
+
+                                # 変換先モデルのIK計算前指までの情報
+                                _, _, _, _, rep_finger_global_3ds = utils.create_matrix_global(replace_model, all_rep_finger_links[org_direction], motion.frames, bf, None)
+                                # logger.debug("rep_finger_global_3ds ------------------------")
+                                # for n in range(len(all_rep_finger_links[org_direction])):
+                                #     logger.debug("f: %s, rep_finger_global_3ds %s, %s, %s", bf.frame, n, all_rep_finger_links[org_direction][len(all_rep_finger_links[org_direction]) - n - 1].name, rep_finger_global_3ds[n])
+                                # 変換先モデルの反対側IK計算前指までの情報
+                                _, _, _, _, rep_reverse_finger_global_3ds = utils.create_matrix_global(replace_model, all_rep_finger_links[reverse_org_direction], motion.frames, bf, None)
+                                # logger.debug("rep_reverse_finger_global_3ds ------------------------")
+                                # for n in range(len(all_rep_finger_links[reverse_org_direction])):
+                                #     logger.debug("f: %s, rep_reverse_finger_global_3ds %s, %s, %s", bf.frame, n, all_rep_finger_links[reverse_org_direction][len(all_rep_finger_links[reverse_org_direction]) - n - 1].name, rep_reverse_finger_global_3ds[n])
+
+                                # 手首のY位置
+                                re_rep_wrist_y = rep_finger_global_3ds[len(rep_finger_global_3ds) - all_rep_finger_indexes[org_direction]["手首"] - 1].y()
+                                re_rep_reverse_wrist_y = rep_reverse_finger_global_3ds[len(rep_reverse_finger_global_3ds) - all_rep_finger_indexes[reverse_org_direction]["手首"] - 1].y()
+
+                                logger.info("hand_floor wrist-re: rwy: %s, rwyr: %s", re_rep_wrist_y, re_rep_reverse_wrist_y)
+                                logger.info("hand_floor wrist-re: (min(org_wrist_y, org_reverse_wrist_y) - min(rep_wrist_y, rep_reverse_wrist_y)): %s", (min(org_wrist_y, org_reverse_wrist_y) - min(rep_wrist_y, rep_reverse_wrist_y)))
+
+                                print("○手首床近接あり上半身調整: f: %s, 手首のY位置: %s:%s, %s:%s" % (bf.frame, org_direction, rep_wrist_y, reverse_org_direction, rep_reverse_wrist_y))
+
+                                if rep_wrist_y < rep_reverse_wrist_y:
+                                    # 正方向のYがより地面に近い（か埋まっている）場合
+
+                                    # Yを元モデルと同じ距離にする
+                                    rep_wrist_pos = rep_finger_global_3ds[len(rep_finger_global_3ds) - all_rep_finger_indexes[org_direction]["手首"] - 1]
+                                    rep_wrist_pos.setY( org_wrist_y * arm_palm_diff_length + abs(wrist_thickness[org_direction]) )
+
+                                    # 手首位置から角度を求める
+                                    calc_arm_IK2FK(rep_wrist_pos, replace_model, upper_links[org_direction], all_rep_finger_links[org_direction], org_direction, motion.frames, bf, None)
+
+                                    if finger_links and wrist_thickness[org_direction] != 0:
+
+                                        # 人指３のY位置
+                                        org_finger_y = org_finger_global_3ds[len(org_finger_global_3ds) - all_org_finger_indexes[org_direction]["人指３"] - 1].y()
+
+                                        # 変換先モデルのIK計算前指までの情報
+                                        _, _, _, _, rep_finger_global_3ds = utils.create_matrix_global(replace_model, all_rep_finger_links[org_direction], motion.frames, bf, None)
+
+                                        rep_finger_pos = rep_finger_global_3ds[len(rep_finger_global_3ds) - all_rep_finger_indexes[org_direction]["人指３"] - 1]
+                                        rep_finger_pos.setY( org_finger_y * arm_palm_diff_length )
+                                        
+                                        # 指３位置から角度を求める
+                                        calc_arm_IK2FK(rep_finger_pos, replace_model, finger_links[org_direction], all_rep_finger_links[org_direction], org_direction, motion.frames, bf, None)
+
+                                else:
+                                    # 逆方向のYがより地面に近い（か埋まっている）場合
+
+                                    # Yを元モデルと同じ距離にする
+                                    rep_wrist_pos = rep_reverse_finger_global_3ds[len(rep_reverse_finger_global_3ds) - all_rep_finger_indexes[reverse_org_direction]["手首"] - 1]
+                                    rep_wrist_pos.setY( org_reverse_wrist_y * arm_palm_diff_length + abs(wrist_thickness[reverse_org_direction]) )
+
+                                    # 手首位置から角度を求める
+                                    calc_arm_IK2FK(rep_wrist_pos, replace_model, upper_links[reverse_org_direction], all_rep_finger_links[reverse_org_direction], reverse_org_direction, motion.frames, bf, None)
+
+                                    if finger_links and wrist_thickness[reverse_org_direction] != 0:
+                                        # 人指３のY位置
+                                        org_reverse_finger_y = org_reverse_finger_global_3ds[len(org_finger_global_3ds) - all_org_finger_indexes[reverse_org_direction]["人指３"] - 1].y()
+
+                                        # 変換先モデルのIK計算前指までの情報
+                                        _, _, _, _, rep_finger_global_3ds = utils.create_matrix_global(replace_model, all_rep_finger_links[reverse_org_direction], motion.frames, bf, None)
+
+                                        rep_finger_pos = rep_finger_global_3ds[len(rep_finger_global_3ds) - all_rep_finger_indexes[reverse_org_direction]["人指３"] - 1]
+                                        rep_finger_pos.setY( org_reverse_finger_y * arm_palm_diff_length )
+
+                                        # 指３位置から角度を求める
+                                        calc_arm_IK2FK(rep_finger_pos, replace_model, finger_links[reverse_org_direction], all_rep_finger_links[reverse_org_direction], reverse_org_direction, motion.frames, bf, None)
+
+                                # 指位置調整-----------------
+
+                                uad = abs(QQuaternion.dotProduct(motion.frames["上半身"][bf_idx].rotation, org_fill_motion_frames["上半身"][bf_idx].rotation))
+                                if uad < 0.85:
+                                    print("%sフレーム目上半身位置合わせ失敗: 上半身:%s" % (bf.frame, uad))
+                                    # 失敗時のみエラーログ出力
+                                    if not is_error_outputed:
+                                        is_error_outputed = True
+                                        if not error_file_logger:
+                                            error_file_logger = utils.create_error_file_logger(motion, trace_model, replace_model, output_vmd_path)
+
+                                        error_file_logger.info("作成元モデルの手の大きさ: %s", org_palm_length)
+                                        error_file_logger.info("変換先モデルの手の大きさ: %s", rep_palm_length)
+                                        error_file_logger.info("手首の厚み: l: %s, r: %s", wrist_thickness["左"], wrist_thickness["右"])
+                                        # error_file_logger.debug("作成元の上半身の厚み: %s", org_upper_thickness_diff)
+                                        # error_file_logger.debug("変換先の上半身の厚み: %s", rep_upper_thickness_diff)
+                                        # error_file_logger.debug("肩幅の差: %s" , showlder_diff_length)
+
+                                    error_file_logger.warning("%sフレーム目上半身位置合わせ失敗: 上半身:%s" % (bf.frame, uad))
+                                    
+                                    # 失敗時は元に戻す
+                                    motion.frames["上半身"][bf_idx] = copy.deepcopy(org_fill_motion_frames["上半身"][bf_idx])
+                                else:
+                                    # logger.info("手首位置合わせ成功: f: %s, 左腕:%s, 右腕:%s", bf.frame, lad, rad)
+                                    motion.frames["上半身"][bf_idx].key = True
 
                         # 前回登録キーとして保持
                         prev_bf = copy.deepcopy(bf)
@@ -1001,7 +1248,7 @@ def calc_arm_IK2FK(target_pos, model, joint_links, all_joint_links, direction, f
 
                 # エフェクタのローカル軸
                 # logger.debug("joint: %s, joint before: %s", all_joint_links[joint_idx].name, joint.rotation.toEulerAngles())
-                # logger.debug("joint: %s, correct_qq: %s", all_joint_links[joint_idx].name, correct_qq.toEulerAngles())
+                logger.debug("joint: %s, correct_qq: %s", all_joint_links[joint_idx].name, correct_qq.toEulerAngles())
 
                 joint.rotation = correct_qq * joint.rotation
 
@@ -1073,6 +1320,15 @@ def create_finger_links(model, links, direction):
     
     return finger_links
     
+def create_upper_links(model, links, direction):
+    # 関節リストを末端から生成する
+    upper_links = []
+
+    upper_links.append(get_bone_in_links_4_joint(model, links, direction, "手首", "手首"))
+    
+    upper_links.append(model.bones["上半身"])
+
+    return upper_links
 
 # 腕ジョイントリスト生成
 def create_arm_links(model, links, direction):

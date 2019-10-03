@@ -25,7 +25,7 @@ level = {0:logging.ERROR,
             3:logging.DEBUG}
 
 def main(motion, trace_model, replace_model, output_vmd_path, \
-    is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, vmd_choice_values, rep_choice_values, rep_rate_values, \
+    is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, is_floor_hand, vmd_choice_values, rep_choice_values, rep_rate_values, \
     camera_motion, camera_vmd_path, output_camera_vmd_path, camera_y_offset):   
     # print("モーション: %s" % motion.path)
     # if camera_motion:
@@ -46,7 +46,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, \
     is_success = sub_arm_stance.exec(motion, trace_model, replace_model, output_vmd_path) and is_success
 
     # 腕IK処理
-    is_success = sub_arm_ik.exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_hand_ik, hand_distance, org_motion_frames) and is_success
+    is_success = sub_arm_ik.exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_hand_ik, hand_distance, is_floor_hand, org_motion_frames) and is_success
 
     # カメラ処理
     # is_success = sub_camera.exec(motion, trace_model, replace_model, output_vmd_path) and is_success
