@@ -251,7 +251,26 @@ R_x1_idxs = [3, 18, 33, 48]
 R_y1_idxs = [7, 22, 37, 52]
 R_x2_idxs = [11, 26, 41, 56]
 R_y2_idxs = [15, 30, 45, 60]
-        
+
+# X移動補間曲線のインデックス
+MX_x1_idxs = [0, 0, 0, 0]
+MX_y1_idxs = [4, 4, 4, 4]
+MX_x2_idxs = [8, 8, 8, 8]
+MX_y2_idxs = [12, 12, 12, 12]
+
+# Y移動補間曲線のインデックス
+MY_x1_idxs = [16, 16, 16, 16]
+MY_y1_idxs = [20, 20, 20, 20]
+MY_x2_idxs = [24, 24, 24, 24]
+MY_y2_idxs = [28, 28, 28, 28]
+
+# Z移動補間曲線のインデックス
+MZ_x1_idxs = [32, 32, 32, 32]
+MZ_y1_idxs = [36, 36, 36, 36]
+MZ_x2_idxs = [40, 40, 40, 40]
+MZ_y2_idxs = [44, 44, 44, 44]
+
+
 # 補間曲線を考慮した指定フレーム番号の位置
 # https://www55.atwiki.jp/kumiho_k/pages/15.html
 # https://harigane.at.webry.info/201103/article_1.html
@@ -301,10 +320,10 @@ def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False
                 prev_rot = prev_bf.org_rotation
                 # 処理対象回転
                 rot = bf.org_rotation
-                # 処理対象前移動
-                prev_pos = prev_bf.org_position
+                # 処理対象前移動(センター等の移動は既に修正されているので、orgじゃなく自身の値)
+                prev_pos = prev_bf.position
                 # 処理対象移動
-                pos = bf.org_position
+                pos = bf.position
             else:
                 # 補間曲線は弄らない場合
 

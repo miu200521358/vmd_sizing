@@ -26,6 +26,8 @@ def main(csv_bone_path, csv_morph_path, csv_camera_path):
         camera_frames = []
 
         if csv_bone_path:
+            output_vmd_path = re.sub(r'\.csv$', "_{0:%Y%m%d_%H%M%S}.vmd".format(datetime.now()), csv_bone_path)
+
             # ボーンCSV読み込み
             with open(csv_bone_path, encoding='cp932', mode='r') as f:
                 reader = csv.reader(f)
@@ -57,6 +59,8 @@ def main(csv_bone_path, csv_morph_path, csv_camera_path):
                     # logger.info("bf: %s %s", bf.name, bf)
 
         if csv_morph_path:
+            output_vmd_path = re.sub(r'\.csv$', "_{0:%Y%m%d_%H%M%S}.vmd".format(datetime.now()), csv_morph_path)
+
             # モーフCSV読み込み
             with open(csv_morph_path, encoding='cp932', mode='r') as f:
                 reader = csv.reader(f)
@@ -83,7 +87,6 @@ def main(csv_bone_path, csv_morph_path, csv_camera_path):
 
         if len(morph_frames) > 0 or len(bone_frames) > 0:            
             # ボーン・モーフモーション生成
-            output_vmd_path = re.sub(r'\.csv$', "_{0:%Y%m%d_%H%M%S}.vmd".format(datetime.now()), csv_bone_path)
             writer.write_vmd_file(output_vmd_path, "CSV Convert Model", bone_frames, morph_frames, [], [], [], [])
 
             print("ボーン・モーフVMD出力成功: %s" % output_vmd_path)

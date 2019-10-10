@@ -36,7 +36,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.01_β38", pos = wx.DefaultPosition, size = wx.Size( 600,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.01_β39", pos = wx.DefaultPosition, size = wx.Size( 600,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -729,12 +729,12 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_note.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.OnTabChange)
 
 		# 腕処理ラジオボタンの切り替え
-		self.m_radioArmNone.Bind(wx.EVT_RADIOBUTTON, self.OnCreateOutputVmd)
-		self.m_radioAvoidance.Bind(wx.EVT_RADIOBUTTON, self.OnCreateOutputVmd)
-		self.m_radioArmIK.Bind(wx.EVT_RADIOBUTTON, self.OnCreateOutputVmd)
+		self.m_radioArmNone.Bind(wx.EVT_RADIOBUTTON, self.OnChangeArmRadio)
+		self.m_radioAvoidance.Bind(wx.EVT_RADIOBUTTON, self.OnChangeArmRadio)
+		self.m_radioArmIK.Bind(wx.EVT_RADIOBUTTON, self.OnChangeArmRadio)
 
 		# 床位置合わせのチェックボックス切り替え
-		self.m_checkFloorArmDistance.Bind(wx.EVT_CHECKBOX, self.OnCreateOutputVmd)
+		self.m_checkFloorArmDistance.Bind(wx.EVT_CHECKBOX, self.OnChangeFloorArmDistance)
 
 		# 接触回避のラジオボタンの切り替え
 		self.m_radioAvoidanceFinger.Bind(wx.EVT_RADIOBUTTON, self.OnChangeAvoidanceTarget)
@@ -935,6 +935,20 @@ class VmdSizingForm3 ( wx.Frame ):
 		# パス再設定
 		self.OnCreateOutputVmd(event)
 	
+	# 腕IKで床にチェックを入れたら、親の選択有効
+	def OnChangeFloorArmDistance(self, event):
+		self.m_radioArmIK.SetValue(1)
+		# パス再設定
+		self.OnCreateOutputVmd(event)
+	
+	def OnChangeArmRadio(self, event):
+		if not self.m_radioArmIK.GetValue():
+			# 腕IKの選択を外した場合、床位置合わせチェックOFF
+			self.m_checkFloorArmDistance.SetValue(0)
+
+		# パス再設定
+		self.OnCreateOutputVmd(event)
+
 	def OnTabChange(self, event):
 		if self.worker:
 			# サイジング実行時はタブ移動不可

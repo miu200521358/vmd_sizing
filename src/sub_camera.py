@@ -528,7 +528,7 @@ def calc_nearest_bone(body_global_3ds, ratio_dict, replace_head_ratio, cf):
 
         if project_square_pos.y() > bottom_project_square_pos.y() and project_square_pos.y() <= 1.1 and -0.2 <= project_square_pos.x() <= 1.2:
             
-            if (replace_head_ratio <= 3 and k in ARM_BONE_NAMES):
+            if k in FINGER_BONE_NAMES or (replace_head_ratio <= 3 and k in ARM_BONE_NAMES):
                 # 指系はBOTTOM判定に入れない
                 pass
             else:                
@@ -540,7 +540,7 @@ def calc_nearest_bone(body_global_3ds, ratio_dict, replace_head_ratio, cf):
 
         if project_square_pos.y() < top_project_square_pos.y() and project_square_pos.y() >= -0.1 and -0.2 <= project_square_pos.x() <= 1.2:
             
-            if (replace_head_ratio <= 3 and k in ARM_BONE_NAMES):
+            if k in FINGER_BONE_NAMES or (replace_head_ratio <= 3 and k in ARM_BONE_NAMES):
                 # 指系はTOP判定に入れない
                 pass
             else:
