@@ -28,6 +28,8 @@ def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_h
             # 腕構造チェックがFALSEの場合、スタンス補正なし
             return False
                 
+        print("■■ 手首位置合わせ補正 -----------------")
+
         # センターから手首までの位置(トレース先モデル)
         all_rep_wrist_links, _ = replace_model.create_link_2_top_lr("手首")
 

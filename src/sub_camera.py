@@ -126,6 +126,9 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
         # カメラフレームがなかったら処理しない
         return True
 
+    print("■■ カメラ補正 -----------------")
+    print("カメラ作成元モデル: %s" % trace_model.name)
+
     # 足IKの比率
     # leg_xz_ratio, leg_y_ratio, _ = sub_move.calc_leg_ik_ratio(trace_model, replace_model)
     

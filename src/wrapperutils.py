@@ -287,7 +287,7 @@ def read_pmx(path, filetype="pmx", is_print=True):
 
 def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_vmd_path, \
         is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, is_floor_hand, vmd_choice_values, rep_choice_values, rep_rate_values, \
-        camera_motion, camera_vmd_path, output_camera_vmd_path, camera_y_offset):
+        camera_motion, camera_vmd_path, camera_pmx, camera_pmx_path, output_camera_vmd_path, camera_y_offset):
     print("■■■■■■■■■■■■■■■■■")
     print("■　VMDサイジング処理実行")
     print("■■■■■■■■■■■■■■■■■")
@@ -352,6 +352,19 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
         if not camera_motion and camera_vmd_path and os.path.exists(camera_vmd_path):
             camera_motion = read_vmd(camera_vmd_path)
         
+        # カメラPMX読み込み
+        # 前のデータが無い場合、内部的に前のモーションPMXデータを保持してしまうので、とりあえずクリア
+        if camera_pmx:
+            # カメラPMXがある場合
+            camera_pmx_data = camera_pmx
+        else:
+            # カメラPMXがない場合
+            if camera_pmx_path and os.path.exists(camera_pmx_path):
+                camera_pmx_data = read_pmx(camera_pmx_path)
+            else:
+                # 未指定の場合、作成元モデルをそのまま使用
+                camera_pmx_data = org_pmx
+
         if motion and org_pmx and rep_pmx:
             # ファイル出力タイプでサイジングチェック
             is_shortage = is_all_sizing(motion, org_pmx, rep_pmx, camera_motion, output_vmd_path)
@@ -360,7 +373,7 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
             # 読み込んだモーションデータそのものを弄らないよう、コピーした結果を渡す
             is_success = main.main(copy.deepcopy(motion), org_pmx, rep_pmx, output_vmd_path, \
                 is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, is_floor_hand, vmd_choice_values, rep_choice_values, rep_rate_values, \
-                copy.deepcopy(camera_motion), camera_vmd_path, output_camera_vmd_path, camera_y_offset)
+                copy.deepcopy(camera_motion), camera_vmd_path, camera_pmx_data, output_camera_vmd_path, camera_y_offset)
 
             logger.debug("is_shortage: %s, is_success: %s", is_shortage, is_success)
 

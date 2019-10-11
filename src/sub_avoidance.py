@@ -18,6 +18,8 @@ def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
     # -----------------------------------------------------------------
     # 頭部と腕の接触回避処理        
     if motion.motion_cnt > 0 and is_avoidance and not is_hand_ik:
+        print("■■ 腕接触回避処理 -----------------")
+
         # 頭までのリンク生成
         head_links, _ = replace_model.create_link_2_top( "頭")
 

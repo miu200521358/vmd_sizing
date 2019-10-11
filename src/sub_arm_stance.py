@@ -14,7 +14,6 @@ import utils
 logger = logging.getLogger("VmdSizing").getChild(__name__)
 
 def exec(motion, trace_model, replace_model, output_vmd_path):
-
     if motion.motion_cnt > 0:
         # -----------------------------------------------------------------
         # 腕の角度補正
@@ -23,6 +22,8 @@ def exec(motion, trace_model, replace_model, output_vmd_path):
             # 腕構造チェックがFALSEの場合、スタンス補正なし
             return False
                     
+        print("■■ 腕スタンス補正 -----------------")
+
         # センターから手首までの位置(作成元モデル)
         all_org_wrist_links, _ = trace_model.create_link_2_top_lr("手首")
 
