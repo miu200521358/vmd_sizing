@@ -36,7 +36,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.01_β42", pos = wx.DefaultPosition, size = wx.Size( 600,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.01_β43", pos = wx.DefaultPosition, size = wx.Size( 600,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -1360,6 +1360,7 @@ class VmdSizingForm3 ( wx.Frame ):
 				logger.debug("vmd_data クリア: %s", target_ctrl.GetPath())
 				# 読み込めるファイルではない場合、オブジェクトをクリアして終了
 				self.vmd_data = None
+				self.camera_vmd_data = None
 
 				if is_print:
 					print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
@@ -1437,6 +1438,7 @@ class VmdSizingForm3 ( wx.Frame ):
 				logger.debug("vmd_data クリア: %s", target_ctrl.GetPath())
 				# 読み込めるファイルではない場合、オブジェクトをクリアして終了
 				self.vmd_data = None
+				self.camera_vmd_data = None			
 
 				if is_print:
 					print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
@@ -1450,6 +1452,7 @@ class VmdSizingForm3 ( wx.Frame ):
 				if not self.vmd_data or not new_vmd_data or (self.vmd_data and new_vmd_data and self.vmd_data.digest != new_vmd_data.digest):
 					# ハッシュが違う場合、データが違うとみなして更新
 					self.vmd_data = new_vmd_data
+					self.camera_vmd_data = None
 
 					# 出力ファイル以外はモーフも変わるので初期化
 					self.ClearMorph()
@@ -1600,6 +1603,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		if target_ctrl == self.m_fileVmd:
 			self.vmd_data = None
+			self.camera_vmd_data = None
 
 		if target_ctrl == self.m_fileOrgPmx:
 			self.org_pmx_data = None

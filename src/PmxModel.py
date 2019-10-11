@@ -67,10 +67,11 @@ class PmxModel():
     
     # 腕系ボーンがサイジング可能かチェック
     def check_arm_bone_can_sizing(self):
-        if "左人指１" in self.bones:
-            ss_parent_bones, _ = self.create_link_2_top("左人指１")
-            all_parent_bones, _ = self.create_link_2_top_all("左人指１")
-        elif "左手首" in self.bones:
+        # if "左人指１" in self.bones:
+        #     ss_parent_bones, _ = self.create_link_2_top("左人指１")
+        #     all_parent_bones, _ = self.create_link_2_top_all("左人指１")
+        # el
+        if "左手首" in self.bones:
             # 指がない場合、手首まででチェック
             ss_parent_bones, _ = self.create_link_2_top("左手首")
             all_parent_bones, _ = self.create_link_2_top_all("左手首")

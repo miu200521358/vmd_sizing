@@ -383,7 +383,7 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
                 print("■　ログを確認してください。")
                 print("■■■■■■■■■■■■■■■■■")
                 print("")
-
+            
             # 実行後、出力ファイル存在チェック
             try:
                 Path(output_vmd_path).resolve(True)

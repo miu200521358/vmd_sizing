@@ -1013,7 +1013,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                     print("○足床近接あり: f: %s, センター補正: %s(%s)" % (bf.frame, rep_center_diff, back_thickness_diff))
 
                                 # 手と足を調整して、寝転がっているのではない場合、上半身を調整する
-                                if (org_wrist_y <= org_palm_length * 1.5 or org_reverse_wrist_y <= org_palm_length * 1.5) and (org_upper_y > org_leg_y * 1.2 or org_upper_y > org_reverse_leg_y * 1.2):
+                                if (org_wrist_y <= org_palm_length * 1.5 or org_reverse_wrist_y <= org_palm_length * 1.5) and (org_upper_y > org_leg_y * 1.2 or org_upper_y > org_reverse_leg_y * 1.2 or org_leg_y > org_palm_length * 2 or org_reverse_leg_y > org_palm_length * 2 ):
 
                                     # 変換先モデルのIK計算前指までの情報
                                     _, _, _, _, rep_finger_global_3ds = utils.create_matrix_global(replace_model, all_rep_finger_links[org_direction], motion.frames, bf, None)
@@ -1042,7 +1042,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
 
                                     is_wrist_adjust = is_reverse_wrist_adjust = False
 
-                                    if org_wrist_y <= org_palm_length and org_reverse_wrist_y <= org_palm_length:
+                                    if org_wrist_y <= org_palm_length * 1.5  and org_reverse_wrist_y <= org_palm_length * 1.5 :
                                         # 両手首とも床に近い場合
 
                                         for _ in range(5):
@@ -1089,7 +1089,12 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                         # calc_arm_IK2FK(target_rep_wrist_middle_pos, replace_model, upper_links[org_direction], all_rep_finger_links[org_direction], org_direction, motion.frames, bf, None, 10, all_rep_finger_links[reverse_org_direction])
 
                                         is_wrist_adjust = is_reverse_wrist_adjust = True
-                                    elif org_wrist_y <= org_palm_length and org_wrist_y < org_reverse_wrist_y:
+                                    elif org_wrist_y <= org_palm_length * 1.5 and org_wrist_y < org_reverse_wrist_y:
+                                        # 変換先モデルのIK計算前指までの情報
+                                        _, _, _, _, rep_finger_global_3ds = utils.create_matrix_global(replace_model, all_rep_finger_links[org_direction], motion.frames, bf, None)
+                                        rep_wrist_pos = rep_finger_global_3ds[len(rep_finger_global_3ds) - all_rep_finger_indexes[org_direction]["手首"] - 1]
+                                        logger.info("hand_floor rep_wrist_pos now: %s", rep_wrist_pos)
+
                                         # 正方向のYがより床に近い場合
                                         org_target_y = org_wrist_y * arm_palm_diff_length
                                         org_thickness_y = abs(wrist_thickness[org_direction])
@@ -1101,7 +1106,12 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                         calc_arm_IK2FK(rep_wrist_pos, replace_model, upper_links[org_direction], all_rep_finger_links[org_direction], org_direction, motion.frames, bf, None)
 
                                         is_wrist_adjust = True
-                                    elif org_reverse_wrist_y <= org_palm_length and org_reverse_wrist_y < org_wrist_y:
+                                    elif org_reverse_wrist_y <= org_palm_length * 1.5 and org_reverse_wrist_y < org_wrist_y:
+                                        # 変換先モデルの反対側IK計算前指までの情報
+                                        _, _, _, _, rep_reverse_finger_global_3ds = utils.create_matrix_global(replace_model, all_rep_finger_links[reverse_org_direction], motion.frames, bf, None)
+                                        rep_reverse_wrist_pos = rep_reverse_finger_global_3ds[len(rep_reverse_finger_global_3ds) - all_rep_finger_indexes[reverse_org_direction]["手首"] - 1]
+                                        logger.info("hand_floor rep_reverse_wrist_pos now: %s", rep_reverse_wrist_pos)
+
                                         # 逆方向のYがより床に近い場合
                                         # Yを元モデルと同じ距離にする
                                         org_target_y = org_reverse_wrist_y * arm_palm_diff_length
