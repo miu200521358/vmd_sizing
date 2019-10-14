@@ -163,7 +163,7 @@ class PmxModel():
     # 頭ボーンのウェイトが乗っている頂点を取得する
     def get_head_upper_vertex_position(self):
         # 頭の頂点位置
-        max_head_upper_pos, _, _, _, max_head_upper_vertex, _, _, _ = self.get_bone_vertex_position("頭", self.bones["頭"].position, self.define_is_target_full_vertex())
+        max_head_upper_pos, _, _, _, max_head_upper_vertex, _, _, _ = self.get_bone_vertex_position("頭", self.bones["頭"].position, self.define_is_target_full_vertex(), True)
 
         return max_head_upper_pos, max_head_upper_vertex
     

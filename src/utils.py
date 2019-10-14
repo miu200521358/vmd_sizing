@@ -116,30 +116,32 @@ def create_matrix_parts(model, links, frames, bf, scales):
                 # 回転なしの場合、角度なし
                 degree = 0
             else:
-                if lbone.local_x_vector.x() < 0:
-                    # 回転補正
-                    if "右" in lbone.name and rot.x() > 0:
-                        rot.setX(rot.x() * -1)
-                        # rot.setY(rot.y() * -1)
-                        rot.setScalar(rot.scalar() * -1)
-                        # rot.setZ(abs(rot.z()))
-                    elif "左" in lbone.name and rot.x() < 0:
-                        rot.setX(rot.x() * -1)
-                        rot.setScalar(rot.scalar() * -1)
-                        # rot.setX(rot.x() * -1)
-                        # rot.setScalar(rot.scalar() * -1)
-                elif lbone.local_x_vector.x() > 0:
-                    # 回転補正（コロン式ミクさん等）
-                    if "右" in lbone.name and rot.x() < 0:
-                        rot.setX(rot.x() * -1)
-                        # rot.setY(rot.y() * -1)
-                        rot.setScalar(rot.scalar() * -1)
-                        # rot.setZ(abs(rot.z()))
-                    elif "左" in lbone.name and rot.x() > 0:
-                        rot.setX(rot.x() * -1)
-                        rot.setScalar(rot.scalar() * -1)
-                        # rot.setX(rot.x() * -1)
-                        # rot.setScalar(rot.scalar() * -1)
+                logger.debug("%s: %s %s fixed_axis: %s rot: %s", bf.frame, model.name, lbone.name, lbone.fixed_axis, rot)
+
+                # 回転補正
+                if "右" in lbone.name and rot.x() > 0 and lbone.fixed_axis.x() <= 0:
+                    rot.setX(rot.x() * -1)
+                    # rot.setY(rot.y() * -1)
+                    rot.setScalar(rot.scalar() * -1)
+                    # rot.setZ(abs(rot.z()))
+                elif "左" in lbone.name and rot.x() < 0 and lbone.fixed_axis.x() >= 0:
+                    rot.setX(rot.x() * -1)
+                    rot.setScalar(rot.scalar() * -1)
+                    # rot.setX(rot.x() * -1)
+                    # rot.setScalar(rot.scalar() * -1)
+                # 回転補正（コロン式ミクさん等軸反転パターン）
+                elif "右" in lbone.name and rot.x() < 0 and lbone.fixed_axis.x() > 0:
+                    logger.debug("右回転補正")
+                    rot.setX(rot.x() * -1)
+                    # rot.setY(rot.y() * -1)
+                    rot.setScalar(rot.scalar() * -1)
+                    # rot.setZ(abs(rot.z()))
+                elif "左" in lbone.name and rot.x() > 0 and lbone.fixed_axis.x() < 0:
+                    logger.debug("左回転補正")
+                    rot.setX(rot.x() * -1)
+                    rot.setScalar(rot.scalar() * -1)
+                    # rot.setX(rot.x() * -1)
+                    # rot.setScalar(rot.scalar() * -1)
                 
                 rot.normalize()
 
