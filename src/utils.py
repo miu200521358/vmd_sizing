@@ -52,13 +52,13 @@ def create_error_file_logger(motion, trace_model, replace_model, output_vmd_path
     global loggers
 
     error_path = re.sub(r'\.vmd$', ".log", output_vmd_path)
-    logger.info("error_path: %s", error_path)
+    logger.debug("error_path: %s", error_path)
     error_file_handler = logging.FileHandler(error_path)
 
     error_file_logger = create_custom_logger("VmdSizingError", error_file_handler)
-    error_file_logger.info("モーション: %s" , motion.path)
-    error_file_logger.info("作成元: %s" , trace_model.path)
-    error_file_logger.info("変換先: %s" , replace_model.path)
+    error_file_logger.debug("モーション: %s" , motion.path)
+    error_file_logger.debug("作成元: %s" , trace_model.path)
+    error_file_logger.debug("変換先: %s" , replace_model.path)
 
     return error_file_logger
 
@@ -108,16 +108,14 @@ def create_matrix_parts(model, links, frames, bf, scales):
         # rot.setScalar( rot.scalar() * -1 )
 
         if lbone.fixed_axis != QVector3D():
-            if 1170 <= bf.frame <= 1190:
-                logger.debug("軸固定before: %s, fixed_axis:%s, rot: %s, euler: %s", lbone.name, lbone.fixed_axis, rot, rot.toEulerAngles())
+            if 0 <= bf.frame <= 20:
+                logger.debug("軸固定before: %s: %s  %s, fixed_axis:%s, rot: %s, euler: %s", bf.frame, model.name, lbone.name, lbone.fixed_axis, rot, rot.toEulerAngles())
                 
             # 回転角度を求める
             if rot == QQuaternion():
                 # 回転なしの場合、角度なし
                 degree = 0
             else:
-                logger.debug("%s: %s %s fixed_axis: %s rot: %s", bf.frame, model.name, lbone.name, lbone.fixed_axis, rot)
-
                 # 回転補正
                 if "右" in lbone.name and rot.x() > 0 and lbone.fixed_axis.x() <= 0:
                     rot.setX(rot.x() * -1)
@@ -147,16 +145,31 @@ def create_matrix_parts(model, links, frames, bf, scales):
 
                 degree = degrees(2 * acos(rot.scalar()))
 
-            if 1070 <= bf.frame <= 1090:
-                logger.debug("軸固定after: %s, fixed_axis:%s, rot: %s, degree: %s", lbone.name, lbone.fixed_axis, rot, degree)                
+            if 0 <= bf.frame <= 20:
+                logger.debug("軸固定after: %s: %s  %s, fixed_axis:%s, rot: %s, euler: %s, degree: %s", bf.frame, model.name, lbone.name, lbone.fixed_axis, rot, rot.toEulerAngles(), degree)
             
             # 軸固定の場合、回転を制限する
             rot = QQuaternion.fromAxisAndAngle(lbone.fixed_axis, degree)
         
+        if lbone.getExternalRotationFlag():
+            # 付与回転ありの場合
+            logger.debug("付与回転＋: %s: %s  %s, idx: %s(%s), fac: %s", bf.frame, model.name, lbone.name, lbone.effect_index, model.bone_indexes[lbone.effect_index], lbone.effect_factor)
+
+            # 該当する付与親の回転を取得する
+            effect_comp_bone = calc_bone_by_complement(frames, model.bone_indexes[lbone.effect_index], bf.frame)
+
+            # 自身の回転量に付与親の回転量を付与率を加味して付与する
+            rot = rot * effect_comp_bone.rotation
+            rot.setX(rot.x() * lbone.effect_factor)
+            rot.setY(rot.y() * lbone.effect_factor)
+            rot.setZ(rot.z() * lbone.effect_factor)
+
+            logger.debug("付与回転＋after: rot: %s: euler: %s", rot, rot.toEulerAngles())
+
         add_qs[lidx] = rot
     
-        if bf.frame == 279:
-            logger.debug("f: %s, lbone: %s, rot: %s", bf.frame, lbone.name, rot.toEulerAngles())
+        if 0 <= bf.frame <= 20:
+            logger.debug("f: %s, m: %s, lbone: %s, rot: %s", bf.frame, model.name, lbone.name, rot.toEulerAngles())
 
         # 大きさ
         if scales is not None:
@@ -238,12 +251,29 @@ def calc_upper_direction_qq(model, links, frames, bf):
                 degree = 0
             else:
                 # 回転補正
-                if "右" in lbone.name and rot.x() > 0:
+                if "右" in lbone.name and rot.x() > 0 and lbone.fixed_axis.x() <= 0:
+                    rot.setX(rot.x() * -1)
+                    # rot.setY(rot.y() * -1)
+                    rot.setScalar(rot.scalar() * -1)
+                    # rot.setZ(abs(rot.z()))
+                elif "左" in lbone.name and rot.x() < 0 and lbone.fixed_axis.x() >= 0:
                     rot.setX(rot.x() * -1)
                     rot.setScalar(rot.scalar() * -1)
-                elif "左" in lbone.name and rot.x() < 0:
+                    # rot.setX(rot.x() * -1)
+                    # rot.setScalar(rot.scalar() * -1)
+                # 回転補正（コロン式ミクさん等軸反転パターン）
+                elif "右" in lbone.name and rot.x() < 0 and lbone.fixed_axis.x() > 0:
+                    logger.debug("右回転補正")
+                    rot.setX(rot.x() * -1)
+                    # rot.setY(rot.y() * -1)
+                    rot.setScalar(rot.scalar() * -1)
+                    # rot.setZ(abs(rot.z()))
+                elif "左" in lbone.name and rot.x() > 0 and lbone.fixed_axis.x() < 0:
+                    logger.debug("左回転補正")
                     rot.setX(rot.x() * -1)
                     rot.setScalar(rot.scalar() * -1)
+                    # rot.setX(rot.x() * -1)
+                    # rot.setScalar(rot.scalar() * -1)
                 
                 rot.normalize()
 
@@ -299,6 +329,8 @@ def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False
         fillbf.frame = frameno
         return fillbf
 
+    prev_bf = None
+
     for bidx, bf in enumerate(frames[bone_name]):
         if bf.frame == frameno:
             # 同一フレームのキーがある場合、それを返す
@@ -329,6 +361,10 @@ def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False
                         prev_bf = frames[bone_name][pbf_idx]
                         break
                 
+                if not prev_bf:
+                    # 前キーが取れなかった場合、暫定的に現在フレームの値を保持する
+                    prev_bf = copy.deepcopy(bf)
+                
                 # 処理対象補間曲線（処理前の補間曲線）
                 comp = bf.org_complement
                 # 処理対象前回転
@@ -341,9 +377,13 @@ def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False
                 pos = bf.position
             else:
                 # 補間曲線は弄らない場合
-
-                # 指定されたフレーム直前のキー
-                prev_bf = frames[bone_name][bidx - 1]
+                
+                if bidx <= 0:
+                    # 前キーが取れない場合、暫定的に現在フレームの値を保持する
+                    prev_bf = copy.deepcopy(bf)
+                else:
+                    # 指定されたフレーム直前のキー
+                    prev_bf = frames[bone_name][bidx - 1]
 
                 # 処理対象補間曲線
                 comp = bf.complement

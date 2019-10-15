@@ -519,16 +519,18 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                         # logger.debug("元モデルのIK計算前指までの情報")
                         # logger.debug("all_org_finger_links[org_direction]: %s(%s)", all_org_finger_links[org_direction][all_org_finger_indexes[org_direction]["肩"]], all_org_finger_indexes[org_direction]["肩"])
                         _, _, _, _, org_finger_global_3ds = utils.create_matrix_global(trace_model, all_org_finger_links[org_direction], org_motion_frames, bf, None)
-                        # logger.info("org_finger_global_3ds ------------------------")
-                        # for n in range(len(all_org_finger_links[org_direction])):
-                        #     logger.info("f: %s, org_finger_global_3ds %s, %s, %s", bf.frame, n, all_org_finger_links[org_direction][len(all_org_finger_links[org_direction]) - n - 1].name, org_finger_global_3ds[n])
+                        if 0 <= bf.frame <= 20:
+                            logger.info("org_finger_global_3ds ------------------------")
+                            for n in range(len(all_org_finger_links[org_direction])):
+                                logger.info("f: %s, org_finger_global_3ds %s, %s, %s", bf.frame, n, all_org_finger_links[org_direction][len(all_org_finger_links[org_direction]) - n - 1].name, org_finger_global_3ds[n])
                         # logger.debug("org 手首 index: %s", len(org_finger_global_3ds) - all_org_finger_indexes[org_direction]["手首"] - 1)
                         # logger.debug("元モデルの反対側の手の指までの情報")
                         # 元モデルの反対側の手の指までの情報
                         _, _, _, _, org_reverse_finger_global_3ds = utils.create_matrix_global(trace_model, all_org_finger_links[reverse_org_direction], org_motion_frames, bf, None)
-                        # logger.info("org_reverse_finger_global_3ds ------------------------")
-                        # for n in range(len(all_org_finger_links[reverse_org_direction])):
-                        #     logger.info("f: %s, org_reverse_finger_global_3ds %s, %s, %s", bf.frame, n, all_org_finger_links[reverse_org_direction][len(all_org_finger_links[reverse_org_direction]) - n - 1].name, org_reverse_finger_global_3ds[n])
+                        if 0 <= bf.frame <= 20:
+                            logger.info("org_reverse_finger_global_3ds ------------------------")
+                            for n in range(len(all_org_finger_links[reverse_org_direction])):
+                                logger.info("f: %s, org_reverse_finger_global_3ds %s, %s, %s", bf.frame, n, all_org_finger_links[reverse_org_direction][len(all_org_finger_links[reverse_org_direction]) - n - 1].name, org_reverse_finger_global_3ds[n])
                     
                         # 変換先モデルのIK計算前指までの情報
                         _, _, _, _, rep_finger_global_3ds = utils.create_matrix_global(replace_model, all_rep_finger_links[org_direction], motion.frames, bf, None)
@@ -936,8 +938,8 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                 org_leg_y = org_leg_global_3ds[len(org_leg_global_3ds) - all_org_leg_indexes[org_direction]["足"] - 1].y()
                                 org_reverse_leg_y = org_reverse_leg_global_3ds[len(org_reverse_leg_global_3ds) - all_org_leg_indexes[reverse_org_direction]["足"] - 1].y()
 
-                                # logger.info("--------------")
-                                # logger.info("%s hand_floor: p: %s, wy: %s, wyr: %s, ly: %s, lyr: %s", bf.frame, org_palm_length, org_wrist_y, org_reverse_wrist_y, org_leg_y, org_reverse_leg_y)
+                                logger.info("--------------")
+                                logger.info("%s hand_floor: p: %s, wy: %s, wyr: %s, ly: %s, lyr: %s", bf.frame, org_palm_length, org_wrist_y, org_reverse_wrist_y, org_leg_y, org_reverse_leg_y)
 
                                 if (org_wrist_y <= org_palm_length * 1.5 or org_reverse_wrist_y <= org_palm_length * 1.5):
                                     # 手首床調整
