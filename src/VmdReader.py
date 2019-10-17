@@ -233,6 +233,7 @@ class VmdReader():
             
             # パース有無
             camera.perspective = self.unpack(1, "B")
+            logger.debug("camera.perspective %s", camera.perspective)
 
             # カメラを追加
             motion.cameras.append(camera)

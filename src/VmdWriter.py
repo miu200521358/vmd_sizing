@@ -94,7 +94,7 @@ class VmdCameraFrame():
         self.euler = QVector3D(0, 0, 0)
         self.complement=[20, 107, 20, 107, 20, 107, 20, 107, 20, 107, 20, 107, 20, 107, 20, 107, 20, 107, 20, 107, 20, 107, 20, 107]
         self.angle = 0
-        self.perspective = 1
+        self.perspective = 0
 
     def write(self, fout):
         fout.write(struct.pack('<L', self.frame))
