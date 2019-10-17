@@ -44,7 +44,7 @@ def main(vmd_path):
             morph_fpath = re.sub(r'\.vmd$', "_morph_{0:%Y%m%d_%H%M%S}.csv".format(datetime.now()), vmd_path)
             with open(morph_fpath, encoding='cp932', mode='w') as f:
                 
-                s = "ボーン名,フレーム,大きさ"
+                s = "モーフ名,フレーム,大きさ"
                 f.write(s)
                 f.write("\n")
 
@@ -61,12 +61,12 @@ def main(vmd_path):
             camera_fpath = re.sub(r'\.vmd$', "_camera_{0:%Y%m%d_%H%M%S}.csv".format(datetime.now()), vmd_path)
             with open(camera_fpath, encoding='cp932', mode='w') as f:
                 
-                s = "フレーム,位置X,位置Y,位置Z,回転X,回転Y,回転Z,距離,視野角,補間曲線"
+                s = "フレーム,位置X,位置Y,位置Z,回転X,回転Y,回転Z,距離,視野角,パース,X_x1,Y_x1,Z_x1,R_x1,L_x1,VA_x1, X_y1,Y_y1,Z_y1,R_y1,L_y1,VA_y1,X_x2,Y_x2,Z_x2,R_x2,L_x2,VA_x2, X_y2,Y_y2,Z_y2,R_y2,L_y2,VA_y2"
                 f.write(s)
                 f.write("\n")
 
                 for cf in motion.cameras:
-                    s = "{0},{1},{2},{3},{4},{5},{6},{7},{8},{9}".format(cf.frame, cf.position.x(), cf.position.y(), cf.position.z(), cf.euler.x(), cf.euler.y(), cf.euler.z(), cf.length, cf.angle,','.join([str(i) for i in cf.complement]))
+                    s = "{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10}".format(cf.frame, cf.position.x(), cf.position.y(), cf.position.z(), cf.euler.x(), cf.euler.y(), cf.euler.z(), -cf.length, cf.angle, cf.perspective,','.join([str(i) for i in cf.complement]))
                     f.write(s)
                     f.write("\n")
 

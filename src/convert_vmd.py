@@ -92,7 +92,7 @@ def main(csv_bone_path, csv_morph_path, csv_camera_path):
             print("ボーン・モーフVMD出力成功: %s" % output_vmd_path)
 
         if csv_camera_path:
-            # ボーンCSV読み込み
+            # カメラCSV読み込み
             with open(csv_camera_path, encoding='cp932', mode='r') as f:
                 reader = csv.reader(f)
                 next(reader)  # ヘッダーを読み飛ばす
@@ -110,13 +110,16 @@ def main(csv_bone_path, csv_morph_path, csv_camera_path):
                     cf.euler = QVector3D(float(row[4]), float(row[5]), float(row[6]))
 
                     # 距離
-                    cf.length = float(row[7])
+                    cf.length = -(float(row[7]))
 
                     # 視野角
                     cf.angle = int(row[8])
 
+                    # パース
+                    cf.perspective = int(row[9])
+
                     # 補間曲線
-                    cf.complement = [int(row[9]),int(row[10]),int(row[11]),int(row[12]),int(row[13]),int(row[14]),int(row[15]),int(row[16]),int(row[17]),int(row[18]),int(row[19]),int(row[20]),int(row[21]),int(row[22]),int(row[23]),int(row[24]),int(row[25]),int(row[26]),int(row[27]),int(row[28]),int(row[29]),int(row[30]),int(row[31]),int(row[32])]
+                    cf.complement = [int(row[10]),int(row[11]),int(row[12]),int(row[13]),int(row[14]),int(row[15]),int(row[16]),int(row[17]),int(row[18]),int(row[19]),int(row[20]),int(row[21]),int(row[22]),int(row[23]),int(row[24]),int(row[25]),int(row[26]),int(row[27]),int(row[28]),int(row[29]),int(row[30]),int(row[31]),int(row[32]),int(row[33])]
 
                     camera_frames.append(cf)
                 
@@ -125,7 +128,7 @@ def main(csv_bone_path, csv_morph_path, csv_camera_path):
         if len(camera_frames) > 0:            
             # カメラモーション生成
             output_vmd_path = re.sub(r'\.csv$', "_{0:%Y%m%d_%H%M%S}.vmd".format(datetime.now()), csv_camera_path)
-            writer.write_vmd_file(output_vmd_path, "CSV Convert Model", camera_frames, [], [], [], [], [])
+            writer.write_vmd_file(output_vmd_path, "CSV Convert Model", [], [], camera_frames, [], [], [])
 
             print("カメラVMD出力成功: %s" % output_vmd_path)
 
