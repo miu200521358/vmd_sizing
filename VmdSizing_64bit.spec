@@ -32,4 +32,3 @@ exe = EXE(pyz,
           runtime_tmpdir=None,
           console=False,
           icon='.\\src\\vmdsizing.ico')
-3
