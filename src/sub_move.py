@@ -38,6 +38,9 @@ def exec(motion, trace_model, replace_model, output_vmd_path):
     # # 元モデルのセンターのリンク生成
     # org_center_links, _ = trace_model.create_link_2_top_one( "センター" )
 
+    # 元々のモーション
+    org_motion_frames = copy.deepcopy(motion.frames)
+
     if motion.motion_cnt > 0:
         # -----------------------------------------------------------------
         # 移動ボーン縮尺
@@ -73,8 +76,91 @@ def exec(motion, trace_model, replace_model, output_vmd_path):
 
                 print("移動補正: %s" % k)
 
+        if "左足ＩＫ" in trace_model.bones and "右足ＩＫ" in replace_model.bones:
+            # 足IKまでの位置(作成元モデル)
+            all_org_leg_ik_links, all_org_leg_ik_indexes = trace_model.create_link_2_top_lr("足ＩＫ")
+            # logger.debug("all_org_leg_links: %s", [ "{0}: {1}\n".format(x.name, x.position) for x in all_org_leg_links["左"]])    
+            # logger.debug("all_org_leg_indexes: %s", [ x for x in all_org_leg_indexes["左"].keys()])    
+
+            # 足IKまでの位置(トレース先モデル)
+            all_rep_leg_ik_links, all_rep_leg_ik_indexes = replace_model.create_link_2_top_lr("足ＩＫ")
+            # logger.debug("all_rep_leg_links: %s", all_rep_leg_indexes["右"].keys())
+
+            # 足の長さの比率
+            trace_leg_length, trace_leg_ex_length, leg_length_rate, leg_ex_length_rate = calc_leg_rate(trace_model, replace_model)
+
+            print("つま先補正用 - 足の大きさ比率: %s" % leg_length_rate )
+            print("つま先補正用 - 足先EX比率: %s" % leg_ex_length_rate )
+
+            for direction in ["右" ,"左"]:
+                for link_name in ["{0}足ＩＫ".format(direction), "{0}足IK親".format(direction)]:
+                    if link_name in motion.frames and link_name in replace_model.bones:
+                        for bf_idx, bf in enumerate(motion.frames[link_name]):
+                            # 該当キーの足IKの位置
+                            # 元モデルの足IKまでの情報
+                            _, _, _, _, org_leg_ik_global_3ds = utils.create_matrix_global(trace_model, all_org_leg_ik_links[direction], org_motion_frames, bf, None)
+                            # 元モデルの足IKのY位置
+                            org_leg_ik_y = org_leg_ik_global_3ds[len(org_leg_ik_global_3ds) - all_org_leg_ik_indexes[direction]["足ＩＫ"] - 1].y()
+
+                            if trace_model.bones["{0}足ＩＫ".format(direction)].position.y() * 0.8 <= org_leg_ik_y <= trace_leg_length * 1.7:
+                                # 足IKのY位置が足の長さ＊αより小さい場合、つま先立ちの可能性あり
+                                # 該当フレームの足先EXの角度
+                                leg_ex_bone = utils.calc_bone_by_complement(org_motion_frames, "{0}足先EX".format(direction), bf.frame)
+
+                                if leg_ex_bone.rotation == QQuaternion():
+                                    logger.info("%s つま先: f:%s: %s足IK: %s, y: %s", link_name, bf.frame, direction, org_leg_ik_y, org_motion_frames[link_name][bf_idx].position.y())
+                                    # 足先EXが入ってない場合、つま先までの長さで補正
+                                    bf.position.setY( org_motion_frames[link_name][bf_idx].position.y() * leg_length_rate )
+                                else:
+                                    logger.info("%s 足先EX: f:%s: %s足IK: %s, y: %s", link_name, bf.frame, direction, org_leg_ik_y, org_motion_frames[link_name][bf_idx].position.y())
+                                    # 足先EXが入っている場合、足先EXまでの長さで補正
+                                    bf.position.setY( org_motion_frames[link_name][bf_idx].position.y() * leg_ex_length_rate )
+                            else:
+                                logger.info("%s 範囲外: f:%s: %s足IK: %s, y: %s", link_name, bf.frame, direction, org_leg_ik_y, org_motion_frames[link_name][bf_idx].position.y())
+
+                    print("つま先補正: %s" % link_name)
+
     return True
 
+def calc_leg_rate(trace_model, replace_model):
+    # 作成元左足ＩＫ
+    trace_ankle_z = trace_model.bones["左足ＩＫ"].position.z()
+    # 作成元つま先
+    trace_toe_z = trace_model.get_toe_front_vertex_position().z()
+    # 作成元足先EX（ある場合）
+    trace_toe_ex_z = trace_toe_z
+    if "左足先EX" in trace_model.bones:
+        trace_toe_ex_z = trace_model.bones["左足先EX"].position.z()
+    # 作成元の足の長さ(つま先まで)
+    trace_leg_length = trace_ankle_z - trace_toe_z
+    logger.info("trace_leg_length: %s", trace_leg_length)
+    # 作成元の足の長さ(足先EXまで)
+    trace_leg_ex_length = trace_ankle_z - trace_toe_ex_z
+    logger.info("trace_leg_ex_length: %s", trace_leg_ex_length)
+
+    # 変換先左足ＩＫ
+    replace_ankle_z = replace_model.bones["左足ＩＫ"].position.z()
+    # 変換先つま先
+    replace_toe_z = replace_model.get_toe_front_vertex_position().z()
+    # 変換先足先EX（ある場合）
+    replace_toe_ex_z = replace_toe_z
+    if "左足先EX" in replace_model.bones:
+        replace_toe_ex_z = replace_model.bones["左足先EX"].position.z()
+    # 変換先の足の長さ(つま先まで)
+    replace_leg_length = replace_ankle_z - replace_toe_z
+    logger.info("replace_leg_length: %s", replace_leg_length)
+    # 変換先の足の長さ(足先EXまで)
+    replace_leg_ex_length = replace_ankle_z - replace_toe_ex_z
+    logger.info("replace_leg_ex_length: %s", replace_leg_ex_length)
+
+    # 足の大きさの比率(つま先まで)
+    leg_length_rate = replace_leg_length / trace_leg_length
+    logger.info("leg_length_rate: %s", leg_length_rate)
+    # 足の大きさの比率(足先EXまで)
+    leg_ex_length_rate = replace_leg_ex_length / trace_leg_ex_length
+    logger.info("leg_ex_length_rate: %s", leg_ex_length_rate)
+    
+    return trace_leg_length, trace_leg_ex_length, leg_length_rate, leg_ex_length_rate
 
 
 def cal_center_z_offset(trace_model, replace_model, bone_name):

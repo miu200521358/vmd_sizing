@@ -399,7 +399,7 @@ class PmxModel():
         # 指定ボーン名を含むボーンINDEXリスト
         bone_idx_list = []
         for bk, bv in self.bones.items():
-            if ("左つま先" in bk or "左足" in bk) and not "指" in bk and bv.index in self.vertices:
+            if ("左つま先" in bk or "左足首" in bk or "左足先" in bk) and not "指" in bk and bv.index in self.vertices:
                 # print("bk: %s, idx: %s v: %s" % (bk, bv.index, bv.index in self.vertices))
                 # ボーン名が指定文字列を含んでおり、かつそのボーンにウェイトが乗っている頂点がある場合、対象
                 # 明示的に指にウェイトが乗っている場合、除外する
@@ -428,7 +428,7 @@ class PmxModel():
                         if v_pos.z() < min_toe_front_pos.z() :
                             # つま先のボーンにウェイトが乗っていて、かつ最前の頂点より前の場合、保持
                             min_toe_front_pos = v_pos
-                            # print("min_wrist_below_pos: %s, %s, %s, %s, %s" % (l.index, l.name, v.index, v.position, v_pos))
+                            logger.info("min_wrist_below_pos: %s, %s, %s, %s, %s" , bone_idx, self.bone_indexes[bone_idx], v.index, v.position, v_pos)
 
             if min_toe_front_pos == QVector3D(0, 0, 99999):
                 # X制限をして見つからなかった場合、制限しないでチェック
