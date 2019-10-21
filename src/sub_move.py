@@ -176,8 +176,8 @@ def cal_center_z_offset(trace_model, replace_model, bone_name):
         trace_leg_z = trace_model.bones["左足"].position.z()
         logger.info("trace_leg_z: %s", trace_leg_z)
         # 作成元つま先ＩＫのZ位置
-        # trace_toe_z = trace_model.get_toe_front_vertex_position().z()
-        trace_toe_z = trace_model.bones["左つま先ＩＫ"].position.z()
+        trace_toe_z = trace_model.get_toe_front_vertex_position().z()
+        # trace_toe_z = trace_model.bones["左つま先ＩＫ"].position.z()
         logger.info("trace_toe_z: %s", trace_toe_z)
 
         # トレース変換先センターのZ位置
@@ -190,8 +190,8 @@ def cal_center_z_offset(trace_model, replace_model, bone_name):
         replace_leg_z = replace_model.bones["左足"].position.z()
         logger.info("replace_leg_z: %s", replace_leg_z)
         # トレース変換先つま先ＩＫのZ位置
-        # replace_toe_z = replace_model.get_toe_front_vertex_position().z()
-        replace_toe_z = replace_model.bones["左つま先ＩＫ"].position.z()
+        replace_toe_z = replace_model.get_toe_front_vertex_position().z()
+        # replace_toe_z = replace_model.bones["左つま先ＩＫ"].position.z()
         logger.info("replace_toe_z: %s", replace_toe_z)
 
         # 作成元の足の長さ
