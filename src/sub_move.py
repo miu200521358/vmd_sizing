@@ -102,21 +102,21 @@ def exec(motion, trace_model, replace_model, output_vmd_path):
                             # 元モデルの足IKのY位置
                             org_leg_ik_y = org_leg_ik_global_3ds[len(org_leg_ik_global_3ds) - all_org_leg_ik_indexes[direction]["足ＩＫ"] - 1].y()
 
-                            if trace_model.bones["{0}足ＩＫ".format(direction)].position.y() * 0.8 <= org_leg_ik_y <= trace_leg_length * 1.7:
+                            if org_motion_frames[link_name][bf_idx].position.y() != 0 and trace_model.bones["{0}足ＩＫ".format(direction)].position.y() * 0.8 <= org_leg_ik_y <= trace_leg_length * 1.7:
                                 # 足IKのY位置が足の長さ＊αより小さい場合、つま先立ちの可能性あり
                                 # 該当フレームの足先EXの角度
                                 leg_ex_bone = utils.calc_bone_by_complement(org_motion_frames, "{0}足先EX".format(direction), bf.frame)
 
                                 if leg_ex_bone.rotation == QQuaternion():
-                                    logger.info("%s つま先: f:%s: %s足IK: %s, y: %s", link_name, bf.frame, direction, org_leg_ik_y, org_motion_frames[link_name][bf_idx].position.y())
+                                    print("%sつま先補正: %sフレーム %s足IK: 高さ: %s, y: %s" % (link_name, bf.frame, direction, org_leg_ik_y, org_motion_frames[link_name][bf_idx].position.y()))
                                     # 足先EXが入ってない場合、つま先までの長さで補正
                                     bf.position.setY( org_motion_frames[link_name][bf_idx].position.y() * leg_length_rate )
                                 else:
-                                    logger.info("%s 足先EX: f:%s: %s足IK: %s, y: %s", link_name, bf.frame, direction, org_leg_ik_y, org_motion_frames[link_name][bf_idx].position.y())
+                                    print("%s足先EX補正: %sフレーム %s足IK: 高さ: %s, y: %s" % (link_name, bf.frame, direction, org_leg_ik_y, org_motion_frames[link_name][bf_idx].position.y()))
                                     # 足先EXが入っている場合、足先EXまでの長さで補正
                                     bf.position.setY( org_motion_frames[link_name][bf_idx].position.y() * leg_ex_length_rate )
                             else:
-                                logger.info("%s 範囲外: f:%s: %s足IK: %s, y: %s", link_name, bf.frame, direction, org_leg_ik_y, org_motion_frames[link_name][bf_idx].position.y())
+                                print("%s範囲外: %sフレーム %s足IK: 高さ: %s, y: %s" % (link_name, bf.frame, direction, org_leg_ik_y, org_motion_frames[link_name][bf_idx].position.y()))
 
                     print("つま先補正: %s" % link_name)
 
@@ -206,13 +206,14 @@ def cal_center_z_offset(trace_model, replace_model, bone_name):
         replace_center_gravity = (replace_ankle_z - replace_leg_z) / (replace_ankle_z - replace_toe_z)
         logger.info("replace_center_gravity %s, replace_leg_zlength: %s", replace_center_gravity, replace_leg_zlength)
         
-        if replace_center_gravity != trace_center_gravity:
-            # 生成元と同じ重心で、変換先モデルのサイズに合わせて算出
-            replace_model.bones[bone_name].offset_z = (replace_ankle_z - replace_center_z) - (trace_center_gravity * replace_leg_zlength)
-            logger.info("trace_center_gravity * (replace_leg_zlength - replace_ankle_z) %s", trace_center_gravity * (replace_leg_zlength - replace_ankle_z))
-        logger.info("offset_z %s", replace_model.bones[bone_name].offset_z)
+        # if replace_center_gravity != trace_center_gravity:
+        #     # 生成元と同じ重心で、変換先モデルのサイズに合わせて算出
+        #     replace_model.bones[bone_name].offset_z = (replace_ankle_z - replace_center_z) - (trace_center_gravity * replace_leg_zlength)
+        #     logger.info("trace_center_gravity * (replace_leg_zlength - replace_ankle_z) %s", trace_center_gravity * (replace_leg_zlength - replace_ankle_z))
        
-        # replace_model.bones[bone_name].offset_z = (replace_center_gravity - trace_center_gravity) * ( replace_leg_zlength / trace_leg_zlength )
+        replace_model.bones[bone_name].offset_z = (replace_center_gravity - trace_center_gravity) * ( replace_leg_zlength / trace_leg_zlength )
+        logger.info("offset_z %s", replace_model.bones[bone_name].offset_z)
+
         # if replace_leg_zlength < trace_leg_zlength:
         #     # 小さい子は、オフセットを小さくする
             # replace_model.bones[bone_name].offset_z *= ( replace_leg_zlength / trace_leg_zlength )

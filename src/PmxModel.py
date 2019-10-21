@@ -163,7 +163,7 @@ class PmxModel():
     # 頭ボーンのウェイトが乗っている頂点を取得する
     def get_head_upper_vertex_position(self):
         # 頭の頂点位置
-        max_head_upper_pos, _, _, _, max_head_upper_vertex, _, _, _ = self.get_bone_vertex_position("頭", self.bones["頭"].position, self.define_is_target_full_vertex(), True)
+        max_head_upper_pos, _, _, _, max_head_upper_vertex, _, _, _ = self.get_bone_vertex_position("頭", self.bones["頭"].position, self.define_is_target_full_vertex(), False)
 
         return max_head_upper_pos, max_head_upper_vertex
     
@@ -224,7 +224,7 @@ class PmxModel():
         # 指定ボーン名を含むボーンINDEXリスト
         bone_idx_list = []
         for bk, bv in self.bones.items():
-            if ((not is_only and bone_name in bk) or (is_only and bone_name == bk)) and bv.index in self.vertices :
+            if ((not is_only and bk.startswith(bone_name)) or (is_only and bone_name == bk)) and bv.index in self.vertices :
                 # ボーン名が指定文字列を含んでおり、かつそのボーンにウェイトが乗っている頂点がある場合、対象
                 # 特定ボーンのみの場合、ボーン名が一致していることが条件
                 bone_idx_list.append(bv.index)
