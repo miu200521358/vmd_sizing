@@ -457,7 +457,7 @@ class PmxModel():
     # 左右のボーンリンクを生成する
     def create_link_2_top_lr(self, start_type_bone, start_type_bone_second=None):
 
-        if "左" + start_type_bone in self.bones and "右" + start_type_bone in self.bones:
+        if ("左" + start_type_bone in self.bones and "右" + start_type_bone in self.bones) or "つま先ＩＫ実体" in start_type_bone:
             left_links, left_indexes = self.create_link_2_top("左" + start_type_bone)
             right_links, right_indexes = self.create_link_2_top("右" + start_type_bone)
             return { "左": left_links, "右": right_links }, { "左": left_indexes, "右": right_indexes }
@@ -502,16 +502,28 @@ class PmxModel():
 
         # print("start_bone: %s" % start_bone)
 
-        if "足底辺" in start_bone:
+        direction = start_bone[0:1]
+
+        if "足底辺" in start_bone and "{0}足ＩＫ".format(direction) in self.bones:
             direction = start_bone[0:1]
             start_type_bone = start_bone[1:]
 
-            if "{0}足ＩＫ".format(direction) in self.bones:
-                # print("direction: %s" % direction)
-                # 足底辺が指定されている場合、足底辺を登録
-                # 位置は足IKのY0位置とする
-                ik_indexes[start_type_bone] = len(ik_indexes)
-                ik_links.append(self.Bone("{0}足底辺".format(direction), None, QVector3D(self.bones["{0}足ＩＫ".format(direction)].position.x(), 0, self.bones["{0}足ＩＫ".format(direction)].position.z()), -1, 0, 0))
+            # print("direction: %s" % direction)
+            # 足底辺が指定されている場合、足底辺を登録
+            # 位置は足IKのY0位置とする
+            ik_indexes[start_type_bone] = len(ik_indexes)
+            ik_links.append(self.Bone("{0}足底辺".format(direction), None, QVector3D(self.bones["{0}足ＩＫ".format(direction)].position.x(), 0, self.bones["{0}足ＩＫ".format(direction)].position.z()), -1, 0, 0))
+        elif "つま先ＩＫ実体" in start_bone and "{0}つま先ＩＫ".format(direction) in self.bones:
+            direction = start_bone[0:1]
+            start_type_bone = start_bone[1:]
+
+            toe_pos = self.get_toe_front_vertex_position()
+
+            # print("direction: %s" % direction)
+            # つま先ＩＫ実体が指定されている場合、つま先ＩＫ実体を登録
+            # 位置はつま先IKのZ実体位置とする
+            ik_indexes[start_type_bone] = len(ik_indexes)
+            ik_links.append(self.Bone("{0}つま先ＩＫ実体".format(direction), None, QVector3D(self.bones["{0}つま先ＩＫ".format(direction)].position.x(), 0, toe_pos.z()), -1, 0, 0))
         elif "頭頂" in start_bone:
             start_type_bone = start_bone
 
@@ -609,6 +621,7 @@ class PmxModel():
         , "左足IK親": ["全ての親"]
         , "左足ＩＫ": ["左足IK親", "全ての親", "原点"]
         , "左つま先ＩＫ": ["左足ＩＫ"]
+        , "左つま先ＩＫ実体": ["左つま先ＩＫ"]
         , "左足底辺": ["左足ＩＫ"]
         , "右肩P": ["上半身2", "上半身"]
         , "右肩": ["右肩P", "上半身2", "上半身"]
@@ -644,6 +657,7 @@ class PmxModel():
         , "右足IK親": ["全ての親"]
         , "右足ＩＫ": ["右足IK親", "全ての親", "原点"]
         , "右つま先ＩＫ": ["右足ＩＫ"]
+        , "右つま先ＩＫ実体": ["右つま先ＩＫ"]
         , "右足底辺": ["右足ＩＫ"]
         , "左目": ["頭"]
         , "右目": ["頭"]

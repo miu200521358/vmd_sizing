@@ -79,12 +79,12 @@ def exec(motion, trace_model, replace_model, output_vmd_path):
         if "左足ＩＫ" in trace_model.bones and "右足ＩＫ" in trace_model.bones and  "左足ＩＫ" in replace_model.bones and "右足ＩＫ" in replace_model.bones \
             and  "左つま先ＩＫ" in trace_model.bones and "右つま先ＩＫ" in trace_model.bones and  "左つま先ＩＫ" in replace_model.bones and "右つま先ＩＫ" in replace_model.bones:
             # 足IKまでの位置(作成元モデル)
-            all_org_toe_ik_links, all_org_toe_ik_indexes = trace_model.create_link_2_top_lr("つま先ＩＫ")
+            all_org_toe_ik_links, all_org_toe_ik_indexes = trace_model.create_link_2_top_lr("つま先ＩＫ実体")
             # logger.debug("all_org_leg_links: %s", [ "{0}: {1}\n".format(x.name, x.position) for x in all_org_leg_links["左"]])    
             # logger.debug("all_org_leg_indexes: %s", [ x for x in all_org_leg_indexes["左"].keys()])    
 
             # 足IKまでの位置(トレース先モデル)
-            all_rep_toe_ik_links, all_rep_toe_ik_indexes = replace_model.create_link_2_top_lr("つま先ＩＫ")
+            all_rep_toe_ik_links, all_rep_toe_ik_indexes = replace_model.create_link_2_top_lr("つま先ＩＫ実体")
             # logger.debug("all_rep_leg_links: %s", all_rep_leg_indexes["右"].keys())
 
             # 足の長さの比率
@@ -92,6 +92,15 @@ def exec(motion, trace_model, replace_model, output_vmd_path):
 
             print("つま先補正用 - 足IK比率: %s, 足の大きさ比率: %s" % (leg_ik_rate, leg_length_rate) )
             # print("つま先補正用 - 足先EX比率: %s" % leg_ex_length_rate )
+
+            if y_ratio < 1:
+                # 小さい子は小さい方
+                leg_ik_ratio = min(leg_ik_rate, y_ratio)
+                leg_length_ratio = min(leg_length_rate, y_ratio)
+            else:
+                # 大きい子はそのまま
+                leg_ik_ratio = leg_ik_rate
+                leg_length_ratio = leg_length_rate
 
             for direction in ["右" ,"左"]:
                 for link_name in ["{0}足ＩＫ".format(direction), "{0}足IK親".format(direction)]:
@@ -103,9 +112,9 @@ def exec(motion, trace_model, replace_model, output_vmd_path):
                             # 元モデルの足IKのY位置
                             org_leg_ik_y = org_toe_ik_global_3ds[len(org_toe_ik_global_3ds) - all_org_toe_ik_indexes[direction]["足ＩＫ"] - 1].y()
                             # 元モデルのつま先IKのY位置
-                            org_toe_ik_y = org_toe_ik_global_3ds[len(org_toe_ik_global_3ds) - all_org_toe_ik_indexes[direction]["つま先ＩＫ"] - 1].y()
+                            org_toe_ik_y = org_toe_ik_global_3ds[len(org_toe_ik_global_3ds) - all_org_toe_ik_indexes[direction]["つま先ＩＫ実体"] - 1].y()
 
-                            if org_motion_frames[link_name][bf_idx].position.y() > 0 and trace_model.bones["{0}足ＩＫ".format(direction)].position.y() * 0.8 <= org_leg_ik_y <= trace_leg_length * 1.7:
+                            if org_motion_frames[link_name][bf_idx].position.y() > 0 and trace_model.bones["{0}足ＩＫ".format(direction)].position.y() * 0.8 <= org_leg_ik_y <= trace_leg_length * 1.2:
                                 # 足IKのY位置が足の長さ＊αより小さい場合、つま先立ちの可能性あり
                                 # # 該当フレームの足先EXの角度
                                 # leg_ex_bone = utils.calc_bone_by_complement(org_motion_frames, "{0}足先EX".format(direction), bf.frame)
@@ -125,31 +134,36 @@ def exec(motion, trace_model, replace_model, output_vmd_path):
                                 rep_leg_ik_y = rep_toe_ik_global_3ds[len(rep_toe_ik_global_3ds) - all_rep_toe_ik_indexes[direction]["足ＩＫ"] - 1].y()
 
                                 # 足IKの差分
-                                leg_ik_diff = (((org_leg_ik_y * leg_ik_rate) - trace_model.bones["{0}足ＩＫ".format(direction)].position.y()) - (rep_leg_ik_y - replace_model.bones["{0}足ＩＫ".format(direction)].position.y()))
+                                leg_ik_diff = ((org_leg_ik_y - trace_model.bones["{0}足ＩＫ".format(direction)].position.y()) * leg_ik_ratio) - (rep_leg_ik_y - replace_model.bones["{0}足ＩＫ".format(direction)].position.y())
+                                logger.info("%s%s: org_leg_ik_y: %s, rep_leg_ik_y: %s, leg_ik_diff: %s, y: %s", direction, bf.frame, org_leg_ik_y, rep_leg_ik_y, leg_ik_diff, bf.position.y())
 
                                 bf.position.setY( bf.position.y() + leg_ik_diff )
-                                bf.rotation = bf.rotation * ankle_qq_diff
 
-                                # 先モデルの足IKまでの情報
-                                _, _, _, _, rep_toe_ik_global_3ds = utils.create_matrix_global(replace_model, all_rep_toe_ik_links[direction], motion.frames, bf, None)
-                                # 先モデルの足IKのY位置
-                                rep_leg_ik_y = rep_toe_ik_global_3ds[len(rep_toe_ik_global_3ds) - all_rep_toe_ik_indexes[direction]["足ＩＫ"] - 1].y()
-                                # 先モデルのつま先IKのY位置
-                                rep_toe_ik_y = rep_toe_ik_global_3ds[len(rep_toe_ik_global_3ds) - all_rep_toe_ik_indexes[direction]["つま先ＩＫ"] - 1].y()
-
-                                # つま先IKの差分
                                 toe_ik_diff = 0
-                                if rep_leg_ik_y > rep_toe_ik_y:
-                                    # つま先IKの方が下の場合、つま先IKでも調整する
-                                    toe_ik_diff = ((org_toe_ik_y * max(leg_length_rate, 1)) - trace_model.bones["{0}つま先ＩＫ".format(direction)].position.y()) - (rep_toe_ik_y - replace_model.bones["{0}つま先ＩＫ".format(direction)].position.y())
-                                    logger.info("%s: org_leg_ik_y: %s(%s), rep_leg_ik_y: %s, leg_ik_diff: %s, toe_ik_diff: %s", bf.frame, org_leg_ik_y, (org_leg_ik_y * leg_length_rate), rep_leg_ik_y, leg_ik_diff, toe_ik_diff)
+                                if bf.rotation.toEulerAngles().x() < -15:
+                                    # つま先立っている場合、足IK回転
+                                    bf.rotation = bf.rotation * ankle_qq_diff
 
-                                # つま先ＩＫの位置で再補正
-                                bf.position.setY( bf.position.y() + toe_ik_diff )
+                                    # 先モデルの足IKまでの情報
+                                    _, _, _, _, rep_toe_ik_global_3ds = utils.create_matrix_global(replace_model, all_rep_toe_ik_links[direction], motion.frames, bf, None)
+                                    # 先モデルの足IKのY位置
+                                    rep_leg_ik_y = rep_toe_ik_global_3ds[len(rep_toe_ik_global_3ds) - all_rep_toe_ik_indexes[direction]["足ＩＫ"] - 1].y()
+                                    # 先モデルのつま先IKのY位置
+                                    rep_toe_ik_y = rep_toe_ik_global_3ds[len(rep_toe_ik_global_3ds) - all_rep_toe_ik_indexes[direction]["つま先ＩＫ実体"] - 1].y()
 
-                                print("%sフレーム: %sつま先補正: %s足IK: 高さ: %s, 補正値: %s" % (bf.frame, link_name, direction, org_leg_ik_y, leg_ik_diff + toe_ik_diff))
+                                    # つま先IKの差分
+                                    if rep_leg_ik_y > rep_toe_ik_y:
+                                        # つま先IKの方が下の場合、つま先IKでも調整する
+                                        toe_ik_diff = (org_toe_ik_y * max(leg_length_ratio, 1)) - rep_toe_ik_y
+                                    logger.info("%s%s: org_toe_ik_y: %s, rep_toe_ik_y: %s, toe_ik_diff: %s, y: %s", direction, bf.frame, org_toe_ik_y, rep_toe_ik_y, toe_ik_diff, bf.position.y())
+
+                                    # つま先ＩＫの位置で再補正
+                                    bf.position.setY( bf.position.y() + toe_ik_diff )
+
+                                print("%sフレーム: %sつま先補正: %s足IK: 高さ: %s, 補正値: %s,%s" % (bf.frame, link_name, direction, org_leg_ik_y, leg_ik_diff, toe_ik_diff))
                             else:
-                                print("%sフレーム: %s範囲外: %s足IK: 高さ: %s, y: %s" % (bf.frame, link_name, direction, org_leg_ik_y, org_motion_frames[link_name][bf_idx].position.y()))
+                                # print("%sフレーム: %s範囲外: %s足IK: 高さ: %s, y: %s" % (bf.frame, link_name, direction, org_leg_ik_y, org_motion_frames[link_name][bf_idx].position.y()))
+                                pass
 
                     print("つま先補正: %s" % link_name)
 
