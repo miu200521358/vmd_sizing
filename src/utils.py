@@ -151,7 +151,7 @@ def create_matrix_parts(model, links, frames, bf, scales):
             # 軸固定の場合、回転を制限する
             rot = QQuaternion.fromAxisAndAngle(lbone.fixed_axis, degree)
         
-        if lbone.getExternalRotationFlag():
+        if lbone.getExternalRotationFlag() and lbone.effect_index in model.bone_indexes:
             # 付与回転ありの場合
             logger.debug("付与回転＋: %s: %s  %s, idx: %s(%s), fac: %s", bf.frame, model.name, lbone.name, lbone.effect_index, model.bone_indexes[lbone.effect_index], lbone.effect_factor)
 
