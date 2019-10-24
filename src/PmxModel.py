@@ -523,7 +523,7 @@ class PmxModel():
             # つま先ＩＫ実体が指定されている場合、つま先ＩＫ実体を登録
             # 位置はつま先IKのZ実体位置とする
             ik_indexes[start_type_bone] = len(ik_indexes)
-            ik_links.append(self.Bone("{0}つま先ＩＫ実体".format(direction), None, QVector3D(self.bones["{0}つま先ＩＫ".format(direction)].position.x(), 0, toe_pos.z()), -1, 0, 0))
+            ik_links.append(self.Bone("{0}つま先ＩＫ実体".format(direction), None, QVector3D(self.bones["{0}つま先ＩＫ".format(direction)].position.x(), toe_pos.y(), toe_pos.z()), -1, 0, 0))
         elif "頭頂" in start_bone:
             start_type_bone = start_bone
 
@@ -621,7 +621,8 @@ class PmxModel():
         , "左足IK親": ["全ての親"]
         , "左足ＩＫ": ["左足IK親", "全ての親", "原点"]
         , "左つま先ＩＫ": ["左足ＩＫ"]
-        , "左つま先ＩＫ実体": ["左つま先ＩＫ"]
+        , "左足先EX": ["左足ＩＫ"]
+        , "左つま先ＩＫ実体": ["左足先EX", "左足ＩＫ"]
         , "左足底辺": ["左足ＩＫ"]
         , "右肩P": ["上半身2", "上半身"]
         , "右肩": ["右肩P", "上半身2", "上半身"]
@@ -657,7 +658,8 @@ class PmxModel():
         , "右足IK親": ["全ての親"]
         , "右足ＩＫ": ["右足IK親", "全ての親", "原点"]
         , "右つま先ＩＫ": ["右足ＩＫ"]
-        , "右つま先ＩＫ実体": ["右つま先ＩＫ"]
+        , "右足先EX": ["右足ＩＫ"]
+        , "右つま先ＩＫ実体": ["右足先EX", "右足ＩＫ"]
         , "右足底辺": ["右足ＩＫ"]
         , "左目": ["頭"]
         , "右目": ["頭"]
