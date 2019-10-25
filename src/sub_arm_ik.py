@@ -306,15 +306,15 @@ def prepare(motion, arm_links, hand_distance, is_floor_hand):
                                 prepare_fill_frame(motion, al.name, bf, hand_distance)
                                 filled_bones.append(al.name)
 
-                    if len(filled_bones) == 8:
+                    if (is_floor_hand and len(filled_bones) == 8) or (not is_floor_hand and len(filled_bones) == 6):
                         # 両手が終わっててチェック済みならブレイク
                         break
 
-                if len(filled_bones) == 8:
+                if (is_floor_hand and len(filled_bones) == 8) or (not is_floor_hand and len(filled_bones) == 6):
                     # 両手が終わっててチェック済みならブレイク
                     break
 
-            if len(filled_bones) == 8:
+            if (is_floor_hand and len(filled_bones) == 8) or (not is_floor_hand and len(filled_bones) == 6):
                 if f // 500 > prev_log_cnt:
                     print("手首位置合わせ事前調整 f: %s" % f)
                     prev_log_cnt = f // 500
