@@ -581,21 +581,21 @@ def is_auto_output_camera_path(output_camera_vmd_path, vmd_path, replace_pmx_pat
     bone_filename, _ = os.path.splitext(os.path.basename(replace_pmx_path))
 
     now_output_camera_vmd_path = os.path.join(get_dir_path(vmd_path), os.path.basename(vmd_path).replace(".vmd", "_{0}".format(bone_filename)))
-    logger.info("now_output_camera_vmd_path: %s", now_output_camera_vmd_path)
-    logger.info("force: %s", force)
-    logger.info("output_camera_vmd_path: %s", output_camera_vmd_path)
+    logger.debug("now_output_camera_vmd_path: %s", now_output_camera_vmd_path)
+    logger.debug("force: %s", force)
+    logger.debug("output_camera_vmd_path: %s", output_camera_vmd_path)
 
     if force and now_output_camera_vmd_path not in output_camera_vmd_path:
         # 強制変更が必要かつパスが変わっている場合、自動生成対象とみなす
-        logger.info("force変更あり: %s", now_output_camera_vmd_path)
+        logger.debug("force変更あり: %s", now_output_camera_vmd_path)
         return True
     
     now_output_camera_vmd_path = escape_filepath(now_output_camera_vmd_path)
-    logger.info("now_output_camera_vmd_path: %s", now_output_camera_vmd_path)
+    logger.debug("now_output_camera_vmd_path: %s", now_output_camera_vmd_path)
 
     output_camera_vmd_pattern = re.compile(r'^%s_\d{8}_\d{6}.vmd$' % (now_output_camera_vmd_path) )
-    logger.info("output_camera_vmd_pattern: %s", output_camera_vmd_pattern)
-    logger.info("re.match(output_camera_vmd_pattern, output_camera_vmd_path): %s", re.match(output_camera_vmd_pattern, output_camera_vmd_path))
+    logger.debug("output_camera_vmd_pattern: %s", output_camera_vmd_pattern)
+    logger.debug("re.match(output_camera_vmd_pattern, output_camera_vmd_path): %s", re.match(output_camera_vmd_pattern, output_camera_vmd_path))
 
     return re.match(output_camera_vmd_pattern, output_camera_vmd_path) is not None
 

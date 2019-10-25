@@ -56,7 +56,7 @@ def main(csv_bone_path, csv_morph_path, csv_camera_path):
 
                     bone_frames.append(bf)
                 
-                    # logger.info("bf: %s %s", bf.name, bf)
+                    # logger.debug("bf: %s %s", bf.name, bf)
 
         if csv_morph_path:
             output_vmd_path = re.sub(r'\.csv$', "_{0:%Y%m%d_%H%M%S}.vmd".format(datetime.now()), csv_morph_path)
@@ -123,7 +123,7 @@ def main(csv_bone_path, csv_morph_path, csv_camera_path):
 
                     camera_frames.append(cf)
                 
-                    # logger.info("bf: %s %s", bf.name, bf)
+                    # logger.debug("bf: %s %s", bf.name, bf)
 
         if len(camera_frames) > 0:            
             # カメラモーション生成

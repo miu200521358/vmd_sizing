@@ -124,11 +124,11 @@ if __name__=="__main__":
         motion = VmdReader().read_vmd_file(args.vmd_path)
 
         # 作成元モデル
-        logger.info("trace_pmx_path: %s", args.trace_pmx_path)
+        logger.debug("trace_pmx_path: %s", args.trace_pmx_path)
         org_pmx = PmxReader().read_pmx_file(args.trace_pmx_path)
 
         # 変換先モデル
-        logger.info("replace_pmx_path: %s", args.replace_pmx_path)
+        logger.debug("replace_pmx_path: %s", args.replace_pmx_path)
         rep_pmx = PmxReader().read_pmx_file(args.replace_pmx_path)
 
         # 出力ファイルパス

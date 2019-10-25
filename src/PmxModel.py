@@ -428,7 +428,7 @@ class PmxModel():
                         if v_pos.z() < min_toe_front_pos.z() :
                             # つま先のボーンにウェイトが乗っていて、かつ最前の頂点より前の場合、保持
                             min_toe_front_pos = v_pos
-                            # logger.info("min_wrist_below_pos: %s, %s, %s, %s, %s" , bone_idx, self.bone_indexes[bone_idx], v.index, v.position, v_pos)
+                            # logger.debug("min_wrist_below_pos: %s, %s, %s, %s, %s" , bone_idx, self.bone_indexes[bone_idx], v.index, v.position, v_pos)
 
             if min_toe_front_pos == QVector3D(0, 0, 99999):
                 # X制限をして見つからなかった場合、制限しないでチェック

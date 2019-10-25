@@ -56,22 +56,22 @@ def exec(motion, trace_model, replace_model, output_vmd_path):
                         # Zオフセットが入っている場合、オフセット調整
                         bf.position.setZ(bf.position.z() + replace_model.bones[k].offset_z) 
 
-                        # logger.info("offset f: %s", bf.frame)
+                        # logger.debug("offset f: %s", bf.frame)
                         # # 元モデルの向いている回転量
                         # org_upper_direction_qq = utils.calc_upper_direction_qq(trace_model, org_center_links, motion.frames, bf)
-                        # logger.info("org_upper_direction_qq: %s", org_upper_direction_qq.toEulerAngles())
+                        # logger.debug("org_upper_direction_qq: %s", org_upper_direction_qq.toEulerAngles())
                         # # 正面向きのセンター位置
                         # mat = QMatrix4x4()
                         # mat.rotate(org_upper_direction_qq.inverted())
                         # front_center_pos = mat.mapVector(bf.position)
-                        # logger.info("front_center_pos: %s", front_center_pos)
+                        # logger.debug("front_center_pos: %s", front_center_pos)
                         # front_center_pos.setZ(front_center_pos.z() + replace_model.bones[k].offset_z)
-                        # logger.info("front_center_pos offset: %s", front_center_pos)
+                        # logger.debug("front_center_pos offset: %s", front_center_pos)
                         # # 元の向きに戻した時のセンター位置
                         # mat = QMatrix4x4()
                         # mat.rotate(org_upper_direction_qq)
                         # center_pos = mat.mapVector(front_center_pos)
-                        # logger.info("center_pos: %s", center_pos)
+                        # logger.debug("center_pos: %s", center_pos)
                         # bf.position = center_pos
 
                 print("移動補正: %s" % k)
@@ -131,7 +131,7 @@ def exec(motion, trace_model, replace_model, output_vmd_path):
 
                                     # 足IKの差分
                                     leg_ik_diff = ((org_leg_ik_y - trace_model.bones["{0}足ＩＫ".format(direction)].position.y()) * leg_ik_ratio) - (rep_leg_ik_y - replace_model.bones["{0}足ＩＫ".format(direction)].position.y())
-                                    logger.info("%s%s: org_leg_ik_y: %s, rep_leg_ik_y: %s, leg_ik_diff: %s, y: %s", direction, bf.frame, org_leg_ik_y, rep_leg_ik_y, leg_ik_diff, bf.position.y())
+                                    logger.debug("%s%s: org_leg_ik_y: %s, rep_leg_ik_y: %s, leg_ik_diff: %s, y: %s", direction, bf.frame, org_leg_ik_y, rep_leg_ik_y, leg_ik_diff, bf.position.y())
 
                                     bf.position.setY( bf.position.y() + leg_ik_diff )
 
@@ -155,16 +155,16 @@ def exec(motion, trace_model, replace_model, output_vmd_path):
                                             else:
                                                 # 0.3未満なら床接地
                                                 toe_ik_diff = -rep_toe_ik_y
-                                        logger.info("%s%s: org_toe_ik_y: %s, max: %s, rep_toe_ik_y: %s, toe_ik_diff: %s, y: %s", direction, bf.frame, org_toe_ik_y, max(0, (org_toe_ik_y * min(leg_length_ratio, 1))), rep_toe_ik_y, toe_ik_diff, bf.position.y())
+                                        logger.debug("%s%s: org_toe_ik_y: %s, max: %s, rep_toe_ik_y: %s, toe_ik_diff: %s, y: %s", direction, bf.frame, org_toe_ik_y, max(0, (org_toe_ik_y * min(leg_length_ratio, 1))), rep_toe_ik_y, toe_ik_diff, bf.position.y())
 
                                         # つま先ＩＫの位置で再補正
                                         bf.position.setY( bf.position.y() + toe_ik_diff )
 
                                     # print("%sフレーム: %sつま先補正: %s足IK: 高さ: %s, 補正値: %s,%s" % (bf.frame, link_name, direction, org_leg_ik_y, leg_ik_diff, toe_ik_diff))
-                                    logger.info("%sフレーム: %sつま先補正: %s足IK: 高さ: %s, 補正値: %s,%s", bf.frame, link_name, direction, org_leg_ik_y, leg_ik_diff, toe_ik_diff)
+                                    logger.debug("%sフレーム: %sつま先補正: %s足IK: 高さ: %s, 補正値: %s,%s", bf.frame, link_name, direction, org_leg_ik_y, leg_ik_diff, toe_ik_diff)
                                 else:
                                     # print("%sフレーム: %s範囲外: %s足IK: 高さ: %s, y: %s" % (bf.frame, link_name, direction, org_leg_ik_y, org_motion_frames[link_name][bf_idx].position.y()))
-                                    logger.info("%sフレーム: %s範囲外: %s足IK: 高さ: %s, y: %s", bf.frame, link_name, direction, org_leg_ik_y, org_motion_frames[link_name][bf_idx].position.y())
+                                    logger.debug("%sフレーム: %s範囲外: %s足IK: 高さ: %s, y: %s", bf.frame, link_name, direction, org_leg_ik_y, org_motion_frames[link_name][bf_idx].position.y())
                                     pass
 
                     print("つま先補正: %s" % link_name)
@@ -174,19 +174,19 @@ def exec(motion, trace_model, replace_model, output_vmd_path):
 def calc_leg_rate(trace_model, replace_model):
     # 作成元左足ＩＫ
     trace_ankle_pos = trace_model.bones["左足ＩＫ"].position
-    logger.info("trace_ankle_pos: %s", trace_ankle_pos)
+    logger.debug("trace_ankle_pos: %s", trace_ankle_pos)
     # 作成元つま先
     trace_toe_pos = trace_model.get_toe_front_vertex_position()
-    logger.info("trace_toe_pos: %s", trace_toe_pos)
+    logger.debug("trace_toe_pos: %s", trace_toe_pos)
     # # 作成元左足ＩＫ
     # trace_toe_ik_pos = trace_model.bones["左つま先ＩＫ"].position
     # 作成元の足の長さ(つま先まで)
     # trace_leg_length = trace_ankle_pos.distanceToPoint(QVector3D(trace_ankle_pos.x(), 0, trace_toe_pos.z()))
     trace_leg_length = trace_ankle_pos.z() - trace_toe_pos.z()
-    logger.info("trace_leg_length: %s", trace_leg_length)
+    logger.debug("trace_leg_length: %s", trace_leg_length)
     # 作成元のつま先から足IKへの傾き
     trace_ankle_qq = calc_ankle_rotation(trace_ankle_pos, QVector3D(trace_ankle_pos.x(), 0, trace_toe_pos.z()))
-    logger.info("trace_ankle_qq: %s", trace_ankle_qq.toEulerAngles())
+    logger.debug("trace_ankle_qq: %s", trace_ankle_qq.toEulerAngles())
     # # 作成元足先EX（ある場合）
     # trace_toe_ex_pos = trace_toe_pos
     # trace_leg_ex_length = 1
@@ -194,20 +194,20 @@ def calc_leg_rate(trace_model, replace_model):
     #     trace_toe_ex_pos = trace_model.bones["左足先EX"].position
     #     # 作成元の足の長さ(つま先~足先EXまで)
     #     trace_leg_ex_length = trace_toe_ex_pos.distanceToPoint(trace_toe_pos)
-    #     logger.info("trace_leg_ex_length: %s", trace_leg_ex_length)
+    #     logger.debug("trace_leg_ex_length: %s", trace_leg_ex_length)
 
     # 変換先左足ＩＫ
     replace_ankle_pos = replace_model.bones["左足ＩＫ"].position
-    logger.info("replace_ankle_pos: %s", replace_ankle_pos)
+    logger.debug("replace_ankle_pos: %s", replace_ankle_pos)
     # 変換先つま先
     replace_toe_pos = replace_model.get_toe_front_vertex_position()
-    logger.info("replace_toe_pos: %s", replace_toe_pos)
+    logger.debug("replace_toe_pos: %s", replace_toe_pos)
     # # 変換先左足ＩＫ
     # replace_toe_ik_pos = replace_model.bones["左つま先ＩＫ"].position
     # 変換先の足の長さ(つま先まで)
     # replace_leg_length = replace_ankle_pos.distanceToPoint(QVector3D(replace_ankle_pos.x(), 0, replace_toe_pos.z()))
     replace_leg_length = replace_ankle_pos.z() - replace_toe_pos.z()
-    logger.info("replace_leg_length: %s", replace_leg_length)
+    logger.debug("replace_leg_length: %s", replace_leg_length)
     # # 変換先足先EX（ある場合）
     # replace_toe_ex_pos = replace_toe_pos
     # replace_leg_ex_length = 1
@@ -215,24 +215,24 @@ def calc_leg_rate(trace_model, replace_model):
     #     replace_toe_ex_pos = replace_model.bones["左足先EX"].position
     #     # 変換先の足の長さ(つま先~足先EXまで)
     #     replace_leg_ex_length = replace_toe_ex_pos.distanceToPoint(replace_toe_pos)
-    #     logger.info("replace_leg_ex_length: %s", replace_leg_ex_length)
+    #     logger.debug("replace_leg_ex_length: %s", replace_leg_ex_length)
     # 変換先のつま先から足IKへの傾き
     replace_ankle_qq = calc_ankle_rotation(replace_ankle_pos, QVector3D(replace_ankle_pos.x(), 0, replace_toe_pos.z()))
-    logger.info("replace_ankle_qq: %s", replace_ankle_qq.toEulerAngles())
+    logger.debug("replace_ankle_qq: %s", replace_ankle_qq.toEulerAngles())
 
     # 足IKの比率(つま先まで)
     leg_ik_rate = replace_ankle_pos.y() / trace_ankle_pos.y()
-    logger.info("leg_ik_rate: %s", leg_ik_rate)
+    logger.debug("leg_ik_rate: %s", leg_ik_rate)
     # # 足の大きさの比率(足先EXまで)
     # 足の大きさの比率(つま先まで)
     leg_length_rate = replace_leg_length / trace_leg_length
-    logger.info("leg_length_rate: %s", leg_length_rate)
+    logger.debug("leg_length_rate: %s", leg_length_rate)
     # # 足の大きさの比率(足先EXまで)
     # leg_ex_length_rate = (replace_leg_ex_length / replace_leg_length) / (trace_leg_ex_length / trace_leg_length)
-    # logger.info("leg_ex_length_rate: %s", leg_ex_length_rate)
+    # logger.debug("leg_ex_length_rate: %s", leg_ex_length_rate)
     # 足首までの角度の差
     ankle_qq_diff = replace_ankle_qq.inverted() * trace_ankle_qq
-    logger.info("ankle_qq_diff: %s", ankle_qq_diff.toEulerAngles())
+    logger.debug("ankle_qq_diff: %s", ankle_qq_diff.toEulerAngles())
 
     return trace_leg_length, leg_ik_rate, leg_length_rate, ankle_qq_diff
 
@@ -243,7 +243,7 @@ def calc_ankle_rotation(from_pos, to_pos):
 
         to_pos = to_pos - from_pos
         to_pos.normalize()
-        logger.info("to_pos: %s", to_pos)        
+        logger.debug("to_pos: %s", to_pos)        
 
         # 水平からTOボーンまでの回転量
         from_qq = QQuaternion.rotationTo(QVector3D(to_pos.x(), 1, -1), to_pos)
@@ -257,51 +257,51 @@ def cal_center_z_offset(trace_model, replace_model, bone_name):
         # 移植元にも移植先にも対象ボーンがある場合
         # 作成元センターのZ位置
         trace_center_z = trace_model.bones["センター"].position.z()
-        logger.info("trace_center_z: %s", trace_center_z)
+        logger.debug("trace_center_z: %s", trace_center_z)
         # 作成元左足首のZ位置
         trace_ankle_z = trace_model.bones["左足首"].position.z()
-        logger.info("trace_ankle_z: %s", trace_ankle_z)
+        logger.debug("trace_ankle_z: %s", trace_ankle_z)
         # 作成元左足のZ位置
         trace_leg_z = trace_model.bones["左足"].position.z()
-        logger.info("trace_leg_z: %s", trace_leg_z)
+        logger.debug("trace_leg_z: %s", trace_leg_z)
         # 作成元つま先ＩＫのZ位置
         trace_toe_z = trace_model.get_toe_front_vertex_position().z()
         # trace_toe_z = trace_model.bones["左つま先ＩＫ"].position.z()
-        logger.info("trace_toe_z: %s", trace_toe_z)
+        logger.debug("trace_toe_z: %s", trace_toe_z)
 
         # トレース変換先センターのZ位置
         replace_center_z = replace_model.bones["センター"].position.z()
-        logger.info("replace_center_z: %s", replace_center_z)
+        logger.debug("replace_center_z: %s", replace_center_z)
         # トレース変換先左足首のZ位置
         replace_ankle_z = replace_model.bones["左足首"].position.z()
-        logger.info("replace_ankle_z: %s", replace_ankle_z)
+        logger.debug("replace_ankle_z: %s", replace_ankle_z)
         # トレース変換先左足のZ位置
         replace_leg_z = replace_model.bones["左足"].position.z()
-        logger.info("replace_leg_z: %s", replace_leg_z)
+        logger.debug("replace_leg_z: %s", replace_leg_z)
         # トレース変換先つま先ＩＫのZ位置
         replace_toe_z = replace_model.get_toe_front_vertex_position().z()
         # replace_toe_z = replace_model.bones["左つま先ＩＫ"].position.z()
-        logger.info("replace_toe_z: %s", replace_toe_z)
+        logger.debug("replace_toe_z: %s", replace_toe_z)
 
         # 作成元の足の長さ
         trace_leg_zlength = trace_ankle_z - trace_toe_z
         # 作成元の重心
         trace_center_gravity = (trace_ankle_z - trace_leg_z) / (trace_ankle_z - trace_toe_z)
-        logger.info("trace_center_gravity %s, trace_leg_zlength: %s", trace_center_gravity, trace_leg_zlength)
+        logger.debug("trace_center_gravity %s, trace_leg_zlength: %s", trace_center_gravity, trace_leg_zlength)
         
         # トレース変換先の足の長さ
         replace_leg_zlength = replace_ankle_z - replace_toe_z
         # トレース変換先の重心
         replace_center_gravity = (replace_ankle_z - replace_leg_z) / (replace_ankle_z - replace_toe_z)
-        logger.info("replace_center_gravity %s, replace_leg_zlength: %s", replace_center_gravity, replace_leg_zlength)
+        logger.debug("replace_center_gravity %s, replace_leg_zlength: %s", replace_center_gravity, replace_leg_zlength)
         
         # if replace_center_gravity != trace_center_gravity:
         #     # 生成元と同じ重心で、変換先モデルのサイズに合わせて算出
         #     replace_model.bones[bone_name].offset_z = (replace_ankle_z - replace_center_z) - (trace_center_gravity * replace_leg_zlength)
-        #     logger.info("trace_center_gravity * (replace_leg_zlength - replace_ankle_z) %s", trace_center_gravity * (replace_leg_zlength - replace_ankle_z))
+        #     logger.debug("trace_center_gravity * (replace_leg_zlength - replace_ankle_z) %s", trace_center_gravity * (replace_leg_zlength - replace_ankle_z))
        
         replace_model.bones[bone_name].offset_z = (replace_center_gravity - trace_center_gravity) * ( replace_leg_zlength / trace_leg_zlength )
-        logger.info("offset_z %s", replace_model.bones[bone_name].offset_z)
+        logger.debug("offset_z %s", replace_model.bones[bone_name].offset_z)
 
         # if replace_leg_zlength < trace_leg_zlength:
         #     # 小さい子は、オフセットを小さくする
