@@ -23,6 +23,8 @@ import traceback
 
 import wrapperutils
 import convert_vmd
+import blend_pmx
+import convert_csv
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VmdSizing").getChild(__name__)
@@ -34,7 +36,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver3.00", pos = wx.DefaultPosition, size = wx.Size( 600,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver4.00", pos = wx.DefaultPosition, size = wx.Size( 600,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -46,6 +48,8 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.vmd_data = None
 		self.org_pmx_data = None
 		self.rep_pmx_data = None
+		self.camera_vmd_data = None
+		self.camera_pmx_data = None
 
 		# モーフプルダウン
 		self.vmd_morphs = None
@@ -59,15 +63,26 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.worker = None
 		# CSVスレッド用
 		self.csv_worker = None
+		# VMDスレッド用
+		self.vmd_worker = None
+		# ブレンドスレッド用
+		self.blend_worker = None
 
 		# ファイル履歴
-		self.file_hitories = {"vmd":[],"org_pmx":[],"rep_pmx":[],"max":20}
+		self.file_hitories = {"vmd":[],"org_pmx":[],"rep_pmx":[],"camera_vmd":[],"camera_pmx":[],"max":20}
 		# 履歴JSONファイルがあれば読み込み
 		try:
 			with open(wrapperutils.get_mypath('history.json'), 'r') as f:
 				self.file_hitories = json.load(f)
+				# キーが揃っているかチェック
+				for key in ["vmd", "org_pmx", "rep_pmx", "camera_vmd", "camera_pmx"]:
+					if key not in self.file_hitories:
+						self.file_hitories[key] = []
+				# 最大件数が揃っているかチェック
+				if "max" not in self.file_hitories:
+					self.file_hitories["max"] = 20
 		except Exception:
-			self.file_hitories = {"vmd":[],"org_pmx":[],"rep_pmx":[],"max":20}
+			self.file_hitories = {"vmd":[],"org_pmx":[],"rep_pmx":[],"camera_vmd":[],"camera_pmx": [],"max":20}
 
 			# msg = wrapperutils.get_mypath('history.json')
 			# msg += "\n"
@@ -76,6 +91,7 @@ class VmdSizingForm3 ( wx.Frame ):
 			# dialog = wx.MessageDialog(self, msg, style=wx.OK)
 			# dialog.ShowModal()
 			# dialog.Destroy()
+
 
 		# ---------------------------------------------
 
@@ -96,7 +112,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		# self.m_testTxt = wx.TextCtrl( self.m_panelFile, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, (300,-1), 0 )
 		# bSizer5.Add( self.m_testTxt, 0, wx.ALL, 5 )
 
-		self.m_staticText9 = wx.StaticText( self.m_panelFile, wx.ID_ANY, u"調整対象VMDファイル", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText9 = wx.StaticText( self.m_panelFile, wx.ID_ANY, u"調整対象モーションVMDファイル", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText9.Wrap( -1 )
 
 		bSizer5.Add( self.m_staticText9, 0, wx.ALL, 5 )
@@ -111,14 +127,14 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		bSizer6 = wx.BoxSizer( wx.HORIZONTAL )
 
-		self.m_fileVmd = wx.FilePickerCtrl( self.m_panelFile, wx.ID_ANY, wx.EmptyString, u"調整対象VMDファイルを開く", u"*.vmd", wx.DefaultPosition, wx.DefaultSize, wx.FLP_DEFAULT_STYLE )
+		self.m_fileVmd = wx.FilePickerCtrl( self.m_panelFile, wx.ID_ANY, wx.EmptyString, u"調整対象モーションVMDファイルを開く", u"VMDファイル (*.vmd)|*.vmd|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.DefaultSize, wx.FLP_DEFAULT_STYLE )
 		self.m_fileVmd.GetPickerCtrl().SetLabel("開く")
 		self.m_fileVmd.SetToolTip( u"調整したいモーションのVMDパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。" )
 
 		bSizer6.Add( self.m_fileVmd, 1, wx.ALL|wx.EXPAND, 5 )
 
 		self.m_btnHistoryVmd = wx.Button( self.m_panelFile, wx.ID_ANY, u"履歴", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_btnHistoryVmd.SetToolTip( u"調整したいモーションのVMDパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。" )
+		self.m_btnHistoryVmd.SetToolTip( u"これまで指定された調整対象モーションVMDパスが再指定できます。" )
 		bSizer6.Add( self.m_btnHistoryVmd, 0, wx.ALL, 5 )
 
 		bSizer4.Add( bSizer6, 0, wx.EXPAND, 5 )
@@ -130,14 +146,14 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		bSizer7 = wx.BoxSizer( wx.HORIZONTAL )
 
-		self.m_fileOrgPmx = wx.FilePickerCtrl( self.m_panelFile, wx.ID_ANY, wx.EmptyString, u"モーション作成元モデルPMXファイルを開く", u"*.pmx", wx.DefaultPosition, wx.DefaultSize, wx.FLP_DEFAULT_STYLE )
+		self.m_fileOrgPmx = wx.FilePickerCtrl( self.m_panelFile, wx.ID_ANY, wx.EmptyString, u"モーション作成元モデルPMXファイルを開く", u"PMXファイル (*.pmx)|*.pmx|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.DefaultSize, wx.FLP_DEFAULT_STYLE )
 		self.m_fileOrgPmx.SetToolTip( u"モーション作成に使用されたモデルのPMXパスを指定してください。\n精度は落ちますが、類似したサイズ・ボーン構造のモデルでも代用できます。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。" )
 		self.m_fileOrgPmx.GetPickerCtrl().SetLabel("開く")
 
 		bSizer7.Add( self.m_fileOrgPmx, 1, wx.ALL|wx.EXPAND, 5 )
 
 		self.m_btnHistoryOrgPmx = wx.Button( self.m_panelFile, wx.ID_ANY, u"履歴", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_btnHistoryOrgPmx.SetToolTip( u"モーション作成に使用されたモデルのPMXパスを指定してください。\n精度は落ちますが、類似したサイズ・ボーン構造のモデルでも代用できます。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。" )
+		self.m_btnHistoryOrgPmx.SetToolTip( u"これまで指定されたモーション作成元モデルPMXパスが再指定できます。" )
 		bSizer7.Add( self.m_btnHistoryOrgPmx, 0, wx.ALL, 5 )
 
 		bSizer4.Add( bSizer7, 0, wx.EXPAND, 5 )
@@ -149,14 +165,14 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		bSizer8 = wx.BoxSizer( wx.HORIZONTAL )
 
-		self.m_fileRepPmx = wx.FilePickerCtrl( self.m_panelFile, wx.ID_ANY, wx.EmptyString, u"モーション変換先モデルPMXファイルを開く", u"*.pmx", wx.DefaultPosition, wx.DefaultSize, wx.FLP_DEFAULT_STYLE )
+		self.m_fileRepPmx = wx.FilePickerCtrl( self.m_panelFile, wx.ID_ANY, wx.EmptyString, u"モーション変換先モデルPMXファイルを開く", u"PMXファイル (*.pmx)|*.pmx|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.DefaultSize, wx.FLP_DEFAULT_STYLE )
 		self.m_fileRepPmx.GetPickerCtrl().SetLabel("開く")
 		self.m_fileRepPmx.SetToolTip( u"実際にモーションを読み込ませたいモデルのPMXパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。" )
 
 		bSizer8.Add( self.m_fileRepPmx, 1, wx.ALL|wx.EXPAND, 5 )
 
 		self.m_btnHistoryRepPmx = wx.Button( self.m_panelFile, wx.ID_ANY, u"履歴", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_btnHistoryRepPmx.SetToolTip( u"実際にモーションを読み込ませたいモデルのPMXパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。" )
+		self.m_btnHistoryRepPmx.SetToolTip( u"これまで指定されたモーションVMDパスが再指定できます。" )
 		bSizer8.Add( self.m_btnHistoryRepPmx, 0, wx.ALL, 5 )
 
 		bSizer4.Add( bSizer8, 0, wx.EXPAND, 5 )
@@ -166,7 +182,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		bSizer4.Add( self.m_staticText12, 0, wx.ALL, 5 )
 
-		self.m_fileOutputVmd = wx.FilePickerCtrl( self.m_panelFile, wx.ID_ANY, wx.EmptyString, u"モーション変換先モデルPMXファイルを開く", u"*.vmd", wx.DefaultPosition, wx.DefaultSize, wx.FLP_OVERWRITE_PROMPT|wx.FLP_SAVE|wx.FLP_USE_TEXTCTRL )
+		self.m_fileOutputVmd = wx.FilePickerCtrl( self.m_panelFile, wx.ID_ANY, wx.EmptyString, u"出力VMDファイルを開く", u"VMDファイル (*.vmd)|*.vmd|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.DefaultSize, wx.FLP_OVERWRITE_PROMPT|wx.FLP_SAVE|wx.FLP_USE_TEXTCTRL )
 		self.m_fileOutputVmd.GetPickerCtrl().SetLabel("開く")
 		self.m_fileOutputVmd.SetToolTip( u"調整結果のVMD出力パスを指定してください。\nVMDファイルと変換先PMXのファイル名に基づいて自動生成されますが、任意のパスに変更することも可能です。" )
 
@@ -344,12 +360,17 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		bSizer13.Add( self.m_staticText911, 0, wx.ALL, 5 )
 
-		self.m_staticText93 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"両手を合わせるなどのモーションを、変換先モデルの手首位置に合わせて調整します。\n手首間の距離を調整することで、位置合わせの適用範囲を調整することができます。\nサイジング実行時、手首間の距離がメッセージ欄に出てますので、参考にしてください。", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText93 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"両手を合わせるなどのモーションを、変換先モデルの手首位置に合わせて調整します。\n手首間の距離を調整することで、位置合わせの適用範囲を調整することができます。\nサイジング実行時、手首間の距離がメッセージ欄に出てますので、参考にしてください。\n床位置合わせオプションをONにした場合、床との手首位置合わせも一緒に行います。", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText93.Wrap( -1 )
 
 		bSizer13.Add( self.m_staticText93, 0, wx.ALL, 5 )
 
 		bSizer13.Add( self.m_radioArmIK, 0, wx.ALL, 5 )
+
+		# 床位置合わせ
+		self.m_checkFloorArmDistance = wx.CheckBox( self.m_panelArm, wx.ID_ANY, u"床との位置合わせも一緒に行う", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_checkFloorArmDistance.SetToolTip( u"手首が床に沈み込んだり浮いてたりする場合、元モデルに合わせて手首の位置を調整します。\nセンター位置も一緒に調整します。" )
+		bSizer13.Add( self.m_checkFloorArmDistance, 0, wx.ALL, 5 )
 
 		bSizer15 = wx.BoxSizer( wx.HORIZONTAL )
 
@@ -376,6 +397,172 @@ class VmdSizingForm3 ( wx.Frame ):
 		bSizer13.Fit( self.m_panelArm )
 		self.m_note.AddPage( self.m_panelArm, u"腕", False )
 
+		# # モーフブレンド ------------------------------------
+
+		# self.m_panelBlend = wx.Panel( self.m_note, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+
+		# bSizerBlend3 = wx.BoxSizer( wx.VERTICAL )
+
+		# bSizerBlend4 = wx.BoxSizer( wx.VERTICAL )
+
+		# self.m_blend_staticText7 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"指定されたPMXファイルのモーフを徐々に変化させた結果を、PMXファイルとして出力します。\n最小値から最大値までの範囲で増加量ごとに区切ってモーフを登録していきます。\nモーフの組み合わせが多くなると破綻する確率が非常に高くなりますので、その状態での公開は避けてください。", wx.DefaultPosition, wx.DefaultSize, 0 )
+		# self.m_blend_staticText7.Wrap( -1 )
+
+		# bSizerBlend4.Add( self.m_blend_staticText7, 0, wx.ALL, 5 )
+
+		# self.m_blend_staticline5 = wx.StaticLine( self.m_panelBlend, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
+		# bSizerBlend4.Add( self.m_blend_staticline5, 0, wx.EXPAND |wx.ALL, 5 )
+
+		# self.m_blend_staticText1 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"PMXファイル", wx.DefaultPosition, wx.DefaultSize, 0 )
+		# self.m_blend_staticText1.Wrap( -1 )
+
+		# bSizerBlend4.Add( self.m_blend_staticText1, 0, wx.ALL, 5 )
+
+		# self.m_blend_filePmx = wx.FilePickerCtrl( self.m_panelBlend, wx.ID_ANY, wx.EmptyString, u"PMXファイルを選択してください", u"PMXファイル (*.pmx)|*.pmx|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.Size( -1,-1 ), wx.FLP_DEFAULT_STYLE )
+		# self.m_blend_filePmx.GetPickerCtrl().SetLabel("開く")
+		# bSizerBlend4.Add( self.m_blend_filePmx, 0, wx.ALL|wx.EXPAND, 5 )
+
+		# bSizerBlend5 = wx.BoxSizer( wx.HORIZONTAL )
+
+		# # # 対象パネル
+		# # self.m_blend_staticText11 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"パネル", wx.DefaultPosition, wx.DefaultSize, 0 )
+		# # self.m_blend_staticText11.SetToolTip( u"モーフを生成するパネルを選択してください。" )
+		# # self.m_blend_staticText11.Wrap( -1 )
+		# # bSizerBlend5.Add( self.m_blend_staticText11, 0, wx.ALL, 5 )
+
+		# # self.m_blend_comboPanel = wx.ComboBox( self.m_panelBlend, id=wx.ID_ANY, value="目", pos=wx.DefaultPosition, size=wx.DefaultSize, choices=["目","眉","口","他"], style=wx.CB_DROPDOWN|wx.CB_READONLY )
+		# # bSizerBlend5.Add( self.m_blend_comboPanel, 0, wx.ALL, 5 )
+
+		# # モーフ最小値
+		# self.m_blend_staticText8 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"最小値", wx.DefaultPosition, wx.DefaultSize, 0 )
+		# self.m_blend_staticText8.SetToolTip( u"モーフ増減の最小値です。-10から10の間で設定できます。（小数点可）" )
+		# self.m_blend_staticText8.Wrap( -1 )
+		# bSizerBlend5.Add( self.m_blend_staticText8, 0, wx.ALL, 5 )
+
+		# self.m_blend_spinMin = wx.SpinCtrlDouble( self.m_panelBlend, id=wx.ID_ANY, size=wx.Size( 80,-1 ), min=-10, max=10, initial=0.0, inc=0.1 )
+		# bSizerBlend5.Add( self.m_blend_spinMin, 0, wx.ALL, 5 )
+
+		# # モーフ最大値
+		# self.m_blend_staticText9 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"最大値", wx.DefaultPosition, wx.DefaultSize, 0 )
+		# self.m_blend_staticText9.SetToolTip( u"モーフ増減の最大値です。-10から10の間で設定できます。（小数点可）" )
+		# self.m_blend_staticText9.Wrap( -1 )
+		# bSizerBlend5.Add( self.m_blend_staticText9, 0, wx.ALL, 5 )
+
+		# self.m_blend_spinMax = wx.SpinCtrlDouble( self.m_panelBlend, id=wx.ID_ANY, size=wx.Size( 80,-1 ), min=-10, max=10, initial=1.0, inc=0.1 )
+		# bSizerBlend5.Add( self.m_blend_spinMax, 0, wx.ALL, 5 )
+
+		# # モーフ増加量
+		# self.m_blend_staticText10 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"増加量", wx.DefaultPosition, wx.DefaultSize, 0 )
+		# self.m_blend_staticText10.SetToolTip( u"モーフ増減の増加量です。この増加量分ごとにモーフ組み合わせを生成していきます。0から1の間で設定できます。（小数点可）" )
+		# self.m_blend_staticText10.Wrap( -1 )
+		# bSizerBlend5.Add( self.m_blend_staticText10, 0, wx.ALL, 5 )
+
+		# self.m_blend_spinInc = wx.SpinCtrlDouble( self.m_panelBlend, id=wx.ID_ANY, size=wx.Size( 80,-1 ), min=0, max=1, initial=0.1, inc=0.1 )
+		# bSizerBlend5.Add( self.m_blend_spinInc, 0, wx.ALL, 5 )
+
+		# bSizerBlend4.Add( bSizerBlend5, 0, wx.ALL, 5 )
+
+		# self.m_blend_btnExec = wx.Button( self.m_panelBlend, wx.ID_ANY, u"モーフブレンドVMD生成", wx.DefaultPosition, wx.Size( 200,50 ), 0 )
+		# bSizerBlend4.Add( self.m_blend_btnExec, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+		# self.m_blend_txtConsole = wx.TextCtrl( self.m_panelBlend, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( -1,370 ), wx.TE_MULTILINE|wx.TE_READONLY|wx.BORDER_NONE|wx.HSCROLL|wx.VSCROLL|wx.WANTS_CHARS )
+		# self.m_blend_txtConsole.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_3DLIGHT ) )
+
+		# bSizerBlend4.Add( self.m_blend_txtConsole, 1, wx.ALL|wx.EXPAND, 5 )
+
+		# self.m_blend_Gauge = wx.Gauge( self.m_panelBlend, wx.ID_ANY, 100, wx.DefaultPosition, wx.DefaultSize, wx.GA_HORIZONTAL )
+		# self.m_blend_Gauge.SetValue( 0 )
+		# bSizerBlend4.Add( self.m_blend_Gauge, 0, wx.ALL|wx.EXPAND, 5 )
+	
+		# bSizerBlend3.Add( bSizerBlend4, 0, wx.EXPAND, 5 )
+
+		# self.m_panelBlend.SetSizer( bSizerBlend3 )
+		# self.m_panelBlend.Layout()
+		# bSizerBlend3.Fit( self.m_panelBlend )
+		# self.m_note.AddPage( self.m_panelBlend, u"モーフブレンド", False )
+
+		# カメラタブ ------------------------------------
+
+		self.m_panelCamera = wx.Panel( self.m_note, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+		bSizerCamera4 = wx.BoxSizer( wx.VERTICAL )
+
+		self.m_camera_staticText7 = wx.StaticText( self.m_panelCamera, wx.ID_ANY, u"指定されたカメラモーションのサイジングを、モーションのサイジングと同時に行えます。", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_camera_staticText7.Wrap( -1 )
+
+		bSizerCamera4.Add( self.m_camera_staticText7, 0, wx.ALL, 5 )
+
+		self.m_camera_staticline5 = wx.StaticLine( self.m_panelCamera, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
+		bSizerCamera4.Add( self.m_camera_staticline5, 0, wx.EXPAND |wx.ALL, 5 )
+
+		self.m_camera_staticText9 = wx.StaticText( self.m_panelCamera, wx.ID_ANY, u"カメラVMDファイル", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_camera_staticText9.Wrap( -1 )
+
+		bSizerCamera4.Add( self.m_camera_staticText9, 0, wx.ALL, 5 )
+
+		bSizerCamera6 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.m_camera_fileVmd = wx.FilePickerCtrl( self.m_panelCamera, wx.ID_ANY, wx.EmptyString, u"カメラVMDファイルを開く", u"VMDファイル (*.vmd)|*.vmd|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.DefaultSize, wx.FLP_DEFAULT_STYLE )
+		self.m_camera_fileVmd.GetPickerCtrl().SetLabel("開く")
+		self.m_camera_fileVmd.SetToolTip( u"調整したいカメラのVMDパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。" )
+
+		bSizerCamera6.Add( self.m_camera_fileVmd, 1, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_camera_btnHistoryVmd = wx.Button( self.m_panelCamera, wx.ID_ANY, u"履歴", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_camera_btnHistoryVmd.SetToolTip( u"これまで指定されたカメラVMDパスが再指定できます。" )
+		bSizerCamera6.Add( self.m_camera_btnHistoryVmd, 0, wx.ALL, 5 )
+
+		bSizerCamera4.Add( bSizerCamera6, 0, wx.EXPAND, 5 )
+
+		self.m_camera_staticText10 = wx.StaticText( self.m_panelCamera, wx.ID_ANY, u"カメラ作成元モデルPMXファイル", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_camera_staticText10.Wrap( -1 )
+
+		bSizerCamera4.Add( self.m_camera_staticText10, 0, wx.ALL, 5 )
+
+		bSizerCamera7 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.m_camera_fileOrgPmx = wx.FilePickerCtrl( self.m_panelCamera, wx.ID_ANY, wx.EmptyString, u"カメラ作成元モデルPMXファイルを開く", u"PMXファイル (*.pmx)|*.pmx|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.DefaultSize, wx.FLP_DEFAULT_STYLE )
+		self.m_camera_fileOrgPmx.SetToolTip( u"カメラ作成に使用されたモデルのPMXパスを指定してください。\n未指定の場合、モーション作成元モデルPMXを使用します。\n精度は落ちますが、類似したサイズ・ボーン構造のモデルでも代用できます。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。" )
+		self.m_camera_fileOrgPmx.GetPickerCtrl().SetLabel("開く")
+
+		bSizerCamera7.Add( self.m_camera_fileOrgPmx, 1, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_camera_btnHistoryOrgPmx = wx.Button( self.m_panelCamera, wx.ID_ANY, u"履歴", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_camera_btnHistoryOrgPmx.SetToolTip( u"これまで指定されたカメラ作成元モデルPMXパスが再指定できます。" )
+		bSizerCamera7.Add( self.m_camera_btnHistoryOrgPmx, 0, wx.ALL, 5 )
+
+		bSizerCamera4.Add( bSizerCamera7, 0, wx.EXPAND, 5 )
+
+		self.m_camera_staticText12 = wx.StaticText( self.m_panelCamera, wx.ID_ANY, u"出力カメラVMDファイル（変更可）", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_camera_staticText12.Wrap( -1 )
+
+		bSizerCamera4.Add( self.m_camera_staticText12, 0, wx.ALL, 5 )
+
+		self.m_camera_fileOutputVmd = wx.FilePickerCtrl( self.m_panelCamera, wx.ID_ANY, wx.EmptyString, u"出力カメラVMDファイルを開く", u"VMDカメラ (*.vmd)|*.vmd|すべてのカメラ (*.*)|*.*", wx.DefaultPosition, wx.DefaultSize, wx.FLP_OVERWRITE_PROMPT|wx.FLP_SAVE|wx.FLP_USE_TEXTCTRL )
+		self.m_camera_fileOutputVmd.GetPickerCtrl().SetLabel("開く")
+		self.m_camera_fileOutputVmd.SetToolTip( u"調整結果のカメラVMD出力パスを指定してください。\nカメラVMDファイルと変換先PMXファイル名に基づいて自動生成されますが、任意のパスに変更することも可能です。" )
+
+		bSizerCamera4.Add( self.m_camera_fileOutputVmd, 0, wx.ALL|wx.EXPAND, 5 )
+	
+		self.m_camera_staticline5 = wx.StaticLine( self.m_panelCamera, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
+		bSizerCamera4.Add( self.m_camera_staticline5, 0, wx.EXPAND |wx.ALL, 5 )
+
+		# 全長Yオフセット
+		self.m_camera_staticText8 = wx.StaticText( self.m_panelCamera, wx.ID_ANY, u"全長Yオフセット値", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_camera_staticText8.SetToolTip( u"全長Yオフセット値" )
+		self.m_camera_staticText8.Wrap( -1 )
+		bSizerCamera4.Add( self.m_camera_staticText8, 0, wx.ALL, 5 )
+
+		self.m_camera_staticText11 = wx.StaticText( self.m_panelCamera, wx.ID_ANY,  u"カメラに映す変換先モデルの全長を調整するオフセット値を指定できます。\n変換先モデルの全長は、頭ボーンにウェイトが100%乗っている頂点のうち最も上にある頂点を計算対象とします。\nそのため、帽子や角など、頭に付属しているパーツで全長に含めたくないパーツがある場合、\nその分をマイナス値で入力してください。\n逆にアホ毛等を全長に含めたい場合、その分をプラス値で入力してください。\n-1000から1000の間で設定できます。（小数点可）", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizerCamera4.Add( self.m_camera_staticText11, 0, wx.ALL, 5 )
+
+		self.m_camera_spinYoffset = wx.SpinCtrlDouble( self.m_panelCamera, id=wx.ID_ANY, size=wx.Size( 80,-1 ), min=-1000, max=1000, initial=0.0, inc=0.1 )
+		bSizerCamera4.Add( self.m_camera_spinYoffset, 0, wx.ALL, 5 )
+
+		self.m_panelCamera.SetSizer( bSizerCamera4 )
+		self.m_panelCamera.Layout()
+		bSizerCamera4.Fit( self.m_panelCamera )
+		self.m_note.AddPage( self.m_panelCamera, u"カメラ", False )
+
 		# CSV ------------------------------------
 
 		self.m_panelCsv = wx.Panel( self.m_note, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
@@ -384,7 +571,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		bSizerCsv4 = wx.BoxSizer( wx.VERTICAL )
 
-		self.m_csv_staticText7 = wx.StaticText( self.m_panelCsv, wx.ID_ANY, u"指定されたVMDファイルの解析結果を、ボーンとモーフに分けてCSVファイルとして出力します。", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_csv_staticText7 = wx.StaticText( self.m_panelCsv, wx.ID_ANY, u"指定されたVMDファイルの解析結果を、ボーン/モーフ/カメラに分けてCSVファイルとして出力します。", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_csv_staticText7.Wrap( -1 )
 
 		bSizerCsv4.Add( self.m_csv_staticText7, 0, wx.ALL, 5 )
@@ -397,7 +584,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		bSizerCsv4.Add( self.m_csv_staticText1, 0, wx.ALL, 5 )
 
-		self.m_csv_fileVmd = wx.FilePickerCtrl( self.m_panelCsv, wx.ID_ANY, wx.EmptyString, u"VMDファイルを選択してください", u"*.vmd", wx.DefaultPosition, wx.Size( -1,-1 ), wx.FLP_DEFAULT_STYLE )
+		self.m_csv_fileVmd = wx.FilePickerCtrl( self.m_panelCsv, wx.ID_ANY, wx.EmptyString, u"VMDファイルを選択してください", u"VMDファイル (*.vmd)|*.vmd|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.Size( -1,-1 ), wx.FLP_DEFAULT_STYLE )
 		self.m_csv_fileVmd.GetPickerCtrl().SetLabel("開く")
 		bSizerCsv4.Add( self.m_csv_fileVmd, 0, wx.ALL|wx.EXPAND, 5 )
 
@@ -420,66 +607,75 @@ class VmdSizingForm3 ( wx.Frame ):
 		bSizerCsv3.Fit( self.m_panelCsv )
 		self.m_note.AddPage( self.m_panelCsv, u"CSV", False )
 
-		# FAQ ------------------------------------
+		# VMD ------------------------------------
 
-		self.m_scrolledFAQ = wx.ScrolledWindow( self.m_note, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.VSCROLL )
-		self.m_scrolledFAQ.SetScrollRate( 5, 5 )
-		bSizer8 = wx.BoxSizer( wx.VERTICAL )
+		self.m_panelVmd = wx.Panel( self.m_note, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 
-		self.m_staticText132 = wx.StaticText( self.m_scrolledFAQ, wx.ID_ANY, u"Q:　モーション作成元モデルが入手できない（分からない）場合、どうしたらいいの？", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText132.Wrap( -1 )
+		bSizerVmd3 = wx.BoxSizer( wx.VERTICAL )
 
-		bSizer8.Add( self.m_staticText132, 0, wx.ALL, 5 )
+		bSizerVmd4 = wx.BoxSizer( wx.VERTICAL )
 
-		self.m_staticText14 = wx.StaticText( self.m_scrolledFAQ, wx.ID_ANY, u"A:　身長やボーン構造が似ているモデルで代用可能です。\n　　一旦代理モデルにモーションを読み込み、そのモデルに合わせて、モーションを調整してください。\n　　生成元として代理モデルを、調整対象モーションとして一次修正したモーションを\n　　指定する事で、ある程度互換性を持ってサイジングできます。\n　　代理モデルの選び方としては、膝をついたり、手を合わせたりするような、\n　　「ここ何とかしてほしいんだけど」という所の修正がいらない、もしくは、\n　　修正ができるだけ少ない、というのが目安になります。", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText14.Wrap( -1 )
+		self.m_vmd_staticText7 = wx.StaticText( self.m_panelVmd, wx.ID_ANY, u"指定されたCSVファイル（ボーン＋モーフ or カメラ）を、VMDファイルとして出力します。\nモデルモーション（ボーン・モーフ）とカメラモーション（カメラ）は別々に出力できます。\nCSVのフォーマットは、CSVタブで出力したデータと同じものを定義してください。", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_vmd_staticText7.Wrap( -1 )
 
-		bSizer8.Add( self.m_staticText14, 0, wx.ALL, 5 )
+		bSizerVmd4.Add( self.m_vmd_staticText7, 0, wx.ALL, 5 )
 
-		self.m_staticline5 = wx.StaticLine( self.m_scrolledFAQ, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
-		bSizer8.Add( self.m_staticline5, 0, wx.EXPAND |wx.ALL, 5 )
+		self.m_vmd_staticline5 = wx.StaticLine( self.m_panelVmd, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
+		bSizerVmd4.Add( self.m_vmd_staticline5, 0, wx.EXPAND |wx.ALL, 5 )
 
-		self.m_staticText30 = wx.StaticText( self.m_scrolledFAQ, wx.ID_ANY, u"Q:　サイジングしたら、膝の位置がおかしくなってしまった", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText30.Wrap( -1 )
+		self.m_vmd_staticText1 = wx.StaticText( self.m_panelVmd, wx.ID_ANY, u"CSVファイル（ボーン）", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_vmd_staticText1.Wrap( -1 )
 
-		bSizer8.Add( self.m_staticText30, 0, wx.ALL, 5 )
+		bSizerVmd4.Add( self.m_vmd_staticText1, 0, wx.ALL, 5 )
 
-		self.m_staticText31 = wx.StaticText( self.m_scrolledFAQ, wx.ID_ANY, u"A:　足の長さか何かが原因で、うまく調整できない場合があります。（調査継続中です）\n　　その場合、センターZを少し前後に動かしていただくと、\n　　大抵の場合、膝をつけるようになると思います。\n　　センターZで直らない場合、足ボーンの角度を変更してみてください。", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText31.Wrap( -1 )
-
-		bSizer8.Add( self.m_staticText31, 0, wx.ALL, 5 )
-
-		self.m_staticline3 = wx.StaticLine( self.m_scrolledFAQ, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
-		bSizer8.Add( self.m_staticline3, 0, wx.EXPAND |wx.ALL, 5 )
-
-		self.m_staticText15 = wx.StaticText( self.m_scrolledFAQ, wx.ID_ANY, u"Q:　槍とかのモーションの場合、どうしたらいいの？", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText15.Wrap( -1 )
-
-		bSizer8.Add( self.m_staticText15, 0, wx.ALL, 5 )
-
-		self.m_staticText16 = wx.StaticText( self.m_scrolledFAQ, wx.ID_ANY, u"A:　槍の場合、剣よりも両手の距離が離れますので、手首位置合わせの\n　　「手首間の距離」」デフォルト値では、足りない場面もあると思います。\n　　槍に限らず、常に両手の位置を元モーションと同じ位置に揃えたい場合は、\n　　「手首間の距離」スライダーを最大値（10）に設定してください。", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText16.Wrap( -1 )
-
-		bSizer8.Add( self.m_staticText16, 0, wx.ALL, 5 )
-
-		self.m_staticline4 = wx.StaticLine( self.m_scrolledFAQ, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
-		bSizer8.Add( self.m_staticline4, 0, wx.EXPAND |wx.ALL, 5 )
-
-		self.m_staticText171 = wx.StaticText( self.m_scrolledFAQ, wx.ID_ANY, u"Q:　ちっちゃい子とかで、腕接触回避と手首位置合わせの両方を使いたい場合はどうしたらいいの？", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText171.Wrap( -1 )
-
-		bSizer8.Add( self.m_staticText171, 0, wx.ALL, 5 )
-
-		self.m_staticText18 = wx.StaticText( self.m_scrolledFAQ, wx.ID_ANY, u"A:　一旦、腕接触回避のモーションと、手首位置合わせのモーションを別々に生成してください。\n　　腕接触回避のモーションを読み込んだモデルと、\n　　手首位置合わせのモーションを読み込んだモデルを用意します。\n　　腕接触回避の方をベースにして、手首位置合わせで調整したいフレーム間だけ、\n　　手首位置合わせのモーションからコピペしてください。\n　　（手首位置合わせはキーフレームが増えている場合があるためです）", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText18.Wrap( -1 )
-
-		bSizer8.Add( self.m_staticText18, 0, wx.ALL, 5 )
+		self.m_vmd_fileCsvBone = wx.FilePickerCtrl( self.m_panelVmd, wx.ID_ANY, wx.EmptyString, u"CSVファイルを選択してください", u"CSVファイル (*.csv)|*.csv|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.Size( -1,-1 ), wx.FLP_DEFAULT_STYLE )
+		self.m_vmd_fileCsvBone.GetPickerCtrl().SetLabel("開く")
+		bSizerVmd4.Add( self.m_vmd_fileCsvBone, 0, wx.ALL|wx.EXPAND, 5 )
 
 
-		self.m_scrolledFAQ.SetSizer( bSizer8 )
-		self.m_scrolledFAQ.Layout()
-		bSizer8.Fit( self.m_scrolledFAQ )
-		self.m_note.AddPage( self.m_scrolledFAQ, u"FAQ", False )
+		self.m_vmd_morph_staticText1 = wx.StaticText( self.m_panelVmd, wx.ID_ANY, u"CSVファイル（モーフ）", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_vmd_morph_staticText1.Wrap( -1 )
+
+		bSizerVmd4.Add( self.m_vmd_morph_staticText1, 0, wx.ALL, 5 )
+
+		self.m_vmd_fileCsvMorph = wx.FilePickerCtrl( self.m_panelVmd, wx.ID_ANY, wx.EmptyString, u"CSVファイルを選択してください", u"CSVファイル (*.csv)|*.csv|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.Size( -1,-1 ), wx.FLP_DEFAULT_STYLE )
+		self.m_vmd_fileCsvMorph.GetPickerCtrl().SetLabel("開く")
+		bSizerVmd4.Add( self.m_vmd_fileCsvMorph, 0, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_vmd_staticline6 = wx.StaticLine( self.m_panelVmd, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
+		bSizerVmd4.Add( self.m_vmd_staticline6, 0, wx.EXPAND |wx.ALL, 5 )
+
+		self.m_vmd_camera_staticText1 = wx.StaticText( self.m_panelVmd, wx.ID_ANY, u"CSVファイル（カメラ）", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_vmd_camera_staticText1.Wrap( -1 )
+
+		bSizerVmd4.Add( self.m_vmd_camera_staticText1, 0, wx.ALL, 5 )
+
+		self.m_vmd_fileCsvCamera = wx.FilePickerCtrl( self.m_panelVmd, wx.ID_ANY, wx.EmptyString, u"CSVファイルを選択してください", u"CSVファイル (*.csv)|*.csv|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.Size( -1,-1 ), wx.FLP_DEFAULT_STYLE )
+		self.m_vmd_fileCsvCamera.GetPickerCtrl().SetLabel("開く")
+		bSizerVmd4.Add( self.m_vmd_fileCsvCamera, 0, wx.ALL|wx.EXPAND, 5 )
+
+
+
+		self.m_vmd_btnExec = wx.Button( self.m_panelVmd, wx.ID_ANY, u"VMD変換実行", wx.DefaultPosition, wx.Size( 200,50 ), 0 )
+		bSizerVmd4.Add( self.m_vmd_btnExec, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+		self.m_vmd_txtConsole = wx.TextCtrl( self.m_panelVmd, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( -1,370 ), wx.TE_MULTILINE|wx.TE_READONLY|wx.BORDER_NONE|wx.HSCROLL|wx.VSCROLL|wx.WANTS_CHARS )
+		self.m_vmd_txtConsole.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_3DLIGHT ) )
+
+		bSizerVmd4.Add( self.m_vmd_txtConsole, 1, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_vmd_Gauge = wx.Gauge( self.m_panelVmd, wx.ID_ANY, 100, wx.DefaultPosition, wx.DefaultSize, wx.GA_HORIZONTAL )
+		self.m_vmd_Gauge.SetValue( 0 )
+		bSizerVmd4.Add( self.m_vmd_Gauge, 0, wx.ALL|wx.EXPAND, 5 )
+	
+		bSizerVmd3.Add( bSizerVmd4, 0, wx.EXPAND, 5 )
+
+		self.m_panelVmd.SetSizer( bSizerVmd3 )
+		self.m_panelVmd.Layout()
+		bSizerVmd3.Fit( self.m_panelVmd )
+		self.m_note.AddPage( self.m_panelVmd, u"VMD", False )
+
+		# ---------------------------
 
 		bSizer1.Add( self.m_note, 1, wx.EXPAND, 5 )
 
@@ -495,49 +691,76 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_btnMorphExport.Bind( wx.EVT_BUTTON, self.OnMorphExport )
 		self.m_btnMorphImport.Bind( wx.EVT_BUTTON, self.OnMorphImport )
 		self.m_csv_btnExec.Bind( wx.EVT_BUTTON, self.OnCsvExec )
+		self.m_vmd_btnExec.Bind( wx.EVT_BUTTON, self.OnVmdExec )
+		# self.m_blend_btnExec.Bind( wx.EVT_BUTTON, self.OnBlendExec )
 		
 		self.Bind(wx.EVT_IDLE, self.OnIdle)
 
 		# Set up event handler for any worker thread results
 		EVT_RESULT(self, self.OnResult)
 		CSV_EVT_RESULT(self, self.OnCsvResult)
+		VMD_EVT_RESULT(self, self.OnVmdResult)
+		BLEND_EVT_RESULT(self, self.OnBlendResult)
 
 		# And indicate we don't have a worker thread yet
 		self.worker = None
 		self.csv_worker = None
+		self.vmd_worker = None
+		self.blend_worker = None
 
 		# D&Dの実装
 		self.m_fileVmd.SetDropTarget(MyFileDropTarget(self, self.m_fileVmd, self.m_staticText9, ".vmd"))
 		self.m_fileOrgPmx.SetDropTarget(MyFileDropTarget(self, self.m_fileOrgPmx, self.m_staticText10, ".pmx"))
 		self.m_fileRepPmx.SetDropTarget(MyFileDropTarget(self, self.m_fileRepPmx, self.m_staticText11, ".pmx"))
 		self.m_fileOutputVmd.SetDropTarget(MyFileDropTarget(self, self.m_fileOutputVmd, self.m_staticText12, ".vmd"))
+		self.m_camera_fileVmd.SetDropTarget(MyFileDropTarget(self, self.m_camera_fileVmd, self.m_camera_staticText9, ".vmd"))
+		self.m_camera_fileOrgPmx.SetDropTarget(MyFileDropTarget(self, self.m_camera_fileOrgPmx, self.m_camera_staticText10, ".pmx"))
+		self.m_camera_fileOutputVmd.SetDropTarget(MyFileDropTarget(self, self.m_camera_fileOutputVmd, self.m_camera_staticText12, ".vmd"))
 		self.m_csv_fileVmd.SetDropTarget(MyFileDropTarget(self, self.m_csv_fileVmd, self.m_csv_staticText1, ".vmd"))
+		self.m_vmd_fileCsvBone.SetDropTarget(MyFileDropTarget(self, self.m_vmd_fileCsvBone, self.m_vmd_staticText1, ".csv"))
+		self.m_vmd_fileCsvMorph.SetDropTarget(MyFileDropTarget(self, self.m_vmd_fileCsvMorph, self.m_vmd_morph_staticText1, ".csv"))
+		self.m_vmd_fileCsvCamera.SetDropTarget(MyFileDropTarget(self, self.m_vmd_fileCsvCamera, self.m_vmd_camera_staticText1, ".csv"))
+		# self.m_blend_filePmx.SetDropTarget(MyFileDropTarget(self, self.m_blend_filePmx, self.m_staticText11, ".pmx"))
 
 		# ファイルパス変更時の処理
 		self.m_fileVmd.Bind( wx.EVT_FILEPICKER_CHANGED, lambda event: self.OnChangeFile(event, self.m_fileVmd, self.m_staticText9, ".vmd"))
 		self.m_fileOrgPmx.Bind( wx.EVT_FILEPICKER_CHANGED, lambda event: self.OnChangeFile(event, self.m_fileOrgPmx, self.m_staticText10, ".pmx"))
 		self.m_fileRepPmx.Bind( wx.EVT_FILEPICKER_CHANGED, lambda event: self.OnChangeFile(event, self.m_fileRepPmx, self.m_staticText11, ".pmx"))
-		self.m_csv_fileVmd.Bind( wx.EVT_FILEPICKER_CHANGED, lambda event: self.OnChangeFile(event, self.m_csv_fileVmd, self.m_csv_staticText1, ".vmd"))
+		self.m_camera_fileVmd.Bind( wx.EVT_FILEPICKER_CHANGED, lambda event: self.OnChangeFile(event, self.m_camera_fileVmd, self.m_camera_staticText9, ".vmd"))
+		self.m_camera_fileOrgPmx.Bind( wx.EVT_FILEPICKER_CHANGED, lambda event: self.OnChangeFile(event, self.m_camera_fileOrgPmx, self.m_camera_staticText10, ".pmx"))
 
 		# ファイル履歴ボタン押下時の処理
 		self.m_btnHistoryVmd.Bind(wx.EVT_BUTTON, lambda event: self.OnShowHistory(event, self.file_hitories["vmd"], self.file_hitories["max"]+1, self.m_fileVmd, self.m_staticText9, ".vmd"))
 		self.m_btnHistoryOrgPmx.Bind(wx.EVT_BUTTON, lambda event: self.OnShowHistory(event, self.file_hitories["org_pmx"], self.file_hitories["max"]+1, self.m_fileOrgPmx, self.m_staticText10, ".pmx"))
 		self.m_btnHistoryRepPmx.Bind(wx.EVT_BUTTON, lambda event: self.OnShowHistory(event, self.file_hitories["rep_pmx"], self.file_hitories["max"]+1, self.m_fileRepPmx, self.m_staticText11, ".pmx"))
+		self.m_camera_btnHistoryVmd.Bind(wx.EVT_BUTTON, lambda event: self.OnShowHistory(event, self.file_hitories["camera_vmd"], self.file_hitories["max"]+1, self.m_camera_fileVmd, self.m_camera_staticText9, ".vmd"))
+		self.m_camera_btnHistoryOrgPmx.Bind(wx.EVT_BUTTON, lambda event: self.OnShowHistory(event, self.file_hitories["camera_pmx"], self.file_hitories["max"]+1, self.m_camera_fileOrgPmx, self.m_camera_staticText10, ".pmx"))
 
 		# ファイル入力欄で全選択イベント
 		self.m_fileVmd.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_fileVmd.GetTextCtrl()))
 		self.m_fileOrgPmx.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_fileOrgPmx.GetTextCtrl()))
 		self.m_fileRepPmx.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_fileRepPmx.GetTextCtrl()))
 		self.m_fileOutputVmd.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_fileOutputVmd.GetTextCtrl()))
+		self.m_camera_fileVmd.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_camera_fileVmd.GetTextCtrl()))
+		self.m_camera_fileOrgPmx.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_camera_fileOrgPmx.GetTextCtrl()))
 		self.m_csv_fileVmd.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_csv_fileVmd.GetTextCtrl()))
+		self.m_vmd_fileCsvBone.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_vmd_fileCsvBone.GetTextCtrl()))
+		self.m_vmd_fileCsvMorph.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_vmd_fileCsvMorph.GetTextCtrl()))
+		self.m_vmd_fileCsvCamera.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_vmd_fileCsvCamera.GetTextCtrl()))
+		# self.m_blend_filePmx.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_blend_filePmx.GetTextCtrl()))
+		# メッセージ欄も全選択可とする
+		self.m_txtConsole.Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_txtConsole))
 
 		# タブ押下時の処理
 		self.m_note.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.OnTabChange)
 
 		# 腕処理ラジオボタンの切り替え
-		self.m_radioArmNone.Bind(wx.EVT_RADIOBUTTON, self.OnCreateOutputVmd)
-		self.m_radioAvoidance.Bind(wx.EVT_RADIOBUTTON, self.OnCreateOutputVmd)
-		self.m_radioArmIK.Bind(wx.EVT_RADIOBUTTON, self.OnCreateOutputVmd)
+		self.m_radioArmNone.Bind(wx.EVT_RADIOBUTTON, self.OnChangeArmRadio)
+		self.m_radioAvoidance.Bind(wx.EVT_RADIOBUTTON, self.OnChangeArmRadio)
+		self.m_radioArmIK.Bind(wx.EVT_RADIOBUTTON, self.OnChangeArmRadio)
+
+		# 床位置合わせのチェックボックス切り替え
+		self.m_checkFloorArmDistance.Bind(wx.EVT_CHECKBOX, self.OnChangeFloorArmDistance)
 
 		# 接触回避のラジオボタンの切り替え
 		self.m_radioAvoidanceFinger.Bind(wx.EVT_RADIOBUTTON, self.OnChangeAvoidanceTarget)
@@ -596,6 +819,64 @@ class VmdSizingForm3 ( wx.Frame ):
 			sys.stdout = self.m_txtConsole
 
 
+	def OnVmdExec( self, event ):
+		self.DisableInput()
+
+		self.m_vmd_txtConsole.Clear()
+		wx.GetApp().Yield()
+
+		# VMDコンソールに切り替え
+		sys.stdout = self.m_vmd_txtConsole
+
+		self.DisableInput()
+
+		if len(self.m_vmd_fileCsvBone.GetPath()) == 0 \
+			and len(self.m_vmd_fileCsvMorph.GetPath()) == 0 \
+			and len(self.m_vmd_fileCsvCamera.GetPath()) == 0:
+
+			print("■■■■■■■■■■■■■■■■■")
+			print("■　**ERROR**　")
+			print("■　CSVファイルが1件も指定されていません。")
+			print("■■■■■■■■■■■■■■■■■")
+
+			self.EnableInput()
+			# プログレス非表示
+			self.m_vmd_Gauge.SetValue(0)
+
+			# 元に戻す
+			sys.stdout = self.m_txtConsole
+
+			event.Skip()
+			return
+
+		if (len(self.m_vmd_fileCsvBone.GetPath()) > 0 and \
+			wrapperutils.is_valid_file(self.m_vmd_fileCsvBone.GetPath(), "ボーンCSVファイル", ".csv", True) == False) or \
+			(len(self.m_vmd_fileCsvMorph.GetPath()) > 0 and \
+			wrapperutils.is_valid_file(self.m_vmd_fileCsvMorph.GetPath(), "モーフCSVファイル", ".csv", True) == False) or \
+			(len(self.m_vmd_fileCsvCamera.GetPath()) > 0 and \
+			wrapperutils.is_valid_file(self.m_vmd_fileCsvCamera.GetPath(), "カメラCSVファイル", ".csv", True) == False):
+
+			self.EnableInput()
+			# プログレス非表示
+			self.m_vmd_Gauge.SetValue(0)
+
+			# 元に戻す
+			sys.stdout = self.m_txtConsole
+
+			event.Skip()
+			return
+
+		if not self.vmd_worker:
+			# スレッド実行
+			self.vmd_worker = VmdWorkerThread(self)
+			self.vmd_worker.start()
+			self.vmd_worker.stop_event.set()
+		else:
+			print("まだ処理が実行中です。終了してから再度実行してください。")
+
+			# 元に戻す
+			sys.stdout = self.m_txtConsole
+
 	def OnShowHistory(self, event, hitories, maxc, target_ctrl, label_ctrl, ext):
 		# 入力行を伸ばす
 		hs = copy.deepcopy(hitories)
@@ -614,7 +895,7 @@ class VmdSizingForm3 ( wx.Frame ):
 			target_ctrl.SetInitialDirectory(wrapperutils.get_dir_path(choiceDialog.GetStringSelection()))
 
 			# ファイル変更処理
-			self.OnChangeFile(event, target_ctrl, label_ctrl, ext)
+			self.OnChangeFile(wx.FileDirPickerEvent(), target_ctrl, label_ctrl, ext)
 
 	def OnClose(self, event):
 		for h in logger.handlers:
@@ -663,14 +944,37 @@ class VmdSizingForm3 ( wx.Frame ):
 			self.csv_worker.stop()
 			self.csv_worker = None
 
+		if self.vmd_worker:
+			# スレッドを止める
+			self.vmd_worker.stop()
+			self.vmd_worker = None
+
 	# 接触回避で処理対象を変えたら、親の選択有効
 	def OnChangeAvoidanceTarget(self, event):
 		self.m_radioAvoidance.SetValue(1)
+		# パス再設定
+		self.OnCreateOutputVmd(event)
 	
 	# 腕IKでスライダーを変えたら、親の選択有効
 	def OnChangeArmIKHandDistance(self, event):
 		self.m_radioArmIK.SetValue(1)
+		# パス再設定
+		self.OnCreateOutputVmd(event)
 	
+	# 腕IKで床にチェックを入れたら、親の選択有効
+	def OnChangeFloorArmDistance(self, event):
+		self.m_radioArmIK.SetValue(1)
+		# パス再設定
+		self.OnCreateOutputVmd(event)
+	
+	def OnChangeArmRadio(self, event):
+		if not self.m_radioArmIK.GetValue():
+			# 腕IKの選択を外した場合、床位置合わせチェックOFF
+			self.m_checkFloorArmDistance.SetValue(0)
+
+		# パス再設定
+		self.OnCreateOutputVmd(event)
+
 	def OnTabChange(self, event):
 		if self.worker:
 			# サイジング実行時はタブ移動不可
@@ -678,9 +982,21 @@ class VmdSizingForm3 ( wx.Frame ):
 			event.Skip()
 			return 
 
+		# if self.blend_worker:
+		# 	# ブレンドモーフ生成時はタブ移動不可
+		# 	self.m_note.SetSelection(3)
+		# 	event.Skip()
+		# 	return 
+
 		if self.csv_worker:
 			# CSVコンバート時はタブ移動不可
-			self.m_note.SetSelection(3)
+			self.m_note.SetSelection(4)
+			event.Skip()
+			return 
+
+		if self.vmd_worker:
+			# VMDコンバート時はタブ移動不可
+			self.m_note.SetSelection(5)
 			event.Skip()
 			return 
 
@@ -754,7 +1070,11 @@ class VmdSizingForm3 ( wx.Frame ):
 					logger.debug("rep_morphs: %s", self.rep_morphs)
 
 				self.m_note.SetSelection(1)
-					
+
+		# # パス再設定
+		# self.OnCreateOutputVmd(event)
+		# self.OnCreateOutputCameraVmd(event)
+
 	def AddMorphLine(self):
 		# self.vmd_morphs = ["", "testA"]
 		# self.rep_morphs = ["", "testB"]
@@ -811,9 +1131,6 @@ class VmdSizingForm3 ( wx.Frame ):
 		# logger.debug("item: %s, size: %s", self.gridMorphSizer.GetItemCount(), self.gridMorphSizer.GetSize())
 
 	def OnFillAddMorphLine(self, event):
-		# 一旦出力ファイル設定
-		self.OnCreateOutputVmd(wx.EVT_FILEPICKER_CHANGED)
-
 		# logger.debug("OnFillAddMorphLine: vmd_choices: %s, rep_choices: %s", self.vmd_choices[-1].GetSelection(), self.rep_choices[-1].GetSelection() > 0)
 		# 最終行のモーフが選択されていたらモーフ行追加
 		if self.vmd_choices[-1].GetSelection() > 0 and self.rep_choices[-1].GetSelection() > 0:
@@ -856,7 +1173,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		input_moprh_path = wrapperutils.create_output_morph_path(self.m_fileVmd.GetPath(), self.m_fileOrgPmx.GetPath(), self.m_fileRepPmx.GetPath())
 		input_morph_dir_path = wrapperutils.get_dir_path(input_moprh_path)
 
-		with wx.FileDialog(self, "モーフ組み合わせCSVを読み込む", wildcard="*.csv",
+		with wx.FileDialog(self, "モーフ組み合わせCSVを読み込む", wildcard=u"CSVファイル (*.csv)|*.csv|すべてのファイル (*.*)|*.*",
 							defaultDir=input_morph_dir_path,
 							style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
 
@@ -874,9 +1191,9 @@ class VmdSizingForm3 ( wx.Frame ):
 					rep_choice_values = morph_lines[1]
 					rep_rate_values = morph_lines[2]
 					
-					logger.info("vmd_choice_values: %s", vmd_choice_values)
-					logger.info("rep_choice_values: %s", rep_choice_values)
-					logger.info("rep_rate_values: %s", rep_rate_values)
+					logger.debug("vmd_choice_values: %s", vmd_choice_values)
+					logger.debug("rep_choice_values: %s", rep_choice_values)
+					logger.debug("rep_rate_values: %s", rep_rate_values)
 
 					if len(vmd_choice_values) == 0 or len(rep_choice_values) == 0 or len(rep_rate_values) == 0:
 						return
@@ -926,7 +1243,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.rep_choice_values = []
 		self.rep_rate_values = []
 
-		logger.info("ClearMorph: size: %s", self.gridMorphSizer.GetItemCount())
+		logger.debug("ClearMorph: size: %s", self.gridMorphSizer.GetItemCount())
 		
 		inner_item_count = self.gridMorphSizer.GetItemCount()
 		if inner_item_count > 4:
@@ -939,75 +1256,89 @@ class VmdSizingForm3 ( wx.Frame ):
 			self.gridMorphSizer.Layout()
 			self.m_scrolledMorph.Layout()
 
+		# パス再設定
+		self.OnCreateOutputVmd(wx.EVT_TEXT)
+
 
 	
 	def LoadFiles(self, is_print=True):
 		is_pre_vmd = self.PreLoadOneFile(self.m_fileVmd, self.m_staticText9, ".vmd", is_print)
 		is_pre_org_pmx = self.PreLoadOneFile(self.m_fileOrgPmx, self.m_staticText10, ".pmx", is_print)
 		is_pre_rep_pmx = self.PreLoadOneFile(self.m_fileRepPmx, self.m_staticText11, ".pmx", is_print)
+		# カメラは初期値OKとする
+		is_pre_camera_vmd = True
+		is_pre_camera_pmx = True
+		if self.m_camera_fileVmd.GetPath():
+			# パスが指定してあってNGの場合、結果保持
+			is_pre_camera_vmd = self.PreLoadOneFile(self.m_camera_fileVmd, self.m_camera_staticText9, ".vmd", is_print)
+		if self.m_camera_fileOrgPmx.GetPath():
+			# パスが指定してあってNGの場合、結果保持
+			is_pre_camera_pmx = self.PreLoadOneFile(self.m_camera_fileOrgPmx, self.m_camera_staticText10, ".pmx", is_print)
 
-		if is_pre_vmd and is_pre_org_pmx and is_pre_rep_pmx:
+		if is_pre_vmd and is_pre_org_pmx and is_pre_rep_pmx and is_pre_camera_vmd and is_pre_camera_pmx:
 			is_vmd = self.LoadOneFile(self.m_fileVmd, self.m_staticText9, ".vmd", is_print)
 			is_org_pmx = self.LoadOneFile(self.m_fileOrgPmx, self.m_staticText10, ".pmx", is_print)
 			is_rep_pmx = self.LoadOneFile(self.m_fileRepPmx, self.m_staticText11, ".pmx", is_print)
 
+			is_camera_vmd = True
+			if self.m_camera_fileVmd.GetPath():
+				is_camera_vmd = self.LoadOneFile(self.m_camera_fileVmd, self.m_camera_staticText9, ".vmd", is_print)
+
+			is_camera_pmx = True
+			if self.m_camera_fileOrgPmx.GetPath():
+				is_camera_pmx = self.LoadOneFile(self.m_camera_fileOrgPmx, self.m_camera_staticText10, ".pmx", is_print)
+
 			# 全ファイル一括チェック
-			return is_vmd and is_org_pmx and is_rep_pmx and self.checkOutputVmdPath()
+			return is_vmd and is_org_pmx and is_rep_pmx and is_camera_vmd and is_camera_pmx \
+				and self.checkOutputVmdPath(self.m_fileOutputVmd, self.m_staticText12) \
+				and ((not self.m_camera_fileOutputVmd) or \
+					(self.m_camera_fileOutputVmd and self.checkOutputVmdPath(self.m_camera_fileOutputVmd, self.m_camera_staticText12)))
 		
 		return False
 	
-	def checkOutputVmdPath(self):
-		output_vmd_path = self.m_fileOutputVmd.GetPath()
-
-		# 出力ファイルパスがなければ設定
-		if not output_vmd_path:
-			output_vmd_path = wrapperutils.create_output_path(self.m_fileVmd.GetPath(), self.m_fileRepPmx.GetPath(), self.m_radioAvoidance.GetValue(), self.m_radioArmIK.GetValue(), (self.vmd_choices and len(self.vmd_choices) > 0))
-			self.m_fileOutputVmd.SetPath(output_vmd_path)
+	def checkOutputVmdPath(self, target_ctrl, label_ctrl):
+		if not target_ctrl.GetPath():
+			# ファイルパスがない場合、生成
+			self.OnCreateOutputVmd(wx.EVT_FILEPICKER_CHANGED)
 		
-		if not output_vmd_path:
-			print("■■■■■■■■■■■■■■■■■")
-			print("■　**ERROR**　")
-			print("■　出力ファイルパスがありません")
-			print("■　生成予定パス: "+ output_vmd_path )
-			print("■■■■■■■■■■■■■■■■■")
-			return False
+		label_text = label_ctrl.GetLabel().strip("（変更可）")
 
-		if len(output_vmd_path) >= 255 and os.name == "nt":
+		if len(target_ctrl.GetPath()) >= 255 and os.name == "nt":
 			print("■■■■■■■■■■■■■■■■■")
 			print("■　**ERROR**　")
-			print("■　出力ファイルパスがWindowsの制限を超えているため、処理を中断します。")
-			print("■　出力ファイルパス: "+ output_vmd_path )
+			print("■　"+ label_text +"がWindowsの制限を超えているため、処理を中断します。")
+			print("■　"+ label_text +"パス: "+ target_ctrl.GetPath() )
 			print("■■■■■■■■■■■■■■■■■")
 			return False
 		
 		logger.debug("文字超制限OK")
 		
 		# 親ディレクトリ取得
-		dir_path = wrapperutils.get_dir_path(output_vmd_path)
+		dir_path = wrapperutils.get_dir_path(target_ctrl.GetPath())
 
 		logger.debug("ディレクトリパス生成")
 
 		if not dir_path or not os.path.exists(dir_path) or not os.path.isdir(dir_path):
 			print("■■■■■■■■■■■■■■■■■")
 			print("■　**ERROR**　")
-			print("■　出力ファイルパスのフォルダ構成が正しくないため、処理を中断します。")
-			print("■　出力ファイルパス: "+ output_vmd_path )
+			print("■　"+ label_text +"パスのフォルダ構成が正しくないため、処理を中断します。")
+			print("■　"+ label_text +"パス: "+ target_ctrl.GetPath() )
 			print("■■■■■■■■■■■■■■■■■")
 			return False
 
 		if dir_path and not os.access(dir_path, os.W_OK):
 			print("■■■■■■■■■■■■■■■■■")
 			print("■　**ERROR**　")
-			print("■　出力ファイルパスの親フォルダに書き込み権限がありません。")
-			print("■　出力ファイルパス: "+ output_vmd_path )
+			print("■　"+ label_text +"パスの親フォルダに書き込み権限がありません。")
+			print("■　"+ label_text +"パス: "+ target_ctrl.GetPath() )
 			print("■■■■■■■■■■■■■■■■■")
 			return False
 
-		if output_vmd_path and os.path.exists(output_vmd_path) and not os.access(output_vmd_path, os.W_OK):
+		if target_ctrl.GetPath() and os.path.exists(target_ctrl.GetPath()) and not os.access(target_ctrl.GetPath(), os.W_OK):
 			print("■■■■■■■■■■■■■■■■■")
 			print("■　**ERROR**　")
-			print("■　出力ファイルパスに書き込み権限がありません。")
-			print("■　出力ファイルパス: "+ output_vmd_path )
+			print("■　"+ label_text +"パスに書き込み権限がありません。")
+			print("■　"+ label_text +"パス: "+ target_ctrl.GetPath() )
 			print("■■■■■■■■■■■■■■■■■")
 			return False
 
@@ -1021,16 +1352,17 @@ class VmdSizingForm3 ( wx.Frame ):
 		# 先頭と末尾のダブルクォーテーションは除去
 		target_path = re.sub(r'^\\+\"(\w)\\', r'\1:\\', target_ctrl.GetPath())
 		target_path = target_path.strip("\"")
-		logger.info("target_path: %s", target_path)
+		logger.debug("target_path: %s", target_path)
 
 		target_ctrl.SetPath(target_path)
 
 		# メインスレッドで読み込む
 		if target_ctrl == self.m_fileVmd:
 			if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, is_print):
-				logger.info("vmd_data クリア: %s", target_ctrl.GetPath())
+				logger.debug("vmd_data クリア: %s", target_ctrl.GetPath())
 				# 読み込めるファイルではない場合、オブジェクトをクリアして終了
 				self.vmd_data = None
+				self.camera_vmd_data = None
 
 				if is_print:
 					print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
@@ -1041,8 +1373,9 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		if target_ctrl == self.m_fileOrgPmx:
 			if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, is_print):
-				logger.info("org_pmx_data クリア: %s", target_ctrl.GetPath())
+				logger.debug("org_pmx_data クリア: %s", target_ctrl.GetPath())
 				self.org_pmx_data = None
+				self.camera_pmx_data = None
 
 				if is_print:
 					print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
@@ -1053,8 +1386,34 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		if target_ctrl == self.m_fileRepPmx:
 			if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, is_print):
-				logger.info("rep_pmx_data クリア: %s", target_ctrl.GetPath())
+				logger.debug("rep_pmx_data クリア: %s", target_ctrl.GetPath())
 				self.rep_pmx_data = None
+
+				if is_print:
+					print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+
+				return False
+			else:
+				return True
+
+		# メインスレッドで読み込む
+		if target_ctrl == self.m_camera_fileVmd:
+			if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, is_print):
+				logger.debug("camera_vmd_data クリア: %s", target_ctrl.GetPath())
+				# 読み込めるファイルではない場合、オブジェクトをクリアして終了
+				self.camera_vmd_data = None
+
+				if is_print:
+					print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+
+				return False
+			else:
+				return True
+
+		if target_ctrl == self.m_camera_fileOrgPmx:
+			if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, is_print):
+				logger.debug("camera_pmx_data クリア: %s", target_ctrl.GetPath())
+				self.camera_pmx_data = None
 
 				if is_print:
 					print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
@@ -1071,29 +1430,31 @@ class VmdSizingForm3 ( wx.Frame ):
 		# 先頭と末尾のダブルクォーテーションは除去
 		target_path = re.sub(r'^\\+\"(\w)\\', r'\1:\\', target_ctrl.GetPath())
 		target_path = target_path.strip("\"")
-		logger.info("target_path: %s", target_path)
+		logger.debug("target_path: %s", target_path)
 
 		target_ctrl.SetPath(target_path)
 
 		# メインスレッドで読み込む
 		if target_ctrl == self.m_fileVmd:
 			if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, is_print):
-				logger.info("vmd_data クリア: %s", target_ctrl.GetPath())
+				logger.debug("vmd_data クリア: %s", target_ctrl.GetPath())
 				# 読み込めるファイルではない場合、オブジェクトをクリアして終了
 				self.vmd_data = None
+				self.camera_vmd_data = None			
 
 				if is_print:
 					print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
 
 				return False
 			else:
-				logger.info("vmd_data 読み込み: %s", target_ctrl.GetPath())
+				logger.debug("vmd_data 読み込み: %s", target_ctrl.GetPath())
 				# VMD読み込む
 				new_vmd_data = wrapperutils.read_vmd(target_ctrl.GetPath(), label_ctrl.GetLabel(), is_print)
 
 				if not self.vmd_data or not new_vmd_data or (self.vmd_data and new_vmd_data and self.vmd_data.digest != new_vmd_data.digest):
 					# ハッシュが違う場合、データが違うとみなして更新
 					self.vmd_data = new_vmd_data
+					self.camera_vmd_data = None
 
 					# 出力ファイル以外はモーフも変わるので初期化
 					self.ClearMorph()
@@ -1103,20 +1464,22 @@ class VmdSizingForm3 ( wx.Frame ):
 						print("%s 読み込み成功: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
 					else:
 						print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+						return False
 
 				return True
 
 		if target_ctrl == self.m_fileOrgPmx:
 			if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, is_print):
-				logger.info("org_pmx_data クリア: %s", target_ctrl.GetPath())
+				logger.debug("org_pmx_data クリア: %s", target_ctrl.GetPath())
 				self.org_pmx_data = None
+				self.camera_pmx_data = None
 
 				if is_print:
 					print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
 
 				return False
 			else:
-				logger.info("org_pmx_data 読み込み: %s", target_ctrl.GetPath())
+				logger.debug("org_pmx_data 読み込み: %s", target_ctrl.GetPath())
 				# 元PMX読み込む
 				new_org_pmx_data = wrapperutils.read_pmx(target_ctrl.GetPath(), label_ctrl.GetLabel(), is_print)
 
@@ -1132,12 +1495,13 @@ class VmdSizingForm3 ( wx.Frame ):
 						print("%s 読み込み成功: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
 					else:
 						print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+						return False
 
 				return True
 
 		if target_ctrl == self.m_fileRepPmx:
 			if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, is_print):
-				logger.info("rep_pmx_data クリア: %s", target_ctrl.GetPath())
+				logger.debug("rep_pmx_data クリア: %s", target_ctrl.GetPath())
 				self.rep_pmx_data = None
 
 				if is_print:
@@ -1145,7 +1509,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 				return False
 			else:
-				logger.info("rep_pmx_data 読み込み: %s", target_ctrl.GetPath())
+				logger.debug("rep_pmx_data 読み込み: %s", target_ctrl.GetPath())
 				# 先PMX読み込む
 				new_rep_pmx_data = wrapperutils.read_pmx(target_ctrl.GetPath(), label_ctrl.GetLabel(), is_print)
 
@@ -1161,9 +1525,65 @@ class VmdSizingForm3 ( wx.Frame ):
 						print("%s 読み込み成功: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
 					else:
 						print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+						return False
 
 				return True
 
+		# メインスレッドで読み込む
+		if target_ctrl == self.m_camera_fileVmd:
+			if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, is_print):
+				logger.debug("camera_vmd_data クリア: %s", target_ctrl.GetPath())
+				# 読み込めるファイルではない場合、オブジェクトをクリアして終了
+				self.camera_vmd_data = None
+
+				if is_print:
+					print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+
+				return False
+			else:
+				logger.debug("camera_vmd_data 読み込み: %s", target_ctrl.GetPath())
+				# VMD読み込む
+				new_camera_vmd_data = wrapperutils.read_vmd(target_ctrl.GetPath(), label_ctrl.GetLabel(), is_print)
+
+				if not self.camera_vmd_data or not new_camera_vmd_data or (self.camera_vmd_data and new_camera_vmd_data and self.camera_vmd_data.digest != new_camera_vmd_data.digest):
+					# ハッシュが違う場合、データが違うとみなして更新
+					self.camera_vmd_data = new_camera_vmd_data
+
+				if is_print:
+					if new_camera_vmd_data:
+						print("%s 読み込み成功: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+					else:
+						print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+						return False
+
+				return True
+
+		if target_ctrl == self.m_camera_fileOrgPmx:
+			if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, is_print):
+				logger.debug("camera_pmx_data クリア: %s", target_ctrl.GetPath())
+				self.camera_pmx_data = None
+
+				if is_print:
+					print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+
+				return False
+			else:
+				logger.debug("camera_pmx_data 読み込み: %s", target_ctrl.GetPath())
+				# 元PMX読み込む
+				new_camera_pmx_data = wrapperutils.read_pmx(target_ctrl.GetPath(), label_ctrl.GetLabel(), is_print)
+
+				if not self.camera_pmx_data or not new_camera_pmx_data or (self.camera_pmx_data and new_camera_pmx_data and self.camera_pmx_data.digest != new_camera_pmx_data.digest):
+					# ハッシュが違う場合、データが違うとみなして更新
+					self.camera_pmx_data = new_camera_pmx_data
+
+				if is_print:
+					if new_camera_pmx_data:
+						print("%s 読み込み成功: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+					else:
+						print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+						return False
+
+				return True
 
 
 	# ファイル切り替え処理実行
@@ -1175,21 +1595,30 @@ class VmdSizingForm3 ( wx.Frame ):
 		# 先頭と末尾のダブルクォーテーションは除去
 		target_path = re.sub(r'^\\+\"(\w)\\', r'\1:\\', target_ctrl.GetPath())
 		target_path = target_path.strip("\"")
-		logger.info("target_path: %s", target_path)
+		logger.debug("target_path: %s", target_path)
 
 		target_ctrl.SetPath(target_path)
 
 		# 一旦出力ファイル設定
 		self.OnCreateOutputVmd(event)
+		self.OnCreateOutputCameraVmd(event)
 
 		if target_ctrl == self.m_fileVmd:
 			self.vmd_data = None
+			self.camera_vmd_data = None
 
 		if target_ctrl == self.m_fileOrgPmx:
 			self.org_pmx_data = None
+			self.camera_pmx_data = None
 
 		if target_ctrl == self.m_fileRepPmx:
 			self.rep_pmx_data = None
+
+		if target_ctrl == self.m_camera_fileVmd:
+			self.camera_vmd_data = None
+
+		if target_ctrl == self.m_camera_fileOrgPmx:
+			self.camera_pmx_data = None
 
 		event.Skip()
 		return
@@ -1202,6 +1631,9 @@ class VmdSizingForm3 ( wx.Frame ):
 		if self.csv_worker:
 			self.m_csv_Gauge.Pulse()
 
+		# if self.blend_worker:
+		# 	self.m_blend_Gauge.Pulse()
+
 	# チェックボタン押下
 	def OnCheck(self, event):
 		self.m_txtConsole.Clear()
@@ -1213,7 +1645,8 @@ class VmdSizingForm3 ( wx.Frame ):
 			return False
 
 		# 読み込み処理が終わったらサイジングできるかチェック
-		wrapperutils.is_all_sizing(self.vmd_data, self.org_pmx_data, self.rep_pmx_data)
+		# カメラPMXはチェックするネタが無いのでとりあえず対象外
+		wrapperutils.is_all_sizing(self.vmd_data, self.org_pmx_data, self.rep_pmx_data, self.camera_vmd_data)
 
 		self.m_Gauge.SetValue(0)
 
@@ -1248,14 +1681,13 @@ class VmdSizingForm3 ( wx.Frame ):
 					# リストに追加
 					vmd_choice_values.append(vcv)
 					rep_choice_values.append(rcv)
-					# 念のため、丸め
-					rep_rate_values.append(round(rr.GetValue(), 10))
+					rep_rate_values.append(rr.GetValue())
 					# ペアとして登録する
 					morph_pair[(vcv,rcv)] = True							
 
-		logger.info("vmd_choice_values: %s", vmd_choice_values)
-		logger.info("rep_choice_values: %s", rep_choice_values)
-		logger.info("rep_rate_values: %s", rep_rate_values)
+		logger.debug("vmd_choice_values: %s", vmd_choice_values)
+		logger.debug("rep_choice_values: %s", rep_choice_values)
+		logger.debug("rep_rate_values: %s", rep_rate_values)
 		
 		return 	vmd_choice_values, rep_choice_values, rep_rate_values
 
@@ -1278,6 +1710,28 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_csv_btnExec.Disable()
 		# ファイル入力不可
 		self.m_csv_fileVmd.Disable()
+
+		# VMD
+		# 実行ボタン押下不可
+		self.m_vmd_btnExec.Disable()
+		# ファイル入力不可
+		self.m_vmd_fileCsvBone.Disable()
+		self.m_vmd_fileCsvMorph.Disable()
+		self.m_vmd_fileCsvCamera.Disable()
+
+		# カメラ
+		self.m_camera_fileVmd.Disable()
+		self.m_camera_fileOutputVmd.Disable()
+		self.m_camera_fileOrgPmx.Disable()
+		self.m_camera_btnHistoryVmd.Disable()
+		self.m_camera_btnHistoryOrgPmx.Disable()
+
+		# # ブレンド
+		# self.m_blend_filePmx.Disable()
+		# self.m_blend_spinMin.Disable()
+		# self.m_blend_spinMax.Disable()
+		# self.m_blend_spinInc.Disable()
+		# self.m_blend_btnExec.Disable()
 	
 	def EnableInput(self):
 		# ファイル入力可
@@ -1298,6 +1752,28 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_csv_btnExec.Enable()
 		# ファイル入力可
 		self.m_csv_fileVmd.Enable()
+		self.m_vmd_fileCsvMorph.Enable()
+		self.m_vmd_fileCsvCamera.Enable()
+
+		# VMD
+		# 実行ボタン押下可
+		self.m_vmd_btnExec.Enable()
+		# ファイル入力可
+		self.m_vmd_fileCsvBone.Enable()
+
+		# カメラ
+		self.m_camera_fileVmd.Enable()
+		self.m_camera_fileOutputVmd.Enable()
+		self.m_camera_fileOrgPmx.Enable()
+		self.m_camera_btnHistoryVmd.Enable()
+		self.m_camera_btnHistoryOrgPmx.Enable()
+
+		# # ブレンド
+		# self.m_blend_filePmx.Enable()
+		# self.m_blend_spinMin.Enable()
+		# self.m_blend_spinMax.Enable()
+		# self.m_blend_spinInc.Enable()
+		# self.m_blend_btnExec.Enable()
 	
 	# 実行ボタン押下
 	def OnExec(self, event):
@@ -1332,23 +1808,41 @@ class VmdSizingForm3 ( wx.Frame ):
 				# モーフデータ生成				
 				self.vmd_choice_values, self.rep_choice_values, self.rep_rate_values = self.create_morph_data()
 
-				# 出力ファイルパスがなければ生成
-				if not self.m_fileOutputVmd.GetPath():
-					output_vmd_path = wrapperutils.create_output_path(self.m_fileVmd.GetPath(), self.m_fileRepPmx.GetPath(), self.m_radioAvoidance.GetValue(), self.m_radioArmIK.GetValue(), (self.vmd_choices and len(self.vmd_choices) > 0))
-					if output_vmd_path:
-						self.m_fileOutputVmd.SetPath(output_vmd_path)
+				# パス再設定
+				self.OnCreateOutputVmd(event)
+				self.OnCreateOutputCameraVmd(event)
 
 				# 履歴保持
-				if not self.m_fileVmd.GetPath() in self.file_hitories["vmd"]:
+				if self.m_fileVmd.GetPath() in self.file_hitories["vmd"]:
+					# 既に登録されている場合、一旦削除
+					self.file_hitories["vmd"].remove(self.m_fileVmd.GetPath())
+				# 改めて先頭に登録
+				if self.m_fileVmd.GetPath():
 					self.file_hitories["vmd"].insert(0, self.m_fileVmd.GetPath())
 				
 				# 履歴保持
-				if not self.m_fileOrgPmx.GetPath() in self.file_hitories["org_pmx"]:
+				if self.m_fileOrgPmx.GetPath() in self.file_hitories["org_pmx"]:
+					self.file_hitories["org_pmx"].remove(self.m_fileOrgPmx.GetPath())
+				if self.m_fileOrgPmx.GetPath():
 					self.file_hitories["org_pmx"].insert(0, self.m_fileOrgPmx.GetPath())
 				
 				# 履歴保持
-				if not self.m_fileRepPmx.GetPath() in self.file_hitories["rep_pmx"]:
+				if self.m_fileRepPmx.GetPath() in self.file_hitories["rep_pmx"]:
+					self.file_hitories["rep_pmx"].remove(self.m_fileRepPmx.GetPath())
+				if self.m_fileRepPmx.GetPath():
 					self.file_hitories["rep_pmx"].insert(0, self.m_fileRepPmx.GetPath())
+
+				# 履歴保持
+				if self.m_camera_fileVmd.GetPath() in self.file_hitories["camera_vmd"]:
+					self.file_hitories["camera_vmd"].remove(self.m_camera_fileVmd.GetPath())
+				if self.m_camera_fileVmd.GetPath():
+					self.file_hitories["camera_vmd"].insert(0, self.m_camera_fileVmd.GetPath())
+
+				# 履歴保持
+				if self.m_camera_fileOrgPmx.GetPath() in self.file_hitories["camera_pmx"]:
+					self.file_hitories["camera_pmx"].remove(self.m_camera_fileOrgPmx.GetPath())
+				if self.m_camera_fileOrgPmx.GetPath():
+					self.file_hitories["camera_pmx"].insert(0, self.m_camera_fileOrgPmx.GetPath())
 
 				# 入力履歴を保存		
 				try:
@@ -1398,6 +1892,77 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		# コンソールを元に戻す
 		sys.stdout = self.m_txtConsole		
+
+	# スレッド実行結果
+	def OnVmdResult(self, event):
+		# スレッド削除
+		self.vmd_worker = None
+		# 入力有効化
+		self.EnableInput()
+		# プログレス非表示
+		self.m_vmd_Gauge.SetValue(0)
+
+		# コンソールを元に戻す
+		sys.stdout = self.m_txtConsole		
+
+	def OnBlendExec( self, event ):
+		self.DisableInput()
+
+		self.m_blend_txtConsole.Clear()
+		wx.GetApp().Yield()
+
+		# BLENDコンソールに切り替え
+		sys.stdout = self.m_blend_txtConsole
+
+		self.DisableInput()
+
+		if wrapperutils.is_valid_file(self.m_blend_filePmx.GetPath(), "PMXファイル", ".pmx", True) == False:
+
+			self.EnableInput()
+			# プログレス非表示
+			self.m_blend_Gauge.SetValue(0)
+
+			# 元に戻す
+			sys.stdout = self.m_txtConsole
+
+			event.Skip()
+			return
+
+		if self.m_blend_spinInc.GetValue() == 0:
+			print("増加量は、0以外の値を入力してください。")
+
+			self.EnableInput()
+			# プログレス非表示
+			self.m_blend_Gauge.SetValue(0)
+
+			# 元に戻す
+			sys.stdout = self.m_txtConsole
+
+			event.Skip()
+			return
+
+		if not self.blend_worker:
+			# スレッド実行
+			self.blend_worker = BlendWorkerThread(self)
+			self.blend_worker.start()
+			self.blend_worker.stop_event.set()
+		else:
+			print("まだ処理が実行中です。終了してから再度実行してください。")
+
+			# 元に戻す
+			sys.stdout = self.m_txtConsole
+
+	# スレッド実行結果
+	def OnBlendResult(self, event):
+		# スレッド削除
+		self.blend_worker = None
+		# 入力有効化
+		self.EnableInput()
+		# プログレス非表示
+		self.m_blend_Gauge.SetValue(0)
+
+		# コンソールを元に戻す
+		sys.stdout = self.m_txtConsole		
 		
 	def ShowTraceModel(self, event):
 		if wrapperutils.is_valid_file(self.m_fileVmd.GetPath(), "調整対象VMDファイル", ".vmd", False) == False:
@@ -1412,27 +1977,56 @@ class VmdSizingForm3 ( wx.Frame ):
 
 	# 出力ファイルパスの生成
 	def OnCreateOutputVmd(self, event):	
-		# print("OnCreateOutputVmd")
-		# print("m_fileVmd: %s " % self.m_fileVmd.GetPath())
-		# print("m_fileRepPmx: %s " % self.m_fileRepPmx.GetPath())
-		# print("self.vmd_choices: %s" % self.vmd_choices)
-		# print("(self.vmd_choices and len(self.vmd_choices) > 0): %s" % (self.vmd_choices and len(self.vmd_choices) > 0))
-		new_filepath = wrapperutils.create_output_path(self.m_fileVmd.GetPath(), self.m_fileRepPmx.GetPath(), self.m_radioAvoidance.GetValue(), self.m_radioArmIK.GetValue(), (self.vmd_choices and len(self.vmd_choices) > 0))
-		# print("new_filepath: %s " % new_filepath)
-		if new_filepath is not None:
-			self.m_fileOutputVmd.SetPath(new_filepath)
+		logger.debug("OnCreateOutputVmd")
+		logger.debug("m_fileVmd: %s " , self.m_fileVmd.GetPath())
+		logger.debug("m_fileRepPmx: %s ",  self.m_fileRepPmx.GetPath())
+		logger.debug("event: %s ",  type(event))
+		logger.debug("wx.EVT_FILEPICKER_CHANGED: %s ",  type(wx.EVT_FILEPICKER_CHANGED))
+		logger.debug("isinstance(event, wx.EVT_FILEPICKER_CHANGED): %s ", isinstance(event, wx.FileDirPickerEvent))
+
+		if wrapperutils.is_auto_output_path(self.m_fileOutputVmd.GetPath(), self.m_fileVmd.GetPath(), self.m_fileRepPmx.GetPath(), isinstance(event, wx.FileDirPickerEvent)):
+			# モーフ出力の組み合わせ取得
+			vmd_choice_values, _, _ = self.create_morph_data()
+			logger.debug("vmd_choice_values: %s", len(vmd_choice_values))
+
+			# 現在設定されているパスが空か、自動生成パスルールに合う場合のみ、再設定
+			new_filepath = wrapperutils.create_output_path(self.m_fileVmd.GetPath(), self.m_fileRepPmx.GetPath(), self.m_radioAvoidance.GetValue(), self.m_radioArmIK.GetValue(), len(vmd_choice_values) > 0)
+			logger.debug("new_filepath: %s ", new_filepath)
+			if new_filepath is not None:
+				self.m_fileOutputVmd.SetPath(new_filepath)
+			else:
+				self.m_fileOutputVmd.SetPath("")
 
 		if self.m_fileVmd.GetPath() != "":
+			logger.debug("ShowTraceModel: %s ", self.m_fileOutputVmd.GetPath())
 			# VMDファイルパスが空でなければ、トレースモデル名表示
 			self.ShowTraceModel(event)
 		else:
 			self.m_vmdTraceTxt.SetValue("　（調整対象VMD未設定）")
 
-	
+	def OnCreateOutputCameraVmd(self, event):
+		logger.debug("OnCreateOutputCameraVmd")
+		logger.debug("m_camera_fileVmd: %s " , self.m_camera_fileVmd.GetPath())
+		logger.debug("m_fileRepPmx: %s ",  self.m_fileRepPmx.GetPath())
+		logger.debug("event: %s ",  type(event))
+		logger.debug("wx.EVT_FILEPICKER_CHANGED: %s ",  type(wx.EVT_FILEPICKER_CHANGED))
+		logger.debug("isinstance(event, wx.EVT_FILEPICKER_CHANGED): %s ", isinstance(event, wx.FileDirPickerEvent))
+
+		if wrapperutils.is_auto_output_camera_path(self.m_camera_fileOutputVmd.GetPath(), self.m_camera_fileVmd.GetPath(), self.m_fileRepPmx.GetPath(), isinstance(event, wx.FileDirPickerEvent)):
+			# 現在設定されているパスが空か、自動生成パスルールに合う場合のみ、再設定
+			new_filepath = wrapperutils.create_output_camera_path(self.m_camera_fileVmd.GetPath(), self.m_fileRepPmx.GetPath())
+			logger.debug("new_filepath: %s ", new_filepath)
+			if new_filepath is not None:
+				self.m_camera_fileOutputVmd.SetPath(new_filepath)
+			else:
+				self.m_camera_fileOutputVmd.SetPath("")
+
 
 # Define notification event for thread completion
 EVT_RESULT_ID = wx.NewId()
 CSV_EVT_RESULT_ID = wx.NewId()
+VMD_EVT_RESULT_ID = wx.NewId()
+BLEND_EVT_RESULT_ID = wx.NewId()
 
 def EVT_RESULT(win, func):
 	"""Define Result Event."""
@@ -1441,6 +2035,14 @@ def EVT_RESULT(win, func):
 def CSV_EVT_RESULT(win, func):
 	"""Define Result Event."""
 	win.Connect(-1, -1, CSV_EVT_RESULT_ID, func)
+
+def VMD_EVT_RESULT(win, func):
+	"""Define Result Event."""
+	win.Connect(-1, -1, VMD_EVT_RESULT_ID, func)
+
+def BLEND_EVT_RESULT(win, func):
+	"""Define Result Event."""
+	win.Connect(-1, -1, BLEND_EVT_RESULT_ID, func)
 
 class ResultEvent(wx.PyEvent):
 	"""Simple event to carry arbitrary result data."""
@@ -1455,6 +2057,20 @@ class CsvResultEvent(wx.PyEvent):
 		"""Init Result Event."""
 		wx.PyEvent.__init__(self)
 		self.SetEventType(CSV_EVT_RESULT_ID)
+
+class VmdResultEvent(wx.PyEvent):
+	"""Simple event to carry arbitrary result data."""
+	def __init__(self, data):
+		"""Init Result Event."""
+		wx.PyEvent.__init__(self)
+		self.SetEventType(VMD_EVT_RESULT_ID)
+
+class BlendResultEvent(wx.PyEvent):
+	"""Simple event to carry arbitrary result data."""
+	def __init__(self, data):
+		"""Init Result Event."""
+		wx.PyEvent.__init__(self)
+		self.SetEventType(BLEND_EVT_RESULT_ID)
 
 # Thread class that executes processing
 # http://nobunaga.hatenablog.jp/entry/2016/06/03/204450
@@ -1492,9 +2108,16 @@ class ExecWorkerThread(Thread):
 			, self._notify_window.m_radioAvoidanceFinger.GetValue()
 			, self._notify_window.m_radioArmIK.GetValue()
 			, self._notify_window.m_sliderHandDistance.GetValue()
+			, self._notify_window.m_checkFloorArmDistance.GetValue()
 			, self._notify_window.vmd_choice_values
 			, self._notify_window.rep_choice_values			
 			, self._notify_window.rep_rate_values
+			, self._notify_window.camera_vmd_data
+			, self._notify_window.m_camera_fileVmd.GetPath()
+			, self._notify_window.camera_pmx_data
+			, self._notify_window.m_camera_fileOrgPmx.GetPath()
+			, self._notify_window.m_camera_fileOutputVmd.GetPath()
+			, self._notify_window.m_camera_spinYoffset.GetValue()
 		)
 
 		# Here's where the result would be returned (this is an
@@ -1531,12 +2154,94 @@ class CsvWorkerThread(Thread):
 		# need to structure your processing so that you periodically
 		# peek at the abort variable
 
-		convert_vmd.main(self._notify_window.m_csv_fileVmd.GetPath())
+		convert_csv.main(self._notify_window.m_csv_fileVmd.GetPath())
 
 		# Here's where the result would be returned (this is an
 		# example fixed result of the number 10, but it could be
 		# any Python object)
 		wx.PostEvent(self._notify_window, CsvResultEvent(None))
+
+	def abort(self):
+		"""abort worker thread."""
+		# Method for use by main thread to signal an abort
+		self._want_abort = 1
+
+
+
+# Thread class that executes processing
+# http://nobunaga.hatenablog.jp/entry/2016/06/03/204450
+class VmdWorkerThread(Thread):
+	"""Worker Thread Class."""
+	def __init__(self, notify_window):
+		"""Init Worker Thread Class."""
+		Thread.__init__(self)
+		self._notify_window = notify_window
+		self._want_abort = 0
+		self.stop_event = Event()
+		# メイン終了時にもスレッド終了する
+		self.daemon = True
+
+	def stop(self):
+		self.stop_event.set()
+
+	def run(self):
+		"""Run Worker Thread."""
+		# This is the code executing in the new thread. Simulation of
+		# a long process (well, 10s here) as a simple loop - you will
+		# need to structure your processing so that you periodically
+		# peek at the abort variable
+
+		convert_vmd.main(
+			self._notify_window.m_vmd_fileCsvBone.GetPath(),
+			self._notify_window.m_vmd_fileCsvMorph.GetPath(),
+			self._notify_window.m_vmd_fileCsvCamera.GetPath()
+		)
+
+		# Here's where the result would be returned (this is an
+		# example fixed result of the number 10, but it could be
+		# any Python object)
+		wx.PostEvent(self._notify_window, VmdResultEvent(None))
+
+	def abort(self):
+		"""abort worker thread."""
+		# Method for use by main thread to signal an abort
+		self._want_abort = 1
+
+# Thread class that executes processing
+# http://nobunaga.hatenablog.jp/entry/2016/06/03/204450
+class BlendWorkerThread(Thread):
+	"""Worker Thread Class."""
+	def __init__(self, notify_window):
+		"""Init Worker Thread Class."""
+		Thread.__init__(self)
+		self._notify_window = notify_window
+		self._want_abort = 0
+		self.stop_event = Event()
+		# メイン終了時にもスレッド終了する
+		self.daemon = True
+
+	def stop(self):
+		self.stop_event.set()
+
+	def run(self):
+		"""Run Worker Thread."""
+		# This is the code executing in the new thread. Simulation of
+		# a long process (well, 10s here) as a simple loop - you will
+		# need to structure your processing so that you periodically
+		# peek at the abort variable
+		
+		blend_pmx.main( \
+			self._notify_window.m_blend_filePmx.GetPath(), \
+			self._notify_window.m_blend_spinMin.GetValue(), \
+			self._notify_window.m_blend_spinMax.GetValue(), \
+			self._notify_window.m_blend_spinInc.GetValue() \
+			# self._notify_window.m_blend_comboPanel.GetValue()
+		)
+
+		# Here's where the result would be returned (this is an
+		# example fixed result of the number 10, but it could be
+		# any Python object)
+		wx.PostEvent(self._notify_window, BlendResultEvent(None))
 
 	def abort(self):
 		"""abort worker thread."""
@@ -1565,11 +2270,16 @@ class MyFileDropTarget(wx.FileDropTarget):
 
 			if self.target_ctrl == self.window.m_fileVmd or self.target_ctrl == self.window.m_fileRepPmx:
 				# 出力パス生成対象コントロールの場合、VMD生成処理を走らせる
-				self.window.OnCreateOutputVmd(wx.EVT_FILEPICKER_CHANGED)
+				self.window.OnCreateOutputVmd(wx.FileDirPickerEvent())
+				self.window.OnCreateOutputCameraVmd(wx.FileDirPickerEvent())
 			
-			if self.target_ctrl == self.window.m_fileVmd:
-				# VMDファイルの場合、VMD登録モデル表示
-				self.window.ShowTraceModel(wx.EVT_FILEPICKER_CHANGED)
+			if self.target_ctrl == self.window.m_camera_fileVmd:
+				# カメラ出力パス生成対象コントロールの場合、VMD生成処理を走らせる
+				self.window.OnCreateOutputCameraVmd(wx.FileDirPickerEvent())
+			
+			# if self.target_ctrl == self.window.m_fileVmd:
+			# 	# VMDファイルの場合、VMD登録モデル表示
+			# 	self.window.ShowTraceModel(wx.EVT_FILEPICKER_CHANGED)
 
 			# オブジェクトクリア
 			if self.target_ctrl == self.window.m_fileVmd:
@@ -1577,10 +2287,17 @@ class MyFileDropTarget(wx.FileDropTarget):
 
 			if self.target_ctrl == self.window.m_fileOrgPmx:
 				self.window.org_pmx_data = None
+				self.window.camera_pmx_data = None
 				
 			if self.target_ctrl == self.window.m_fileRepPmx:
 				self.window.rep_pmx_data = None
 
+			if self.target_ctrl == self.window.m_camera_fileVmd:
+				self.window.camera_vmd = None
+
+			if self.target_ctrl == self.window.m_camera_fileOrgPmx:
+				self.window.camera_pmx_data = None
+				
 			# # 出力ファイル以外はデータ読み込み
 			# if self.target_ctrl != self.window.m_fileOutputVmd:
 			# 	self.window.OnLoadFile(wx.EVT_FILEPICKER_CHANGED, self.target_ctrl, self.label_ctrl, self.ext)

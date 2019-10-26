@@ -17,6 +17,8 @@ def exec(motion, trace_model, replace_model, output_vmd_path, vmd_choice_values,
 
     # モーフ置換
     if len(vmd_choice_values) > 0 and len(rep_choice_values) > 0 and len(rep_rate_values) > 0 and len(vmd_choice_values) == len(rep_choice_values) == len(rep_rate_values):
+        print("■■ モーフ補正 -----------------")
+
         # モーフの大きさ変更処理
         replace_morphs = create_replace_morphs(motion, vmd_choice_values, rep_choice_values, rep_rate_values)
 
@@ -42,7 +44,7 @@ def create_replace_morphs(motion, vmd_choice_values, rep_choice_values, rep_rate
         if vcv in motion.morphs.keys():
             print("モーフ置換 %s → %s (%s)" % (vcv, rcv, rcr))
             # Shift-JISでエンコード
-            rcv_encode = rcv.encode('shift-jis')
+            rcv_encode = rcv.encode('cp932').decode('shift_jis').encode('shift_jis')
             # モーフを組合せで保持
             replace_morphs[(rcv,vcv)] = copy.deepcopy(motion.morphs[vcv])
 
