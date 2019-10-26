@@ -233,6 +233,7 @@ class VmdReader():
             
             # パース有無
             camera.perspective = self.unpack(1, "B")
+            logger.debug("camera.perspective %s", camera.perspective)
 
             # カメラを追加
             motion.cameras.append(camera)
@@ -339,7 +340,7 @@ class VmdReader():
         
         # ハッシュを設定
         motion.digest = self.hexdigest(filepath)
-        logger.info("motion: %s, hash: %s", motion.path, motion.digest)
+        logger.debug("motion: %s, hash: %s", motion.path, motion.digest)
 
         return motion            
                     

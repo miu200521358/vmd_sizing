@@ -29,7 +29,7 @@ class PmxReader():
     def read_pmx_file(self, filepath):
         # PMXファイルをバイナリ読み込み
         self.buffer = open(filepath, "rb").read()
-        # logger.info("hashlib.algorithms_available: %s", hashlib.algorithms_available)
+        # logger.debug("hashlib.algorithms_available: %s", hashlib.algorithms_available)
         
         # pmx宣言
         signature = self.unpack(4, "4s")        
@@ -108,6 +108,7 @@ class PmxReader():
         logger.debug("english_comment: %s (%s)", pmx.english_comment, self.offset)
         
         # 頂点データリスト
+        vidx = 0
         for _ in range(self.read_int(4)):
             position = self.read_Vector3D()
             normal = self.read_Vector3D()
@@ -122,10 +123,18 @@ class PmxReader():
             deform = self.read_deform()
             edge_factor = self.read_float()
 
-            vindex = len(pmx.vertices)
+            vindex = vidx
+            vidx += 1
 
-            pmx.vertices.append(pmx.Vertex(vindex, position, normal, uv, extended_uvs, deform, edge_factor))
+            # 頂点をウェイトボーンごとに分けて保持する
+            vertex = pmx.Vertex(vindex, position, normal, uv, extended_uvs, deform, edge_factor)
+            for bone_idx in vertex.deform.get_idx_list():
+                if not bone_idx in pmx.vertices:
+                    pmx.vertices[bone_idx] = []
+                pmx.vertices[bone_idx].append(vertex)
+                
         logger.debug("len(vertices): %s", len(pmx.vertices))
+        logger.debug("vertices.keys: %s", pmx.vertices.keys())
 
         # 面データリスト
         for _ in range(self.read_int(4)):
@@ -389,7 +398,11 @@ class PmxReader():
 
         # ハッシュを設定
         pmx.digest = self.hexdigest(filepath)
-        logger.info("pmx: %s, hash: %s", pmx.name, pmx.digest)
+        logger.debug("pmx: %s, hash: %s", pmx.name, pmx.digest)
+
+        # 腕がサイジング可能かチェック
+        pmx.can_arm_sizing = pmx.check_arm_bone_can_sizing()
+        logger.debug("pmx: %s, can_arm_sizing: %s", pmx.name, pmx.can_arm_sizing)
 
         return pmx
                  

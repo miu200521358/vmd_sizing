@@ -18,6 +18,8 @@ def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
     # -----------------------------------------------------------------
     # 頭部と腕の接触回避処理        
     if motion.motion_cnt > 0 and is_avoidance and not is_hand_ik:
+        print("■■ 腕接触回避処理 -----------------")
+
         # 頭までのリンク生成
         head_links, _ = replace_model.create_link_2_top( "頭")
 
@@ -231,7 +233,13 @@ def calc_upper_vertex(upper_vertices, model, head_links, frames, bf):
     # 上半身の頂点位置
     for uv in upper_vertices:
         # 頂点が乗っているウェイトボーン情報取得
-        deform_bone = model.bones[model.bone_indexes[uv.deform.index0]]
+        for hlii in head_links_indexes.keys():
+            # 末端から調べていき、ウェイトが乗っているボーンである場合、それを対象とする
+            if uv.is_deform_index(hlii):
+                deform_bone = model.bones[model.bone_indexes[hlii]]
+                break
+            
+        # deform_bone = model.bones[model.bone_indexes[uv.deform.index0]]
 
         # 頂点初期位置
         uv_diff = uv.position - deform_bone.position
