@@ -311,7 +311,7 @@ def cal_center_z_offset(trace_model, replace_model, bone_name):
 
         return True
     else:
-        print("Zオフセットなし: %s: %s" % ( bone_name, replace_model.bones[bone_name].offset_z))
+        print("Zオフセットなし: %s" % ( bone_name ))
 
         return False
 
