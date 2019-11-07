@@ -457,6 +457,9 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
     org_fill_motion_frames = copy.deepcopy(motion.frames)
 
     if is_floor_hand:
+        # # 足IKまでの位置(作成元モデル)
+        # all_org_leg_ik_links, all_org_leg_ik_indexes = trace_model.create_link_2_top_lr("足ＩＫ")
+
         # 足までの位置(作成元モデル)
         all_org_leg_links, all_org_leg_indexes = trace_model.create_link_2_top_lr("足")
         # logger.debug("all_org_leg_links: %s", [ "{0}: {1}\n".format(x.name, x.position) for x in all_org_leg_links["左"]])    
@@ -900,12 +903,13 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                                 break
 
                         else:
-                            print("－手首近接なし: f: %s(%s), 境界: %s, 手首間の距離: %s" % (bf.frame, org_direction, hand_distance, org_wrist_diff_rate ))
+                            if hand_distance <= org_wrist_diff_rate <= hand_distance * 2:
+                                print("－手首近接なし: f: %s(%s), 境界: %s, 手首間の距離: %s" % (bf.frame, org_direction, hand_distance, org_wrist_diff_rate ))
                         
                         # logger.debug("bf_idx: %s, cf:%s", bf_idx, motion.frames["センター"][bf_idx].frame)
 
                         if is_floor_hand:
-                            if bf_idx != 0 and is_prev_next_enable_key("センター", motion.frames, bf_idx) and is_prev_next_enable_key("上半身", motion.frames, bf_idx):
+                            if bf_idx != 0 and is_prev_next_enable_key("センター", motion.frames, bf_idx, 2) and is_prev_next_enable_key("上半身", motion.frames, bf_idx, 2):
                                 # print("－床位置近接スルー: f: %s(%s)" % (bf.frame, org_direction ))
                                 pass
                             else:
@@ -937,6 +941,16 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                 # 足のY位置
                                 org_leg_y = org_leg_global_3ds[len(org_leg_global_3ds) - all_org_leg_indexes[org_direction]["足"] - 1].y()
                                 org_reverse_leg_y = org_reverse_leg_global_3ds[len(org_reverse_leg_global_3ds) - all_org_leg_indexes[reverse_org_direction]["足"] - 1].y()
+
+                                # # 足IKのY位置                            
+                                # # 元モデルのIK計算前足IKまでの情報
+                                # _, _, _, _, org_leg_ik_global_3ds = utils.create_matrix_global(trace_model, all_org_leg_ik_links[org_direction], org_motion_frames, bf, None)
+                                # # 元モデルの反対側の足IKまでの情報
+                                # _, _, _, _, org_reverse_leg_ik_global_3ds = utils.create_matrix_global(trace_model, all_org_leg_ik_links[reverse_org_direction], org_motion_frames, bf, None)
+
+                                # # 足IKのY位置
+                                # org_leg_ik_y = org_leg_ik_global_3ds[len(org_leg_ik_global_3ds) - all_org_leg_ik_indexes[org_direction]["足ＩＫ"] - 1].y()
+                                # org_reverse_leg_ik_y = org_reverse_leg_ik_global_3ds[len(org_reverse_leg_ik_global_3ds) - all_org_leg_ik_indexes[reverse_org_direction]["足ＩＫ"] - 1].y()
 
                                 logger.debug("--------------")
                                 logger.debug("%s hand_floor: p: %s, wy: %s, wyr: %s, ly: %s, lyr: %s", bf.frame, org_palm_length, org_wrist_y, org_reverse_wrist_y, org_leg_y, org_reverse_leg_y)
@@ -975,6 +989,9 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                     logger.debug("hand_floor wrist: center: %s", motion.frames["センター"][bf_idx].position)
 
                                     print("○手首床近接あり: f: %s, 境界: %s, %s: %s, %s: %s" % (bf.frame, hand_floor_distance, org_direction, org_wrist_y / org_palm_length, reverse_org_direction, org_reverse_wrist_y / org_palm_length))
+                                else:
+                                    if (org_wrist_y <= org_palm_length * hand_floor_distance * 2 or org_reverse_wrist_y <= org_palm_length * hand_floor_distance * 2):
+                                        print("－手首床近接なし: f: %s, 境界: %s, %s: %s, %s: %s" % (bf.frame, hand_floor_distance, org_direction, org_wrist_y / org_palm_length, reverse_org_direction, org_reverse_wrist_y / org_palm_length))
 
                                 if (org_leg_y <= org_palm_length * leg_floor_distance or org_reverse_leg_y <= org_palm_length * leg_floor_distance):
                                     # 足床調整
@@ -1016,9 +1033,19 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                     logger.debug("hand_floor leg: center: %s", motion.frames["センター"][bf_idx].position)
 
                                     print("○足床近接あり: f: %s, 境界: %s, %s: %s, %s: %s" % (bf.frame, leg_floor_distance, org_direction, org_leg_y / org_palm_length, reverse_org_direction, org_reverse_leg_y / org_palm_length))
+                                else:
+                                    if (org_leg_y <= org_palm_length * leg_floor_distance * 2 or org_reverse_leg_y <= org_palm_length * leg_floor_distance * 2):
+                                        print("－足床近接なし: f: %s, 境界: %s, %s: %s, %s: %s" % (bf.frame, leg_floor_distance, org_direction, org_leg_y / org_palm_length, reverse_org_direction, org_reverse_leg_y / org_palm_length))
 
-                                # 手と足を調整して、寝転がっているのではない場合、上半身を調整する
-                                if (org_wrist_y <= org_palm_length * hand_floor_distance or org_reverse_wrist_y <= org_palm_length * hand_floor_distance) and (org_upper_y > org_leg_y * 1.2 or org_upper_y > org_reverse_leg_y * 1.2 or org_leg_y > org_palm_length * (leg_floor_distance * 1.5) or org_reverse_leg_y > org_palm_length * (leg_floor_distance * 1.5) ):
+                                logger.debug("%s: org_wrist_y: %s(%s), org_reverse_wrist_y: %s(%s)", bf.frame, org_wrist_y, org_palm_length * hand_floor_distance, org_reverse_wrist_y, org_palm_length * hand_floor_distance)
+                                logger.debug("%s: org_upper_y: %s(%s)(%s)", bf.frame, org_upper_y, org_leg_y * 1.2, org_reverse_leg_y * 1.2)
+                                logger.debug("%s: org_leg_y: %s(%s), org_reverse_leg_y: %s(%s)", bf.frame, org_leg_y, org_palm_length * 2, org_reverse_leg_y, org_palm_length * 2)
+
+                                # # 手と足を調整して、寝転がっているのではない場合、上半身を調整する
+                                # if (org_wrist_y <= org_palm_length * hand_floor_distance or org_reverse_wrist_y <= org_palm_length * hand_floor_distance) and (org_upper_y > org_leg_y * 1.2 or org_upper_y > org_reverse_leg_y * 1.2 or org_leg_y > org_palm_length * 2 or org_reverse_leg_y > org_palm_length * 2 ):
+                                # 手と足を調整した後、上半身を調整する
+                                if (org_wrist_y <= org_palm_length * hand_floor_distance or org_reverse_wrist_y <= org_palm_length * hand_floor_distance):
+                                    logger.debug("%s: 上半身調整対象", bf.frame)
 
                                     # 変換先モデルのIK計算前指までの情報
                                     _, _, _, _, rep_finger_global_3ds = utils.create_matrix_global(replace_model, all_rep_finger_links[org_direction], motion.frames, bf, None)
@@ -1203,12 +1230,12 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
     
     return is_error_outputed
 
-def is_prev_next_enable_key(bone_name, frames, bf_idx):
-    # 前回が登録対象で前回フレームと1Fしか離れていない場合、今回をOFF
-    # 次回が登録対象で次回フレームと1Fしか離れていない場合、今回をOFF
+def is_prev_next_enable_key(bone_name, frames, bf_idx, diff=1):
+    # 前回が登録対象で前回フレームとdiffFしか離れていない場合、今回をOFF
+    # 次回が登録対象で次回フレームとdiffFしか離れていない場合、今回をOFF
     return frames[bone_name][bf_idx].key == False and \
-        ((frames[bone_name][bf_idx - 1] and frames[bone_name][bf_idx - 1].key == True and frames[bone_name][bf_idx].frame - frames[bone_name][bf_idx - 1].frame < 2) or\
-        ( len(frames[bone_name]) > bf_idx + 1 and frames[bone_name][bf_idx + 1].key == True and frames[bone_name][bf_idx + 1].frame - frames[bone_name][bf_idx].frame < 2 ))
+        ((frames[bone_name][bf_idx - 1] and frames[bone_name][bf_idx - 1].key == True and frames[bone_name][bf_idx].frame - frames[bone_name][bf_idx - 1].frame < diff + 1) or\
+        ( len(frames[bone_name]) > bf_idx + 1 and frames[bone_name][bf_idx + 1].key == True and frames[bone_name][bf_idx + 1].frame - frames[bone_name][bf_idx].frame < diff + 1 ))
 
 # 手首から指３までで最も離れている関節の距離
 def calc_farer_finger_length(finger_global_3ds, all_finger_indexes, direction):

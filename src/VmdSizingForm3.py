@@ -37,7 +37,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver4.02_β01", pos = wx.DefaultPosition, size = wx.Size( 600,700 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver4.02_β02", pos = wx.DefaultPosition, size = wx.Size( 600,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -381,23 +381,23 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		bSizer15 = wx.BoxSizer( wx.HORIZONTAL )
 
-		self.m_staticText39 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"手首間の距離", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText39 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"手首間の距離　  ", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText39.SetToolTip( u"どのくらい手首が近付いた場合に、手首位置合わせを実行するか指定してください。\n値が小さいほど、手首が近付いた時だけ手首位置合わせを行います。\nサイジング実行時、手首間の距離がメッセージ欄に出てますので、参考にしてください。\nスライダーを最大に設定すると、常に手首位置合わせを行います。（両手剣等に便利です）" )
 		self.m_staticText39.Wrap( -1 )
 
 		bSizer15.Add( self.m_staticText39, 0, wx.ALL, 5 )
 
-		self.m_vmdHandDistanceTxt = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"　（1.7）", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_vmdHandDistanceTxt = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"（1.7）", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_vmdHandDistanceTxt.SetToolTip( u"現在指定されている手首間の距離です。元モデルの両手首位置がこの範囲内である場合、手首間の位置合わせを行います。" )
 		self.m_vmdHandDistanceTxt.Wrap( -1 )
 
 		bSizer15.Add( self.m_vmdHandDistanceTxt, 0, wx.ALL, 5 )
 
-		bSizer13.Add( bSizer15, 0, wx.ALL, 5 )
-
 		# 小数点を許可したスライダー
 		self.m_sliderHandDistance = FloatSlider( self.m_panelArm, wx.ID_ANY, 1.7, 0, 10, 0.1, self.m_vmdHandDistanceTxt, wx.DefaultPosition, wx.DefaultSize, wx.SL_HORIZONTAL )
-		bSizer13.Add( self.m_sliderHandDistance, 0, wx.ALL|wx.EXPAND, 5 )
+		bSizer15.Add( self.m_sliderHandDistance, 1, wx.ALL|wx.EXPAND, 5 )
+
+		bSizer13.Add( bSizer15, 1, wx.ALL|wx.EXPAND, 5 )
 
 		# -------------
 
@@ -409,39 +409,39 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		bSizerHandFloor15.Add( self.m_staticText40, 0, wx.ALL, 5 )
 
-		self.m_vmdHandFloorDistanceTxt = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"　（1.5）", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_vmdHandFloorDistanceTxt = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"（1.5）", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_vmdHandFloorDistanceTxt.SetToolTip( u"現在指定されている手首ボーンと床の距離です。元モデルの手首ボーン位置と床がこの範囲内である場合、手首と床の位置合わせを行います。" )
 		self.m_vmdHandFloorDistanceTxt.Wrap( -1 )
 
 		bSizerHandFloor15.Add( self.m_vmdHandFloorDistanceTxt, 0, wx.ALL, 5 )
 
-		bSizer13.Add( bSizerHandFloor15, 0, wx.ALL, 5 )
-
 		# 小数点を許可したスライダー
 		self.m_sliderHandFloorDistance = FloatSlider( self.m_panelArm, wx.ID_ANY, 1.5, 0, 10, 0.1, self.m_vmdHandFloorDistanceTxt, wx.DefaultPosition, wx.DefaultSize, wx.SL_HORIZONTAL )
-		bSizer13.Add( self.m_sliderHandFloorDistance, 0, wx.ALL|wx.EXPAND, 5 )
+		bSizerHandFloor15.Add( self.m_sliderHandFloorDistance, 1, wx.ALL|wx.EXPAND, 5 )
 		
+		bSizer13.Add( bSizerHandFloor15, 1, wx.ALL|wx.EXPAND, 5 )
+
 		# -------------
 
 		bSizerLegFloor15 = wx.BoxSizer( wx.HORIZONTAL )
 
-		self.m_staticText40 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"足と床との距離", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText40 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"足と床との距離　", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText40.SetToolTip( u"どのくらい足が床と近付いた場合に、足と床の位置合わせを実行するか指定してください。\n値が小さいほど、足が床に近付いた時だけ足と床の位置合わせを行います。\n距離の単位は、元モデルの手のひらの大きさです。" )
 		self.m_staticText40.Wrap( -1 )
 
 		bSizerLegFloor15.Add( self.m_staticText40, 0, wx.ALL, 5 )
 
-		self.m_vmdLegFloorDistanceTxt = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"　（1.1）", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_vmdLegFloorDistanceTxt = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"（1.5）", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_vmdLegFloorDistanceTxt.SetToolTip( u"現在指定されている足ボーンと床の距離です。元モデルの足ボーン位置と床がこの範囲内である場合、足と床の位置合わせを行います。" )
 		self.m_vmdLegFloorDistanceTxt.Wrap( -1 )
 
 		bSizerLegFloor15.Add( self.m_vmdLegFloorDistanceTxt, 0, wx.ALL, 5 )
 
-		bSizer13.Add( bSizerLegFloor15, 0, wx.ALL, 5 )
-
 		# 小数点を許可したスライダー
-		self.m_sliderLegFloorDistance = FloatSlider( self.m_panelArm, wx.ID_ANY, 1.1, 0, 10, 0.1, self.m_vmdLegFloorDistanceTxt, wx.DefaultPosition, wx.DefaultSize, wx.SL_HORIZONTAL )
-		bSizer13.Add( self.m_sliderLegFloorDistance, 0, wx.ALL|wx.EXPAND, 5 )
+		self.m_sliderLegFloorDistance = FloatSlider( self.m_panelArm, wx.ID_ANY, 1.5, 0, 10, 0.1, self.m_vmdLegFloorDistanceTxt, wx.DefaultPosition, wx.DefaultSize, wx.SL_HORIZONTAL )
+		bSizerLegFloor15.Add( self.m_sliderLegFloorDistance, 1, wx.ALL|wx.EXPAND, 5 )
+
+		bSizer13.Add( bSizerLegFloor15, 1, wx.ALL|wx.EXPAND, 5 )
 
 		# -------------
 
@@ -644,7 +644,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_csv_btnExec = wx.Button( self.m_panelCsv, wx.ID_ANY, u"CSV変換実行", wx.DefaultPosition, wx.Size( 200,50 ), 0 )
 		bSizerCsv4.Add( self.m_csv_btnExec, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 
-		self.m_csv_txtConsole = wx.TextCtrl( self.m_panelCsv, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( -1,470 ), wx.TE_MULTILINE|wx.TE_READONLY|wx.BORDER_NONE|wx.HSCROLL|wx.VSCROLL|wx.WANTS_CHARS )
+		self.m_csv_txtConsole = wx.TextCtrl( self.m_panelCsv, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( -1,370 ), wx.TE_MULTILINE|wx.TE_READONLY|wx.BORDER_NONE|wx.HSCROLL|wx.VSCROLL|wx.WANTS_CHARS )
 		self.m_csv_txtConsole.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_3DLIGHT ) )
 
 		bSizerCsv4.Add( self.m_csv_txtConsole, 1, wx.ALL|wx.EXPAND, 5 )
@@ -2630,12 +2630,12 @@ class FloatSlider(wx.Slider):
 			self._value = ival * self._res
 		
 		# logger.debug('OnScroll: value=%f, ival=%d', self._value, ival)
-		self._label.SetLabel(  u"　（{0}）".format( round(self._value, 3)) )
+		self._label.SetLabel(  u"（{0}）".format( round(self._value, 3)) )
 
 		event.Skip()
 
 	def GetValue(self):
-		return self._value
+		return round(self._value, 3)
 
 	def GetMin(self):
 		return self._min
