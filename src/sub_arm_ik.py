@@ -17,7 +17,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 # file_logger = logging.getLogger("message")
 # file_logger.addHandler(logging.FileHandler("test.csv"))
 
-def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_hand_ik, hand_distance, is_floor_hand, org_motion_frames):
+def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_hand_ik, hand_distance, is_floor_hand, hand_floor_distance, leg_floor_distance, org_motion_frames):
     is_error_outputed = False
 
     # -----------------------------------------------------------------
@@ -45,7 +45,7 @@ def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_h
 
         if hand_distance >= 0:
             # 手首位置合わせ処理実行
-            is_error_outputed = exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distance, is_floor_hand, org_motion_frames, all_rep_wrist_links, arm_links)
+            is_error_outputed = exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distance, is_floor_hand, hand_floor_distance, leg_floor_distance, org_motion_frames, all_rep_wrist_links, arm_links)
 
             # 補間曲線再設定
             reset_complement(motion, arm_links, is_floor_hand)
@@ -360,7 +360,7 @@ def prepare_fill_frame(motion, link_name, bf, hand_distance):
 
 
 # 手首位置合わせ実行
-def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distance, is_floor_hand, org_motion_frames, all_rep_wrist_links, arm_links):    
+def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distance, is_floor_hand, hand_floor_distance, leg_floor_distance, org_motion_frames, all_rep_wrist_links, arm_links):    
     # 腕IKによる位置調整を行う場合
 
     # エラーを一度でも出力しているか(腕IK)
@@ -577,7 +577,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                     reverse_direction = "右" if "左" == direction else "左"
 
                                     # 手首が近接している場合のみ、腕IK処理実施
-                                    print("○手首近接あり: f: %s(%s), 手首間の距離: %s" % (bf.frame, org_direction, org_wrist_diff_rate ))
+                                    print("○手首近接あり: f: %s(%s), 境界: %s, 手首間の距離: %s" % (bf.frame, org_direction, hand_distance, org_wrist_diff_rate ))
 
                                     # 元モデルの向いている回転量
                                     org_upper_direction_qq = utils.calc_upper_direction_qq(trace_model, org_upper_links, org_motion_frames, bf)
@@ -900,7 +900,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                                 break
 
                         else:
-                            print("－手首近接なし: f: %s(%s), 手首間の距離: %s" % (bf.frame, org_direction, org_wrist_diff_rate ))
+                            print("－手首近接なし: f: %s(%s), 境界: %s, 手首間の距離: %s" % (bf.frame, org_direction, hand_distance, org_wrist_diff_rate ))
                         
                         # logger.debug("bf_idx: %s, cf:%s", bf_idx, motion.frames["センター"][bf_idx].frame)
 
@@ -941,7 +941,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                 logger.debug("--------------")
                                 logger.debug("%s hand_floor: p: %s, wy: %s, wyr: %s, ly: %s, lyr: %s", bf.frame, org_palm_length, org_wrist_y, org_reverse_wrist_y, org_leg_y, org_reverse_leg_y)
 
-                                if (org_wrist_y <= org_palm_length * 1.5 or org_reverse_wrist_y <= org_palm_length * 1.5):
+                                if (org_wrist_y <= org_palm_length * hand_floor_distance or org_reverse_wrist_y <= org_palm_length * hand_floor_distance):
                                     # 手首床調整
 
                                     # 変換先モデルのIK計算前指までの情報
@@ -974,9 +974,9 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
 
                                     logger.debug("hand_floor wrist: center: %s", motion.frames["センター"][bf_idx].position)
 
-                                    print("○手首床近接あり: f: %s, センター補正: %s(%s)" % (bf.frame, rep_center_diff, rep_wrist_thick))
+                                    print("○手首床近接あり: f: %s, 境界: %s, %s: %s, %s: %s" % (bf.frame, hand_floor_distance, org_direction, org_wrist_y / org_palm_length, reverse_org_direction, org_reverse_wrist_y / org_palm_length))
 
-                                if (org_leg_y <= org_palm_length * 1.5 or org_reverse_leg_y <= org_palm_length * 1.5):
+                                if (org_leg_y <= org_palm_length * leg_floor_distance or org_reverse_leg_y <= org_palm_length * leg_floor_distance):
                                     # 足床調整
 
                                     # 変換先モデルのIK計算前足までの情報
@@ -1015,10 +1015,10 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
 
                                     logger.debug("hand_floor leg: center: %s", motion.frames["センター"][bf_idx].position)
 
-                                    print("○足床近接あり: f: %s, センター補正: %s(%s)" % (bf.frame, rep_center_diff, back_thickness_diff))
+                                    print("○足床近接あり: f: %s, 境界: %s, %s: %s, %s: %s" % (bf.frame, leg_floor_distance, org_direction, org_leg_y / org_palm_length, reverse_org_direction, org_reverse_leg_y / org_palm_length))
 
                                 # 手と足を調整して、寝転がっているのではない場合、上半身を調整する
-                                if (org_wrist_y <= org_palm_length * 1.5 or org_reverse_wrist_y <= org_palm_length * 1.5) and (org_upper_y > org_leg_y * 1.2 or org_upper_y > org_reverse_leg_y * 1.2 or org_leg_y > org_palm_length * 2 or org_reverse_leg_y > org_palm_length * 2 ):
+                                if (org_wrist_y <= org_palm_length * hand_floor_distance or org_reverse_wrist_y <= org_palm_length * hand_floor_distance) and (org_upper_y > org_leg_y * 1.2 or org_upper_y > org_reverse_leg_y * 1.2 or org_leg_y > org_palm_length * (leg_floor_distance * 1.5) or org_reverse_leg_y > org_palm_length * (leg_floor_distance * 1.5) ):
 
                                     # 変換先モデルのIK計算前指までの情報
                                     _, _, _, _, rep_finger_global_3ds = utils.create_matrix_global(replace_model, all_rep_finger_links[org_direction], motion.frames, bf, None)

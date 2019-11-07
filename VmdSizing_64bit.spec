@@ -1,4 +1,5 @@
 # -*- mode: python -*-
+# -*- coding: utf-8 -*-
 
 block_cipher = None
 
@@ -24,7 +25,7 @@ exe = EXE(pyz,
           a.zipfiles,
           a.datas,
           [],
-          name='VmdSizing_4.01_64bit',
+          name='VmdSizing_4.02_β01_64bit',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,

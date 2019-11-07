@@ -170,8 +170,12 @@ class VmdWriter():
             
         if len(bone_frames) > 0 or len(morph_frames) > 0 or len(showik_frames) > 0:
             
-            # モデル名を20byteで切る
-            model_bname = model_name.encode('cp932').decode('shift_jis').encode('shift_jis')[:20]
+            try:
+                # モデル名を20byteで切る
+                model_bname = model_name.encode('cp932').decode('shift_jis').encode('shift_jis')[:20]
+            except Exception as e:
+                print("モデル名に日本語・英語で判読できない文字が含まれているため、仮モデル名を設定します。 %s" % model_name)
+                model_bname = "Vmd Sized Model".encode('shift_jis')[:20]
             # print("model_bname: %s, model_bname_len: %s" % (model_bname, len(model_bname)))
 
             # 20文字に満たなかった場合、埋める

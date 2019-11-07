@@ -25,6 +25,7 @@ import wrapperutils
 import convert_vmd
 import blend_pmx
 import convert_csv
+import slice_frame_keys
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VmdSizing").getChild(__name__)
@@ -36,13 +37,16 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver4.01", pos = wx.DefaultPosition, size = wx.Size( 600,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver4.02_β01", pos = wx.DefaultPosition, size = wx.Size( 600,700 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
 		self.vmd_choice_values = []
 		self.rep_choice_values = []
 		self.rep_rate_values = []
+
+		# 分割配列
+		self.slice_frame_values = []
 
 		# ファイル解析情報
 		self.vmd_data = None
@@ -58,6 +62,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.arrow_choices = None
 		self.rep_choices = None
 		self.rep_rates = None
+		self.slice_frames = None
 
 		# スレッド用
 		self.worker = None
@@ -65,6 +70,8 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.csv_worker = None
 		# VMDスレッド用
 		self.vmd_worker = None
+		# 補間曲線分割スレッド用
+		self.slice_worker = None
 		# ブレンドスレッド用
 		self.blend_worker = None
 
@@ -293,7 +300,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		bSizer13 = wx.BoxSizer( wx.VERTICAL )
 
-		self.m_staticText7 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"腕を変換先モデルに合わせて調整する事ができます。\n「腕接触回避」と「手首位置合わせ」のいずれか片方しか選択できません。\n腕の動きが、元々のモーションから変わる事があります。\nいずれもそれなりに時間がかかります。", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText7 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"腕を変換先モデルに合わせて調整する事ができます。\n「腕接触回避」と「手首位置合わせ」のいずれか片方しか選択できません。\n腕の動きが、元々のモーションから変わる事があります。いずれもそれなりに時間がかかります。", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText7.Wrap( -1 )
 
 		bSizer13.Add( self.m_staticText7, 0, wx.ALL, 5 )
@@ -321,7 +328,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_staticText91.SetFont( wx.Font( wx.NORMAL_FONT.GetPointSize(), wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, False, wx.EmptyString ) )
 		bSizer13.Add( self.m_staticText91, 0, wx.ALL, 5 )
 
-		self.m_staticText92 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"ねんどろ風など、頭身が大幅に異なる場合に、\n頭部に腕が貫通してしまうのを軽減できます。", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText92 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"ねんどろ風など、頭身が大幅に異なる場合に、頭部に腕が貫通してしまうのを軽減できます。", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText92.Wrap( -1 )
 
 		bSizer13.Add( self.m_staticText92, 0, wx.ALL, 5 )
@@ -360,7 +367,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		bSizer13.Add( self.m_staticText911, 0, wx.ALL, 5 )
 
-		self.m_staticText93 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"両手を合わせるなどのモーションを、変換先モデルの手首位置に合わせて調整します。\n手首間の距離を調整することで、位置合わせの適用範囲を調整することができます。\nサイジング実行時、手首間の距離がメッセージ欄に出てますので、参考にしてください。\n床位置合わせオプションをONにした場合、床との手首位置合わせも一緒に行います。", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText93 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"両手を合わせるなどのモーションを、変換先モデルの手首位置に合わせて調整します。\nそれぞれの距離を調整することで、位置合わせの適用範囲を調整することができます。\nモーションの中で、手首や足がどの辺の位置にいるかは、メッセージ欄に出力されます。", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText93.Wrap( -1 )
 
 		bSizer13.Add( self.m_staticText93, 0, wx.ALL, 5 )
@@ -375,13 +382,13 @@ class VmdSizingForm3 ( wx.Frame ):
 		bSizer15 = wx.BoxSizer( wx.HORIZONTAL )
 
 		self.m_staticText39 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"手首間の距離", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText39.SetToolTip( u"どのくらい手首が近付いた場合に、手首位置合わせを実行するか指定してください。\n値が小さいほど、手首が近付いた時だけ手首位置合わせを行います。\nスライダーを最大に設定すると、常に手首位置合わせを行います。（両手剣等に便利です）" )
+		self.m_staticText39.SetToolTip( u"どのくらい手首が近付いた場合に、手首位置合わせを実行するか指定してください。\n値が小さいほど、手首が近付いた時だけ手首位置合わせを行います。\nサイジング実行時、手首間の距離がメッセージ欄に出てますので、参考にしてください。\nスライダーを最大に設定すると、常に手首位置合わせを行います。（両手剣等に便利です）" )
 		self.m_staticText39.Wrap( -1 )
 
 		bSizer15.Add( self.m_staticText39, 0, wx.ALL, 5 )
 
 		self.m_vmdHandDistanceTxt = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"　（1.7）", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_vmdHandDistanceTxt.SetToolTip( u"現在指定されている手首間の距離です。" )
+		self.m_vmdHandDistanceTxt.SetToolTip( u"現在指定されている手首間の距離です。元モデルの両手首位置がこの範囲内である場合、手首間の位置合わせを行います。" )
 		self.m_vmdHandDistanceTxt.Wrap( -1 )
 
 		bSizer15.Add( self.m_vmdHandDistanceTxt, 0, wx.ALL, 5 )
@@ -391,6 +398,52 @@ class VmdSizingForm3 ( wx.Frame ):
 		# 小数点を許可したスライダー
 		self.m_sliderHandDistance = FloatSlider( self.m_panelArm, wx.ID_ANY, 1.7, 0, 10, 0.1, self.m_vmdHandDistanceTxt, wx.DefaultPosition, wx.DefaultSize, wx.SL_HORIZONTAL )
 		bSizer13.Add( self.m_sliderHandDistance, 0, wx.ALL|wx.EXPAND, 5 )
+
+		# -------------
+
+		bSizerHandFloor15 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.m_staticText40 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"手首と床との距離", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText40.SetToolTip( u"どのくらい手首が床と近付いた場合に、手首と床の位置合わせを実行するか指定してください。\n値が小さいほど、手首が床に近付いた時だけ手首と床の位置合わせを行います。\n距離の単位は、元モデルの手のひらの大きさです。" )
+		self.m_staticText40.Wrap( -1 )
+
+		bSizerHandFloor15.Add( self.m_staticText40, 0, wx.ALL, 5 )
+
+		self.m_vmdHandFloorDistanceTxt = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"　（1.5）", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_vmdHandFloorDistanceTxt.SetToolTip( u"現在指定されている手首ボーンと床の距離です。元モデルの手首ボーン位置と床がこの範囲内である場合、手首と床の位置合わせを行います。" )
+		self.m_vmdHandFloorDistanceTxt.Wrap( -1 )
+
+		bSizerHandFloor15.Add( self.m_vmdHandFloorDistanceTxt, 0, wx.ALL, 5 )
+
+		bSizer13.Add( bSizerHandFloor15, 0, wx.ALL, 5 )
+
+		# 小数点を許可したスライダー
+		self.m_sliderHandFloorDistance = FloatSlider( self.m_panelArm, wx.ID_ANY, 1.5, 0, 10, 0.1, self.m_vmdHandFloorDistanceTxt, wx.DefaultPosition, wx.DefaultSize, wx.SL_HORIZONTAL )
+		bSizer13.Add( self.m_sliderHandFloorDistance, 0, wx.ALL|wx.EXPAND, 5 )
+		
+		# -------------
+
+		bSizerLegFloor15 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.m_staticText40 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"足と床との距離", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText40.SetToolTip( u"どのくらい足が床と近付いた場合に、足と床の位置合わせを実行するか指定してください。\n値が小さいほど、足が床に近付いた時だけ足と床の位置合わせを行います。\n距離の単位は、元モデルの手のひらの大きさです。" )
+		self.m_staticText40.Wrap( -1 )
+
+		bSizerLegFloor15.Add( self.m_staticText40, 0, wx.ALL, 5 )
+
+		self.m_vmdLegFloorDistanceTxt = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"　（1.1）", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_vmdLegFloorDistanceTxt.SetToolTip( u"現在指定されている足ボーンと床の距離です。元モデルの足ボーン位置と床がこの範囲内である場合、足と床の位置合わせを行います。" )
+		self.m_vmdLegFloorDistanceTxt.Wrap( -1 )
+
+		bSizerLegFloor15.Add( self.m_vmdLegFloorDistanceTxt, 0, wx.ALL, 5 )
+
+		bSizer13.Add( bSizerLegFloor15, 0, wx.ALL, 5 )
+
+		# 小数点を許可したスライダー
+		self.m_sliderLegFloorDistance = FloatSlider( self.m_panelArm, wx.ID_ANY, 1.1, 0, 10, 0.1, self.m_vmdLegFloorDistanceTxt, wx.DefaultPosition, wx.DefaultSize, wx.SL_HORIZONTAL )
+		bSizer13.Add( self.m_sliderLegFloorDistance, 0, wx.ALL|wx.EXPAND, 5 )
+
+		# -------------
 
 		self.m_panelArm.SetSizer( bSizer13 )
 		self.m_panelArm.Layout()
@@ -591,7 +644,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_csv_btnExec = wx.Button( self.m_panelCsv, wx.ID_ANY, u"CSV変換実行", wx.DefaultPosition, wx.Size( 200,50 ), 0 )
 		bSizerCsv4.Add( self.m_csv_btnExec, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 
-		self.m_csv_txtConsole = wx.TextCtrl( self.m_panelCsv, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( -1,370 ), wx.TE_MULTILINE|wx.TE_READONLY|wx.BORDER_NONE|wx.HSCROLL|wx.VSCROLL|wx.WANTS_CHARS )
+		self.m_csv_txtConsole = wx.TextCtrl( self.m_panelCsv, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( -1,470 ), wx.TE_MULTILINE|wx.TE_READONLY|wx.BORDER_NONE|wx.HSCROLL|wx.VSCROLL|wx.WANTS_CHARS )
 		self.m_csv_txtConsole.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_3DLIGHT ) )
 
 		bSizerCsv4.Add( self.m_csv_txtConsole, 1, wx.ALL|wx.EXPAND, 5 )
@@ -675,6 +728,75 @@ class VmdSizingForm3 ( wx.Frame ):
 		bSizerVmd3.Fit( self.m_panelVmd )
 		self.m_note.AddPage( self.m_panelVmd, u"VMD", False )
 
+
+		# # 分割タブ ------------------------------------
+
+		# self.m_panelSlice = wx.Panel( self.m_note, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+
+		# bSliceSizer8 = wx.BoxSizer( wx.VERTICAL )
+
+		# self.m_panelSliceHeader = wx.Panel( self.m_panelSlice, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+		# bSliceSizer10 = wx.BoxSizer( wx.VERTICAL )
+
+		# self.m_slice_staticText132 = wx.StaticText( self.m_panelSliceHeader, wx.ID_ANY, u"VMDのキーを補間曲線を維持しつつ分割する事ができます。\n分割前の補間曲線を維持するため、指定したキーに加えて、更に分割キーが追加される場合があります。\n分割キー値が0の項目はスキップします。", wx.DefaultPosition, wx.DefaultSize, 0 )
+		# self.m_slice_staticText132.Wrap( -1 )
+		# bSliceSizer10.Add( self.m_slice_staticText132, 0, wx.ALL, 5 )
+
+		# self.m_slice_staticline5 = wx.StaticLine( self.m_panelSliceHeader, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
+		# bSliceSizer10.Add( self.m_slice_staticline5, 0, wx.EXPAND |wx.ALL, 5 )
+
+		# self.m_slice_staticText1 = wx.StaticText( self.m_panelSliceHeader, wx.ID_ANY, u"VMDファイル", wx.DefaultPosition, wx.DefaultSize, 0 )
+		# self.m_slice_staticText1.Wrap( -1 )
+
+		# bSliceSizer10.Add( self.m_slice_staticText1, 0, wx.ALL, 5 )
+
+		# self.m_slice_fileVmd = wx.FilePickerCtrl( self.m_panelSliceHeader, wx.ID_ANY, wx.EmptyString, u"VMDファイルを選択してください", u"VMDファイル (*.vmd)|*.vmd|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.Size( -1,-1 ), wx.FLP_DEFAULT_STYLE )
+		# self.m_slice_fileVmd.GetPickerCtrl().SetLabel("開く")
+		# bSliceSizer10.Add( self.m_slice_fileVmd, 0, wx.ALL|wx.EXPAND, 5 )
+
+		# self.m_slice_btnAddLine = wx.Button( self.m_panelSliceHeader, wx.ID_ANY, u"キー追加", wx.DefaultPosition, wx.DefaultSize, 0 )
+		# self.m_slice_btnAddLine.SetToolTip( u"分割フレーム番号欄を追加します。\n上限はありません。" )
+		# bSliceSizer10.Add( self.m_slice_btnAddLine, 0, wx.ALIGN_RIGHT|wx.ALL, 5 )
+
+		# self.m_panelSliceHeader.SetSizer( bSliceSizer10 )
+		# self.m_panelSliceHeader.Layout()
+		# bSliceSizer10.Fit( self.m_panelSliceHeader )
+
+		# bSliceSizer8.Add( self.m_panelSliceHeader, 0, wx.EXPAND |wx.ALL, 5 )
+
+		# self.m_scrolledSlice = wx.ScrolledWindow( self.m_panelSlice, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.FULL_REPAINT_ON_RESIZE|wx.VSCROLL )
+		# self.m_scrolledSlice.SetScrollRate( 5, 5 )
+
+		# self.gridSliceSizer = wx.FlexGridSizer( 0, 6, 0, 0 )
+		# self.gridSliceSizer.SetFlexibleDirection( wx.BOTH )
+		# self.gridSliceSizer.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+
+		# self.m_scrolledSlice.SetSizer( self.gridSliceSizer )
+		# self.m_scrolledSlice.Layout()
+		# # self.gridSliceSizer.Fit( self.m_scrolledSlice )
+		# bSliceSizer8.Add( self.m_scrolledSlice, 1, wx.ALL|wx.EXPAND|wx.FIXED_MINSIZE, 5 )
+
+		# bSizerSlice4 = wx.BoxSizer( wx.VERTICAL )
+
+		# self.m_slice_btnExec = wx.Button( self.m_panelSlice, wx.ID_ANY, u"分割実行", wx.DefaultPosition, wx.Size( 200,50 ), 0 )
+		# bSizerSlice4.Add( self.m_slice_btnExec, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+		# self.m_slice_txtConsole = wx.TextCtrl( self.m_panelSlice, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( -1,120 ), wx.TE_MULTILINE|wx.TE_READONLY|wx.BORDER_NONE|wx.HSCROLL|wx.VSCROLL|wx.WANTS_CHARS )
+		# self.m_slice_txtConsole.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_3DLIGHT ) )
+
+		# bSizerSlice4.Add( self.m_slice_txtConsole, 1, wx.ALL|wx.EXPAND, 5 )
+
+		# self.m_slice_Gauge = wx.Gauge( self.m_panelSlice, wx.ID_ANY, 100, wx.DefaultPosition, wx.DefaultSize, wx.GA_HORIZONTAL )
+		# self.m_slice_Gauge.SetValue( 0 )
+		# bSizerSlice4.Add( self.m_slice_Gauge, 0, wx.ALL|wx.EXPAND, 5 )
+	
+		# bSliceSizer8.Add( bSizerSlice4, 0, wx.EXPAND, 5 )
+
+		# self.m_panelSlice.SetSizer( bSliceSizer8 )
+		# self.m_panelSlice.Layout()
+		# bSliceSizer8.Fit( self.m_panelSlice )
+		# self.m_note.AddPage( self.m_panelSlice, u"分割", False )
+
 		# ---------------------------
 
 		bSizer1.Add( self.m_note, 1, wx.EXPAND, 5 )
@@ -693,6 +815,8 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_csv_btnExec.Bind( wx.EVT_BUTTON, self.OnCsvExec )
 		self.m_vmd_btnExec.Bind( wx.EVT_BUTTON, self.OnVmdExec )
 		# self.m_blend_btnExec.Bind( wx.EVT_BUTTON, self.OnBlendExec )
+		# self.m_slice_btnAddLine.Bind( wx.EVT_BUTTON, self.OnAddSliceCell )
+		# self.m_slice_btnExec.Bind( wx.EVT_BUTTON, self.OnSliceExec )
 		
 		self.Bind(wx.EVT_IDLE, self.OnIdle)
 
@@ -700,12 +824,14 @@ class VmdSizingForm3 ( wx.Frame ):
 		EVT_RESULT(self, self.OnResult)
 		CSV_EVT_RESULT(self, self.OnCsvResult)
 		VMD_EVT_RESULT(self, self.OnVmdResult)
+		# SLICE_EVT_RESULT(self, self.OnSliceResult)
 		BLEND_EVT_RESULT(self, self.OnBlendResult)
 
 		# And indicate we don't have a worker thread yet
 		self.worker = None
 		self.csv_worker = None
 		self.vmd_worker = None
+		# self.slice_worker = None
 		self.blend_worker = None
 
 		# D&Dの実装
@@ -720,6 +846,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_vmd_fileCsvBone.SetDropTarget(MyFileDropTarget(self, self.m_vmd_fileCsvBone, self.m_vmd_staticText1, ".csv"))
 		self.m_vmd_fileCsvMorph.SetDropTarget(MyFileDropTarget(self, self.m_vmd_fileCsvMorph, self.m_vmd_morph_staticText1, ".csv"))
 		self.m_vmd_fileCsvCamera.SetDropTarget(MyFileDropTarget(self, self.m_vmd_fileCsvCamera, self.m_vmd_camera_staticText1, ".csv"))
+		# self.m_slice_fileVmd.SetDropTarget(MyFileDropTarget(self, self.m_slice_fileVmd, self.m_slice_staticText1, ".vmd"))
 		# self.m_blend_filePmx.SetDropTarget(MyFileDropTarget(self, self.m_blend_filePmx, self.m_staticText11, ".pmx"))
 
 		# ファイルパス変更時の処理
@@ -747,6 +874,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_vmd_fileCsvBone.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_vmd_fileCsvBone.GetTextCtrl()))
 		self.m_vmd_fileCsvMorph.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_vmd_fileCsvMorph.GetTextCtrl()))
 		self.m_vmd_fileCsvCamera.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_vmd_fileCsvCamera.GetTextCtrl()))
+		# self.m_slice_fileVmd.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_slice_fileVmd.GetTextCtrl()))
 		# self.m_blend_filePmx.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_blend_filePmx.GetTextCtrl()))
 		# メッセージ欄も全選択可とする
 		self.m_txtConsole.Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_txtConsole))
@@ -768,6 +896,13 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		# スライダーの変更時
 		self.m_sliderHandDistance.Bind(wx.EVT_SCROLL_CHANGED, self.OnChangeArmIKHandDistance)
+
+		# スライダーの変更時
+		self.m_sliderHandFloorDistance.Bind(wx.EVT_SCROLL_CHANGED, self.OnChangeArmIKFloorDistance)
+		self.m_sliderLegFloorDistance.Bind(wx.EVT_SCROLL_CHANGED, self.OnChangeArmIKFloorDistance)
+
+		# # 分割フレームのセル追加
+		# self.AddSliceCell()
 
 		# 終了時の処理
 		self.Bind(wx.EVT_CLOSE, self.OnClose)
@@ -877,6 +1012,45 @@ class VmdSizingForm3 ( wx.Frame ):
 			# 元に戻す
 			sys.stdout = self.m_txtConsole
 
+
+	def OnSliceExec( self, event ):
+		self.DisableInput()
+
+		self.m_slice_txtConsole.Clear()
+		wx.GetApp().Yield()
+
+		# 分割コンソールに切り替え
+		sys.stdout = self.m_slice_txtConsole
+
+		self.DisableInput()
+
+		if wrapperutils.is_valid_file(self.m_slice_fileVmd.GetPath(), "VMDファイル", ".vmd", True) == False:
+
+			self.EnableInput()
+			# プログレス非表示
+			self.m_slice_Gauge.SetValue(0)
+
+			# 元に戻す
+			sys.stdout = self.m_txtConsole
+
+			event.Skip()
+			return
+
+		if not self.slice_worker:
+			# 分割キーデータ生成				
+			self.slice_frame_values = self.create_slice_frame_data()
+
+			# スレッド実行
+			self.slice_worker = SliceWorkerThread(self)
+			self.slice_worker.start()
+			self.slice_worker.stop_event.set()
+		else:
+			print("まだ処理が実行中です。終了してから再度実行してください。")
+
+			# 元に戻す
+			sys.stdout = self.m_txtConsole
+
+
 	def OnShowHistory(self, event, hitories, maxc, target_ctrl, label_ctrl, ext):
 		# 入力行を伸ばす
 		hs = copy.deepcopy(hitories)
@@ -961,6 +1135,13 @@ class VmdSizingForm3 ( wx.Frame ):
 		# パス再設定
 		self.OnCreateOutputVmd(event)
 	
+	# 腕IKでスライダーを変えたら、親の選択有効
+	def OnChangeArmIKFloorDistance(self, event):
+		self.m_radioArmIK.SetValue(1)
+		self.m_checkFloorArmDistance.SetValue(1)
+		# パス再設定
+		self.OnCreateOutputVmd(event)
+
 	# 腕IKで床にチェックを入れたら、親の選択有効
 	def OnChangeFloorArmDistance(self, event):
 		self.m_radioArmIK.SetValue(1)
@@ -1259,6 +1440,22 @@ class VmdSizingForm3 ( wx.Frame ):
 		# パス再設定
 		self.OnCreateOutputVmd(wx.EVT_TEXT)
 
+
+	def AddSliceCell(self):
+		# フレーム番号
+		if not self.slice_frames:
+			self.slice_frames = []
+
+		self.slice_frames.append(wx.SpinCtrl( self.m_scrolledSlice, id=wx.ID_ANY, size=wx.Size( 80,-1 ), value="0", min=0, initial=1 ))
+		self.gridSliceSizer.Add( self.slice_frames[-1], 0, wx.ALL, 5 )
+
+		self.gridSliceSizer.Layout()
+		# スクロールバーの表示のためにサイズ調整
+		self.gridSliceSizer.FitInside( self.m_scrolledSlice )
+
+	def OnAddSliceCell(self, event):
+		# フレーム列追加
+		self.AddSliceCell()
 
 	
 	def LoadFiles(self, is_print=True):
@@ -1691,6 +1888,18 @@ class VmdSizingForm3 ( wx.Frame ):
 		
 		return 	vmd_choice_values, rep_choice_values, rep_rate_values
 
+	def create_slice_frame_data(self):
+		logger.debug("create_slice_frame_data")
+
+		slice_frame_values = []
+
+		if self.slice_frames:
+			for sf in self.slice_frames:
+				if sf.GetValue() > 0:
+					slice_frame_values.append(sf.GetValue())
+		
+		return slice_frame_values
+
 	def DisableInput(self):
 		# ファイル入力不可
 		self.m_fileVmd.Disable()
@@ -1725,6 +1934,14 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_camera_fileOrgPmx.Disable()
 		self.m_camera_btnHistoryVmd.Disable()
 		self.m_camera_btnHistoryOrgPmx.Disable()
+
+		# # 分割
+		# # 行追加ボタン押下不可
+		# self.m_slice_btnAddLine.Disable()
+		# # 実行ボタン押下不可
+		# self.m_slice_btnExec.Disable()
+		# # ファイル入力不可
+		# self.m_slice_fileVmd.Disable()
 
 		# # ブレンド
 		# self.m_blend_filePmx.Disable()
@@ -1767,6 +1984,14 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_camera_fileOrgPmx.Enable()
 		self.m_camera_btnHistoryVmd.Enable()
 		self.m_camera_btnHistoryOrgPmx.Enable()
+
+		# # 分割
+		# # 行追加ボタン押下不可
+		# self.m_slice_btnAddLine.Enable()
+		# # 実行ボタン押下不可
+		# self.m_slice_btnExec.Enable()
+		# # ファイル入力不可
+		# self.m_slice_fileVmd.Enable()
 
 		# # ブレンド
 		# self.m_blend_filePmx.Enable()
@@ -1905,6 +2130,20 @@ class VmdSizingForm3 ( wx.Frame ):
 		# コンソールを元に戻す
 		sys.stdout = self.m_txtConsole		
 
+	# スレッド実行結果
+	def OnSliceResult(self, event):
+		# スレッド削除
+		self.slice_worker = None
+		# 入力有効化
+		self.EnableInput()
+		# プログレス非表示
+		self.m_slice_Gauge.SetValue(0)
+		# 分割配列初期化
+		self.slice_frame_values = []
+
+		# コンソールを元に戻す
+		sys.stdout = self.m_txtConsole		
+
 	def OnBlendExec( self, event ):
 		self.DisableInput()
 
@@ -2026,6 +2265,7 @@ class VmdSizingForm3 ( wx.Frame ):
 EVT_RESULT_ID = wx.NewId()
 CSV_EVT_RESULT_ID = wx.NewId()
 VMD_EVT_RESULT_ID = wx.NewId()
+SLICE_EVT_RESULT_ID = wx.NewId()
 BLEND_EVT_RESULT_ID = wx.NewId()
 
 def EVT_RESULT(win, func):
@@ -2043,6 +2283,10 @@ def VMD_EVT_RESULT(win, func):
 def BLEND_EVT_RESULT(win, func):
 	"""Define Result Event."""
 	win.Connect(-1, -1, BLEND_EVT_RESULT_ID, func)
+
+def SLICE_EVT_RESULT(win, func):
+	"""Define Result Event."""
+	win.Connect(-1, -1, SLICE_EVT_RESULT_ID, func)
 
 class ResultEvent(wx.PyEvent):
 	"""Simple event to carry arbitrary result data."""
@@ -2064,6 +2308,13 @@ class VmdResultEvent(wx.PyEvent):
 		"""Init Result Event."""
 		wx.PyEvent.__init__(self)
 		self.SetEventType(VMD_EVT_RESULT_ID)
+
+class SliceResultEvent(wx.PyEvent):
+	"""Simple event to carry arbitrary result data."""
+	def __init__(self, data):
+		"""Init Result Event."""
+		wx.PyEvent.__init__(self)
+		self.SetEventType(SLICE_EVT_RESULT_ID)
 
 class BlendResultEvent(wx.PyEvent):
 	"""Simple event to carry arbitrary result data."""
@@ -2109,6 +2360,8 @@ class ExecWorkerThread(Thread):
 			, self._notify_window.m_radioArmIK.GetValue()
 			, self._notify_window.m_sliderHandDistance.GetValue()
 			, self._notify_window.m_checkFloorArmDistance.GetValue()
+			, self._notify_window.m_sliderHandFloorDistance.GetValue()
+			, self._notify_window.m_sliderLegFloorDistance.GetValue()
 			, self._notify_window.vmd_choice_values
 			, self._notify_window.rep_choice_values			
 			, self._notify_window.rep_rate_values
@@ -2206,6 +2459,44 @@ class VmdWorkerThread(Thread):
 		"""abort worker thread."""
 		# Method for use by main thread to signal an abort
 		self._want_abort = 1
+
+
+
+# Thread class that executes processing
+# http://nobunaga.hatenablog.jp/entry/2016/06/03/204450
+class SliceWorkerThread(Thread):
+	"""Worker Thread Class."""
+	def __init__(self, notify_window):
+		"""Init Worker Thread Class."""
+		Thread.__init__(self)
+		self._notify_window = notify_window
+		self._want_abort = 0
+		self.stop_event = Event()
+		# メイン終了時にもスレッド終了する
+		self.daemon = True
+
+	def stop(self):
+		self.stop_event.set()
+
+	def run(self):
+		"""Run Worker Thread."""
+		# This is the code executing in the new thread. Simulation of
+		# a long process (well, 10s here) as a simple loop - you will
+		# need to structure your processing so that you periodically
+		# peek at the abort variable
+
+		slice_frame_keys.main(self._notify_window.m_slice_fileVmd.GetPath(), self._notify_window.slice_frame_values)
+
+		# Here's where the result would be returned (this is an
+		# example fixed result of the number 10, but it could be
+		# any Python object)
+		wx.PostEvent(self._notify_window, SliceResultEvent(None))
+
+	def abort(self):
+		"""abort worker thread."""
+		# Method for use by main thread to signal an abort
+		self._want_abort = 1
+
 
 # Thread class that executes processing
 # http://nobunaga.hatenablog.jp/entry/2016/06/03/204450
