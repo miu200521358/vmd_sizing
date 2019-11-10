@@ -17,7 +17,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 # file_logger = logging.getLogger("message")
 # file_logger.addHandler(logging.FileHandler("test.csv"))
 
-def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_hand_ik, hand_distance, is_floor_hand, hand_floor_distance, leg_floor_distance, org_motion_frames):
+def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, org_motion_frames):
     is_error_outputed = False
 
     # -----------------------------------------------------------------
@@ -45,7 +45,7 @@ def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_h
 
         if hand_distance >= 0:
             # 手首位置合わせ処理実行
-            is_error_outputed = exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distance, is_floor_hand, hand_floor_distance, leg_floor_distance, org_motion_frames, all_rep_wrist_links, arm_links)
+            is_error_outputed = exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, org_motion_frames, all_rep_wrist_links, arm_links)
 
             # 補間曲線再設定
             reset_complement(motion, arm_links, is_floor_hand)
@@ -360,7 +360,7 @@ def prepare_fill_frame(motion, link_name, bf, hand_distance):
 
 
 # 手首位置合わせ実行
-def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distance, is_floor_hand, hand_floor_distance, leg_floor_distance, org_motion_frames, all_rep_wrist_links, arm_links):    
+def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, org_motion_frames, all_rep_wrist_links, arm_links):    
     # 腕IKによる位置調整を行う場合
 
     # エラーを一度でも出力しているか(腕IK)
@@ -982,16 +982,28 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                     logger.debug("hand_floor wrist: rwy: %s, rwyr: %s", rep_wrist_y, rep_reverse_wrist_y)
                                     logger.debug("hand_floor wrist: (min(org_wrist_y, org_reverse_wrist_y) - min(rep_wrist_y, rep_reverse_wrist_y)): %s", (min(org_wrist_y, org_reverse_wrist_y) - min(rep_wrist_y, rep_reverse_wrist_y)))
 
-                                    # 床位置合わせで、手首のY位置が大体手の大きさ以下の場合、手首と床の位置合わせ
-                                    motion.frames["センター"][bf_idx].position.setY(motion.frames["センター"][bf_idx].position.y() + rep_center_diff + rep_wrist_thick)
-                                    motion.frames["センター"][bf_idx].key = True
+                                    logger.info("%s: is_floor_hand_up: %s, is_floor_hand_down: %s, rep_center_diff: %s", bf.frame, is_floor_hand_up, is_floor_hand_down, rep_center_diff)
 
-                                    logger.debug("hand_floor wrist: center: %s", motion.frames["センター"][bf_idx].position)
+                                    if (is_floor_hand_up and rep_center_diff > 0) or (is_floor_hand_down and rep_center_diff < 0):
+                                        logger.info("○手首床近接あり")
 
-                                    print("○手首床近接あり: f: %s, 境界: %s, %s: %s, %s: %s" % (bf.frame, hand_floor_distance, org_direction, org_wrist_y / org_palm_length, reverse_org_direction, org_reverse_wrist_y / org_palm_length))
+                                        # 床位置合わせで、手首のY位置が大体手の大きさ以下の場合、手首と床の位置合わせ
+                                        motion.frames["センター"][bf_idx].position.setY(motion.frames["センター"][bf_idx].position.y() + rep_center_diff + rep_wrist_thick)
+                                        motion.frames["センター"][bf_idx].key = True
+
+                                        logger.debug("hand_floor wrist: center: %s", motion.frames["センター"][bf_idx].position)
+
+                                        print("○手首床近接あり: f: %s, 境界: %s, %s: %s, %s: %s, 調整: %s" % (bf.frame, hand_floor_distance, org_direction, org_wrist_y / org_palm_length, reverse_org_direction, org_reverse_wrist_y / org_palm_length, rep_center_diff))
+                                    else:
+                                        if (not is_floor_hand_up and rep_center_diff > 0):
+                                            print("－手首床近接UP×: f: %s, 境界: %s, %s: %s, %s: %s, 調整: %s" % (bf.frame, hand_floor_distance, org_direction, org_wrist_y / org_palm_length, reverse_org_direction, org_reverse_wrist_y / org_palm_length, rep_center_diff))
+
+                                        if (not is_floor_hand_down and rep_center_diff < 0):
+                                            print("－手首床近接DOWN×: f: %s, 境界: %s, %s: %s, %s: %s, 調整: %s" % (bf.frame, hand_floor_distance, org_direction, org_wrist_y / org_palm_length, reverse_org_direction, org_reverse_wrist_y / org_palm_length, rep_center_diff))
+
                                 else:
                                     if (org_wrist_y <= org_palm_length * hand_floor_distance * 2 or org_reverse_wrist_y <= org_palm_length * hand_floor_distance * 2):
-                                        print("－手首床近接なし: f: %s, 境界: %s, %s: %s, %s: %s" % (bf.frame, hand_floor_distance, org_direction, org_wrist_y / org_palm_length, reverse_org_direction, org_reverse_wrist_y / org_palm_length))
+                                        print("－手首床近接なし: f: %s, 境界: %s, %s: %s, %s: %s, 調整: %s" % (bf.frame, hand_floor_distance, org_direction, org_wrist_y / org_palm_length, reverse_org_direction, org_reverse_wrist_y / org_palm_length, rep_center_diff))
 
                                 if (org_leg_y <= org_palm_length * leg_floor_distance or org_reverse_leg_y <= org_palm_length * leg_floor_distance):
                                     # 足床調整
@@ -1026,16 +1038,28 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                         # 寝ている場合は上に起こす
                                         back_thickness_diff = back_thickness
 
-                                    # 床位置合わせで、足のY位置が大体手の大きさ以下の場合、足と床の位置合わせ
-                                    motion.frames["センター"][bf_idx].position.setY(motion.frames["センター"][bf_idx].position.y() + rep_center_diff + back_thickness_diff)
-                                    motion.frames["センター"][bf_idx].key = True
 
-                                    logger.debug("hand_floor leg: center: %s", motion.frames["センター"][bf_idx].position)
 
-                                    print("○足床近接あり: f: %s, 境界: %s, %s: %s, %s: %s" % (bf.frame, leg_floor_distance, org_direction, org_leg_y / org_palm_length, reverse_org_direction, org_reverse_leg_y / org_palm_length))
+                                    if (is_floor_hand_up and rep_center_diff > 0) or (is_floor_hand_down and rep_center_diff < 0):
+                                        logger.info("○手首床近接あり")
+
+                                        # 床位置合わせで、足のY位置が大体手の大きさ以下の場合、足と床の位置合わせ
+                                        motion.frames["センター"][bf_idx].position.setY(motion.frames["センター"][bf_idx].position.y() + rep_center_diff + back_thickness_diff)
+                                        motion.frames["センター"][bf_idx].key = True
+
+                                        logger.debug("hand_floor leg: center: %s", motion.frames["センター"][bf_idx].position)
+
+                                        print("○足床近接あり: f: %s, 境界: %s, %s: %s, %s: %s, 調整: %s" % (bf.frame, leg_floor_distance, org_direction, org_leg_y / org_palm_length, reverse_org_direction, org_reverse_leg_y / org_palm_length, rep_center_diff))
+                                    else:
+                                        if (not is_floor_hand_up and rep_center_diff > 0):
+                                            print("－足床近接UP×: f: %s, 境界: %s, %s: %s, %s: %s, 調整: %s" % (bf.frame, leg_floor_distance, org_direction, org_leg_y / org_palm_length, reverse_org_direction, org_reverse_leg_y / org_palm_length, rep_center_diff))
+
+                                        if (not is_floor_hand_down and rep_center_diff < 0):
+                                            print("－足床近接DOWN×: f: %s, 境界: %s, %s: %s, %s: %s, 調整: %s" % (bf.frame, leg_floor_distance, org_direction, org_leg_y / org_palm_length, reverse_org_direction, org_reverse_leg_y / org_palm_length, rep_center_diff))
+
                                 else:
                                     if (org_leg_y <= org_palm_length * leg_floor_distance * 2 or org_reverse_leg_y <= org_palm_length * leg_floor_distance * 2):
-                                        print("－足床近接なし: f: %s, 境界: %s, %s: %s, %s: %s" % (bf.frame, leg_floor_distance, org_direction, org_leg_y / org_palm_length, reverse_org_direction, org_reverse_leg_y / org_palm_length))
+                                        print("－足床近接なし: f: %s, 境界: %s, %s: %s, %s: %s, 調整: %s" % (bf.frame, hand_floor_distance, org_direction, org_wrist_y / org_palm_length, reverse_org_direction, org_reverse_wrist_y / org_palm_length, rep_center_diff))
 
                                 logger.debug("%s: org_wrist_y: %s(%s), org_reverse_wrist_y: %s(%s)", bf.frame, org_wrist_y, org_palm_length * hand_floor_distance, org_reverse_wrist_y, org_palm_length * hand_floor_distance)
                                 logger.debug("%s: org_upper_y: %s(%s)(%s)", bf.frame, org_upper_y, org_leg_y * 1.2, org_reverse_leg_y * 1.2)

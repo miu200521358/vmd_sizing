@@ -11,7 +11,7 @@ import wx
 import wx.xrc
 import logging
 import sys
-import os.path
+import os
 import time
 import re
 import csv
@@ -37,7 +37,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver4.02_β02", pos = wx.DefaultPosition, size = wx.Size( 600,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver4.02_β03", pos = wx.DefaultPosition, size = wx.Size( 600,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -374,10 +374,30 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		bSizer13.Add( self.m_radioArmIK, 0, wx.ALL, 5 )
 
+		bSizer16 = wx.BoxSizer( wx.HORIZONTAL )
+
 		# 床位置合わせ
 		self.m_checkFloorArmDistance = wx.CheckBox( self.m_panelArm, wx.ID_ANY, u"床との位置合わせも一緒に行う", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_checkFloorArmDistance.SetToolTip( u"手首が床に沈み込んだり浮いてたりする場合、元モデルに合わせて手首の位置を調整します。\nセンター位置も一緒に調整します。" )
-		bSizer13.Add( self.m_checkFloorArmDistance, 0, wx.ALL, 5 )
+		bSizer16.Add( self.m_checkFloorArmDistance, 0, wx.ALL, 5 )
+
+		self.m_staticText94 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"（", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer16.Add( self.m_staticText94, 0, wx.ALL, 5 )
+
+		# センターを上げる
+		self.m_checkFloorArmDistanceUp = wx.CheckBox( self.m_panelArm, wx.ID_ANY, u"センターを上げる", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_checkFloorArmDistanceUp.SetToolTip( u"センターYを上げる処理を許可します。" )
+		bSizer16.Add( self.m_checkFloorArmDistanceUp, 0, wx.ALL, 5 )
+
+		# センターを下げる
+		self.m_checkFloorArmDistanceDown = wx.CheckBox( self.m_panelArm, wx.ID_ANY, u"センターを下げる", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_checkFloorArmDistanceDown.SetToolTip( u"センターYを下げる処理を許可します。" )
+		bSizer16.Add( self.m_checkFloorArmDistanceDown, 0, wx.ALL, 5 )
+
+		self.m_staticText95 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"）", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer16.Add( self.m_staticText95, 0, wx.ALL, 5 )
+
+		bSizer13.Add( bSizer16, 0, wx.ALL, 5 )
 
 		bSizer15 = wx.BoxSizer( wx.HORIZONTAL )
 
@@ -1139,12 +1159,18 @@ class VmdSizingForm3 ( wx.Frame ):
 	def OnChangeArmIKFloorDistance(self, event):
 		self.m_radioArmIK.SetValue(1)
 		self.m_checkFloorArmDistance.SetValue(1)
+		# センターYは両方有効
+		self.m_checkFloorArmDistanceUp.SetValue(self.m_checkFloorArmDistance.GetValue())
+		self.m_checkFloorArmDistanceDown.SetValue(self.m_checkFloorArmDistance.GetValue())
 		# パス再設定
 		self.OnCreateOutputVmd(event)
 
 	# 腕IKで床にチェックを入れたら、親の選択有効
 	def OnChangeFloorArmDistance(self, event):
 		self.m_radioArmIK.SetValue(1)
+		# センターYは両方有効
+		self.m_checkFloorArmDistanceUp.SetValue(self.m_checkFloorArmDistance.GetValue())
+		self.m_checkFloorArmDistanceDown.SetValue(self.m_checkFloorArmDistance.GetValue())
 		# パス再設定
 		self.OnCreateOutputVmd(event)
 	
@@ -1152,6 +1178,9 @@ class VmdSizingForm3 ( wx.Frame ):
 		if not self.m_radioArmIK.GetValue():
 			# 腕IKの選択を外した場合、床位置合わせチェックOFF
 			self.m_checkFloorArmDistance.SetValue(0)
+			# センターYは両方有効
+			self.m_checkFloorArmDistanceUp.SetValue(0)
+			self.m_checkFloorArmDistanceDown.SetValue(0)
 
 		# パス再設定
 		self.OnCreateOutputVmd(event)
@@ -2360,6 +2389,8 @@ class ExecWorkerThread(Thread):
 			, self._notify_window.m_radioArmIK.GetValue()
 			, self._notify_window.m_sliderHandDistance.GetValue()
 			, self._notify_window.m_checkFloorArmDistance.GetValue()
+			, self._notify_window.m_checkFloorArmDistanceUp.GetValue()
+			, self._notify_window.m_checkFloorArmDistanceDown.GetValue()
 			, self._notify_window.m_sliderHandFloorDistance.GetValue()
 			, self._notify_window.m_sliderLegFloorDistance.GetValue()
 			, self._notify_window.vmd_choice_values
