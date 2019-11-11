@@ -73,8 +73,20 @@ class PmxModel():
         # el
         if "左手首" in self.bones:
             # 指がない場合、手首まででチェック
-            ss_parent_bones, _ = self.create_link_2_top("左手首")
-            all_parent_bones, _ = self.create_link_2_top_all("左手首")
+            try:
+                ss_parent_bones, _ = self.create_link_2_top("左手首")
+                all_parent_bones, _ = self.create_link_2_top_all("左手首")
+            except SizingException as e:
+                print("■■■■■■■■■■■■■■■■■")
+                print("■　**WARNING**　")
+                print("■　モデルの手首から一番親のボーンまでの繋がりをチェック中にエラーが発生しました。")
+                print("■　読み込み処理を中断します。")
+                print("■■■■■■■■■■■■■■■■■")
+                print("")
+                print(e.message)
+                print("")
+
+                return False
         else:
             # 手首も指もない場合、サイジング不可
             return False
@@ -225,6 +237,7 @@ class PmxModel():
         bone_idx_list = []
         for bk, bv in self.bones.items():
             if ((not is_only and bone_name in bk) or (is_only and bone_name == bk)) and bv.index in self.vertices :
+                logger.info("bk: %s, bv: %s", bk, bv.index)
                 # ボーン名が指定文字列を含んでおり、かつそのボーンにウェイトが乗っている頂点がある場合、対象
                 # 特定ボーンのみの場合、ボーン名が一致していることが条件
                 bone_idx_list.append(bv.index)
@@ -234,7 +247,7 @@ class PmxModel():
             # ウェイトボーンがない場合、初期値
             return QVector3D(), QVector3D(), QVector3D(), QVector3D(), None, None, None, None        
 
-        logger.debug("bone_name: %s, bone_idx_list:%s", bone_name, bone_idx_list)
+        logger.info("model: %s, bone_name: %s, bone_idx_list:%s", self.name, bone_name, bone_idx_list)
         
         max_bone_upper_pos = QVector3D(0, -99999, 0)
         min_bone_below_pos = QVector3D(0, 99999, 0)
@@ -503,7 +516,7 @@ class PmxModel():
         # print("start_bone: %s" % start_bone)
 
         direction = start_bone[0:1]
-
+        
         if "足底辺" in start_bone and "{0}足ＩＫ".format(direction) in self.bones:
             direction = start_bone[0:1]
             start_type_bone = start_bone[1:]
@@ -568,7 +581,10 @@ class PmxModel():
         logger.debug("start_bone: %s. parent_name: %s, start_type_bone: %s", start_bone, parent_name, start_type_bone)
         
         # 親をたどる
-        return self.create_link_2_top(parent_name, ik_links, ik_indexes )    
+        try:
+            return self.create_link_2_top(parent_name, ik_links, ik_indexes )    
+        except RecursionError as e:
+            raise SizingException("ボーンリンクの生成に失敗しました。\nモデル「%s」で以下を確認してください。\n・同じ名前のボーンが複数ないか（ボーンのINDEXがズレるため、サイジングに失敗します）\n・親ボーンに自分の名前と同じ名前のボーンが指定されていないか\n※ PMXEditorの「PMXデータの状態検証」から確認できます。" % ( self.name, start_type_bone) )
 
     # ボーン関係親子のペア
     PARENT_BORN_PAIR = {
@@ -692,7 +708,10 @@ class PmxModel():
         logger.debug("start_bone: %s. parent_name: %s, start_type_bone: %s", start_bone, parent_name, start_type_bone)
         
         # 親をたどる
-        return self.create_link_2_top_all(parent_name, ik_links, ik_indexes )    
+        try:
+            return self.create_link_2_top_all(parent_name, ik_links, ik_indexes )    
+        except RecursionError as e:
+            raise SizingException("ボーンリンクの生成に失敗しました。\nモデル「%s」で以下を確認してください。\n・同じ名前のボーンが複数ないか（ボーンのINDEXがズレるため、サイジングに失敗します）\n・親ボーンに自分の名前と同じ名前のボーンが指定されていないか\n※ PMXEditorの「PMXデータの状態検証」から確認できます。" % ( self.name) )
 
 
     # 頂点構造 ----------------------------
