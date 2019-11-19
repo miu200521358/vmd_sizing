@@ -1,0 +1,47 @@
+{
+    // IntelliSense を使用して利用可能な属性を学べます。
+    // 既存の属性の説明をホバーして表示します。
+    // 詳細情報は次を確認してください: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: debug_exec",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "pythonPath": "${config:python.pythonPath}",
+            "stopOnEntry": true,
+            "args": [
+                "--vmd_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/アンノウン・マザーグース【フィンガータットモーション】 しぱ/アンノウン・マザーグース（フィンガータットモーション）/アンノウンマザーグース【フィンガータットモーション】1.00.vmd",
+                "--trace_pmx_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/112_膝丸/膝丸mkmk009b 刀剣乱舞/膝丸mkmk009b/膝丸mkmk009b.pmx",
+                "--replace_pmx_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/アンジェリーク/オリヴィエ シロクマ式/オリヴィエ.pmx",
+                "--avoidance", "0",
+                "--avoidance_finger", "0",
+                "--hand_ik", "1",
+                "--hand_distance", "1.7",
+                "--floor_hand", "0",
+                "--floor_hand_up", "0",
+                "--floor_hand_down", "0",
+                "--hand_floor_distance", "1.5",
+                "--leg_floor_distance", "1.5",
+                "--finger_ik", "1",
+                "--finger_distance", "0.6",
+                "--vmd_choice_values", "",
+                "--rep_choice_values", "",
+                "--rep_rate_values", "",
+                "--camera_vmd_path", "",
+                "--camera_pmx_path", "",
+                "--camera_y_offset", "0",
+                "--verbose", "2",
+            ]
+        },
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal"
+        }
+    ]
+}

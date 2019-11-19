@@ -11,13 +11,14 @@ from VmdReader import VmdReader
 from PmxModel import PmxModel, SizingException
 from PmxReader import PmxReader
 import utils
+import sub_move
 
 logger = logging.getLogger("VmdSizing").getChild(__name__)
 
 # file_logger = logging.getLogger("message")
 # file_logger.addHandler(logging.FileHandler("test.csv"))
 
-def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, org_motion_frames):
+def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, org_motion_frames):
     is_error_outputed = False
 
     # -----------------------------------------------------------------
@@ -45,7 +46,7 @@ def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_h
 
         if hand_distance >= 0:
             # 手首位置合わせ処理実行
-            is_error_outputed = exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, org_motion_frames, all_rep_wrist_links, arm_links)
+            is_error_outputed = exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, org_motion_frames, all_rep_wrist_links, arm_links)
 
             # 補間曲線再設定
             reset_complement(motion, arm_links, is_floor_hand)
@@ -58,8 +59,11 @@ def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_h
 # 必要なキーだけ残す
 def leave_valid_key_frames(motion, arm_links, is_floor_hand):
     # 有効なキーのみのリストを再設定
-    motion.frames["センター"] = [x for x in motion.frames["センター"] if x.key == True]
-    motion.frames["上半身"] = [x for x in motion.frames["上半身"] if x.key == True]
+    if "センター" in motion.frames:
+        motion.frames["センター"] = [x for x in motion.frames["センター"] if x.key == True]
+    
+    if "上半身" in motion.frames:
+        motion.frames["上半身"] = [x for x in motion.frames["上半身"] if x.key == True]
 
     for direction in ["左", "右"]:
         for al in arm_links[direction]:
@@ -71,15 +75,17 @@ def reset_complement(motion, arm_links, is_floor_hand):
     # 補間曲線を有効なキーだけに揃える
     
     # センター移動補間曲線
-    for bf_idx, bf in enumerate(motion.frames["センター"]):
-        reset_complement_frame(motion, "センター", bf_idx, utils.MX_x1_idxs, utils.MX_y1_idxs, utils.MX_x2_idxs, utils.MX_y2_idxs)
-        reset_complement_frame(motion, "センター", bf_idx, utils.MY_x1_idxs, utils.MY_y1_idxs, utils.MY_x2_idxs, utils.MY_y2_idxs)
-        reset_complement_frame(motion, "センター", bf_idx, utils.MZ_x1_idxs, utils.MZ_y1_idxs, utils.MZ_x2_idxs, utils.MZ_y2_idxs)
+    if "センター" in motion.frames:
+        for bf_idx, bf in enumerate(motion.frames["センター"]):
+            reset_complement_frame(motion, "センター", bf_idx, utils.MX_x1_idxs, utils.MX_y1_idxs, utils.MX_x2_idxs, utils.MX_y2_idxs)
+            reset_complement_frame(motion, "センター", bf_idx, utils.MY_x1_idxs, utils.MY_y1_idxs, utils.MY_x2_idxs, utils.MY_y2_idxs)
+            reset_complement_frame(motion, "センター", bf_idx, utils.MZ_x1_idxs, utils.MZ_y1_idxs, utils.MZ_x2_idxs, utils.MZ_y2_idxs)
 
     # センターと上半身の回転補間曲線
     for link_name in ["センター", "上半身"]:
-        for bf_idx, bf in enumerate(motion.frames[link_name]):
-            reset_complement_frame(motion, link_name, bf_idx, utils.R_x1_idxs, utils.R_y1_idxs, utils.R_x2_idxs, utils.R_y2_idxs)
+        if link_name in motion.frames:
+            for bf_idx, bf in enumerate(motion.frames[link_name]):
+                reset_complement_frame(motion, link_name, bf_idx, utils.R_x1_idxs, utils.R_y1_idxs, utils.R_x2_idxs, utils.R_y2_idxs)
 
         print("手首位置合わせ事後調整 b: %s" % link_name)
     
@@ -288,39 +294,40 @@ def prepare(motion, arm_links, hand_distance, is_floor_hand):
         filled_bones = []
 
         for k in ["センター", "上半身", "左腕", "左ひじ", "左手首", "右腕", "右ひじ", "右手首"]:
-            for _, bf in enumerate(motion.frames[k]):
-                if bf.frame == f:
-                    # 該当フレームの場合
-                    if is_floor_hand:
-                        for al_name in ["センター", "上半身"]:
-                            # 床位置合わせONの場合、センターにキー追加
-                            if al_name not in filled_bones and al_name in motion.frames:
-                                logger.debug("センターprepare_fill_frame %s", bf.frame)
-                                prepare_fill_frame(motion, al_name, bf, hand_distance)
-                                filled_bones.append(al_name)
+            if k in motion.frames:
+                for _, bf in enumerate(motion.frames[k]):
+                    if bf.frame == f:
+                        # 該当フレームの場合
+                        if is_floor_hand:
+                            for al_name in ["センター", "上半身"]:
+                                # 床位置合わせONの場合、センターにキー追加
+                                if al_name not in filled_bones and al_name in motion.frames:
+                                    logger.debug("センターprepare_fill_frame %s", bf.frame)
+                                    prepare_fill_frame(motion, al_name, bf, hand_distance)
+                                    filled_bones.append(al_name)
 
-                    for direction in ["左", "右"]:
-                        for al in arm_links[direction]:
-                            if al.name in motion.frames and al.name not in filled_bones:
-                                # 手首キーを埋める
-                                prepare_fill_frame(motion, al.name, bf, hand_distance)
-                                filled_bones.append(al.name)
+                        for direction in ["左", "右"]:
+                            for al in arm_links[direction]:
+                                if al.name in motion.frames and al.name not in filled_bones:
+                                    # 手首キーを埋める
+                                    prepare_fill_frame(motion, al.name, bf, hand_distance)
+                                    filled_bones.append(al.name)
+
+                        if (is_floor_hand and len(filled_bones) == 8) or (not is_floor_hand and len(filled_bones) == 6):
+                            # 両手が終わっててチェック済みならブレイク
+                            break
 
                     if (is_floor_hand and len(filled_bones) == 8) or (not is_floor_hand and len(filled_bones) == 6):
                         # 両手が終わっててチェック済みならブレイク
                         break
 
                 if (is_floor_hand and len(filled_bones) == 8) or (not is_floor_hand and len(filled_bones) == 6):
+                    if f // 500 > prev_log_cnt:
+                        print("手首位置合わせ事前調整 f: %s" % f)
+                        prev_log_cnt = f // 500
+
                     # 両手が終わっててチェック済みならブレイク
                     break
-
-            if (is_floor_hand and len(filled_bones) == 8) or (not is_floor_hand and len(filled_bones) == 6):
-                if f // 500 > prev_log_cnt:
-                    print("手首位置合わせ事前調整 f: %s" % f)
-                    prev_log_cnt = f // 500
-
-                # 両手が終わっててチェック済みならブレイク
-                break
 
     print("手首位置合わせ事前調整終了")
 
@@ -360,12 +367,15 @@ def prepare_fill_frame(motion, link_name, bf, hand_distance):
 
 
 # 手首位置合わせ実行
-def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, org_motion_frames, all_rep_wrist_links, arm_links):    
+def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, org_motion_frames, all_rep_wrist_links, arm_links):    
     # 腕IKによる位置調整を行う場合
 
     # エラーを一度でも出力しているか(腕IK)
     is_error_outputed = False
     error_file_logger = None
+
+    # 足IKのXYZの比率
+    xz_ratio, y_ratio, leg_ik_stance = sub_move.calc_leg_ik_ratio(trace_model, replace_model)
 
     # 指の先までの位置(作成元モデル)
     all_org_finger_links, all_org_finger_indexes = trace_model.create_link_2_top_lr("人指３", "手首")
@@ -455,6 +465,46 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
     
     # キーフレーム分割済みのフレーム情報を別保持
     org_fill_motion_frames = copy.deepcopy(motion.frames)
+
+    if is_finger_ik:
+        # 指位置合わせを行う場合
+
+        # 元モデルの首までのリンク生成
+        org_neck_links, _ = trace_model.create_link_2_top_one("首")
+        # logger.debug("org_upper_links: %s", org_upper_links)
+
+        # 変換先モデルの首までのリンク生成
+        rep_neck_links, _ = replace_model.create_link_2_top_one("首")
+
+        # 各指の先までの位置(作成元モデル)
+        all_org_finger_links_list = {"左": [], "右": []}
+
+        # 各指の先までの位置(変換先モデル)
+        all_rep_finger_links_list = {"左": [], "右": []}
+
+        for (finger_name, end_joint_name) in [("親指", "２"), ("人指", "３"), ("中指", "３"), ("薬指", "３"), ("小指", "３")]:
+            joint_name = "{0}{1}".format(finger_name, end_joint_name)
+            oflinks, ofindexes = trace_model.create_link_2_top_lr(joint_name, "手首")
+            all_org_finger_links_list["左"].append({"joint": joint_name, "links": oflinks["左"], "indexes": ofindexes["左"]})
+            all_org_finger_links_list["右"].append({"joint": joint_name, "links": oflinks["右"], "indexes": ofindexes["右"]})
+
+            rflinks, rfindexes = replace_model.create_link_2_top_lr(joint_name, "手首")
+            all_rep_finger_links_list["左"].append({"joint": joint_name, "links": rflinks["左"], "indexes": rfindexes["左"]})
+            all_rep_finger_links_list["右"].append({"joint": joint_name, "links": rflinks["右"], "indexes": rfindexes["右"]})
+
+        # 親指の長さの差（始点：腕, 終点：手首）
+        org_thubm_finger_length = (trace_model.bones["右手首"].position - trace_model.bones["右親指２"].position).length()
+        # logger.debug("org_arm_length: %s", org_arm_length)
+
+        rep_thubm_finger_length = (replace_model.bones["右手首"].position - replace_model.bones["右親指２"].position).length()
+        # logger.debug("rep_arm_length: %s", rep_arm_length)
+
+        # if rep_arm_length > org_arm_length:
+        # arm_diff_length = (org_arm_length / rep_arm_length)
+        # else:
+        thumb_finger_diff_length = (org_thubm_finger_length * arm_palm_diff_length) - rep_thubm_finger_length
+
+        print("親指の長さ差: %s" % thumb_finger_diff_length)
 
     if is_floor_hand:
         # # 足IKまでの位置(作成元モデル)
@@ -574,7 +624,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                             if bf_idx != 0 and is_prev_next_enable_key("右腕", motion.frames, bf_idx) and is_prev_next_enable_key("右ひじ", motion.frames, bf_idx) and is_prev_next_enable_key("右手首", motion.frames, bf_idx) \
                                 and is_prev_next_enable_key("左腕", motion.frames, bf_idx) and is_prev_next_enable_key("左ひじ", motion.frames, bf_idx) and is_prev_next_enable_key("左手首", motion.frames, bf_idx):
                                 print("－キー直近スルー: f: %s(%s), 手首間の距離: %s" % (bf.frame, org_direction, org_wrist_diff_rate ))
-                            else:                            
+                            else: 
                                 for direction in [org_direction, reverse_org_direction]:
                                     # 逆方向
                                     reverse_direction = "右" if "左" == direction else "左"
@@ -798,8 +848,8 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                         # 変換先モデルの向きを逆転させて、正面向きの手首の位置を計算する
                                         rep_reverse_front_finger_global_3ds = create_direction_pos_all(rep_upper_direction_qq.inverted(), rep_reverse_finger_global_3ds)
 
-                                        # 変換先モデルの正面向き上半身の位置
-                                        rep_front_upper_pos = rep_front_finger_global_3ds[len(rep_finger_global_3ds) - all_rep_finger_indexes[direction]["上半身"] - 1]
+                                        # # 変換先モデルの正面向き上半身の位置
+                                        # rep_front_upper_pos = rep_front_finger_global_3ds[len(rep_finger_global_3ds) - all_rep_finger_indexes[direction]["上半身"] - 1]
                                         # 変換先モデルの正面向き手首の位置
                                         rep_front_wrist_pos = rep_front_finger_global_3ds[len(rep_finger_global_3ds) - all_rep_finger_indexes[direction]["手首"] - 1]
                                         # 変換先モデルの正面向き反対側手首の位置
@@ -903,8 +953,276 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                                 break
 
                         else:
-                            if hand_distance <= org_wrist_diff_rate <= hand_distance * 2:
+                            if not is_finger_ik and hand_distance <= org_wrist_diff_rate <= hand_distance * 2:
                                 print("－手首近接なし: f: %s(%s), 境界: %s, 手首間の距離: %s" % (bf.frame, org_direction, hand_distance, org_wrist_diff_rate ))
+
+                        if is_finger_ik:
+                            # 最短距離
+                            min_finger_distance = 99999999
+                            # 最短の指（作成元正方向）
+                            min_force_idx = -1
+                            min_force_joint_name = None
+                            min_force_direction = None
+                            # 最短の指（作成元逆方向）
+                            min_reverse_idx = -1
+                            min_reverse_joint_name = None
+                            min_reverse_direction = None
+
+                            # 指位置合わせの場合、まず指位置の距離を測る
+                            for _oidx, org_finger_links in enumerate(all_org_finger_links_list[org_direction]):
+                                
+                                # 元モデルのIK計算前指までの情報
+                                _, _, _, _, org_finger_global_3ds = utils.create_matrix_global(trace_model, org_finger_links["links"], org_motion_frames, bf, None)
+
+                                for _ridx, org_reverse_finger_links in enumerate(all_org_finger_links_list[reverse_org_direction]):
+                                    # 元モデルのIK計算前指までの情報
+                                    _, _, _, _, org_reverse_finger_global_3ds = utils.create_matrix_global(trace_model, org_reverse_finger_links["links"], org_motion_frames, bf, None)
+
+                                    # 手首を含まない指の距離を測る
+                                    end_finger_end_idx = org_finger_links["indexes"]["手首"]
+                                    end_reverse_finger_end_idx = org_reverse_finger_links["indexes"]["手首"]
+
+                                    for _ol_idx in range(0, end_finger_end_idx, 1):
+                                        for _rl_idx in range(0, end_reverse_finger_end_idx, 1):
+                                            
+                                            now_org_finger_distance = org_finger_global_3ds[len(org_finger_global_3ds) - _ol_idx - 1].distanceToPoint(org_reverse_finger_global_3ds[len(org_reverse_finger_global_3ds) - _rl_idx - 1])
+                                            if now_org_finger_distance < min_finger_distance:
+                                                # 指の間が最短よりさらに短い場合、保持
+                                                min_force_idx = _oidx
+                                                min_force_joint_name = org_finger_links["links"][_ol_idx].name[1:]
+                                                min_force_direction = org_direction
+                                                min_reverse_idx = _ridx
+                                                min_reverse_joint_name = org_reverse_finger_links["links"][_rl_idx].name[1:]
+                                                min_reverse_direction = reverse_org_direction
+                                                min_finger_distance = now_org_finger_distance
+
+                            # 手首間の距離
+                            org_finger_diff_rate = (min_finger_distance / org_palm_length)
+
+                            # 指の距離が指定より大きいか
+                            is_over_org_finger_length = finger_distance <= org_finger_diff_rate
+
+                            if (not is_over_org_finger_length or finger_distance == 10):
+                                if bf_idx != 0 and is_prev_next_enable_key("右腕", motion.frames, bf_idx) and is_prev_next_enable_key("右ひじ", motion.frames, bf_idx) and is_prev_next_enable_key("右手首", motion.frames, bf_idx) \
+                                    and is_prev_next_enable_key("左腕", motion.frames, bf_idx) and is_prev_next_enable_key("左ひじ", motion.frames, bf_idx) and is_prev_next_enable_key("左手首", motion.frames, bf_idx):
+                                    print("－キー直近スルー: f: %s(%s), 手首間の距離: %s" % (bf.frame, org_direction, org_wrist_diff_rate ))
+                                else: 
+                                    direction = min_force_direction
+                                    reverse_direction = min_reverse_direction
+
+                                    # 最接近の指の名前
+                                    force_joint_name = min_force_joint_name
+                                    reverse_joint_name = min_reverse_joint_name
+
+                                    # 手首が近接している場合のみ、腕IK処理実施
+                                    print("○指近接あり: f: %s(%s%s:%s%s), 境界: %s, 指間の距離: %s" % (bf.frame, direction, force_joint_name, reverse_direction, reverse_joint_name, finger_distance, org_finger_diff_rate ))
+
+                                    # 最接近の指のリンク（作成元）
+                                    org_force_target_finger_links = all_org_finger_links_list[direction][min_force_idx]["links"]
+                                    org_force_target_finger_indexes = all_org_finger_links_list[direction][min_force_idx]["indexes"]
+                                    
+                                    # 最接近の反対側指のリンク（作成元）
+                                    org_reverse_target_finger_links = all_org_finger_links_list[reverse_direction][min_reverse_idx]["links"]
+                                    org_reverse_target_finger_indexes = all_org_finger_links_list[reverse_direction][min_reverse_idx]["indexes"]
+
+                                    # 最接近の指のリンク（変換先）
+                                    rep_force_target_finger_links = all_rep_finger_links_list[direction][min_force_idx]["links"]
+                                    rep_force_target_finger_indexes = all_rep_finger_links_list[direction][min_force_idx]["indexes"]
+                                    
+                                    # 最接近の反対側指のリンク（変換先）
+                                    rep_reverse_target_finger_links = all_rep_finger_links_list[reverse_direction][min_reverse_idx]["links"]
+                                    rep_reverse_target_finger_indexes = all_rep_finger_links_list[reverse_direction][min_reverse_idx]["indexes"]
+
+                                    # 腕から末端までのリンク生成
+                                    arm_finger_links = {
+                                        org_direction: create_arm_finger_links(replace_model, rep_force_target_finger_links, org_direction, force_joint_name), 
+                                        reverse_org_direction: create_arm_finger_links(replace_model, rep_reverse_target_finger_links, reverse_org_direction, reverse_joint_name)
+                                    }
+
+                                    # ----------------------
+
+                                    # 元モデルのIK計算前指までの情報
+                                    _, _, _, _, org_neck_global_3ds = utils.create_matrix_global(trace_model, org_neck_links, org_motion_frames, bf, None)
+                                    _, _, _, _, org_finger_global_3ds = utils.create_matrix_global(trace_model, org_force_target_finger_links, org_motion_frames, bf, None)
+                                    _, _, _, _, org_reverse_finger_global_3ds = utils.create_matrix_global(trace_model, org_reverse_target_finger_links, org_motion_frames, bf, None)
+
+
+                                    # 変換先モデルのIK計算前指までの情報
+                                    _, _, _, _, rep_neck_global_3ds = utils.create_matrix_global(replace_model, rep_neck_links, motion.frames, bf, None)
+                                    _, _, _, _, rep_finger_global_3ds = utils.create_matrix_global(replace_model, rep_force_target_finger_links, motion.frames, bf, None)
+                                    _, _, _, _, rep_reverse_finger_global_3ds = utils.create_matrix_global(replace_model, rep_reverse_target_finger_links, motion.frames, bf, None)
+
+                                    # ---------------------
+
+                                    # 元モデルの向いている回転量
+                                    org_upper_direction_qq = utils.calc_upper_direction_qq(trace_model, org_upper_links, org_motion_frames, bf)
+
+                                    # 元モデルの向きを逆転させて、正面向きの位置を計算する
+                                    org_front_neck_global_3ds = create_direction_pos_all(org_upper_direction_qq.inverted(), org_neck_global_3ds)
+                                    org_front_finger_global_3ds = create_direction_pos_all(org_upper_direction_qq.inverted(), org_finger_global_3ds)
+                                    org_reverse_front_finger_global_3ds = create_direction_pos_all(org_upper_direction_qq.inverted(), org_reverse_finger_global_3ds)
+
+                                    # 元モデルの正面向き上半身の位置
+                                    org_front_upper_pos = org_front_finger_global_3ds[len(org_front_finger_global_3ds) - org_force_target_finger_indexes["上半身"] - 1]
+                                    # 元モデルの正面向き首の位置
+                                    org_front_neck_pos = org_front_neck_global_3ds[-1]
+                                    # 元モデルの正面向き指の位置
+                                    org_front_finger_pos = org_front_finger_global_3ds[len(org_finger_global_3ds) - org_force_target_finger_indexes[force_joint_name] - 1]
+                                    # 元モデルの正面向き指の位置（反対側）
+                                    org_reverse_front_finger_pos = org_reverse_front_finger_global_3ds[len(org_reverse_front_finger_global_3ds) - org_reverse_target_finger_indexes[reverse_joint_name] - 1]
+
+                                    # 変換先モデルの指位置
+                                    rep_finger_pos = rep_finger_global_3ds[len(rep_finger_global_3ds) - rep_force_target_finger_indexes[force_joint_name] - 1]
+                                    # 変換先モデルの指位置
+                                    rep_reverse_finger_pos = rep_reverse_finger_global_3ds[len(rep_reverse_finger_global_3ds) - rep_reverse_target_finger_indexes[reverse_joint_name] - 1]
+
+                                    # 変換先モデルの向いている回転量
+                                    rep_upper_direction_qq = utils.calc_upper_direction_qq(replace_model, rep_upper_links, motion.frames, bf)
+
+                                    # 変換先モデルの向きを逆転させて、正面向きの指の位置を計算する
+                                    rep_front_neck_global_3ds = create_direction_pos_all(rep_upper_direction_qq.inverted(), rep_neck_global_3ds)
+                                    rep_front_finger_global_3ds = create_direction_pos_all(rep_upper_direction_qq.inverted(), rep_finger_global_3ds)
+                                    rep_reverse_front_finger_global_3ds = create_direction_pos_all(rep_upper_direction_qq.inverted(), rep_reverse_finger_global_3ds)
+
+                                    # 変換先モデルの正面向き上半身の位置
+                                    rep_front_upper_pos = rep_front_finger_global_3ds[len(rep_front_finger_global_3ds) - rep_force_target_finger_indexes["上半身"] - 1]
+                                    # 変換先モデルの正面向き上半身の位置
+                                    rep_front_neck_pos = rep_front_neck_global_3ds[-1]
+                                    # 変換先モデルの正面向き指の位置
+                                    rep_front_finger_pos = rep_front_finger_global_3ds[len(rep_finger_global_3ds) - rep_force_target_finger_indexes[force_joint_name] - 1]
+                                    # 変換先モデルの正面向き反対側指の位置
+                                    rep_reverse_front_finger_pos = rep_reverse_front_finger_global_3ds[len(rep_reverse_front_finger_global_3ds) - rep_reverse_target_finger_indexes[reverse_joint_name] - 1]
+
+                                    # 指の位置を元モデルとだいたい同じ位置にする
+                                    # 1. 自分自身の上半身X位置
+                                    # 2: 元モデルの上半身と指位置の差
+                                    rep_finger_x = rep_front_upper_pos.x() \
+                                        + ( org_front_finger_pos.x() - org_front_upper_pos.x() ) * arm_palm_diff_length
+
+                                    # 手首の厚みを考慮
+                                    finger_diff_sign = 1 if direction == "左" else -1
+                                    finger_reverse_diff_sign = -1 if reverse_direction == "右" else 1
+                                    
+                                    if "親指" in force_joint_name:          
+                                        rep_finger_x += thumb_finger_diff_length * finger_diff_sign
+
+                                    rep_front_finger_pos.setX(rep_finger_x)
+
+                                    # Yは首基準で比率を身長か腕の長さか大きい方に変更
+                                    rep_finger_y = rep_front_neck_pos.y() \
+                                        + ( org_front_finger_pos.y() - org_front_neck_pos.y() ) * max(y_ratio, arm_diff_length)
+                                    rep_finger_y_diff = rep_front_finger_pos.y() - rep_finger_y
+                                    rep_front_finger_pos.setY(rep_finger_y)
+                                        
+                                    # 指の位置を元モデルとだいたい同じ位置にする(反対側)
+                                    rep_reverse_finger_x = rep_front_upper_pos.x() \
+                                        + ( org_reverse_front_finger_pos.x() - org_front_upper_pos.x() ) * arm_palm_diff_length
+                                    rep_reverse_finger_x_diff = rep_reverse_front_finger_pos.x() - rep_reverse_finger_x
+                                    # logger.debug("rep_reverse_finger_x_diff: %s", rep_reverse_finger_x_diff)
+
+                                    if "親指" in reverse_joint_name:          
+                                        rep_reverse_finger_x += thumb_finger_diff_length * finger_reverse_diff_sign
+
+                                    rep_reverse_front_finger_pos.setX( rep_reverse_finger_x )
+                                        
+                                    # 指の位置を元モデルとだいたい同じ位置にする(反対側)
+                                    rep_reverse_finger_y = rep_front_neck_pos.y() \
+                                        + ( org_reverse_front_finger_pos.y() - org_front_neck_pos.y() ) * max(y_ratio, arm_diff_length)
+                                    rep_reverse_finger_y_diff = rep_reverse_front_finger_pos.y() - rep_reverse_finger_y
+                                    # logger.debug("rep_reverse_finger_y_diff: %s", rep_reverse_finger_y_diff)
+                                    rep_reverse_front_finger_pos.setY( rep_reverse_finger_y )
+
+                                    # if org_finger_diff_rate <= 0.4:
+                                    #     # 指先がピタッとくっついているような場合、手のひらの厚み補正
+                                    #     rep_front_finger_pos.setX( rep_front_finger_pos.x() + (wrist_thickness[direction] * finger_diff_sign))
+                                    #     rep_reverse_front_finger_pos.setX( rep_reverse_front_finger_pos.x() + (wrist_thickness[reverse_direction] * finger_reverse_diff_sign))
+
+                                    # 変換先モデルの向きを元に戻して、正面向きの指を回転させた位置に合わせる
+                                    rep_finger_pos = create_direction_pos(rep_upper_direction_qq, rep_front_finger_pos)
+                                    # logger.debug("frame: %s, rep_finger_pos after: %s", bf.frame, rep_finger_pos)
+
+                                    # 変換先モデルの向きを元に戻して、正面向きの指を回転させた位置に合わせる(反対側)
+                                    rep_reverse_finger_pos = create_direction_pos(rep_upper_direction_qq, rep_reverse_front_finger_pos)
+                                    # logger.debug("frame: %s, rep_reverse_finger_pos after: %s", bf.frame, rep_reverse_finger_pos)
+
+                                    target_arm_links = arm_links[direction] if force_joint_name == "手首" else arm_finger_links[direction]
+                                    target_arm_reverse_links = arm_links[reverse_direction] if reverse_joint_name == "手首" else arm_finger_links[reverse_direction]
+
+                                    # 指位置から角度を求める
+                                    calc_arm_IK2FK(rep_finger_pos, replace_model, target_arm_links, rep_force_target_finger_links, direction, motion.frames, bf, prev_space_bf)
+                                    # 反対側の指位置から角度を求める
+                                    calc_arm_IK2FK(rep_reverse_finger_pos, replace_model, target_arm_reverse_links, rep_reverse_target_finger_links, reverse_direction, motion.frames, bf, prev_space_bf)
+
+                                    # ---------
+                                    finger_ik_bone = "{0}偽IK".format(direction)
+                                    if not finger_ik_bone in motion.frames:
+                                        motion.frames[finger_ik_bone] = []
+                                    
+                                    wikbf = VmdBoneFrame(bf.frame)
+                                    wikbf.name = finger_ik_bone.encode('shift-jis')
+                                    wikbf.format_name = finger_ik_bone
+                                    wikbf.frame = bf.frame
+                                    wikbf.key = True
+                                    wikbf.position = rep_finger_pos
+                                    motion.frames[finger_ik_bone].append(wikbf)
+                                    # ---------
+
+                                    # ---------
+                                    reverse_finger_ik_bone = "{0}偽IK".format(reverse_direction)
+                                    if not reverse_finger_ik_bone in motion.frames:
+                                        motion.frames[reverse_finger_ik_bone] = []
+                                    
+                                    rwikbf = VmdBoneFrame(bf.frame)
+                                    rwikbf.name = reverse_finger_ik_bone.encode('shift-jis')
+                                    rwikbf.format_name = reverse_finger_ik_bone
+                                    rwikbf.frame = bf.frame
+                                    rwikbf.key = True
+                                    rwikbf.position = rep_reverse_finger_pos
+                                    motion.frames[reverse_finger_ik_bone].append(rwikbf)
+                                    # ---------
+
+                                    # 指位置合わせ結果判定 ------------
+
+                                    lad = abs(QQuaternion.dotProduct(motion.frames["左腕"][bf_idx].rotation, org_fill_motion_frames["左腕"][bf_idx].rotation))
+                                    rad = abs(QQuaternion.dotProduct(motion.frames["右腕"][bf_idx].rotation, org_fill_motion_frames["右腕"][bf_idx].rotation))
+                                    if lad < 0.85 or rad < 0.85:
+                                        print("%sフレーム目指位置合わせ失敗: 指間: %s, 左腕:%s, 右腕:%s" % (bf.frame, org_finger_diff_rate, lad, rad))
+                                        # 失敗時のみエラーログ出力
+                                        if not is_error_outputed:
+                                            is_error_outputed = True
+                                            if not error_file_logger:
+                                                error_file_logger = utils.create_error_file_logger(motion, trace_model, replace_model, output_vmd_path)
+
+                                            error_file_logger.info("作成元モデルの手の大きさ: %s", org_palm_length)
+                                            error_file_logger.info("変換先モデルの手の大きさ: %s", rep_palm_length)
+                                            error_file_logger.info("指の厚み: l: %s, r: %s", wrist_thickness["左"], wrist_thickness["右"])
+                                            # error_file_logger.debug("作成元の上半身の厚み: %s", org_neck_thickness_diff)
+                                            # error_file_logger.debug("変換先の上半身の厚み: %s", rep_neck_thickness_diff)
+                                            # error_file_logger.debug("肩幅の差: %s" , showlder_diff_length)
+
+                                        error_file_logger.warning("%sフレーム目指位置合わせ失敗: 指間: %s, 左腕:%s, 右腕:%s" , bf.frame, org_finger_diff_rate, lad, rad)
+                                    else:
+                                        # logger.debug("指位置合わせ成功: f: %s, 左腕:%s, 右腕:%s", bf.frame, lad, rad)
+                                        pass
+
+                                    for cfk, cflist in org_fill_motion_frames.items():
+                                        for dd in [direction, reverse_direction]:
+                                            for al in arm_links[dd]:
+                                                if al.name == cfk:
+                                                    if lad >= 0.85 and rad >= 0.85:
+                                                        # 角度調整が既定内である場合
+                                                        motion.frames[cfk][bf_idx].key = True
+
+                                                        # logger.debug("採用: cfk: %s, bf: %s, f: %s, read: %s, rot: %s", cfk, bf.frame, motion.frames[cfk][bf_idx].frame, motion.frames[cfk][bf_idx].read, motion.frames[cfk][bf_idx].rotation.toEulerAngles())
+                                                    else:
+                                                        # 角度調整が既定外である場合、クリア
+                                                        motion.frames[cfk][bf_idx] = copy.deepcopy(cflist[bf_idx])
+                                                        # logger.debug("クリア: cfk: %s, bf_idx: %s, rot: %s", cfk, bf_idx, motion.frames[cfk][bf_idx].rotation.toEulerAngles())
+                                                    break
+
+                            else:
+                                if finger_distance <= org_finger_diff_rate <= finger_distance * 2:
+                                    print("－指近接なし: f: %s(%s), 境界: %s, 指間の距離: %s" % (bf.frame, org_direction, finger_distance, org_finger_diff_rate ))
                         
                         # logger.debug("bf_idx: %s, cf:%s", bf_idx, motion.frames["センター"][bf_idx].frame)
 
@@ -1540,6 +1858,34 @@ def create_arm_links(model, links, direction):
     # logger.debug([x.name for x in arm_links])
 
     return arm_links
+
+# 腕ジョイントリスト生成
+def create_arm_finger_links(model, links, direction, joint_name):
+    
+    # 関節リストを末端から生成する
+    arm_finger_links = []
+    
+    # if "{0}人指１".format(direction) in model.bones:
+    #     arm_links.append(model.bones["{0}人指１".format(direction)])
+
+    arm_finger_links.append(get_bone_in_links_4_joint(model, {direction: links}, direction, joint_name, joint_name))
+    
+    # arm_finger_links.append(get_bone_in_links_4_joint(model, {direction: links}, direction, "手首", joint_name))
+    
+    # if "{0}手捩".format(direction) in model.bones:
+    #     arm_links.append(model.bones["{0}手捩".format(direction)])
+
+    arm_finger_links.append(get_bone_in_links_4_joint(model, {direction: links}, direction, "ひじ", joint_name))
+    
+    # if "{0}腕捩".format(direction) in model.bones:
+    #     arm_links.append(model.bones["{0}腕捩".format(direction)])
+
+    arm_finger_links.append(get_bone_in_links_4_joint(model, {direction: links}, direction, "腕", joint_name))
+    # arm_links.append(get_bone_in_links_4_joint(model, links, direction, "肩", "手首"))
+    
+    # logger.debug([x.name for x in arm_links])
+
+    return arm_finger_links
 
 # ジョイント用：リンクからボーン情報を取得して返す
 def get_bone_in_links_4_joint(model, links, direction, bone_type_name, start_bone_type_name):

@@ -37,7 +37,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver4.02", pos = wx.DefaultPosition, size = wx.Size( 600,600 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver5.00_β02", pos = wx.DefaultPosition, size = wx.Size( 600,650 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -374,6 +374,14 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		bSizer13.Add( self.m_radioArmIK, 0, wx.ALL, 5 )
 
+		bSizer17 = wx.BoxSizer( wx.HORIZONTAL )
+		# 指位置合わせ
+		self.m_checkFingerDistance = wx.CheckBox( self.m_panelArm, wx.ID_ANY, u"指の位置で手首位置合わせを行う", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_checkFingerDistance.SetToolTip( u"フィンガータットモーション等、指間の距離を基準に手首位置を調整したい場合にチェックを入れて下さい。" )
+		bSizer17.Add( self.m_checkFingerDistance, 0, wx.ALL, 5 )
+
+		bSizer13.Add( bSizer17, 0, wx.ALL, 5 )
+
 		bSizer16 = wx.BoxSizer( wx.HORIZONTAL )
 
 		# 床位置合わせ
@@ -418,6 +426,28 @@ class VmdSizingForm3 ( wx.Frame ):
 		bSizer15.Add( self.m_sliderHandDistance, 1, wx.ALL|wx.EXPAND, 5 )
 
 		bSizer13.Add( bSizer15, 1, wx.ALL|wx.EXPAND, 5 )
+
+		# -------------
+
+		bSizerFinger15 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.m_staticText40 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"指間の距離　　 ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText40.SetToolTip( u"どのくらい指が近付いた場合に、手首位置合わせを実行するか指定してください。\n値が小さいほど、指が近付いた時だけ手首位置合わせを行います。" )
+		self.m_staticText40.Wrap( -1 )
+
+		bSizerFinger15.Add( self.m_staticText40, 0, wx.ALL, 5 )
+
+		self.m_vmdFingerDistanceTxt = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"（0.6）", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_vmdFingerDistanceTxt.SetToolTip( u"現在指定されている指ボーン間の最短距離です。元モデルの指ボーン間の最短がこの範囲内である場合、手首位置合わせを行います。" )
+		self.m_vmdFingerDistanceTxt.Wrap( -1 )
+
+		bSizerFinger15.Add( self.m_vmdFingerDistanceTxt, 0, wx.ALL, 5 )
+
+		# 小数点を許可したスライダー
+		self.m_sliderFingerDistance = FloatSlider( self.m_panelArm, wx.ID_ANY, 0.6, 0, 10, 0.1, self.m_vmdFingerDistanceTxt, wx.DefaultPosition, wx.DefaultSize, wx.SL_HORIZONTAL )
+		bSizerFinger15.Add( self.m_sliderFingerDistance, 1, wx.ALL|wx.EXPAND, 5 )
+		
+		bSizer13.Add( bSizerFinger15, 1, wx.ALL|wx.EXPAND, 5 )
 
 		# -------------
 
@@ -664,7 +694,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_csv_btnExec = wx.Button( self.m_panelCsv, wx.ID_ANY, u"CSV変換実行", wx.DefaultPosition, wx.Size( 200,50 ), 0 )
 		bSizerCsv4.Add( self.m_csv_btnExec, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 
-		self.m_csv_txtConsole = wx.TextCtrl( self.m_panelCsv, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( -1,370 ), wx.TE_MULTILINE|wx.TE_READONLY|wx.BORDER_NONE|wx.HSCROLL|wx.VSCROLL|wx.WANTS_CHARS )
+		self.m_csv_txtConsole = wx.TextCtrl( self.m_panelCsv, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( -1,420 ), wx.TE_MULTILINE|wx.TE_READONLY|wx.BORDER_NONE|wx.HSCROLL|wx.VSCROLL|wx.WANTS_CHARS )
 		self.m_csv_txtConsole.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_3DLIGHT ) )
 
 		bSizerCsv4.Add( self.m_csv_txtConsole, 1, wx.ALL|wx.EXPAND, 5 )
@@ -910,6 +940,9 @@ class VmdSizingForm3 ( wx.Frame ):
 		# 床位置合わせのチェックボックス切り替え
 		self.m_checkFloorArmDistance.Bind(wx.EVT_CHECKBOX, self.OnChangeFloorArmDistance)
 
+		# 指位置合わせのチェックボックス切り替え
+		self.m_checkFingerDistance.Bind(wx.EVT_CHECKBOX, self.OnChangeFingerDistance)
+
 		# 接触回避のラジオボタンの切り替え
 		self.m_radioAvoidanceFinger.Bind(wx.EVT_RADIOBUTTON, self.OnChangeAvoidanceTarget)
 		self.m_radioAvoidanceWrist.Bind(wx.EVT_RADIOBUTTON, self.OnChangeAvoidanceTarget)
@@ -920,6 +953,9 @@ class VmdSizingForm3 ( wx.Frame ):
 		# スライダーの変更時
 		self.m_sliderHandFloorDistance.Bind(wx.EVT_SCROLL_CHANGED, self.OnChangeArmIKFloorDistance)
 		self.m_sliderLegFloorDistance.Bind(wx.EVT_SCROLL_CHANGED, self.OnChangeArmIKFloorDistance)
+
+		# スライダーの変更時
+		self.m_sliderFingerDistance.Bind(wx.EVT_SCROLL_CHANGED, self.OnChangeArmIKFingerDistance)
 
 		# # 分割フレームのセル追加
 		# self.AddSliceCell()
@@ -1165,6 +1201,13 @@ class VmdSizingForm3 ( wx.Frame ):
 		# パス再設定
 		self.OnCreateOutputVmd(event)
 
+	# 腕IKで指のスライダーを変えたら、親の選択有効
+	def OnChangeArmIKFingerDistance(self, event):
+		self.m_radioArmIK.SetValue(1)
+		self.m_checkFingerDistance.SetValue(1)
+		# パス再設定
+		self.OnCreateOutputVmd(event)
+
 	# 腕IKで床にチェックを入れたら、親の選択有効
 	def OnChangeFloorArmDistance(self, event):
 		self.m_radioArmIK.SetValue(1)
@@ -1174,13 +1217,21 @@ class VmdSizingForm3 ( wx.Frame ):
 		# パス再設定
 		self.OnCreateOutputVmd(event)
 	
+	# 腕IKで指にチェックを入れたら、親の選択有効
+	def OnChangeFingerDistance(self, event):
+		self.m_radioArmIK.SetValue(1)
+		# パス再設定
+		self.OnCreateOutputVmd(event)
+	
 	def OnChangeArmRadio(self, event):
 		if not self.m_radioArmIK.GetValue():
 			# 腕IKの選択を外した場合、床位置合わせチェックOFF
 			self.m_checkFloorArmDistance.SetValue(0)
-			# センターYは両方有効
+			# センターYは両方無効
 			self.m_checkFloorArmDistanceUp.SetValue(0)
 			self.m_checkFloorArmDistanceDown.SetValue(0)
+			# 指も無効
+			self.m_checkFingerDistance.SetValue(0)
 
 		# パス再設定
 		self.OnCreateOutputVmd(event)
@@ -2393,6 +2444,8 @@ class ExecWorkerThread(Thread):
 			, self._notify_window.m_checkFloorArmDistanceDown.GetValue()
 			, self._notify_window.m_sliderHandFloorDistance.GetValue()
 			, self._notify_window.m_sliderLegFloorDistance.GetValue()
+			, self._notify_window.m_checkFingerDistance.GetValue()
+			, self._notify_window.m_sliderFingerDistance.GetValue()
 			, self._notify_window.vmd_choice_values
 			, self._notify_window.rep_choice_values			
 			, self._notify_window.rep_rate_values
