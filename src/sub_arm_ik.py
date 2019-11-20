@@ -1097,7 +1097,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                     # 1. 自分自身の上半身X位置
                                     # 2: 元モデルの上半身と指位置の差
                                     rep_finger_x = rep_front_upper_pos.x() \
-                                        + ( org_front_finger_pos.x() - org_front_upper_pos.x() ) * arm_palm_diff_length
+                                        + ( org_front_finger_pos.x() - org_front_upper_pos.x() ) * arm_diff_length
 
                                     # 手首の厚みを考慮
                                     finger_diff_sign = 1 if direction == "左" else -1
@@ -1116,7 +1116,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                         
                                     # 指の位置を元モデルとだいたい同じ位置にする(反対側)
                                     rep_reverse_finger_x = rep_front_upper_pos.x() \
-                                        + ( org_reverse_front_finger_pos.x() - org_front_upper_pos.x() ) * arm_palm_diff_length
+                                        + ( org_reverse_front_finger_pos.x() - org_front_upper_pos.x() ) * arm_diff_length
                                     rep_reverse_finger_x_diff = rep_reverse_front_finger_pos.x() - rep_reverse_finger_x
                                     # logger.debug("rep_reverse_finger_x_diff: %s", rep_reverse_finger_x_diff)
 
@@ -1292,7 +1292,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                     rep_reverse_wrist_y = rep_reverse_finger_global_3ds[len(rep_reverse_finger_global_3ds) - all_rep_finger_indexes[reverse_org_direction]["手首"] - 1].y()
 
                                     # 手首を元に合わせるY補正
-                                    rep_center_diff = (min(org_wrist_y, org_reverse_wrist_y) * arm_palm_diff_length) - min(rep_wrist_y, rep_reverse_wrist_y)
+                                    rep_center_diff = (min(org_wrist_y, org_reverse_wrist_y) * arm_diff_length) - min(rep_wrist_y, rep_reverse_wrist_y)
 
                                     # 手首がぺたっと床についている場合、手首の厚み補正
                                     rep_wrist_thick = wrist_thickness["左"] if (rep_wrist_y / org_palm_length < 0.5 or rep_reverse_wrist_y / org_palm_length < 0.5 ) else 0
@@ -1321,7 +1321,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
 
                                 else:
                                     if (org_wrist_y <= org_palm_length * hand_floor_distance * 2 or org_reverse_wrist_y <= org_palm_length * hand_floor_distance * 2):
-                                        print("－手首床近接なし: f: %s, 境界: %s, %s: %s, %s: %s, 調整: %s" % (bf.frame, hand_floor_distance, org_direction, org_wrist_y / org_palm_length, reverse_org_direction, org_reverse_wrist_y / org_palm_length, rep_center_diff))
+                                        print("－手首床近接なし: f: %s, 境界: %s, %s: %s, %s: %s" % (bf.frame, hand_floor_distance, org_direction, org_wrist_y / org_palm_length, reverse_org_direction, org_reverse_wrist_y / org_palm_length))
 
                                 if (org_leg_y <= org_palm_length * leg_floor_distance or org_reverse_leg_y <= org_palm_length * leg_floor_distance):
                                     # 足床調整
@@ -1342,7 +1342,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                     rep_reverse_leg_y = rep_reverse_leg_global_3ds[len(rep_reverse_leg_global_3ds) - all_rep_leg_indexes[reverse_org_direction]["足"] - 1].y()
 
                                     # 足を元に合わせるY補正
-                                    rep_center_diff = (min(org_leg_y, org_reverse_leg_y) * arm_palm_diff_length) - min(rep_leg_y, rep_reverse_leg_y)
+                                    rep_center_diff = (min(org_leg_y, org_reverse_leg_y) * arm_diff_length) - min(rep_leg_y, rep_reverse_leg_y)
 
                                     logger.debug("hand_floor leg: oly: %s, olyr: %s", org_leg_y, org_reverse_leg_y)
                                     logger.debug("hand_floor leg: rly: %s, rlyr: %s", rep_leg_y, rep_reverse_leg_y)
@@ -1433,7 +1433,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                                 rep_reverse_wrist_pos = rep_reverse_finger_global_3ds[len(rep_reverse_finger_global_3ds) - all_rep_finger_indexes[reverse_org_direction]["手首"] - 1]
 
                                                 # 逆方向
-                                                org_target_y = (org_reverse_wrist_y + 0.1) * arm_palm_diff_length
+                                                org_target_y = (org_reverse_wrist_y + 0.1) * arm_diff_length
                                                 org_thickness_y = abs(wrist_thickness[reverse_org_direction])
                                                 rep_reverse_wrist_pos.setY( org_target_y + org_thickness_y )
                                                 logger.debug("hand_floor org_target_y: %s, org_thickness_y: %s", org_target_y, org_thickness_y)
@@ -1448,7 +1448,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                                 rep_wrist_pos = rep_finger_global_3ds[len(rep_finger_global_3ds) - all_rep_finger_indexes[org_direction]["手首"] - 1]
 
                                                 # 正方向
-                                                org_target_y = (org_wrist_y + 0.1) * arm_palm_diff_length
+                                                org_target_y = (org_wrist_y + 0.1) * arm_diff_length
                                                 org_thickness_y = abs(wrist_thickness[org_direction])
                                                 rep_wrist_pos.setY( org_target_y + org_thickness_y )
                                                 logger.debug("hand_floor org_target_y: %s, org_thickness_y: %s", org_target_y, org_thickness_y)
@@ -1460,7 +1460,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                             is_wrist_adjust = is_reverse_wrist_adjust = True
                                         elif org_wrist_y <= org_palm_length * 1.5:
                                             # 正方向のYがより床に近い場合
-                                            org_target_y = org_wrist_y * arm_palm_diff_length
+                                            org_target_y = org_wrist_y * arm_diff_length
                                             org_thickness_y = abs(wrist_thickness[org_direction])
                                             rep_wrist_pos.setY( org_target_y + org_thickness_y )
                                             logger.debug("hand_floor org_target_y: %s, org_thickness_y: %s", org_target_y, org_thickness_y)
@@ -1473,7 +1473,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                         elif org_reverse_wrist_y <= org_palm_length * 1.5:
                                             # 逆方向のYがより床に近い場合
                                             # Yを元モデルと同じ距離にする
-                                            org_target_y = org_reverse_wrist_y * arm_palm_diff_length
+                                            org_target_y = org_reverse_wrist_y * arm_diff_length
                                             org_thickness_y = abs(wrist_thickness[reverse_org_direction])
                                             rep_reverse_wrist_pos.setY( org_target_y + org_thickness_y )
                                             logger.debug("hand_floor org_target_y: %s, org_thickness_y: %s", org_target_y, org_thickness_y)
@@ -1495,7 +1495,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                             rep_finger_pos = rep_finger_global_3ds[len(rep_finger_global_3ds) - all_rep_finger_indexes[org_direction]["人指３"] - 1]
                                             logger.debug("org_wrist_y: %s, org_finger_y: %s", org_wrist_y, org_finger_y)
                                             logger.debug("rep_wrist_y: %s, rep_finger_pos before: %s", rep_wrist_y, rep_finger_pos)
-                                            rep_finger_pos.setY( org_finger_y * arm_palm_diff_length )
+                                            rep_finger_pos.setY( org_finger_y * arm_diff_length )
                                             logger.debug("rep_wrist_y: %s, rep_finger_pos after: %s", rep_wrist_y, rep_finger_pos)
                                             
                                             # 指３位置から角度を求める
@@ -1512,7 +1512,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                             rep_reverse_wrist_y = rep_reverse_finger_global_3ds[len(rep_reverse_finger_global_3ds) - all_rep_finger_indexes[reverse_org_direction]["手首"] - 1].y()
 
                                             rep_reverse_finger_pos = rep_reverse_finger_global_3ds[len(rep_reverse_finger_global_3ds) - all_rep_finger_indexes[reverse_org_direction]["人指３"] - 1]
-                                            rep_reverse_finger_pos.setY( org_reverse_finger_y * arm_palm_diff_length )
+                                            rep_reverse_finger_pos.setY( org_reverse_finger_y * arm_diff_length )
 
                                             # 指３位置から角度を求める
                                             calc_arm_IK2FK(rep_reverse_finger_pos, replace_model, finger_links[reverse_org_direction], all_rep_finger_links[reverse_org_direction], reverse_org_direction, motion.frames, bf, None)

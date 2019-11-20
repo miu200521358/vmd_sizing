@@ -37,7 +37,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver5.00_β02", pos = wx.DefaultPosition, size = wx.Size( 600,650 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver5.00_β03", pos = wx.DefaultPosition, size = wx.Size( 600,650 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -1205,6 +1205,7 @@ class VmdSizingForm3 ( wx.Frame ):
 	def OnChangeArmIKFingerDistance(self, event):
 		self.m_radioArmIK.SetValue(1)
 		self.m_checkFingerDistance.SetValue(1)
+
 		# パス再設定
 		self.OnCreateOutputVmd(event)
 
@@ -2701,6 +2702,7 @@ class FloatSlider(wx.Slider):
 			parent, id, ival, imin, imax, pos=pos, size=size, style=style, name=name
 		)
 		self.Bind(wx.EVT_SCROLL, self._OnScroll)
+		self.Bind(wx.EVT_MOUSEWHEEL, self._OnScroll)
 
 	def _OnScroll(self, event):
 		ival = self._islider.GetValue()
