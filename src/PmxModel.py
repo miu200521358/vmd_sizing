@@ -385,6 +385,43 @@ class PmxModel():
                 break
 
         return max_wrist_upper_pos, min_wrist_below_pos
+    
+    # 指ウェイトの末端頂点の位置を取得する
+    def get_finger_end_vertex(self, direction, finger_name):
+        arm_qq = self.calc_arm_stance_rotation(direction)
+
+        # 指定ボーン名を含むボーンINDEXリスト
+        bone_idx_list = []
+        for bk, bv in self.bones.items():
+            if "{0}{1}".format(direction, finger_name) in bk and bv.index in self.vertices:
+                # ボーン名が指定文字列を含んでおり、かつそのボーンにウェイトが乗っている頂点がある場合、対象
+                bone_idx_list.append(bv.index)
+
+        if len(bone_idx_list) == 0:
+            # ウェイトボーンがない場合、初期値
+            return QVector3D(), 0
+
+        finger_end_vertex = 0
+        finger_end_pos = QVector3D()
+        finger_end_vertex_pos = QVector3D()
+        for bone_idx in bone_idx_list:            
+            for v in self.vertices[bone_idx]:
+                # 一旦水平にしたときの頂点位置を算出
+                v_pos = arm_qq.inverted().rotatedVector(v.position - self.bones["{0}ひじ".format(direction)].position)
+
+                if direction == "左" and v_pos.x() > finger_end_pos.x():
+                    # 指ボーンにウェイトが乗っていて、かつ末端より大きい（左）の場合、保持
+                    finger_end_pos = v_pos
+                    finger_end_vertex = v.index
+                    finger_end_vertex_pos = v.position
+
+                if direction == "右" and v_pos.x() < finger_end_pos.x():
+                    # 指ボーンにウェイトが乗っていて、かつ末端より小さい（右）の場合、保持
+                    finger_end_pos = v_pos
+                    finger_end_vertex = v.index
+                    finger_end_vertex_pos = v.position
+
+        return finger_end_vertex_pos, finger_end_vertex
 
     # 自身の腕の角度を算出する
     def calc_arm_stance_rotation(self, direction):
@@ -651,22 +688,27 @@ class PmxModel():
         , "右親指０": ["右手首"]
         , "右親指１": ["右親指０", "右手首"]
         , "右親指２": ["右親指１"]
+        , "右親指先": ["右親指２"]
         , "右人指０": ["右手首"]
         , "右人指１": ["右人指０", "右手首"]
         , "右人指２": ["右人指１"]
         , "右人指３": ["右人指２"]
+        , "右人指先": ["右人指３"]
         , "右中指０": ["右手首"]
         , "右中指１": ["右中指０", "右手首"]
         , "右中指２": ["右中指１"]
         , "右中指３": ["右中指２"]
+        , "右中指先": ["右中指３"]
         , "右薬指０": ["右手首"]
         , "右薬指１": ["右薬指０", "右手首"]
         , "右薬指２": ["右薬指１"]
         , "右薬指３": ["右薬指２"]
+        , "右薬指先": ["右薬指３"]
         , "右小指０": ["右手首"]
         , "右小指１": ["右小指０", "右手首"]
         , "右小指２": ["右小指１"]
         , "右小指３": ["右小指２"]
+        , "右小指先": ["右小指３"]
         , "右足": ["下半身"]
         , "右ひざ": ["右足"]
         , "右足首": ["右ひざ"]

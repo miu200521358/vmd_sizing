@@ -24,20 +24,13 @@ def exec(motion, trace_model, replace_model, output_vmd_path):
                     
         print("■■ 腕スタンス補正 -----------------")
 
-        # センターから手首までの位置(作成元モデル)
-        all_org_wrist_links, _ = trace_model.create_link_2_top_lr("中指１")
-
-        # センターから手首までの位置(トレース先モデル)
-        all_rep_wrist_links, _ = replace_model.create_link_2_top_lr("中指１")
-        logger.debug("all_rep_wrist_links: %s", [ "{0}: {1}\n".format(x.name, x.position) for x in all_rep_wrist_links["左"]])    
-
         all_d_list = [{"肩":"左肩", "腕":"左腕", "ひじ":"左ひじ", "手首":"左手首"}, {"肩":"右肩", "腕":"右腕", "ひじ":"右ひじ", "手首":"右手首"}]
         if set(all_d_list[0].values()).issubset(trace_model.bones) and set(all_d_list[0].values()).issubset(replace_model.bones) and \
             set(all_d_list[1].values()).issubset(trace_model.bones) and set(all_d_list[1].values()).issubset(replace_model.bones):
 
             # 腕の各パーツの補正角度（キー：ボーン名、値：補正クォータニオン）
-            left_arm_stance_qqs = calc_arm_stance(trace_model, all_org_wrist_links, replace_model, all_rep_wrist_links, "左")
-            right_arm_stance_qqs = calc_arm_stance(trace_model, all_org_wrist_links, replace_model, all_rep_wrist_links, "右")
+            left_arm_stance_qqs = calc_arm_stance(trace_model, replace_model, "左")
+            right_arm_stance_qqs = calc_arm_stance(trace_model, replace_model, "右")
 
             # for lak, lav in left_arm_stance_qqs.items():
             #     logger.debug("lak: %s, lav: %s", lak, lav.toEulerAngles())
@@ -66,53 +59,70 @@ def exec(motion, trace_model, replace_model, output_vmd_path):
                     # 腕
                     for bf in motion.frames[dlist["腕"]]:
                         if bf.key == True:
-                            bf.rotation = bf.rotation * arm_stance_qqs["腕"]
+                            bf.rotation = bf.rotation * arm_stance_qqs[dlist["腕"]]
 
                 if dlist["ひじ"] in motion.frames:
                     # ひじ
                     for bf in motion.frames[dlist["ひじ"]]:
                         if bf.key == True:
-                            bf.rotation = arm_stance_qqs["腕"].inverted() * bf.rotation * arm_stance_qqs["ひじ"]
+                            bf.rotation = arm_stance_qqs[dlist["腕"]].inverted() * bf.rotation * arm_stance_qqs[dlist["ひじ"]]
 
                 if dlist["手首"] in motion.frames:
                     # 手首
                     for bf in motion.frames[dlist["手首"]]:
                         if bf.key == True:
-                            bf.rotation = arm_stance_qqs["腕"].inverted() * arm_stance_qqs["ひじ"].inverted() * bf.rotation * arm_stance_qqs["手首"]
+                            # arm_stance_qqs[dlist["腕"]].inverted() *  * arm_stance_qqs[dlist["手首"]]
+                            bf.rotation = arm_stance_qqs[dlist["ひじ"]].inverted() * bf.rotation
 
-        # 各指の先までの位置(作成元モデル)
-        all_org_finger_links_list = {"左": [], "右": []}
+            # finger_bone_names = ["左人指１", "左人指２", "左人指３", "左中指１", "左中指２", "左中指３", "左薬指１", "左薬指２", "左薬指３", "左小指１", "左小指２", "左小指３" \
+            #                         , "右人指１", "右人指２", "右人指３", "右中指１", "右中指２", "右中指３", "右薬指１", "右薬指２", "右薬指３", "右小指１", "右小指２", "右小指３"]
 
-        # 各指の先までの位置(変換先モデル)
-        all_rep_finger_links_list = {"左": [], "右": []}
+            # if set(finger_bone_names).issubset(trace_model.bones) and set(finger_bone_names).issubset(replace_model.bones):
+                
+            #     # 指の初期角度補正
+            #     for direction in ["左", "右"]:
 
-        # 指の初期角度補正
-        for finger_name in ["人指", "中指", "薬指", "小指"]:
-            from_joint_name = "{0}{1}".format(finger_name, "１")
-            to_joint_name = "{0}{1}".format(finger_name, "２")
-            oflinks, ofindexes = trace_model.create_link_2_top_lr(to_joint_name)
-            rflinks, rfindexes = replace_model.create_link_2_top_lr(to_joint_name)
+            #         # 方向別
+            #         arm_stance_qqs = left_arm_stance_qqs if direction == "左" else right_arm_stance_qqs
 
-            for direction in ["左", "右"]:
-                finger_stance_qqs = calc_arm_stance(trace_model, oflinks, replace_model, rflinks, direction, from_joint_name)
-                direction_joint_name = "{0}{1}".format(direction, from_joint_name)
+            #         for finger_name in ["人指", "中指", "薬指", "小指"]:
+            #             # , ("２", "３", "{0}１".format(finger_name), "{0}２".format(finger_name)), ("３", "先", "{0}２".format(finger_name), "{0}３".format(finger_name))
+            #             for _fidx, finger_no in enumerate([("１", "２", "手首", "中指１")]):
 
-                if direction_joint_name in motion.frames:
-                    for bf in motion.frames[direction_joint_name]:
-                        if bf.key == True:
-                            bf.rotation = arm_stance_qqs["腕"].inverted() * arm_stance_qqs["ひじ"].inverted() * arm_stance_qqs["手首"].inverted() * bf.rotation * finger_stance_qqs[from_joint_name]
+            #                 from_joint_name = "{0}{1}{2}".format(direction, finger_name, finger_no[0])
+            #                 to_joint_name = "{0}{1}{2}".format(direction, finger_name, finger_no[1])
+            #                 prev_from_joint_name = "{0}{1}".format(direction, finger_no[2])
+            #                 prev_to_joint_name = "{0}{1}".format(direction, finger_no[3])
+
+            #                 finger_stance_qqs = calc_finger_stance(trace_model, replace_model, direction, from_joint_name, to_joint_name)
+            #                 prev_finger_stance_qqs = calc_finger_stance(trace_model, replace_model, direction, prev_from_joint_name, prev_to_joint_name)
+
+            #                 if from_joint_name in motion.frames:
+            #                     for bf in motion.frames[from_joint_name]:
+            #                         if bf.key == True:
+            #                             # bf.rotation = arm_stance_qqs["{0}腕".format(direction)].inverted() * arm_stance_qqs["{0}ひじ".format(direction)].inverted() * prev_finger_stance_qqs[prev_from_joint_name].inverted() * bf.rotation * finger_stance_qqs[from_joint_name]
+            #                             bf.rotation = prev_finger_stance_qqs[prev_from_joint_name].inverted() * bf.rotation * finger_stance_qqs[from_joint_name]
 
     print("腕スタンス補正終了")
     return True
 
 
-def calc_arm_stance(trace_model, all_org_wrist_links, replace_model, all_replace_wrist_links, direction, wrist_to_bone_name="中指１"):
-    from_bone = ["肩", "腕", "ひじ", "手首", "人指１", "中指１", "薬指１", "小指１"]
-    to_bone = ["腕", "ひじ", "手首", wrist_to_bone_name, "人指２", "中指２", "薬指２", "小指２"]
+def calc_arm_stance(trace_model, replace_model, direction):
+    from_bones = ["{0}肩".format(direction), "{0}腕".format(direction), "{0}ひじ".format(direction), "{0}手首".format(direction)]
+    to_bones = ["{0}腕".format(direction), "{0}ひじ".format(direction), "{0}手首".format(direction), "{0}中指１".format(direction)]
+
+    return calc_stance(trace_model, replace_model, direction, from_bones, to_bones)
+
+
+def calc_finger_stance(trace_model, replace_model, direction, from_bone, to_bone):
+    return calc_stance(trace_model, replace_model, direction, [from_bone], [to_bone])
+
+
+def calc_stance(trace_model, replace_model, direction, from_bone, to_bone):
     arm_stance_qqs = {}
     for f, t in zip(from_bone, to_bone):
-        org_qq = calc_arm_stance_rotation(trace_model, all_org_wrist_links[direction], f, t, direction)
-        rep_qq = calc_arm_stance_rotation(replace_model, all_replace_wrist_links[direction], f, t, direction)
+        org_qq = calc_arm_stance_rotation(trace_model, f, t, direction)
+        rep_qq = calc_arm_stance_rotation(replace_model, f, t, direction)
 
         arm_stance_qqs[f] = rep_qq.inverted() * org_qq
 
@@ -122,22 +132,24 @@ def calc_arm_stance(trace_model, all_org_wrist_links, replace_model, all_replace
 
     return arm_stance_qqs
 
-
-
-def calc_arm_stance_rotation(model, wrist_links, fbone, tbone, direction):
+def calc_arm_stance_rotation(model, fbone, tbone, direction):
     from_pos = QVector3D()
     to_pos = QVector3D()
     tail_pos = QVector3D()
 
-    for fk, fv in enumerate(wrist_links):
-        if fv.name.endswith(fbone):
-            from_pos = fv.position
-            if fv.tail_position != QVector3D:
+    if tbone in model.bones:
+        tv = model.bones[tbone]
+        to_pos = tv.position
+
+    if fbone in model.bones:
+        fv = model.bones[fbone]
+        from_pos = fv.position
+        if to_pos == QVector3D():
+            if fv.tail_position != QVector3D():
                 # 表示先が相対パスの場合、保持
                 tail_pos = fv.tail_position
-                break
-        if fv.name.endswith(tbone):
-            to_pos = fv.position
+            elif fv.tail_index >= 0:
+                to_pos = model.bones[model.bone_indexes[fv.tail_index]].position
     
     if to_pos == QVector3D() and tail_pos != QVector3D():
         to_pos = from_pos + tail_pos
@@ -154,7 +166,7 @@ def calc_arm_stance_rotation(model, wrist_links, fbone, tbone, direction):
 
         # 水平からTOボーンまでの回転量
         direction_x = 1 if direction == "左" else -1
-        from_qq = QQuaternion.rotationTo(QVector3D(direction_x, 0, diff_pos.z()), diff_pos)
+        from_qq = QQuaternion.rotationTo(QVector3D(direction_x, 0, 0), diff_pos)
         logger.debug("[z] d: %s, fbone: %s, from_qq: %s", direction, fbone, from_qq.toEulerAngles())
 
     return from_qq

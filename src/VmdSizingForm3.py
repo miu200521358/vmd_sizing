@@ -37,7 +37,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver5.00_β03", pos = wx.DefaultPosition, size = wx.Size( 600,650 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver4.03_β05", pos = wx.DefaultPosition, size = wx.Size( 600,650 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -389,21 +389,21 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_checkFloorArmDistance.SetToolTip( u"手首が床に沈み込んだり浮いてたりする場合、元モデルに合わせて手首の位置を調整します。\nセンター位置も一緒に調整します。" )
 		bSizer16.Add( self.m_checkFloorArmDistance, 0, wx.ALL, 5 )
 
-		self.m_staticText94 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"（", wx.DefaultPosition, wx.DefaultSize, 0 )
-		bSizer16.Add( self.m_staticText94, 0, wx.ALL, 5 )
+		# self.m_staticText94 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"（", wx.DefaultPosition, wx.DefaultSize, 0 )
+		# bSizer16.Add( self.m_staticText94, 0, wx.ALL, 5 )
 
-		# センターを上げる
-		self.m_checkFloorArmDistanceUp = wx.CheckBox( self.m_panelArm, wx.ID_ANY, u"センターを上げる", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_checkFloorArmDistanceUp.SetToolTip( u"センターYを上げる処理を許可します。" )
-		bSizer16.Add( self.m_checkFloorArmDistanceUp, 0, wx.ALL, 5 )
+		# # センターを上げる
+		# self.m_checkFloorArmDistanceUp = wx.CheckBox( self.m_panelArm, wx.ID_ANY, u"センターを上げる", wx.DefaultPosition, wx.DefaultSize, 0 )
+		# self.m_checkFloorArmDistanceUp.SetToolTip( u"センターYを上げる処理を許可します。" )
+		# bSizer16.Add( self.m_checkFloorArmDistanceUp, 0, wx.ALL, 5 )
 
-		# センターを下げる
-		self.m_checkFloorArmDistanceDown = wx.CheckBox( self.m_panelArm, wx.ID_ANY, u"センターを下げる", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_checkFloorArmDistanceDown.SetToolTip( u"センターYを下げる処理を許可します。" )
-		bSizer16.Add( self.m_checkFloorArmDistanceDown, 0, wx.ALL, 5 )
+		# # センターを下げる
+		# self.m_checkFloorArmDistanceDown = wx.CheckBox( self.m_panelArm, wx.ID_ANY, u"センターを下げる", wx.DefaultPosition, wx.DefaultSize, 0 )
+		# self.m_checkFloorArmDistanceDown.SetToolTip( u"センターYを下げる処理を許可します。" )
+		# bSizer16.Add( self.m_checkFloorArmDistanceDown, 0, wx.ALL, 5 )
 
-		self.m_staticText95 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"）", wx.DefaultPosition, wx.DefaultSize, 0 )
-		bSizer16.Add( self.m_staticText95, 0, wx.ALL, 5 )
+		# self.m_staticText95 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"）", wx.DefaultPosition, wx.DefaultSize, 0 )
+		# bSizer16.Add( self.m_staticText95, 0, wx.ALL, 5 )
 
 		bSizer13.Add( bSizer16, 0, wx.ALL, 5 )
 
@@ -431,20 +431,20 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		bSizerFinger15 = wx.BoxSizer( wx.HORIZONTAL )
 
-		self.m_staticText40 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"指間の距離　　 ", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText40.SetToolTip( u"どのくらい指が近付いた場合に、手首位置合わせを実行するか指定してください。\n値が小さいほど、指が近付いた時だけ手首位置合わせを行います。" )
+		self.m_staticText40 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"指間の距離　　  ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText40.SetToolTip( u"どのくらい指が近付いた場合に、指位置合わせを実行するか指定してください。\n値が小さいほど、指が近付いた時だけ手首位置合わせを行います。" )
 		self.m_staticText40.Wrap( -1 )
 
 		bSizerFinger15.Add( self.m_staticText40, 0, wx.ALL, 5 )
 
-		self.m_vmdFingerDistanceTxt = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"（0.6）", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_vmdFingerDistanceTxt.SetToolTip( u"現在指定されている指ボーン間の最短距離です。元モデルの指ボーン間の最短がこの範囲内である場合、手首位置合わせを行います。" )
+		self.m_vmdFingerDistanceTxt = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"（1.4）", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_vmdFingerDistanceTxt.SetToolTip( u"現在指定されている指ボーン間の最短距離です。元モデルの指ボーン間の最短がこの範囲内である場合、指位置合わせを行います。" )
 		self.m_vmdFingerDistanceTxt.Wrap( -1 )
 
 		bSizerFinger15.Add( self.m_vmdFingerDistanceTxt, 0, wx.ALL, 5 )
 
 		# 小数点を許可したスライダー
-		self.m_sliderFingerDistance = FloatSlider( self.m_panelArm, wx.ID_ANY, 0.6, 0, 10, 0.1, self.m_vmdFingerDistanceTxt, wx.DefaultPosition, wx.DefaultSize, wx.SL_HORIZONTAL )
+		self.m_sliderFingerDistance = FloatSlider( self.m_panelArm, wx.ID_ANY, 1.4, 0, 10, 0.1, self.m_vmdFingerDistanceTxt, wx.DefaultPosition, wx.DefaultSize, wx.SL_HORIZONTAL )
 		bSizerFinger15.Add( self.m_sliderFingerDistance, 1, wx.ALL|wx.EXPAND, 5 )
 		
 		bSizer13.Add( bSizerFinger15, 1, wx.ALL|wx.EXPAND, 5 )
@@ -1195,9 +1195,9 @@ class VmdSizingForm3 ( wx.Frame ):
 	def OnChangeArmIKFloorDistance(self, event):
 		self.m_radioArmIK.SetValue(1)
 		self.m_checkFloorArmDistance.SetValue(1)
-		# センターYは両方有効
-		self.m_checkFloorArmDistanceUp.SetValue(self.m_checkFloorArmDistance.GetValue())
-		self.m_checkFloorArmDistanceDown.SetValue(self.m_checkFloorArmDistance.GetValue())
+		# # センターYは両方有効
+		# self.m_checkFloorArmDistanceUp.SetValue(self.m_checkFloorArmDistance.GetValue())
+		# self.m_checkFloorArmDistanceDown.SetValue(self.m_checkFloorArmDistance.GetValue())
 		# パス再設定
 		self.OnCreateOutputVmd(event)
 
@@ -1212,9 +1212,9 @@ class VmdSizingForm3 ( wx.Frame ):
 	# 腕IKで床にチェックを入れたら、親の選択有効
 	def OnChangeFloorArmDistance(self, event):
 		self.m_radioArmIK.SetValue(1)
-		# センターYは両方有効
-		self.m_checkFloorArmDistanceUp.SetValue(self.m_checkFloorArmDistance.GetValue())
-		self.m_checkFloorArmDistanceDown.SetValue(self.m_checkFloorArmDistance.GetValue())
+		# # センターYは両方有効
+		# self.m_checkFloorArmDistanceUp.SetValue(self.m_checkFloorArmDistance.GetValue())
+		# self.m_checkFloorArmDistanceDown.SetValue(self.m_checkFloorArmDistance.GetValue())
 		# パス再設定
 		self.OnCreateOutputVmd(event)
 	
@@ -1228,9 +1228,9 @@ class VmdSizingForm3 ( wx.Frame ):
 		if not self.m_radioArmIK.GetValue():
 			# 腕IKの選択を外した場合、床位置合わせチェックOFF
 			self.m_checkFloorArmDistance.SetValue(0)
-			# センターYは両方無効
-			self.m_checkFloorArmDistanceUp.SetValue(0)
-			self.m_checkFloorArmDistanceDown.SetValue(0)
+			# # センターYは両方無効
+			# self.m_checkFloorArmDistanceUp.SetValue(0)
+			# self.m_checkFloorArmDistanceDown.SetValue(0)
 			# 指も無効
 			self.m_checkFingerDistance.SetValue(0)
 
@@ -2441,8 +2441,8 @@ class ExecWorkerThread(Thread):
 			, self._notify_window.m_radioArmIK.GetValue()
 			, self._notify_window.m_sliderHandDistance.GetValue()
 			, self._notify_window.m_checkFloorArmDistance.GetValue()
-			, self._notify_window.m_checkFloorArmDistanceUp.GetValue()
-			, self._notify_window.m_checkFloorArmDistanceDown.GetValue()
+			, True
+			, True
 			, self._notify_window.m_sliderHandFloorDistance.GetValue()
 			, self._notify_window.m_sliderLegFloorDistance.GetValue()
 			, self._notify_window.m_checkFingerDistance.GetValue()
