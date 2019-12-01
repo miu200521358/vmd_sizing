@@ -71,8 +71,8 @@ def exec(motion, trace_model, replace_model, output_vmd_path):
                     # 手首
                     for bf in motion.frames[dlist["手首"]]:
                         if bf.key == True:
-                            # arm_stance_qqs[dlist["腕"]].inverted() *  * arm_stance_qqs[dlist["手首"]]
-                            bf.rotation = arm_stance_qqs[dlist["ひじ"]].inverted() * bf.rotation
+                            # arm_stance_qqs[dlist["腕"]].inverted() * 
+                            bf.rotation = arm_stance_qqs[dlist["ひじ"]].inverted() * bf.rotation * arm_stance_qqs[dlist["手首"]]
 
             # finger_bone_names = ["左人指１", "左人指２", "左人指３", "左中指１", "左中指２", "左中指３", "左薬指１", "左薬指２", "左薬指３", "左小指１", "左小指２", "左小指３" \
             #                         , "右人指１", "右人指２", "右人指３", "右中指１", "右中指２", "右中指３", "右薬指１", "右薬指２", "右薬指３", "右小指１", "右小指２", "右小指３"]
