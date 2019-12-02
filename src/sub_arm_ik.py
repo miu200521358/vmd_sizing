@@ -28,11 +28,11 @@ def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_h
         if not trace_model.can_arm_sizing or not replace_model.can_arm_sizing:
             # 腕構造チェックがFALSEの場合、腕IK補正なし
             return False
-        elif is_finger_ik and "親指０" in motion.frames and "親指０" not in replace_model.bones:            
+        elif is_finger_ik and (("左親指０" in motion.frames and "左親指０" not in replace_model.bones) or ("右親指０" in motion.frames and "右親指０" not in replace_model.bones)):
             print("■■■■■■■■■■■■■■■■■")
             print("■　**WARNING**　")
             print("■　モーションに「親指０」が登録されており、変換先モデルに「親指０」がありません。")
-            print("■　指位置合わせ処理をスキップします。")
+            print("■　指位置合わせをスキップします。")
             print("■■■■■■■■■■■■■■■■■")
 
             error_file_logger = utils.create_error_file_logger(motion, trace_model, replace_model, output_vmd_path)
@@ -40,7 +40,7 @@ def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_h
             error_file_logger.warning("■■■■■■■■■■■■■■■■■")
             error_file_logger.warning("■　**WARNING**　")
             error_file_logger.warning("■　モーションに「親指０」が登録されており、変換先モデルに「親指０」がありません。")
-            error_file_logger.warning("■　指位置合わせ処理をスキップします。")
+            error_file_logger.warning("■　指位置合わせをスキップします。")
             error_file_logger.warning("■■■■■■■■■■■■■■■■■")
 
             return False
@@ -1185,19 +1185,33 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                 + (( org_front_finger_pos.x() - org_front_upper_pos.x() ) * arm_palm_diff_length)
                             rep_front_finger_pos.setX(rep_finger_x)
 
-                            # Yは首基準
-                            rep_finger_y = rep_front_neck_pos.y() \
-                                + (( org_front_finger_pos.y() - org_front_neck_pos.y() ) * arm_palm_diff_length)
-                            rep_front_finger_pos.setY(rep_finger_y)
-
                             # 指の位置を元モデルとだいたい同じ位置にする(反対側)
                             rep_reverse_finger_x = rep_front_upper_pos.x() \
                                 + (( org_reverse_front_finger_pos.x() - org_front_upper_pos.x() ) * arm_palm_diff_length)
                             rep_reverse_front_finger_pos.setX( rep_reverse_finger_x )
                                 
-                            # 指の位置を元モデルとだいたい同じ位置にする(反対側)
-                            rep_reverse_finger_y = rep_front_neck_pos.y() \
-                                + (( org_reverse_front_finger_pos.y() - org_front_neck_pos.y() ) * arm_palm_diff_length)
+                            # 指の位置を元モデルとだいたい同じ位置にする(Y)
+                            if org_front_finger_pos.y() <= org_front_upper_pos.y():
+                                # 上半身より下の場合は上半身基準
+                                rep_finger_y = rep_front_upper_pos.y() \
+                                        + (( org_front_finger_pos.y() - org_front_upper_pos.y() ) * arm_palm_diff_length)
+                                rep_reverse_finger_y = rep_front_upper_pos.y() \
+                                        + (( org_reverse_front_finger_pos.y() - org_front_upper_pos.y() ) * arm_palm_diff_length)
+                            elif org_front_finger_pos.y() >= org_front_neck_pos.y():
+                                # 首より上の場合は首基準
+                                rep_finger_y = rep_front_neck_pos.y() \
+                                        + (( org_front_finger_pos.y() - org_front_neck_pos.y() ) * arm_palm_diff_length)
+                                rep_reverse_finger_y = rep_front_neck_pos.y() \
+                                    + (( org_reverse_front_finger_pos.y() - org_front_neck_pos.y() ) * arm_palm_diff_length)
+                            else:
+                                # 間は中間くらい
+                                rep_finger_y = (rep_front_upper_pos.y() + (rep_front_neck_pos.y() - rep_front_upper_pos.y()) /2) \
+                                    + (( org_front_finger_pos.y() - (org_front_upper_pos.y() + (org_front_neck_pos.y() - org_front_upper_pos.y()) /2) ) * arm_palm_diff_length)
+                                rep_front_finger_pos.setY(rep_finger_y)
+                                rep_reverse_finger_y = (rep_front_upper_pos.y() + (rep_front_neck_pos.y() - rep_front_upper_pos.y()) /2) \
+                                    + (( org_reverse_front_finger_pos.y() - (org_front_upper_pos.y() + (org_front_neck_pos.y() - org_front_upper_pos.y()) /2) ) * arm_palm_diff_length)
+                            
+                            rep_front_finger_pos.setY(rep_finger_y)
                             rep_reverse_front_finger_pos.setY( rep_reverse_finger_y )
 
                             # 基準となるZ位置(身体に遠い方のZ)
@@ -1308,21 +1322,32 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                     + (( org_front_wrist_pos.x() - org_front_upper_pos.x() ) * arm_palm_diff_length)
                                 rep_front_wrist_pos.setX(rep_wrist_x)
 
-                                # Yは首基準
-                                rep_wrist_y = rep_front_neck_pos.y() \
-                                    + (( org_front_wrist_pos.y() - org_front_neck_pos.y() ) * arm_palm_diff_length)
-                                rep_front_wrist_pos.setY(rep_wrist_y)
-
                                 # 手首の位置を元モデルとだいたい同じ位置にする(反対側)
                                 rep_reverse_wrist_x = rep_front_upper_pos.x() \
                                     + (( org_reverse_front_wrist_pos.x() - org_front_upper_pos.x() ) * arm_palm_diff_length)
                                 rep_reverse_front_wrist_pos.setX( rep_reverse_wrist_x )
-                                    
-                                # 手首の位置を元モデルとだいたい同じ位置にする(反対側)
-                                rep_reverse_wrist_y = rep_front_neck_pos.y() \
-                                    + (( org_reverse_front_wrist_pos.y() - org_front_neck_pos.y() ) * arm_palm_diff_length)
-                                rep_reverse_front_wrist_pos.setY( rep_reverse_wrist_y )
 
+                                # 指の位置を元モデルとだいたい同じ位置にする(Y)
+                                if org_front_wrist_pos.y() <= org_front_upper_pos.y():
+                                    # 上半身より下の場合は上半身基準
+                                    rep_wrist_y = rep_front_upper_pos.y() \
+                                            + (( org_front_wrist_pos.y() - org_front_upper_pos.y() ) * arm_palm_diff_length)
+                                    rep_reverse_wrist_y = rep_front_upper_pos.y() \
+                                            + (( org_reverse_front_wrist_pos.y() - org_front_upper_pos.y() ) * arm_palm_diff_length)
+                                elif org_front_wrist_pos.y() >= org_front_neck_pos.y():
+                                    # 首より上の場合は首基準
+                                    rep_wrist_y = rep_front_neck_pos.y() \
+                                            + (( org_front_wrist_pos.y() - org_front_neck_pos.y() ) * arm_palm_diff_length)
+                                    rep_reverse_wrist_y = rep_front_neck_pos.y() \
+                                        + (( org_reverse_front_wrist_pos.y() - org_front_neck_pos.y() ) * arm_palm_diff_length)
+                                else:
+                                    # 間は中間くらい
+                                    rep_wrist_y = (rep_front_upper_pos.y() + (rep_front_neck_pos.y() - rep_front_upper_pos.y()) /2) \
+                                        + (( org_front_wrist_pos.y() - (org_front_upper_pos.y() + (org_front_neck_pos.y() - org_front_upper_pos.y()) /2) ) * arm_palm_diff_length)
+                                    rep_front_wrist_pos.setY(rep_wrist_y)
+                                    rep_reverse_wrist_y = (rep_front_upper_pos.y() + (rep_front_neck_pos.y() - rep_front_upper_pos.y()) /2) \
+                                        + (( org_reverse_front_wrist_pos.y() - (org_front_upper_pos.y() + (org_front_neck_pos.y() - org_front_upper_pos.y()) /2) ) * arm_palm_diff_length)
+                                
                                 if not is_prev_load:
                                     # 基準となるZ位置(身体に遠い方のZ)
                                     org_base_z = min(org_front_wrist_pos.z(), org_reverse_front_wrist_pos.z())
