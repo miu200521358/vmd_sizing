@@ -1240,33 +1240,33 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                             # 反対側の指位置から角度を求める
                             calc_arm_IK2FK(rep_reverse_finger_pos, replace_model, arm_finger_links[reverse_direction], rep_reverse_target_finger_links, reverse_direction, motion.frames, bf, prev_space_bf)
 
-                            # ---------
-                            finger_ik_bone = "{0}偽IK".format(direction)
-                            if not finger_ik_bone in motion.frames:
-                                motion.frames[finger_ik_bone] = []
+                            # # ---------
+                            # finger_ik_bone = "{0}偽IK".format(direction)
+                            # if not finger_ik_bone in motion.frames:
+                            #     motion.frames[finger_ik_bone] = []
                             
-                            wikbf = VmdBoneFrame(bf.frame)
-                            wikbf.name = finger_ik_bone.encode('shift-jis')
-                            wikbf.format_name = finger_ik_bone
-                            wikbf.frame = bf.frame
-                            wikbf.key = True
-                            wikbf.position = rep_finger_pos
-                            motion.frames[finger_ik_bone].append(wikbf)
-                            # ---------
+                            # wikbf = VmdBoneFrame(bf.frame)
+                            # wikbf.name = finger_ik_bone.encode('shift-jis')
+                            # wikbf.format_name = finger_ik_bone
+                            # wikbf.frame = bf.frame
+                            # wikbf.key = True
+                            # wikbf.position = rep_finger_pos
+                            # motion.frames[finger_ik_bone].append(wikbf)
+                            # # ---------
 
-                            # ---------
-                            reverse_finger_ik_bone = "{0}偽IK".format(reverse_direction)
-                            if not reverse_finger_ik_bone in motion.frames:
-                                motion.frames[reverse_finger_ik_bone] = []
+                            # # ---------
+                            # reverse_finger_ik_bone = "{0}偽IK".format(reverse_direction)
+                            # if not reverse_finger_ik_bone in motion.frames:
+                            #     motion.frames[reverse_finger_ik_bone] = []
                             
-                            rwikbf = VmdBoneFrame(bf.frame)
-                            rwikbf.name = reverse_finger_ik_bone.encode('shift-jis')
-                            rwikbf.format_name = reverse_finger_ik_bone
-                            rwikbf.frame = bf.frame
-                            rwikbf.key = True
-                            rwikbf.position = rep_reverse_finger_pos
-                            motion.frames[reverse_finger_ik_bone].append(rwikbf)
-                            # ---------
+                            # rwikbf = VmdBoneFrame(bf.frame)
+                            # rwikbf.name = reverse_finger_ik_bone.encode('shift-jis')
+                            # rwikbf.format_name = reverse_finger_ik_bone
+                            # rwikbf.frame = bf.frame
+                            # rwikbf.key = True
+                            # rwikbf.position = rep_reverse_finger_pos
+                            # motion.frames[reverse_finger_ik_bone].append(rwikbf)
+                            # # ---------
 
                             # ----------------------
 
@@ -1374,33 +1374,33 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                 # 反対側の手首位置から角度を求める
                                 calc_arm_IK2FK(rep_reverse_wrist_pos, replace_model, arm_links[reverse_direction], rep_reverse_target_finger_links, reverse_direction, motion.frames, bf, prev_space_bf)
 
-                                # ---------
-                                finger_ik_bone = "{0}偽IK2".format(direction)
-                                if not finger_ik_bone in motion.frames:
-                                    motion.frames[finger_ik_bone] = []
+                                # # ---------
+                                # finger_ik_bone = "{0}偽IK2".format(direction)
+                                # if not finger_ik_bone in motion.frames:
+                                #     motion.frames[finger_ik_bone] = []
                                 
-                                wikbf = VmdBoneFrame(bf.frame)
-                                wikbf.name = finger_ik_bone.encode('shift-jis')
-                                wikbf.format_name = finger_ik_bone
-                                wikbf.frame = bf.frame
-                                wikbf.key = True
-                                wikbf.position = rep_wrist_pos
-                                motion.frames[finger_ik_bone].append(wikbf)
-                                # ---------
+                                # wikbf = VmdBoneFrame(bf.frame)
+                                # wikbf.name = finger_ik_bone.encode('shift-jis')
+                                # wikbf.format_name = finger_ik_bone
+                                # wikbf.frame = bf.frame
+                                # wikbf.key = True
+                                # wikbf.position = rep_wrist_pos
+                                # motion.frames[finger_ik_bone].append(wikbf)
+                                # # ---------
 
-                                # ---------
-                                reverse_finger_ik_bone = "{0}偽IK2".format(reverse_direction)
-                                if not reverse_finger_ik_bone in motion.frames:
-                                    motion.frames[reverse_finger_ik_bone] = []
+                                # # ---------
+                                # reverse_finger_ik_bone = "{0}偽IK2".format(reverse_direction)
+                                # if not reverse_finger_ik_bone in motion.frames:
+                                #     motion.frames[reverse_finger_ik_bone] = []
                                 
-                                rwikbf = VmdBoneFrame(bf.frame)
-                                rwikbf.name = reverse_finger_ik_bone.encode('shift-jis')
-                                rwikbf.format_name = reverse_finger_ik_bone
-                                rwikbf.frame = bf.frame
-                                rwikbf.key = True
-                                rwikbf.position = rep_reverse_wrist_pos
-                                motion.frames[reverse_finger_ik_bone].append(rwikbf)
-                                # ---------
+                                # rwikbf = VmdBoneFrame(bf.frame)
+                                # rwikbf.name = reverse_finger_ik_bone.encode('shift-jis')
+                                # rwikbf.format_name = reverse_finger_ik_bone
+                                # rwikbf.frame = bf.frame
+                                # rwikbf.key = True
+                                # rwikbf.position = rep_reverse_wrist_pos
+                                # motion.frames[reverse_finger_ik_bone].append(rwikbf)
+                                # # ---------
 
                                 # 腕から末端までのリンク生成(手首あり)
                                 arm_finger_links = {
