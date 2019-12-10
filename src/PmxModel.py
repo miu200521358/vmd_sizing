@@ -237,7 +237,7 @@ class PmxModel():
         bone_idx_list = []
         for bk, bv in self.bones.items():
             if ((not is_only and bone_name in bk) or (is_only and bone_name == bk)) and bv.index in self.vertices :
-                logger.info("bk: %s, bv: %s", bk, bv.index)
+                logger.debug("bk: %s, bv: %s", bk, bv.index)
                 # ボーン名が指定文字列を含んでおり、かつそのボーンにウェイトが乗っている頂点がある場合、対象
                 # 特定ボーンのみの場合、ボーン名が一致していることが条件
                 bone_idx_list.append(bv.index)
@@ -247,7 +247,7 @@ class PmxModel():
             # ウェイトボーンがない場合、初期値
             return QVector3D(), QVector3D(), QVector3D(), QVector3D(), None, None, None, None        
 
-        logger.info("model: %s, bone_name: %s, bone_idx_list:%s", self.name, bone_name, bone_idx_list)
+        logger.debug("model: %s, bone_name: %s, bone_idx_list:%s", self.name, bone_name, bone_idx_list)
         
         max_bone_upper_pos = QVector3D(0, -99999, 0)
         min_bone_below_pos = QVector3D(0, 99999, 0)

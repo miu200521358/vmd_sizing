@@ -1516,7 +1516,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                             # logger.debug("hand_floor wrist: rwy: %s, rwyr: %s", rep_wrist_y, rep_reverse_wrist_y)
                             # logger.debug("hand_floor wrist: (min(org_wrist_y, org_reverse_wrist_y) - min(rep_wrist_y, rep_reverse_wrist_y)): %s", (min(org_wrist_y, org_reverse_wrist_y) - min(rep_wrist_y, rep_reverse_wrist_y)))
 
-                            # logger.info("%s: is_floor_hand_up: %s, is_floor_hand_down: %s, rep_center_diff: %s", bf.frame, is_floor_hand_up, is_floor_hand_down, rep_center_diff)
+                            # logger.debug("%s: is_floor_hand_up: %s, is_floor_hand_down: %s, rep_center_diff: %s", bf.frame, is_floor_hand_up, is_floor_hand_down, rep_center_diff)
 
                             if (is_floor_hand_up and rep_center_diff > 0) or (is_floor_hand_down and rep_center_diff < 0):
                                 # 床位置合わせで、手首のY位置が大体手の大きさ以下の場合、手首と床の位置合わせ
@@ -1581,7 +1581,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
 
                         else:
                             if (org_leg_y <= org_palm_length * leg_floor_distance * 2 or org_reverse_leg_y <= org_palm_length * leg_floor_distance * 2):
-                                print("－足床近接なし: f: %s, 境界: %s, %s: %s, %s: %s, 調整: %s" % (bf.frame, hand_floor_distance, org_direction, org_wrist_y / org_palm_length, reverse_org_direction, org_reverse_wrist_y / org_palm_length, rep_center_diff))
+                                print("－足床近接なし: f: %s, 境界: %s, %s: %s, %s: %s" % (bf.frame, hand_floor_distance, org_direction, org_wrist_y / org_palm_length, reverse_org_direction, org_reverse_wrist_y / org_palm_length))
 
                         logger.debug("%s: org_wrist_y: %s(%s), org_reverse_wrist_y: %s(%s)", bf.frame, org_wrist_y, org_palm_length * hand_floor_distance, org_reverse_wrist_y, org_palm_length * hand_floor_distance)
                         logger.debug("%s: org_upper_y: %s(%s)(%s)", bf.frame, org_upper_y, org_leg_y * 1.2, org_reverse_leg_y * 1.2)
@@ -1741,7 +1741,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                         # 失敗時は元に戻す
                                         motion.frames["上半身"][bf_idx] = copy.deepcopy(org_fill_motion_frames["上半身"][bf_idx])
                                     else:
-                                        logger.info("手首床位置合わせ成功: f: %s, 上半身:%s", bf.frame, uad)
+                                        logger.debug("手首床位置合わせ成功: f: %s, 上半身:%s", bf.frame, uad)
                                         motion.frames["上半身"][bf_idx].key = True
                                         if is_wrist_adjust:
                                             motion.frames["{0}手首".format(org_direction)][bf_idx].key = True
