@@ -675,3 +675,19 @@ def calc_interpolate_bezier_by_t(x1v, y1v, x2v, y2v, start, end, t):
     logger.debug(",calc_interpolate_bezier_by_t,x1v,%s, y1v,%s, x2v,%s, y2v,%s, y,%s,x,%s,t,%s,x2,%s,x3,%s",x1v, y1v, x2v, y2v, y, x, t,x2,x3)
 
     return x3, y
+
+
+# 指定された方向に向いた場合の位置情報を返す
+def create_direction_pos_all(direction_qq, target_pos_3ds):
+    direction_pos_3ds = []
+
+    for target_pos in target_pos_3ds:
+        direction_pos_3ds.append(create_direction_pos(direction_qq, target_pos))
+    
+    return direction_pos_3ds
+
+# 指定された方向に向いた場合の位置情報を返す
+def create_direction_pos(direction_qq, target_pos):
+    mat = QMatrix4x4()
+    mat.rotate(direction_qq)
+    return mat.mapVector(target_pos)

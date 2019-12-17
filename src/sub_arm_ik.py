@@ -707,9 +707,9 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                             # logger.debug("org_upper_direction_qq: %s", org_upper_direction_qq.toEulerAngles())
 
                             # 元モデルの向きを逆転させて、正面向きの位置を計算する
-                            org_front_finger_global_3ds = create_direction_pos_all(org_upper_direction_qq.inverted(), org_finger_global_3ds)
+                            org_front_finger_global_3ds = utils.create_direction_pos_all(org_upper_direction_qq.inverted(), org_finger_global_3ds)
                             # 元モデルの向きを逆転させて、正面向きの位置を計算する(反対側)
-                            org_reverse_front_finger_global_3ds = create_direction_pos_all(org_upper_direction_qq.inverted(), org_reverse_finger_global_3ds)
+                            org_reverse_front_finger_global_3ds = utils.create_direction_pos_all(org_upper_direction_qq.inverted(), org_reverse_finger_global_3ds)
 
                             # 元モデルの正面向き上半身の位置
                             org_front_upper_pos = org_front_finger_global_3ds[len(org_finger_global_3ds) - all_org_finger_indexes[direction]["上半身"] - 1]
@@ -739,9 +739,9 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                             # logger.debug("rep_upper_direction_qq: %s", rep_upper_direction_qq.toEulerAngles())
 
                             # 変換先モデルの向きを逆転させて、正面向きの手首の位置を計算する
-                            rep_front_finger_global_3ds = create_direction_pos_all(rep_upper_direction_qq.inverted(), rep_finger_global_3ds)
+                            rep_front_finger_global_3ds = utils.create_direction_pos_all(rep_upper_direction_qq.inverted(), rep_finger_global_3ds)
                             # 変換先モデルの向きを逆転させて、正面向きの手首の位置を計算する
-                            rep_reverse_front_finger_global_3ds = create_direction_pos_all(rep_upper_direction_qq.inverted(), rep_reverse_finger_global_3ds)
+                            rep_reverse_front_finger_global_3ds = utils.create_direction_pos_all(rep_upper_direction_qq.inverted(), rep_reverse_finger_global_3ds)
 
                             # 変換先モデルの正面向き上半身の位置
                             rep_front_upper_pos = rep_front_finger_global_3ds[len(rep_finger_global_3ds) - all_rep_finger_indexes[direction]["上半身"] - 1]
@@ -843,7 +843,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                             # logger.debug("frame: %s, rep_reverse_front_wrist_pos after: %s", bf.frame, rep_reverse_front_wrist_pos)
 
                             # 変換先モデルの向きを元に戻して、正面向きの手首を回転させた位置に合わせる
-                            rep_wrist_pos = create_direction_pos(rep_upper_direction_qq, rep_front_wrist_pos)
+                            rep_wrist_pos = utils.create_direction_pos(rep_upper_direction_qq, rep_front_wrist_pos)
                             # logger.debug("frame: %s, rep_wrist_pos after: %s", bf.frame, rep_wrist_pos)
 
                             # # ---------
@@ -861,7 +861,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                             # # ---------
 
                             # 変換先モデルの向きを元に戻して、正面向きの手首を回転させた位置に合わせる(反対側)
-                            rep_reverse_wrist_pos = create_direction_pos(rep_upper_direction_qq, rep_reverse_front_wrist_pos)
+                            rep_reverse_wrist_pos = utils.create_direction_pos(rep_upper_direction_qq, rep_reverse_front_wrist_pos)
                             # logger.debug("frame: %s, rep_reverse_wrist_pos after: %s", bf.frame, rep_reverse_wrist_pos)
 
                             # # ---------
@@ -914,9 +914,9 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                 # logger.debug("rep_upper_direction_qq: %s", rep_upper_direction_qq.toEulerAngles())
 
                                 # 変換先モデルの向きを逆転させて、正面向きの手首の位置を計算する
-                                rep_front_finger_global_3ds = create_direction_pos_all(rep_upper_direction_qq.inverted(), rep_finger_global_3ds)
+                                rep_front_finger_global_3ds = utils.create_direction_pos_all(rep_upper_direction_qq.inverted(), rep_finger_global_3ds)
                                 # 変換先モデルの向きを逆転させて、正面向きの手首の位置を計算する
-                                rep_reverse_front_finger_global_3ds = create_direction_pos_all(rep_upper_direction_qq.inverted(), rep_reverse_finger_global_3ds)
+                                rep_reverse_front_finger_global_3ds = utils.create_direction_pos_all(rep_upper_direction_qq.inverted(), rep_reverse_finger_global_3ds)
 
                                 # # 変換先モデルの正面向き上半身の位置
                                 # rep_front_upper_pos = rep_front_finger_global_3ds[len(rep_finger_global_3ds) - all_rep_finger_indexes[direction]["上半身"] - 1]
@@ -951,11 +951,11 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                 # logger.debug("(( org_reverse_front_finger_pos.x() - org_front_upper_pos.x() )  * arm_diff_length): %s", (( org_reverse_front_finger_pos.x() - org_front_upper_pos.x() )  * arm_diff_length))
 
                                 # 変換先モデルの向きを元に戻して、正面向きの指３を回転させた位置に合わせる
-                                rep_finger_pos = create_direction_pos(rep_upper_direction_qq, rep_front_finger_pos)
+                                rep_finger_pos = utils.create_direction_pos(rep_upper_direction_qq, rep_front_finger_pos)
                                 # logger.debug("frame: %s, rep_finger_pos after: %s", bf.frame, rep_finger_pos)
 
                                 # 変換先モデルの向きを元に戻して、正面向きの指３を回転させた位置に合わせる(反対側)
-                                rep_reverse_finger_pos = create_direction_pos(rep_upper_direction_qq, rep_reverse_front_finger_pos)
+                                rep_reverse_finger_pos = utils.create_direction_pos(rep_upper_direction_qq, rep_reverse_front_finger_pos)
                                 # logger.debug("frame: %s, rep_reverse_finger_pos after: %s", bf.frame, rep_reverse_finger_pos)
 
                                 # 指３位置から角度を求める
@@ -1141,9 +1141,9 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                             org_upper_direction_qq = utils.calc_upper_direction_qq(trace_model, org_upper_links, org_motion_frames, bf)
 
                             # 元モデルの向きを逆転させて、正面向きの位置を計算する
-                            org_front_neck_global_3ds = create_direction_pos_all(org_upper_direction_qq.inverted(), org_neck_global_3ds)
-                            org_front_finger_global_3ds = create_direction_pos_all(org_upper_direction_qq.inverted(), org_finger_global_3ds)
-                            org_reverse_front_finger_global_3ds = create_direction_pos_all(org_upper_direction_qq.inverted(), org_reverse_finger_global_3ds)
+                            org_front_neck_global_3ds = utils.create_direction_pos_all(org_upper_direction_qq.inverted(), org_neck_global_3ds)
+                            org_front_finger_global_3ds = utils.create_direction_pos_all(org_upper_direction_qq.inverted(), org_finger_global_3ds)
+                            org_reverse_front_finger_global_3ds = utils.create_direction_pos_all(org_upper_direction_qq.inverted(), org_reverse_finger_global_3ds)
 
                             # 元モデルの正面向き上半身の位置
                             org_front_upper_pos = org_front_finger_global_3ds[len(org_front_finger_global_3ds) - org_force_target_finger_indexes["上半身"] - 1]
@@ -1163,9 +1163,9 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                             rep_upper_direction_qq = utils.calc_upper_direction_qq(replace_model, rep_upper_links, motion.frames, bf)
 
                             # 変換先モデルの向きを逆転させて、正面向きの指の位置を計算する
-                            rep_front_neck_global_3ds = create_direction_pos_all(rep_upper_direction_qq.inverted(), rep_neck_global_3ds)
-                            rep_front_finger_global_3ds = create_direction_pos_all(rep_upper_direction_qq.inverted(), rep_finger_global_3ds)
-                            rep_reverse_front_finger_global_3ds = create_direction_pos_all(rep_upper_direction_qq.inverted(), rep_reverse_finger_global_3ds)
+                            rep_front_neck_global_3ds = utils.create_direction_pos_all(rep_upper_direction_qq.inverted(), rep_neck_global_3ds)
+                            rep_front_finger_global_3ds = utils.create_direction_pos_all(rep_upper_direction_qq.inverted(), rep_finger_global_3ds)
+                            rep_reverse_front_finger_global_3ds = utils.create_direction_pos_all(rep_upper_direction_qq.inverted(), rep_reverse_finger_global_3ds)
 
                             # 変換先モデルの正面向き上半身の位置
                             rep_front_upper_pos = rep_front_finger_global_3ds[len(rep_front_finger_global_3ds) - rep_force_target_finger_indexes["上半身"] - 1]
@@ -1228,11 +1228,11 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                             rep_reverse_front_finger_pos.setZ( rep_reverse_finger_z )
 
                             # 変換先モデルの向きを元に戻して、正面向きの指を回転させた位置に合わせる
-                            rep_finger_pos = create_direction_pos(rep_upper_direction_qq, rep_front_finger_pos)
+                            rep_finger_pos = utils.create_direction_pos(rep_upper_direction_qq, rep_front_finger_pos)
                             # logger.debug("frame: %s, rep_finger_pos after: %s", bf.frame, rep_finger_pos)
 
                             # 変換先モデルの向きを元に戻して、正面向きの指を回転させた位置に合わせる(反対側)
-                            rep_reverse_finger_pos = create_direction_pos(rep_upper_direction_qq, rep_reverse_front_finger_pos)
+                            rep_reverse_finger_pos = utils.create_direction_pos(rep_upper_direction_qq, rep_reverse_front_finger_pos)
                             # logger.debug("frame: %s, rep_reverse_finger_pos after: %s", bf.frame, rep_reverse_finger_pos)
 
                             # 指位置から角度を求める
@@ -1282,8 +1282,8 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                             # ---------------------
 
                             # 元モデルの向きを逆転させて、正面向きの位置を計算する
-                            org_front_finger_global_3ds = create_direction_pos_all(org_upper_direction_qq.inverted(), org_finger_global_3ds)
-                            org_reverse_front_finger_global_3ds = create_direction_pos_all(org_upper_direction_qq.inverted(), org_reverse_finger_global_3ds)
+                            org_front_finger_global_3ds = utils.create_direction_pos_all(org_upper_direction_qq.inverted(), org_finger_global_3ds)
+                            org_reverse_front_finger_global_3ds = utils.create_direction_pos_all(org_upper_direction_qq.inverted(), org_reverse_finger_global_3ds)
 
                             # 元モデルの正面向き手首の位置
                             org_front_wrist_pos = org_front_finger_global_3ds[len(org_finger_global_3ds) - org_force_target_finger_indexes["手首"] - 1]
@@ -1295,8 +1295,8 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                             # 変換先モデルの手首位置
                             rep_reverse_wrist_pos = rep_reverse_finger_global_3ds[len(rep_reverse_finger_global_3ds) - rep_reverse_target_finger_indexes["手首"] - 1]
 
-                            rep_front_finger_global_3ds = create_direction_pos_all(rep_upper_direction_qq.inverted(), rep_finger_global_3ds)
-                            rep_reverse_front_finger_global_3ds = create_direction_pos_all(rep_upper_direction_qq.inverted(), rep_reverse_finger_global_3ds)
+                            rep_front_finger_global_3ds = utils.create_direction_pos_all(rep_upper_direction_qq.inverted(), rep_finger_global_3ds)
+                            rep_reverse_front_finger_global_3ds = utils.create_direction_pos_all(rep_upper_direction_qq.inverted(), rep_reverse_finger_global_3ds)
 
                             # 変換先モデルの正面向き手首の位置
                             rep_front_wrist_pos = rep_front_finger_global_3ds[len(rep_finger_global_3ds) - rep_force_target_finger_indexes["手首"] - 1]
@@ -1362,11 +1362,11 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                 rep_reverse_front_wrist_pos.setZ( rep_reverse_wrist_z )
 
                                 # 変換先モデルの向きを元に戻して、正面向きの手首を回転させた位置に合わせる
-                                rep_wrist_pos = create_direction_pos(rep_upper_direction_qq, rep_front_wrist_pos)
+                                rep_wrist_pos = utils.create_direction_pos(rep_upper_direction_qq, rep_front_wrist_pos)
                                 # logger.debug("frame: %s, rep_wrist_pos after: %s", bf.frame, rep_wrist_pos)
 
                                 # 変換先モデルの向きを元に戻して、正面向きの手首を回転させた位置に合わせる(反対側)
-                                rep_reverse_wrist_pos = create_direction_pos(rep_upper_direction_qq, rep_reverse_front_wrist_pos)
+                                rep_reverse_wrist_pos = utils.create_direction_pos(rep_upper_direction_qq, rep_reverse_front_wrist_pos)
                                 # logger.debug("frame: %s, rep_reverse_wrist_pos after: %s", bf.frame, rep_reverse_wrist_pos)
 
                                 # 手首位置から角度を求める
@@ -1700,7 +1700,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
 
                                 if finger_links and wrist_thickness[reverse_org_direction] != 0 and is_reverse_wrist_adjust:
                                     # 人指３のY位置
-                                    org_reverse_finger_y = org_reverse_finger_global_3ds[len(org_finger_global_3ds) - all_org_finger_indexes[reverse_org_direction]["人指３"] - 1].y()
+                                    org_reverse_finger_y = org_reverse_finger_global_3ds[len(org_reverse_finger_global_3ds) - all_org_finger_indexes[reverse_org_direction]["人指３"] - 1].y()
 
                                     # 変換先モデルのIK計算前指までの情報
                                     _, _, _, _, rep_reverse_finger_global_3ds = utils.create_matrix_global(replace_model, all_rep_finger_links[reverse_org_direction], motion.frames, bf, None)
@@ -1790,21 +1790,6 @@ def calc_farer_finger_length(finger_global_3ds, all_finger_indexes, direction):
     
     # 最終的に最も遠い関節との距離を返す
     return (wrist_pos - farer_finger_pos).length()
-
-# 指定された方向に向いた場合の位置情報を返す
-def create_direction_pos_all(direction_qq, target_pos_3ds):
-    direction_pos_3ds = []
-
-    for target_pos in target_pos_3ds:
-        direction_pos_3ds.append(create_direction_pos(direction_qq, target_pos))
-    
-    return direction_pos_3ds
-
-# 指定された方向に向いた場合の位置情報を返す
-def create_direction_pos(direction_qq, target_pos):
-    mat = QMatrix4x4()
-    mat.rotate(direction_qq)
-    return mat.mapVector(target_pos)
 
 # IK計算
 # https://mukai-lab.org/content/CcdParticleInverseKinematics.pdf
