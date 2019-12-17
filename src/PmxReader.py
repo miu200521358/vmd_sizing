@@ -243,6 +243,22 @@ class PmxReader():
             pmx.bones[bone.name] = bone
             # インデックス逆引きも登録
             pmx.bone_indexes[bone.index] = bone.name
+        
+        # 指先ボーンがない場合、代替で挿入
+        for direction in ["左", "右"]:
+            for (finger_name, end_joint_name) in [("親指", "２"), ("人指", "３"), ("中指", "３"), ("薬指", "３"), ("小指", "３")]:
+                end_joint_name = "{0}{1}{2}".format(direction, finger_name, end_joint_name)
+                to_joint_name = "{0}{1}{2}".format(direction, finger_name, "先")
+
+                if to_joint_name not in pmx.bones:
+                    _, to_pos = self.calc_tail_pos(pmx, end_joint_name)
+                    to_bone = pmx.Bone(to_joint_name, None, to_pos, -1, 0, 0)
+
+                    # ボーンのINDEX
+                    to_bone.index = len(pmx.bones.keys())
+                    pmx.bones[to_bone.name] = to_bone
+                    # インデックス逆引きも登録
+                    pmx.bone_indexes[to_bone.index] = to_bone.name
 
         logger.debug("len(bones): %s", len(pmx.bones))
         
@@ -650,3 +666,23 @@ class PmxReader():
             result = None
 
         return result
+
+
+    # 指定されたボーンの先を取得する
+    def calc_tail_pos(self, model, fbone):
+        from_pos = QVector3D()
+        tail_pos = QVector3D()
+        to_pos = QVector3D()
+
+        if fbone in model.bones:
+            fv = model.bones[fbone]
+            from_pos = fv.position
+            if fv.tail_position != QVector3D():
+                # 表示先が相対パスの場合、保持
+                tail_pos = fv.tail_position
+                to_pos = from_pos + tail_pos
+            elif fv.tail_index >= 0:
+                to_pos = model.bones[model.bone_indexes[fv.tail_index]].position
+                tail_pos = to_pos - from_pos
+        
+        return tail_pos, to_pos

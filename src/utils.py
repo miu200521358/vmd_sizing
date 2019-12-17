@@ -77,7 +77,7 @@ def get_prev_bf(frames, bone_name, frameno):
 
     # 最後まで取れなければ、最終項目
     return len(frames[bone_name]) - 1, frames[bone_name][-1]
-    
+
 
 # グローバル座標計算行列のための情報を生成する
 def create_matrix_parts(model, links, frames, bf, scales):
@@ -235,6 +235,65 @@ def create_matrix_global(model, links, frames, bf, scales=None):
     
     return trans_vs, add_qs, scale_l, matrixs, global_3ds
 
+# 指定されたボーンの先の位置を取得する
+def create_matrix_global_tail(model, links, frames, bf, scales=None):
+    if links[0].name not in model.bones:
+        # 末端を除いたリンクでグローバル位置を生成
+        trans_vs, add_qs, scale_l, matrixs, global_3ds = create_matrix_global(model, links[1:], frames, bf, scales)
+
+        # 現時点の上半身までの回転量
+        direction_qq = QQuaternion()
+        for aq, l in zip(add_qs, reversed(links)):
+            direction_qq *= aq
+            if l.name == "上半身":
+                break
+
+        to_global_3ds = copy.deepcopy(global_3ds)
+
+        # 末端直前のグローバル位置を正面向きで取得
+        mat = QMatrix4x4()
+        mat.rotate(direction_qq.inverted())
+        to_end_fornt_pos = mat.mapVector(to_global_3ds[-1])
+
+        # 末端位置を生成
+        tail_pos, _ = calc_tail_pos(model, links[1].name)
+        tail_front_pos = to_end_fornt_pos + tail_pos
+
+        # 末端位置を元に戻す
+        mat = QMatrix4x4()
+        mat.rotate(direction_qq)
+        to_end_pos = mat.mapVector(tail_front_pos)
+
+        # グローバル位置に追加
+        to_global_3ds.append(to_end_pos)
+    else:
+        # 末端ボーンがある場合、そのまま取得
+        trans_vs, add_qs, scale_l, matrixs, global_3ds = create_matrix_global(model, links, frames, bf, scales)
+        to_global_3ds = copy.deepcopy(global_3ds)
+
+    return trans_vs, add_qs, scale_l, matrixs, global_3ds, to_global_3ds
+
+
+# 指定されたボーンの先を取得する
+def calc_tail_pos(model, fbone):
+    from_pos = QVector3D()
+    tail_pos = QVector3D()
+    to_pos = QVector3D()
+
+    if fbone in model.bones:
+        fv = model.bones[fbone]
+        from_pos = fv.position
+        if fv.tail_position != QVector3D():
+            # 表示先が相対パスの場合、保持
+            tail_pos = fv.tail_position
+            to_pos = from_pos + tail_pos
+        elif fv.tail_index >= 0:
+            to_pos = model.bones[model.bone_indexes[fv.tail_index]].position
+            tail_pos = to_pos - from_pos
+    
+    return tail_pos, to_pos
+
+
 
 # 現在向いている回転量を取得する
 def calc_upper_direction_qq(model, links, frames, bf):
@@ -288,7 +347,6 @@ def calc_upper_direction_qq(model, links, frames, bf):
 
     # XYZ全方向の回転を参照するため、そのまま返す
     return total_qq
-
 
 
 # 回転補間曲線のインデックス
