@@ -2104,8 +2104,11 @@ def create_arm_wrist_finger_links(model, links, indexes, direction, joint_name):
 # ジョイント用：リンクからボーン情報を取得して返す
 def get_bone_in_links_4_joint(model, links, direction, bone_type_name, start_bone_type_name):
     target_bone_name = "{0}{1}".format(direction, bone_type_name)
+    
+    # 処理対象リンク
+    target_links = links if not direction else links[direction]
 
-    for l in links[direction]:
+    for l in target_links:
         # logger.debug("l: %s, target_bone_name:%s", l, target_bone_name)
         if l.name == target_bone_name:
             # ちゃんとリンクの中にボーンがあれば、それを返す
