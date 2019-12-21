@@ -13,10 +13,10 @@ import utils, sub_arm_ik
 
 logger = logging.getLogger("VmdSizing").getChild(__name__)
 
-def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames):
+def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger):
     if motion.motion_cnt > 0:
         # 上半身補正
-        adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames)
+        adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger)
 
         if not trace_model.can_arm_sizing or not replace_model.can_arm_sizing:
             # 腕構造チェックがFALSEの場合、スタンス補正なし
@@ -27,7 +27,7 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames)
 
     return True
 
-def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames):
+def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger):
     # -----------------------------------------------------------------
     # 上半身の角度補正
 
@@ -36,9 +36,8 @@ def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org
     # 上半身調整に必要なボーン群
     upper_target_bones = ["上半身", "頭", "首", "左腕", "右腕"]
 
-    # エラーを一度でも出力しているか(腕IK)
+    # エラーを一度でも出力しているか
     is_error_outputed = False
-    error_file_logger = None
 
     if set(upper_target_bones).issubset(trace_model.bones) and set(upper_target_bones).issubset(replace_model.bones) and "上半身" in motion.frames:
         # 元モデルのリンク生成
@@ -174,7 +173,7 @@ def calc_upper_rotation(org_motion_frames, motion, trace_model, org_head_links, 
     rep_front_to_pos.setY(rep_to_y)
 
     rep_to_z = rep_front_upper_pos.z() + rep_to_z_diff \
-        + ( org_front_to_pos.z() - org_front_upper_pos.z() - org_to_z_diff )
+        + ( org_front_to_pos.z() - org_front_upper_pos.z() - org_to_z_diff ) * shoulder_diff_length
     rep_front_to_pos.setZ(rep_to_z)
     logger.debug("f: %s, rep_to_pos: %s", bf.frame, rep_front_to_pos)
 
@@ -187,7 +186,7 @@ def calc_upper_rotation(org_motion_frames, motion, trace_model, org_head_links, 
     _, _, _, _, org_left_arm_global_3ds = utils.create_matrix_global(trace_model, org_arm_links["左"], org_motion_frames, bf, None)
     _, _, _, _, rep_left_arm_global_3ds = utils.create_matrix_global(replace_model, rep_arm_links["左"], motion.frames, bf, None)
 
-    # 正面向きの頭までの位置
+    # 正面向きの左腕までの位置
     org_front_left_arm_global_3ds = utils.create_direction_pos_all(org_upper_direction_qq.inverted(), org_left_arm_global_3ds)
     rep_front_left_arm_global_3ds = utils.create_direction_pos_all(rep_upper_direction_qq.inverted(), rep_left_arm_global_3ds)
 
@@ -204,7 +203,7 @@ def calc_upper_rotation(org_motion_frames, motion, trace_model, org_head_links, 
     rep_front_left_arm_pos.setY(rep_front_left_arm_y)
 
     rep_front_left_arm_z = rep_front_upper_pos.z() + rep_left_arm_z_diff \
-        + ( org_front_left_arm_pos.z() - org_front_upper_pos.z() - org_left_arm_z_diff )
+        + ( org_front_left_arm_pos.z() - org_front_upper_pos.z() - org_left_arm_z_diff ) * shoulder_diff_length
     rep_front_left_arm_pos.setZ(rep_front_left_arm_z)
     logger.debug("f: %s, rep_left_arm_pos: %s", bf.frame, rep_front_left_arm_pos)
     
@@ -217,7 +216,7 @@ def calc_upper_rotation(org_motion_frames, motion, trace_model, org_head_links, 
     _, _, _, _, org_right_arm_global_3ds = utils.create_matrix_global(trace_model, org_arm_links["右"], org_motion_frames, bf, None)
     _, _, _, _, rep_right_arm_global_3ds = utils.create_matrix_global(replace_model, rep_arm_links["右"], motion.frames, bf, None)
 
-    # 正面向きの頭までの位置
+    # 正面向きの右腕までの位置
     org_front_right_arm_global_3ds = utils.create_direction_pos_all(org_upper_direction_qq.inverted(), org_right_arm_global_3ds)
     rep_front_right_arm_global_3ds = utils.create_direction_pos_all(rep_upper_direction_qq.inverted(), rep_right_arm_global_3ds)
 
@@ -234,7 +233,7 @@ def calc_upper_rotation(org_motion_frames, motion, trace_model, org_head_links, 
     rep_front_right_arm_pos.setY(rep_front_right_arm_y)
 
     rep_front_right_arm_z = rep_front_upper_pos.z() + rep_right_arm_z_diff \
-        + ( org_front_right_arm_pos.z() - org_front_upper_pos.z() - org_right_arm_z_diff )
+        + ( org_front_right_arm_pos.z() - org_front_upper_pos.z() - org_right_arm_z_diff ) * shoulder_diff_length
     rep_front_right_arm_pos.setZ(rep_front_right_arm_z)
     logger.debug("f: %s, rep_right_arm_pos: %s", bf.frame, rep_front_right_arm_pos)
     

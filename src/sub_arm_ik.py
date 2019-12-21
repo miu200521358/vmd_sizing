@@ -18,7 +18,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 # file_logger = logging.getLogger("message")
 # file_logger.addHandler(logging.FileHandler("test.csv"))
 
-def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, org_motion_frames):
+def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, org_motion_frames, error_file_logger):
     is_error_outputed = False
 
     # -----------------------------------------------------------------
@@ -67,7 +67,7 @@ def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_h
 
         if hand_distance >= 0:
             # 手首位置合わせ処理実行
-            is_error_outputed = exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, org_motion_frames, all_rep_wrist_links, arm_links, target_bones)
+            is_error_outputed = exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, org_motion_frames, all_rep_wrist_links, arm_links, target_bones, error_file_logger)
 
             # キー有効可否設定
             reset_activate(motion, arm_links, is_floor_hand)
@@ -408,12 +408,11 @@ def prepare_fill_frame(motion, link_name, bf, hand_distance):
 
 
 # 手首位置合わせ実行
-def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, org_motion_frames, all_rep_wrist_links, arm_links, target_bones):    
+def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, org_motion_frames, all_rep_wrist_links, arm_links, target_bones, error_file_logger):    
     # 腕IKによる位置調整を行う場合
 
     # エラーを一度でも出力しているか(腕IK)
     is_error_outputed = False
-    error_file_logger = None
 
     # 指の先までの位置(作成元モデル)
     all_org_finger_links, all_org_finger_indexes = trace_model.create_link_2_top_lr("人指３", "手首")

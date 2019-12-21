@@ -38,18 +38,18 @@ def main(motion, trace_model, replace_model, output_vmd_path, \
 
     # 処理に成功しているか
     is_success = True
+    error_file_logger = None
 
     # 移動系ボーン縮尺処理
     is_success = sub_move.exec(motion, trace_model, replace_model, output_vmd_path) and is_success
 
     # 腕スタンス補正処理
-    is_success = sub_arm_stance.exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames) and is_success
+    is_success = sub_arm_stance.exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger) and is_success
 
     # 腕IK処理
-    is_success = sub_arm_ik.exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, org_motion_frames) and is_success
+    is_success = sub_arm_ik.exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, org_motion_frames, error_file_logger) and is_success
 
     # カメラ処理
-    # is_success = sub_camera.exec(motion, trace_model, replace_model, output_vmd_path) and is_success
     # カメラの元モデルは、カメラ用PMXデータ
     is_success = sub_camera.exec(motion, camera_pmx, replace_model, output_vmd_path, org_motion_frames, camera_motion, camera_y_offset) and is_success
 
