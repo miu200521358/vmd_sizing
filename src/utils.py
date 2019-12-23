@@ -21,6 +21,9 @@ COMPLEMENT_MMD_MAX = 127
 
 loggers = {}
 
+def sign(x):
+    return (x > 0) - (x < 0)
+
 def create_custom_logger(name, handler):
     global loggers
 

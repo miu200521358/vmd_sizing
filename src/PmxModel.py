@@ -1046,8 +1046,10 @@ class PmxModel():
             self.len = 0
             # 親ボーンからの長さ3D版(計算して求める）
             self.len_3d = QVector3D()
-            # センターのZ軸オフセット
-            self.offset_z = 0
+            # オフセット(ローカル)
+            self.local_offset = QVector3D()
+            # IKオフセット(グローバル)
+            self.global_ik_offset = QVector3D()
             
             self.BONEFLAG_TAILPOS_IS_BONE=0x0001
             self.BONEFLAG_CAN_ROTATE=0x0002

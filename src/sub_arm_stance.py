@@ -311,7 +311,7 @@ def prepare_upper_stance(motion, bone_name):
         if abs(rot_diff_euler.x()) > 170 or abs(rot_diff_euler.y()) > 170 or abs(rot_diff_euler.z()) > 170:
             # 回転量が半分近い場合、半分に分割しておく            
             frame_no = prev_bf.frame + round((bf.frame - prev_bf.frame) / 2)
-            logger.info("bf: %s, 回転量over: %s, f: %s", bf.frame, rot_diff_euler, frame_no)
+            logger.debug("bf: %s, 回転量over: %s, f: %s", bf.frame, rot_diff_euler, frame_no)
 
             if bf.frame != frame_no and prev_bf.frame != frame_no:
                 # キーが追加できる状態であれば、追加
