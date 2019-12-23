@@ -88,13 +88,11 @@ def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org
 
         for bf in motion.frames["上半身"]:
             if bf.key == True:
-                rep_upper2_rotation = utils.calc_bone_by_complement(motion.frames, "上半身2", bf.frame).rotation if "上半身2" in trace_model.bones and "上半身2" in replace_model.bones else QQuaternion()
-
                 calc_upper_rotation(org_motion_frames, motion, trace_model, org_head_links, org_head_indexes, org_arm_links, org_arm_indexes, \
                     replace_model, rep_head_links, rep_head_indexes, rep_arm_links, rep_arm_indexes, "上半身", target_bone_name, \
                     shoulder_diff_length, upper_diff_length, org_target_upper_z_diff, rep_target_upper_z_diff, \
                     org_left_arm_z_diff, rep_left_arm_z_diff, org_right_arm_z_diff, rep_right_arm_z_diff, rep_target_slope, \
-                    is_error_outputed, error_file_logger, output_vmd_path, bf, QQuaternion())
+                    is_error_outputed, error_file_logger, output_vmd_path, bf)
 
         print("上半身スタンス補正終了")
 
@@ -121,12 +119,11 @@ def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org
             for bf in motion.frames["上半身2"]:
                 if bf.key == True:
                     # 同一フレームの上半身の回転量
-                    rep_upper_bone = utils.calc_bone_by_complement(motion.frames, "上半身", bf.frame)
                     calc_upper_rotation(org_motion_frames, motion, trace_model, org_head_links, org_head_indexes, org_arm_links, org_arm_indexes, \
                         replace_model, rep_head_links, rep_head_indexes, rep_arm_links, rep_arm_indexes, "上半身2", "頭", \
                         shoulder_diff_length, upper_diff_length, org_head_upper_z_diff, rep_head_upper_z_diff, \
                         org_left_arm_z_diff, rep_left_arm_z_diff, org_right_arm_z_diff, rep_right_arm_z_diff, rep_head_slope, \
-                        is_error_outputed, error_file_logger, output_vmd_path, bf, rep_upper_bone.rotation)
+                        is_error_outputed, error_file_logger, output_vmd_path, bf)
 
             print("上半身2スタンス補正終了")
 
@@ -136,7 +133,7 @@ def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org
 def calc_upper_rotation(org_motion_frames, motion, trace_model, org_head_links, org_head_indexes, org_arm_links, org_arm_indexes, \
     replace_model, rep_head_links, rep_head_indexes, rep_arm_links, rep_arm_indexes, from_bone_name, to_bone_name, \
     shoulder_diff_length, from_diff_length, org_to_z_diff, rep_to_z_diff, org_left_arm_z_diff, rep_left_arm_z_diff, org_right_arm_z_diff, rep_right_arm_z_diff, rep_from_slope, \
-    is_error_outputed, error_file_logger, output_vmd_path, bf, parent_rotation):
+    is_error_outputed, error_file_logger, output_vmd_path, bf):
 
     # 処理対象までのモーション情報(処理対象以上のモーション情報を含まない)
     org_target_motion_frames = {}
@@ -148,6 +145,9 @@ def calc_upper_rotation(org_motion_frames, motion, trace_model, org_head_links, 
     for l in rep_head_links[rep_head_indexes[from_bone_name]:]:
         bone = utils.calc_bone_by_complement(motion.frames, l.name, bf.frame)
         rep_target_motion_frames[bone.format_name] = [bone]
+    
+    # FROMより親の回転量
+    parent_rotation = utils.calc_upper_direction_qq(replace_model, rep_head_links[rep_head_indexes[from_bone_name]+1:], motion.frames, bf)
 
     # 元モデルの向いている回転量
     org_from_direction_qq = utils.calc_upper_direction_qq(trace_model, org_head_links[org_head_indexes[from_bone_name]:], org_target_motion_frames, bf)
@@ -260,24 +260,24 @@ def calc_upper_rotation(org_motion_frames, motion, trace_model, org_head_links, 
     from_rotation = parent_rotation.inverted() * from_orientation * initial.inverted()
     logger.debug("f: %s, bf: %s", bf.frame, from_rotation.toEulerAngles())
 
-    # org_bfs = [x for x in org_motion_frames[from_bone_name] if x.frame == bf.frame]
-    # if len(org_bfs) > 0:
-    #     # 元にもあるキーである場合、内積チェック
-    #     uad = abs(QQuaternion.dotProduct(from_rotation, org_bfs[0].rotation))
-    #     if uad < 0.90:
-    #         print("%sフレーム目%sスタンス補正失敗: 角度:%s, uad: %s" % (bf.frame, from_bone_name, from_rotation.toEulerAngles(), uad))
+    org_bfs = [x for x in org_motion_frames[from_bone_name] if x.frame == bf.frame]
+    if len(org_bfs) > 0:
+        # 元にもあるキーである場合、内積チェック
+        uad = abs(QQuaternion.dotProduct(from_rotation, org_bfs[0].rotation))
+        if uad < 0.90:
+            print("%sフレーム目%sスタンス補正失敗: 角度:%s, uad: %s" % (bf.frame, from_bone_name, from_rotation.toEulerAngles(), uad))
 
-    #         # 失敗時のみエラーログ出力
-    #         if not is_error_outputed:
-    #             is_error_outputed = True
-    #             if not error_file_logger:
-    #                 error_file_logger = utils.create_error_file_logger(motion, trace_model, replace_model, output_vmd_path)
+            # 失敗時のみエラーログ出力
+            if not is_error_outputed:
+                is_error_outputed = True
+                if not error_file_logger:
+                    error_file_logger = utils.create_error_file_logger(motion, trace_model, replace_model, output_vmd_path)
 
-    #         error_file_logger.warning("%sフレーム目%sスタンス補正失敗: 角度:%s, uad: %s" , bf.frame, from_bone_name, from_rotation.toEulerAngles(), uad)
-    #     else:
-    #         # 内積の差が小さい場合、回転適用
-    #         bf.rotation = from_rotation
-    bf.rotation = from_rotation
+            error_file_logger.warning("%sフレーム目%sスタンス補正失敗: 角度:%s, uad: %s" , bf.frame, from_bone_name, from_rotation.toEulerAngles(), uad)
+        else:
+            # 内積の差が小さい場合、回転適用
+            bf.rotation = from_rotation
+    # bf.rotation = from_rotation
 
 
 def adjust_neck_rotation(org_motion_frames, motion, trace_model, replace_model):
