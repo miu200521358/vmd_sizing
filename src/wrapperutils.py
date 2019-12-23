@@ -156,6 +156,42 @@ def is_all_sizing(motion, org_pmx, rep_pmx, camera_motion, output_vmd_path=None)
             print("■　変換先モデルにモーションで使用されているボーン・モーフが揃っています。")
             print("■■■■■■■■■■■■■■■■■")
         
+        if not org_pmx.can_upper_sizing:
+            # 作成元モデルの上半身構造チェック
+            print_methods = []
+            if output_vmd_path:
+                error_file_logger = utils.create_error_file_logger(motion, org_pmx, rep_pmx, output_vmd_path)
+                print_methods = [print, error_file_logger.info]
+            else:
+                print_methods = [print]
+
+            for print_method in print_methods:
+                print_method("■■■■■■■■■■■■■■■■■")
+                print_method("■　**WARNING**　")
+                print_method("■　作成元モデルの上半身構造が標準・準標準ボーン構造でない可能性があります。")
+                print_method("■　上半身スタンス補正をスキップします。")
+                print_method("■■■■■■■■■■■■■■■■■")
+        
+            is_shortage = True
+
+        if not rep_pmx.can_upper_sizing:
+            # 変換先モデルの上半身構造チェック
+            print_methods = []
+            if output_vmd_path:
+                error_file_logger = utils.create_error_file_logger(motion, org_pmx, rep_pmx, output_vmd_path)
+                print_methods = [print, error_file_logger.info]
+            else:
+                print_methods = [print]
+
+            for print_method in print_methods:
+                print_method("■■■■■■■■■■■■■■■■■")
+                print_method("■　**WARNING**　")
+                print_method("■　変換先モデルの上半身構造が標準・準標準ボーン構造でない可能性があります。")
+                print_method("■　上半身スタンス補正をスキップします。")
+                print_method("■■■■■■■■■■■■■■■■■")
+        
+            is_shortage = True
+        
         if not org_pmx.can_arm_sizing:
             # 作成元モデルの腕構造チェック
             print_methods = []

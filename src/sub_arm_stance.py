@@ -15,15 +15,13 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 
 def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger):
     if motion.motion_cnt > 0:
-        # 上半身補正
-        adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger)
+        if trace_model.can_upper_sizing and replace_model.can_upper_sizing:
+            # 上半身補正
+            adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger)
 
-        if not trace_model.can_arm_sizing or not replace_model.can_arm_sizing:
-            # 腕構造チェックがFALSEの場合、スタンス補正なし
-            return False
-
-        # 腕補正
-        adjust_arm_stance(motion, trace_model, replace_model, org_motion_frames)
+        if trace_model.can_arm_sizing and replace_model.can_arm_sizing:
+            # 腕構造チェックがTRUEの場合のみ腕スタンス補正
+            adjust_arm_stance(motion, trace_model, replace_model, org_motion_frames)
 
     return True
 

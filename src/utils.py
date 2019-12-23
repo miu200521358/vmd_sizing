@@ -502,7 +502,7 @@ def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False
 # http://geom.web.fc2.com/geometry/bezier/cut-cb.html
 def calc_bezier_split(x1v, y1v, x2v, y2v, start, end, now, bone_name):
     if (now - start) == 0 or (end - start) == 0:
-        return True, [QVector2D(),QVector2D(),QVector2D(),QVector2D()], [QVector2D(),QVector2D(),QVector2D(),QVector2D()]
+        return 0, 0, 0, False, False, [QVector2D(),QVector2D(),QVector2D(),QVector2D()], [QVector2D(),QVector2D(),QVector2D(),QVector2D()]
 
     # 3次ベジェ曲線を分割する
     t, x, y, beforebz, afterbz = calc_bezier_split_offset(x1v, y1v, x2v, y2v, start, end, now, bone_name)

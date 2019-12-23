@@ -420,6 +420,10 @@ class PmxReader():
         pmx.can_arm_sizing = pmx.check_arm_bone_can_sizing()
         logger.debug("pmx: %s, can_arm_sizing: %s", pmx.name, pmx.can_arm_sizing)
 
+        # 上半身がサイジング可能かチェック
+        pmx.can_upper_sizing = pmx.check_upper_bone_can_sizing()
+        logger.debug("pmx: %s, can_upper_sizing: %s", pmx.name, pmx.can_upper_sizing)
+
         return pmx
                  
     def hexdigest(self, filepath):

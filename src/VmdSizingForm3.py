@@ -25,7 +25,8 @@ import wrapperutils
 import convert_vmd
 import blend_pmx
 import convert_csv
-import slice_frame_keys
+import form_bezier
+import utils
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VmdSizing").getChild(__name__)
@@ -37,7 +38,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver4.05_β05", pos = wx.DefaultPosition, size = wx.Size( 600,650 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver4.05_β06", pos = wx.DefaultPosition, size = wx.Size( 600,650 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -779,73 +780,273 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_note.AddPage( self.m_panelVmd, u"VMD", False )
 
 
-		# # 分割タブ ------------------------------------
+		# 分割タブ ------------------------------------
 
-		# self.m_panelSlice = wx.Panel( self.m_note, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+		self.slice_start = 0
+		self.slice_end = 10
+		self.slice_middle = 5
+		self.slice_original_bezier1 = [20, 20]
+		self.slice_original_bezier2 = [107, 107]
 
-		# bSliceSizer8 = wx.BoxSizer( wx.VERTICAL )
+		self.m_panelSlice = wx.Panel( self.m_note, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 
-		# self.m_panelSliceHeader = wx.Panel( self.m_panelSlice, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-		# bSliceSizer10 = wx.BoxSizer( wx.VERTICAL )
+		bSizerSlice8 = wx.BoxSizer( wx.VERTICAL )
 
-		# self.m_slice_staticText132 = wx.StaticText( self.m_panelSliceHeader, wx.ID_ANY, u"VMDのキーを補間曲線を維持しつつ分割する事ができます。\n分割前の補間曲線を維持するため、指定したキーに加えて、更に分割キーが追加される場合があります。\n分割キー値が0の項目はスキップします。", wx.DefaultPosition, wx.DefaultSize, 0 )
-		# self.m_slice_staticText132.Wrap( -1 )
-		# bSliceSizer10.Add( self.m_slice_staticText132, 0, wx.ALL, 5 )
+		self.m_slice_staticText132 = wx.StaticText( self.m_panelSlice, wx.ID_ANY, u"オリジナル補間曲線に指定された補間曲線を、指定された箇所で分割した場合の補間曲線を表示します。\n補間曲線は、数値で指定する他、MMDと同じくマウスで操作できます。\n補間曲線を正常に2分割できない場合、パネルに×が出ます。", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_slice_staticText132.Wrap( -1 )
+		bSizerSlice8.Add( self.m_slice_staticText132, 0, wx.ALL, 5 )
 
-		# self.m_slice_staticline5 = wx.StaticLine( self.m_panelSliceHeader, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
-		# bSliceSizer10.Add( self.m_slice_staticline5, 0, wx.EXPAND |wx.ALL, 5 )
+		self.m_slice_staticline5 = wx.StaticLine( self.m_panelSlice, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
+		bSizerSlice8.Add( self.m_slice_staticline5, 0, wx.EXPAND |wx.ALL, 5 )
 
-		# self.m_slice_staticText1 = wx.StaticText( self.m_panelSliceHeader, wx.ID_ANY, u"VMDファイル", wx.DefaultPosition, wx.DefaultSize, 0 )
-		# self.m_slice_staticText1.Wrap( -1 )
+		# ----------
+		# オリジナル補間曲線
 
-		# bSliceSizer10.Add( self.m_slice_staticText1, 0, wx.ALL, 5 )
+		bSizerSlice13 = wx.BoxSizer( wx.VERTICAL )
 
-		# self.m_slice_fileVmd = wx.FilePickerCtrl( self.m_panelSliceHeader, wx.ID_ANY, wx.EmptyString, u"VMDファイルを選択してください", u"VMDファイル (*.vmd)|*.vmd|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.Size( -1,-1 ), wx.FLP_DEFAULT_STYLE )
-		# self.m_slice_fileVmd.GetPickerCtrl().SetLabel("開く")
-		# bSliceSizer10.Add( self.m_slice_fileVmd, 0, wx.ALL|wx.EXPAND, 5 )
+		self.m_staticSliceText40 = wx.StaticText( self.m_panelSlice, wx.ID_ANY, u"オリジナル補間曲線", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticSliceText40.SetToolTip( u"分割する元となる補間曲線を指定して下さい。" )
+		self.m_staticSliceText40.Wrap( -1 )
+		bSizerSlice13.Add( self.m_staticSliceText40, 0, wx.EXPAND |wx.ALL, 5 )
 
-		# self.m_slice_btnAddLine = wx.Button( self.m_panelSliceHeader, wx.ID_ANY, u"キー追加", wx.DefaultPosition, wx.DefaultSize, 0 )
-		# self.m_slice_btnAddLine.SetToolTip( u"分割フレーム番号欄を追加します。\n上限はありません。" )
-		# bSliceSizer10.Add( self.m_slice_btnAddLine, 0, wx.ALIGN_RIGHT|wx.ALL, 5 )
+		bSizerSlice8.Add( bSizerSlice13, 0, wx.EXPAND |wx.ALL, 5 )
 
-		# self.m_panelSliceHeader.SetSizer( bSliceSizer10 )
-		# self.m_panelSliceHeader.Layout()
-		# bSliceSizer10.Fit( self.m_panelSliceHeader )
+		bSizerSlice14 = wx.BoxSizer( wx.HORIZONTAL )
 
-		# bSliceSizer8.Add( self.m_panelSliceHeader, 0, wx.EXPAND |wx.ALL, 5 )
+		self.m_panelOriginalBezier = form_bezier.BezierPanel(self.m_panelSlice, size=(130, 130))
+		bSizerSlice14.Add( self.m_panelOriginalBezier, 0, wx.EXPAND |wx.ALL, 5 )
 
-		# self.m_scrolledSlice = wx.ScrolledWindow( self.m_panelSlice, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.FULL_REPAINT_ON_RESIZE|wx.VSCROLL )
-		# self.m_scrolledSlice.SetScrollRate( 5, 5 )
+		bSizerSlice16 = wx.BoxSizer( wx.VERTICAL )
 
-		# self.gridSliceSizer = wx.FlexGridSizer( 0, 6, 0, 0 )
-		# self.gridSliceSizer.SetFlexibleDirection( wx.BOTH )
-		# self.gridSliceSizer.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+		bSizerSlice161 = wx.BoxSizer( wx.HORIZONTAL )
 
-		# self.m_scrolledSlice.SetSizer( self.gridSliceSizer )
-		# self.m_scrolledSlice.Layout()
-		# # self.gridSliceSizer.Fit( self.m_scrolledSlice )
-		# bSliceSizer8.Add( self.m_scrolledSlice, 1, wx.ALL|wx.EXPAND|wx.FIXED_MINSIZE, 5 )
+		self.m_staticSliceText161 = wx.StaticText( self.m_panelSlice, wx.ID_ANY, u"x1: ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizerSlice161.Add( self.m_staticSliceText161, 0, wx.ALL, 0 )
 
-		# bSizerSlice4 = wx.BoxSizer( wx.VERTICAL )
+		self.m_spinOriginalBezierStartX1 = wx.SpinCtrl( self.m_panelSlice, id=wx.ID_ANY, size=wx.Size( 60,-1 ), value=str(self.slice_original_bezier1[0]), min=0, max=127, initial=1 )
+		bSizerSlice161.Add( self.m_spinOriginalBezierStartX1, 0, wx.EXPAND |wx.ALL, 0 )
 
-		# self.m_slice_btnExec = wx.Button( self.m_panelSlice, wx.ID_ANY, u"分割実行", wx.DefaultPosition, wx.Size( 200,50 ), 0 )
-		# bSizerSlice4.Add( self.m_slice_btnExec, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+		bSizerSlice16.Add( bSizerSlice161, 0, wx.EXPAND |wx.ALL, 2 )
 
-		# self.m_slice_txtConsole = wx.TextCtrl( self.m_panelSlice, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( -1,120 ), wx.TE_MULTILINE|wx.TE_READONLY|wx.BORDER_NONE|wx.HSCROLL|wx.VSCROLL|wx.WANTS_CHARS )
-		# self.m_slice_txtConsole.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_3DLIGHT ) )
+		bSizerSlice162 = wx.BoxSizer( wx.HORIZONTAL )
 
-		# bSizerSlice4.Add( self.m_slice_txtConsole, 1, wx.ALL|wx.EXPAND, 5 )
+		self.m_staticSliceText162 = wx.StaticText( self.m_panelSlice, wx.ID_ANY, u"y1: ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizerSlice162.Add( self.m_staticSliceText162, 0, wx.ALL, 0 )
 
-		# self.m_slice_Gauge = wx.Gauge( self.m_panelSlice, wx.ID_ANY, 100, wx.DefaultPosition, wx.DefaultSize, wx.GA_HORIZONTAL )
-		# self.m_slice_Gauge.SetValue( 0 )
-		# bSizerSlice4.Add( self.m_slice_Gauge, 0, wx.ALL|wx.EXPAND, 5 )
+		self.m_spinOriginalBezierStartY1 = wx.SpinCtrl( self.m_panelSlice, id=wx.ID_ANY, size=wx.Size( 60,-1 ), value=str(self.slice_original_bezier1[1]), min=0, max=127, initial=1 )
+		bSizerSlice162.Add( self.m_spinOriginalBezierStartY1, 0, wx.EXPAND |wx.ALL, 0 )
+
+		bSizerSlice16.Add( bSizerSlice162, 0, wx.EXPAND |wx.ALL, 2 )
+
+		bSizerSlice163 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.m_staticSliceText163 = wx.StaticText( self.m_panelSlice, wx.ID_ANY, u"x2: ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizerSlice163.Add( self.m_staticSliceText163, 0, wx.ALL, 0 )
+
+		self.m_spinOriginalBezierStartX2 = wx.SpinCtrl( self.m_panelSlice, id=wx.ID_ANY, size=wx.Size( 60,-1 ), value=str(self.slice_original_bezier2[0]), min=0, max=127, initial=1 )
+		bSizerSlice163.Add( self.m_spinOriginalBezierStartX2, 0, wx.EXPAND |wx.ALL, 0 )
+
+		bSizerSlice16.Add( bSizerSlice163, 0, wx.EXPAND |wx.ALL, 2 )
+
+		bSizerSlice164 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.m_staticSliceText164 = wx.StaticText( self.m_panelSlice, wx.ID_ANY, u"y2: ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizerSlice164.Add( self.m_staticSliceText164, 0, wx.ALL, 0 )
+
+		self.m_spinOriginalBezierStartY2 = wx.SpinCtrl( self.m_panelSlice, id=wx.ID_ANY, size=wx.Size( 60,-1 ), value=str(self.slice_original_bezier2[1]), min=0, max=127, initial=1 )
+		bSizerSlice164.Add( self.m_spinOriginalBezierStartY2, 0, wx.EXPAND |wx.ALL, 0 )
+
+		bSizerSlice16.Add( bSizerSlice164, 0, wx.EXPAND |wx.ALL, 2 )
+
+		bSizerSlice14.Add( bSizerSlice16, 0, wx.EXPAND |wx.ALL, 5 )
+
+		bSizerSlice8.Add( bSizerSlice14, 0, wx.EXPAND |wx.ALL, 5 )
+
+		bSizerSlice17 = wx.BoxSizer( wx.VERTICAL )
+
+		self.m_slice_staticline7 = wx.StaticLine( self.m_panelSlice, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
+		bSizerSlice17.Add( self.m_slice_staticline7, 0, wx.EXPAND |wx.ALL, 5 )
+
+		bSizerSlice8.Add( bSizerSlice17, 0, wx.EXPAND |wx.ALL, 5 )
+
+		# ----------
+		# 分割地点
+
+		bSizerSlice11 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.m_staticSliceText40 = wx.StaticText( self.m_panelSlice, wx.ID_ANY, u"キー分割フレーム：　", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticSliceText40.SetToolTip( u"キーをどの位置で分割するか指定して下さい。" )
+		self.m_staticSliceText40.Wrap( -1 )
+
+		bSizerSlice11.Add( self.m_staticSliceText40, 0, wx.ALL, 5 )
+
+		self.m_vmdSliceMiddleTxt = wx.StaticText( self.m_panelSlice, wx.ID_ANY, u"（" + str(self.slice_middle) +"）", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_vmdSliceMiddleTxt.SetToolTip( u"現在指定されているフレームの分割番号です。" )
+		self.m_vmdSliceMiddleTxt.Wrap( -1 )
+
+		bSizerSlice11.Add( self.m_vmdSliceMiddleTxt, 0, wx.ALL, 5 )
+
+		bSizerSlice8.Add( bSizerSlice11, 0, wx.EXPAND |wx.ALL, 5 )
+
+		# ----------
+		# キーの範囲
+
+		bSizerSlice12 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.m_spinSliceStart = wx.SpinCtrl( self.m_panelSlice, id=wx.ID_ANY, size=wx.Size( 80,-1 ), value=str(self.slice_start), min=0, max=999999999, initial=1 )
+		bSizerSlice12.Add( self.m_spinSliceStart, 0, wx.EXPAND |wx.ALL, 5 )
+
+		self.m_sliderSlice = FloatSlider( self.m_panelSlice, wx.ID_ANY, self.slice_middle, self.slice_start, self.slice_end, 1, self.m_vmdSliceMiddleTxt, wx.DefaultPosition, wx.DefaultSize, wx.SL_HORIZONTAL, scrollevt=self.OnRePaintBezier )
+		bSizerSlice12.Add( self.m_sliderSlice, 1, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_spinSliceEnd = wx.SpinCtrl( self.m_panelSlice, id=wx.ID_ANY, size=wx.Size( 80,-1 ), value=str(self.slice_end), min=0, max=999999999, initial=1 )
+		bSizerSlice12.Add( self.m_spinSliceEnd, 0, wx.EXPAND |wx.ALL, 5 )
 	
-		# bSliceSizer8.Add( bSizerSlice4, 0, wx.EXPAND, 5 )
+		bSizerSlice8.Add( bSizerSlice12, 0, wx.EXPAND |wx.ALL, 5 )
 
-		# self.m_panelSlice.SetSizer( bSliceSizer8 )
-		# self.m_panelSlice.Layout()
-		# bSliceSizer8.Fit( self.m_panelSlice )
-		# self.m_note.AddPage( self.m_panelSlice, u"分割", False )
+		# ----------
+
+		bSizerSlice70 = wx.BoxSizer( wx.HORIZONTAL )
+
+		# ----------
+		# 分割地点の補間曲線
+
+		bSizerSlice23 = wx.BoxSizer( wx.VERTICAL )
+
+		self.m_staticSliceText41 = wx.StaticText( self.m_panelSlice, wx.ID_ANY, u"分割キー補間曲線", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticSliceText41.SetToolTip( u"分割したキーの補間曲線を表示します。" )
+		self.m_staticSliceText41.Wrap( -1 )
+		bSizerSlice23.Add( self.m_staticSliceText41, 0, wx.EXPAND |wx.ALL, 5 )
+
+		bSizerSlice24 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.m_panelSliceBezier = form_bezier.BezierPanel(self.m_panelSlice, size=(130, 130))
+		bSizerSlice24.Add( self.m_panelSliceBezier, 0, wx.EXPAND |wx.ALL, 5 )
+
+		bSizerSlice26 = wx.BoxSizer( wx.VERTICAL )
+
+		bSizerSlice261 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.m_staticSliceText161 = wx.StaticText( self.m_panelSlice, wx.ID_ANY, u"x1: ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizerSlice261.Add( self.m_staticSliceText161, 0, wx.ALL, 0 )
+
+		self.m_spinSliceBezierStartX1 = wx.SpinCtrl( self.m_panelSlice, id=wx.ID_ANY, size=wx.Size( 60,-1 ), value="0", min=0, max=127, initial=1 )
+		bSizerSlice261.Add( self.m_spinSliceBezierStartX1, 0, wx.EXPAND |wx.ALL, 0 )
+
+		bSizerSlice26.Add( bSizerSlice261, 0, wx.EXPAND |wx.ALL, 2 )
+
+		bSizerSlice262 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.m_staticSliceText162 = wx.StaticText( self.m_panelSlice, wx.ID_ANY, u"y1: ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizerSlice262.Add( self.m_staticSliceText162, 0, wx.ALL, 0 )
+
+		self.m_spinSliceBezierStartY1 = wx.SpinCtrl( self.m_panelSlice, id=wx.ID_ANY, size=wx.Size( 60,-1 ), value="0", min=0, max=127, initial=1 )
+		bSizerSlice262.Add( self.m_spinSliceBezierStartY1, 0, wx.EXPAND |wx.ALL, 0 )
+
+		bSizerSlice26.Add( bSizerSlice262, 0, wx.EXPAND |wx.ALL, 2 )
+
+		bSizerSlice263 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.m_staticSliceText163 = wx.StaticText( self.m_panelSlice, wx.ID_ANY, u"x2: ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizerSlice263.Add( self.m_staticSliceText163, 0, wx.ALL, 0 )
+
+		self.m_spinSliceBezierStartX2 = wx.SpinCtrl( self.m_panelSlice, id=wx.ID_ANY, size=wx.Size( 60,-1 ), value="0", min=0, max=127, initial=1 )
+		bSizerSlice263.Add( self.m_spinSliceBezierStartX2, 0, wx.EXPAND |wx.ALL, 0 )
+
+		bSizerSlice26.Add( bSizerSlice263, 0, wx.EXPAND |wx.ALL, 2 )
+
+		bSizerSlice264 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.m_staticSliceText164 = wx.StaticText( self.m_panelSlice, wx.ID_ANY, u"y2: ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizerSlice264.Add( self.m_staticSliceText164, 0, wx.ALL, 0 )
+
+		self.m_spinSliceBezierStartY2 = wx.SpinCtrl( self.m_panelSlice, id=wx.ID_ANY, size=wx.Size( 60,-1 ), value="0", min=0, max=127, initial=1 )
+		bSizerSlice264.Add( self.m_spinSliceBezierStartY2, 0, wx.EXPAND |wx.ALL, 0 )
+
+		bSizerSlice26.Add( bSizerSlice264, 0, wx.EXPAND |wx.ALL, 2 )
+
+		bSizerSlice24.Add( bSizerSlice26, 0, wx.EXPAND |wx.ALL, 5 )
+
+		bSizerSlice23.Add( bSizerSlice24, 0, wx.EXPAND |wx.ALL, 5 )
+		
+		bSizerSlice70.Add( bSizerSlice23, 0, wx.EXPAND |wx.ALL, 5 )
+
+		# ---------
+		# 終端キー
+
+		bSizerSlice33 = wx.BoxSizer( wx.VERTICAL )
+
+		self.m_staticSliceText42 = wx.StaticText( self.m_panelSlice, wx.ID_ANY, u"終端キー補間曲線", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticSliceText42.SetToolTip( u"分割したキーの後の補間曲線を表示します。" )
+		self.m_staticSliceText42.Wrap( -1 )
+		bSizerSlice33.Add( self.m_staticSliceText42, 0, wx.EXPAND |wx.ALL, 5 )
+
+		bSizerSlice34 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.m_panelEndBezier = form_bezier.BezierPanel(self.m_panelSlice, size=(130, 130))
+		bSizerSlice34.Add( self.m_panelEndBezier, 0, wx.EXPAND |wx.ALL, 5 )
+
+		bSizerSlice36 = wx.BoxSizer( wx.VERTICAL )
+
+		bSizerSlice361 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.m_staticSliceText161 = wx.StaticText( self.m_panelSlice, wx.ID_ANY, u"x1: ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizerSlice361.Add( self.m_staticSliceText161, 0, wx.ALL, 0 )
+
+		self.m_spinEndBezierStartX1 = wx.SpinCtrl( self.m_panelSlice, id=wx.ID_ANY, size=wx.Size( 60,-1 ), value="0", min=0, max=127, initial=1 )
+		bSizerSlice361.Add( self.m_spinEndBezierStartX1, 0, wx.EXPAND |wx.ALL, 0 )
+
+		bSizerSlice36.Add( bSizerSlice361, 0, wx.EXPAND |wx.ALL, 2 )
+
+		bSizerSlice362 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.m_staticSliceText162 = wx.StaticText( self.m_panelSlice, wx.ID_ANY, u"y1: ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizerSlice362.Add( self.m_staticSliceText162, 0, wx.ALL, 0 )
+
+		self.m_spinEndBezierStartY1 = wx.SpinCtrl( self.m_panelSlice, id=wx.ID_ANY, size=wx.Size( 60,-1 ), value="0", min=0, max=127, initial=1 )
+		bSizerSlice362.Add( self.m_spinEndBezierStartY1, 0, wx.EXPAND |wx.ALL, 0 )
+
+		bSizerSlice36.Add( bSizerSlice362, 0, wx.EXPAND |wx.ALL, 2 )
+
+		bSizerSlice363 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.m_staticSliceText163 = wx.StaticText( self.m_panelSlice, wx.ID_ANY, u"x2: ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizerSlice363.Add( self.m_staticSliceText163, 0, wx.ALL, 0 )
+
+		self.m_spinEndBezierStartX2 = wx.SpinCtrl( self.m_panelSlice, id=wx.ID_ANY, size=wx.Size( 60,-1 ), value="0", min=0, max=127, initial=1 )
+		bSizerSlice363.Add( self.m_spinEndBezierStartX2, 0, wx.EXPAND |wx.ALL, 0 )
+
+		bSizerSlice36.Add( bSizerSlice363, 0, wx.EXPAND |wx.ALL, 2 )
+
+		bSizerSlice364 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.m_staticSliceText164 = wx.StaticText( self.m_panelSlice, wx.ID_ANY, u"y2: ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizerSlice364.Add( self.m_staticSliceText164, 0, wx.ALL, 0 )
+
+		self.m_spinEndBezierStartY2 = wx.SpinCtrl( self.m_panelSlice, id=wx.ID_ANY, size=wx.Size( 60,-1 ), value="0", min=0, max=127, initial=1 )
+		bSizerSlice364.Add( self.m_spinEndBezierStartY2, 0, wx.EXPAND |wx.ALL, 0 )
+
+		bSizerSlice36.Add( bSizerSlice364, 0, wx.EXPAND |wx.ALL, 2 )
+
+		bSizerSlice34.Add( bSizerSlice36, 0, wx.EXPAND |wx.ALL, 5 )
+
+		bSizerSlice33.Add( bSizerSlice34, 0, wx.EXPAND |wx.ALL, 5 )
+
+		bSizerSlice70.Add( bSizerSlice33, 0, wx.EXPAND |wx.ALL, 5 )
+
+		# ----------
+
+		# 初期分割処理
+		self.splitBezier()
+
+		bSizerSlice8.Add( bSizerSlice70, 0, wx.EXPAND |wx.ALL, 5 )
+
+		# ----------
+
+		self.m_panelSlice.SetSizer( bSizerSlice8 )
+		self.m_panelSlice.Layout()
+		bSizerSlice8.Fit( self.m_panelSlice )
+		self.m_note.AddPage( self.m_panelSlice, u"分割", False )
 
 		# ---------------------------
 
@@ -957,8 +1158,29 @@ class VmdSizingForm3 ( wx.Frame ):
 		# スライダーの変更時
 		self.m_sliderFingerDistance.Bind(wx.EVT_SCROLL_CHANGED, self.OnChangeArmIKFingerDistance)
 
-		# # 分割フレームのセル追加
-		# self.AddSliceCell()
+		# 補間曲線パネルの描画(オリジナル)
+		self.m_panelOriginalBezier.Bind(wx.EVT_PAINT, lambda event: self.OnPaintBezier(event, self.m_panelOriginalBezier, self.m_spinOriginalBezierStartX1, self.m_spinOriginalBezierStartY1, self.m_spinOriginalBezierStartX2, self.m_spinOriginalBezierStartY2))
+		self.m_panelOriginalBezier.Bind(wx.EVT_LEFT_DOWN, lambda event: self.OnPaintBezierMouseLeftDown(event, self.m_panelOriginalBezier))
+		self.m_panelOriginalBezier.Bind(wx.EVT_LEFT_UP, lambda event: self.OnPaintBezierMouseLeftUp(event, self.m_panelOriginalBezier))
+		self.m_panelOriginalBezier.Bind(wx.EVT_MOTION, lambda event: self.OnPaintBezierMouseMotion(event, self.m_panelOriginalBezier))
+		self.m_spinOriginalBezierStartX1.Bind(wx.EVT_SPINCTRL, self.OnRePaintBezier)
+		self.m_spinOriginalBezierStartY1.Bind(wx.EVT_SPINCTRL, self.OnRePaintBezier)
+		self.m_spinOriginalBezierStartX2.Bind(wx.EVT_SPINCTRL, self.OnRePaintBezier)
+		self.m_spinOriginalBezierStartY2.Bind(wx.EVT_SPINCTRL, self.OnRePaintBezier)
+		self.m_spinSliceStart.Bind(wx.EVT_SPINCTRL, self.OnReCalcBezier)
+		self.m_spinSliceEnd.Bind(wx.EVT_SPINCTRL, self.OnReCalcBezier)
+
+		# 補間曲線パネルの描画(分割キー)
+		self.m_panelSliceBezier.Bind(wx.EVT_PAINT, lambda event: self.OnPaintBezier(event, self.m_panelSliceBezier, self.m_spinSliceBezierStartX1, self.m_spinSliceBezierStartY1, self.m_spinSliceBezierStartX2, self.m_spinSliceBezierStartY2))
+		self.m_panelSliceBezier.Bind(wx.EVT_LEFT_DOWN, lambda event: self.OnPaintBezierMouseLeftDown(event, self.m_panelSliceBezier))
+		self.m_panelSliceBezier.Bind(wx.EVT_LEFT_UP, lambda event: self.OnPaintBezierMouseLeftUp(event, self.m_panelSliceBezier))
+		self.m_panelSliceBezier.Bind(wx.EVT_MOTION, lambda event: self.OnPaintBezierMouseMotion(event, self.m_panelSliceBezier))
+
+		# 補間曲線パネルの描画(終端キー)
+		self.m_panelEndBezier.Bind(wx.EVT_PAINT, lambda event: self.OnPaintBezier(event, self.m_panelEndBezier, self.m_spinEndBezierStartX1, self.m_spinEndBezierStartY1, self.m_spinEndBezierStartX2, self.m_spinEndBezierStartY2))
+		self.m_panelEndBezier.Bind(wx.EVT_LEFT_DOWN, lambda event: self.OnPaintBezierMouseLeftDown(event, self.m_panelEndBezier))
+		self.m_panelEndBezier.Bind(wx.EVT_LEFT_UP, lambda event: self.OnPaintBezierMouseLeftUp(event, self.m_panelEndBezier))
+		self.m_panelEndBezier.Bind(wx.EVT_MOTION, lambda event: self.OnPaintBezierMouseMotion(event, self.m_panelEndBezier))
 
 		# 終了時の処理
 		self.Bind(wx.EVT_CLOSE, self.OnClose)
@@ -2341,6 +2563,152 @@ class VmdSizingForm3 ( wx.Frame ):
 			else:
 				self.m_camera_fileOutputVmd.SetPath("")
 
+	# ベジェ曲線のコピペ -----------------
+	def OnReCalcBezier(self, event):
+		self.m_sliderSlice.SetMin(float(self.m_spinSliceStart.GetValue()))
+		self.m_sliderSlice.SetMax(float(self.m_spinSliceEnd.GetValue()))
+
+	def OnRePaintBezier(self, event):
+		self.splitBezier() # ベジェ分割
+		self.Refresh(False)
+
+	# ベジェ曲線の描画 -------------------------
+	def OnPaintBezier(self, event, target_panel, target_ctrl_x1, target_ctrl_y1, target_ctrl_x2, target_ctrl_y2):
+		dc = wx.PaintDC(target_panel)
+		dc = wx.BufferedDC(dc)  # 画面に表示されないところで描画を行うためのデバイスコンテキストを作成
+		m = form_bezier.Mapper(target_panel.GetSize(), (0, 0), (127, 127))
+		target_ctrl = [(0, 0), (target_ctrl_x1.GetValue(), target_ctrl_y1.GetValue()), (target_ctrl_x2.GetValue(), target_ctrl_y2.GetValue()), (127, 127)]
+
+		self.clearbezier(target_panel, dc)
+		# self.drawgrid(target_panel, target_ctrl, m, dc)
+		self.drawguide(target_panel, target_ctrl[0], target_ctrl[1], target_ctrl_x1, target_ctrl_y1, m, dc)
+		self.drawguide(target_panel, target_ctrl[2], target_ctrl[3], target_ctrl_x2, target_ctrl_y2, m, dc)
+		self.drawbezier(target_panel, target_ctrl, m, dc)
+		self.drawbeziererror(target_panel, m, dc)
+
+	def clearbezier(self, target_panel, dc):
+		self.setColor(dc,'white')
+		dc.DrawRectangle(*(0, 0) + tuple(target_panel.GetSize()))
+		
+	def drawbezier(self, target_panel, target_ctrl, m, dc):
+		# draw bezier curve
+		self.setColor(dc,'blue')
+		#dc.DrawPointList([m.toClient(x, y) for x, y in Bezier(target_ctrl)])
+		lst = list(form_bezier.Bezier(target_ctrl))
+		dc.DrawLineList([m.toClient(*p) + m.toClient(*q) for p,q in zip(lst, lst[1:])])
+
+	def drawguide(self, target_panel, target_ctrl_start, target_ctrl_end, target_ctrl_x, target_ctrl_y, m, dc):
+		#
+		self.setColor(dc,'black')
+		line = m.toClient(*target_ctrl_start) + m.toClient(*target_ctrl_end)
+		dc.DrawLine(*line)
+
+		# draw control points
+		self.setColor(dc,'red')
+		pnt = form_bezier.BezierPoint(*m.toClient(target_ctrl_x.GetValue(), target_ctrl_y.GetValue()) + (target_ctrl_x, target_ctrl_y))
+		target_panel.addObj(pnt)
+		pnt.Draw(dc, True)
+
+	def drawgrid(self, target_panel, target_ctrl, m, dc):
+		xs,ys = m.ll
+		xe,ye = m.ur
+		
+		self.setColor(dc,'black')
+		dc.DrawLine(*m.toClient(xs, 0) + m.toClient(xe, 0))
+		dc.DrawLine(*m.toClient(0, ys) + m.toClient(0, ye))
+		
+		dc.SetFont(target_panel.GetFont())
+		dc.DrawText('%+d' % xs, *m.toClient(xs , 0))
+		dc.DrawText('%+d' % ye, *m.toClient(0, ye))
+		#x,y = m.toClient(xe, 0)
+		#dc.DrawText('%+d' % xe, *(x - dc.GetTextExtent('%+d' % xe)[0], y))
+		#x,y = m.toClient(0, ys)
+		#dc.DrawText('%+d' % ys, *(x, y dc.GetTextExtent('%+d' % ys)[1]))
+		
+		#...
+	
+	def drawbeziererror(self, target_panel, m, dc):
+		if target_panel.iserror:
+			xs,ys = m.ll
+			xe,ye = m.ur
+
+			self.setColor(dc,'red', 5)
+			dc.DrawLine(*m.toClient(0, 0) + m.toClient(xe, ye))
+			dc.DrawLine(*m.toClient(0, ye) + m.toClient(xe, 0))
+
+
+	def setColor(self, dc, color, w=1):
+		dc.SetPen(wx.Pen(color, w))
+		dc.SetBrush(wx.Brush(color))
+	
+	def OnPaintBezierMouseLeftDown(self, event, target_panel):
+		"""マウスの左ボタンが押された時の処理"""
+		pos = event.GetPosition()  # マウス座標を取得
+		obj = self.findBezierPoint(target_panel, pos)  # マウス座標と重なってるオブジェクトを取得
+		if obj is not None:
+			target_panel.drag_obj = obj  # ドラッグ移動するオブジェクトを記憶
+			target_panel.drag_start_pos = pos  # ドラッグ開始時のマウス座標を記録
+			target_panel.drag_obj.SavePosDiff(pos)
+
+	def OnPaintBezierMouseLeftUp(self, event, target_panel):
+		"""マウスの左ボタンが離された時の処理"""
+		if target_panel.drag_obj is not None:
+			pos = event.GetPosition()
+			target_panel.drag_obj.pos.x = pos.x + target_panel.drag_obj.diff_pos.x
+			target_panel.drag_obj.pos.y = pos.y + target_panel.drag_obj.diff_pos.y
+			target_panel.drag_obj.UpdatePos()
+			self.splitBezier() # ベジェ分割
+
+		target_panel.drag_obj = None
+		self.Refresh(False)
+
+	def OnPaintBezierMouseMotion(self, event, target_panel):
+		"""マウスカーソルが動いた時の処理"""
+		if target_panel.drag_obj is None:
+		# ドラッグしてるオブジェクトが無いなら処理しない
+			return
+
+		# ドラッグしてるオブジェクトの座標値をマウス座標で更新
+		pos = event.GetPosition()
+		target_panel.drag_obj.pos.x = pos.x + target_panel.drag_obj.diff_pos.x
+		target_panel.drag_obj.pos.y = pos.y + target_panel.drag_obj.diff_pos.y
+		target_panel.drag_obj.UpdatePos()
+		self.splitBezier() # ベジェ分割
+		self.Refresh(False)  # 描画更新
+    
+	def findBezierPoint(self, target_panel, pnt):
+		"""マウス座標と重なってるオブジェクトを返す"""
+		result = None
+		for obj in target_panel.objs:
+			if obj.HitTest(pnt):
+				result = obj
+		return result
+
+	def splitBezier(self):
+		# ベジェ曲線の分割
+		t, x, y, bresult, aresult, before_bz, after_bz = \
+			utils.calc_bezier_split(self.m_spinOriginalBezierStartX1.GetValue(), self.m_spinOriginalBezierStartY1.GetValue(), self.m_spinOriginalBezierStartX2.GetValue(), self.m_spinOriginalBezierStartY2.GetValue(), \
+			self.m_spinSliceStart.GetValue(), self.m_spinSliceEnd.GetValue(), int(self.m_sliderSlice.GetValue()), "")
+
+		if bresult:
+			# 前半のキー
+			self.m_panelSliceBezier.iserror = False
+			self.m_spinSliceBezierStartX1.SetValue(int(before_bz[1].x()))
+			self.m_spinSliceBezierStartY1.SetValue(int(before_bz[1].y()))
+			self.m_spinSliceBezierStartX2.SetValue(int(before_bz[2].x()))
+			self.m_spinSliceBezierStartY2.SetValue(int(before_bz[2].y()))
+		else:
+			self.m_panelSliceBezier.iserror = True
+
+		if aresult:
+			# 前半のキー
+			self.m_panelEndBezier.iserror = False
+			self.m_spinEndBezierStartX1.SetValue(int(after_bz[1].x()))
+			self.m_spinEndBezierStartY1.SetValue(int(after_bz[1].y()))
+			self.m_spinEndBezierStartX2.SetValue(int(after_bz[2].x()))
+			self.m_spinEndBezierStartY2.SetValue(int(after_bz[2].y()))
+		else:
+			self.m_panelEndBezier.iserror = True
 
 # Define notification event for thread completion
 EVT_RESULT_ID = wx.NewId()
@@ -2690,7 +3058,7 @@ class FloatSlider(wx.Slider):
 
 	def __init__(self, parent, id, value, minval, maxval, res,
 				 label, pos=wx.DefaultPosition, size=wx.DefaultSize, style=wx.SL_HORIZONTAL,
-				 name='floatslider'):
+				 name='floatslider', scrollevt=None):
 		self._value = value
 		self._min = minval
 		self._max = maxval
@@ -2701,6 +3069,7 @@ class FloatSlider(wx.Slider):
 		self._islider.__init__(
 			parent, id, ival, imin, imax, pos=pos, size=size, style=style, name=name
 		)
+		self._scrollevt = scrollevt
 		self.Bind(wx.EVT_SCROLL, self._OnScroll)
 		self.Bind(wx.EVT_MOUSEWHEEL, self._OnScroll)
 
@@ -2717,6 +3086,9 @@ class FloatSlider(wx.Slider):
 		
 		# logger.debug('OnScroll: value=%f, ival=%d', self._value, ival)
 		self._label.SetLabel(  u"（{0}）".format( round(self._value, 3)) )
+
+		if self._scrollevt:
+			self._scrollevt(event)
 
 		event.Skip()
 

@@ -41,6 +41,8 @@ class PmxModel():
         self.joints = {}
         # ハッシュ値
         self.digest = None
+        # 上半身がサイジング可能（標準・準標準ボーン構造）か
+        self.can_upper_sizing = True
         # 腕がサイジング可能（標準・準標準ボーン構造）か
         self.can_arm_sizing = True
 
@@ -64,6 +66,44 @@ class PmxModel():
                         upper_vertices.append(v)
 
         return upper_vertices
+    
+    # 上半身系ボーンがサイジング可能かチェック
+    def check_upper_bone_can_sizing(self):
+        ss_parent_bones, _ = self.create_link_2_top("首")
+        all_parent_bones, _ = self.create_link_2_top_all("首")
+
+        ss_parent_bone_names = [p.name for p in ss_parent_bones]
+        logger.debug("ss_parent_bone_names: %s" , ss_parent_bone_names)
+        a_parent_bone_names = [p.name for p in all_parent_bones]
+        logger.debug("a_parent_bone_names: %s" , a_parent_bone_names)
+
+        for apbn in all_parent_bones:
+            if "上半身" == apbn.name:
+                logger.debug("上半身まできたら終了: %s", apbn.name)
+                break
+
+            # ボーンリンクが既定ボーンリンクリストに含まれていない場合
+            if apbn.name not in ss_parent_bone_names:
+                if self.bones[apbn.name].display == True:
+                    is_adjust = False
+                    for spbn in ss_parent_bones:
+                        # 既定ボーンリストと同じ位置のボーンである場合、調整系とみなしてスルー
+                        if spbn.position == apbn.position:
+                            is_adjust = True
+                            break
+
+                    if not is_adjust:
+                        print("■■■■■■■■■■■■■■■■■")
+                        print("■　**WARNING**　")
+                        print("■　モデルの上半身系ボーンにサイジング可能範囲外のボーンがあります。")
+                        print("■　モデル: %s" % self.name)
+                        print("■　ボーン: %s" % apbn.name)
+                        print("■■■■■■■■■■■■■■■■■")
+                        return False
+
+        # 全部許容範囲内ならOK
+        return True
+
     
     # 腕系ボーンがサイジング可能かチェック
     def check_arm_bone_can_sizing(self):
