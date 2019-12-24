@@ -42,18 +42,27 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames)
     global_ik_links = {}
     center_ik_links = {}
     if "左足ＩＫ" in trace_model.bones and "左足ＩＫ" in replace_model.bones and "右足ＩＫ" in trace_model.bones and "右足ＩＫ" in replace_model.bones:
-        # all_rep_leg_ik_links, all_rep_leg_ik_indexes = replace_model.create_link_2_top_lr("つま先ＩＫ", "足ＩＫ")
-        # global_ik_links["右足ＩＫ"] = {"link": all_rep_leg_ik_links["右"], "index": all_rep_leg_ik_indexes["右"], "toe": "右つま先ＩＫ"}
-        # global_ik_links["左足ＩＫ"] = {"link": all_rep_leg_ik_links["左"], "index": all_rep_leg_ik_indexes["左"], "toe": "左つま先ＩＫ"}
+        all_rep_leg_ik_links, all_rep_leg_ik_indexes = replace_model.create_link_2_top_lr("つま先ＩＫ", "足ＩＫ")
+        all_org_leg_ik_links, all_org_leg_ik_indexes = trace_model.create_link_2_top_lr("つま先ＩＫ", "足ＩＫ")
+        global_ik_links["右足ＩＫ"] = {"rep_link": all_rep_leg_ik_links["右"], "rep_index": all_rep_leg_ik_indexes["右"], \
+            "org_link": all_org_leg_ik_links["右"], "org_index": all_org_leg_ik_indexes["右"], "toe": "右つま先ＩＫ"}
+        global_ik_links["左足ＩＫ"] = {"rep_link": all_rep_leg_ik_links["左"], "rep_index": all_rep_leg_ik_indexes["左"], \
+            "org_link": all_org_leg_ik_links["左"], "org_index": all_org_leg_ik_indexes["左"], "toe": "左つま先ＩＫ"}
 
-        all_rep_center_links, all_rep_center_indexes = replace_model.create_link_2_top_one("センター")
+        all_org_center_links, all_org_center_indexes = trace_model.create_link_2_top_one("下半身")
+        all_org_upper_links, all_org_upper_indexes = trace_model.create_link_2_top_one("上半身")
+        all_org_leg_ik_links, all_org_leg_ik_indexes = trace_model.create_link_2_top_lr("足ＩＫ")
+        all_rep_center_links, all_rep_center_indexes = replace_model.create_link_2_top_one("下半身")
+        all_rep_upper_links, all_rep_upper_indexes = replace_model.create_link_2_top_one("上半身")
         all_rep_leg_ik_links, all_rep_leg_ik_indexes = replace_model.create_link_2_top_lr("足ＩＫ")
-        center_ik_links["センター"] = {"rlink": all_rep_leg_ik_links["右"], "rindex": all_rep_leg_ik_indexes["右"], \
-                                        "llink": all_rep_leg_ik_links["左"], "lindex": all_rep_leg_ik_indexes["左"], \
-                                        "clink": all_rep_center_links, "cindex": all_rep_center_indexes}
-
-    # 元々のモーション
-    org_motion_frames = copy.deepcopy(motion.frames)
+        center_ik_links["センター"] = {"rep_rlink": all_rep_leg_ik_links["右"], "rep_rindex": all_rep_leg_ik_indexes["右"], \
+                                        "rep_llink": all_rep_leg_ik_links["左"], "rep_lindex": all_rep_leg_ik_indexes["左"], \
+                                        "rep_clink": all_rep_center_links, "rep_cindex": all_rep_center_indexes, \
+                                        "rep_ulink": all_rep_upper_links, "rep_uindex": all_rep_upper_indexes, \
+                                        "org_rlink": all_org_leg_ik_links["右"], "org_rindex": all_org_leg_ik_indexes["右"], \
+                                        "org_llink": all_org_leg_ik_links["左"], "org_lindex": all_org_leg_ik_indexes["左"], \
+                                        "org_clink": all_org_center_links, "org_cindex": all_org_center_indexes, \
+                                        "org_ulink": all_org_upper_links, "org_uindex": all_org_upper_indexes}
 
     if motion.motion_cnt > 0:
         # -----------------------------------------------------------------
@@ -74,33 +83,33 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames)
                         # ローカルZオフセットが入っている場合、オフセット調整
                         bf.position += replace_model.bones[k].local_offset
                     
-                    # if replace_model.bones[k].global_ik_offset != QVector3D() and k in global_ik_links:
-                    #     # グローバルIKオフセットが入っている場合、オフセット調整
-                    #     # つま先までのグローバル位置
-                    #     _, _, _, _, rep_ik_global_3ds = utils.create_matrix_global(replace_model, global_ik_links[k]["link"], motion.frames, bf, None)
-                    #     # 先モデルの足IKが向いている回転量
-                    #     rep_leg_direction_qq = bf.rotation
-                    #     if "つま先ＩＫ" in global_ik_links[k]["index"]:
-                    #         # つま先IKがある場合、つま先IKの向きも保持する
-                    #         toe_ik_pos = rep_ik_global_3ds[len(rep_ik_global_3ds) - global_ik_links[k]["index"]["つま先ＩＫ"] - 1]
-                    #         leg_ik_pos = rep_ik_global_3ds[len(rep_ik_global_3ds) - global_ik_links[k]["index"]["足ＩＫ"] - 1]
-                    #         logger.info("toe_ik_pos: %s", toe_ik_pos)
-                    #         logger.info("leg_ik_pos: %s", leg_ik_pos)
-                    #         toe_initial_pos = (replace_model.bones[global_ik_links[k]["toe"]].position - replace_model.bones[k].position).normalized()
-                    #         toe_initial_pos.setY(0)
-                    #         toe_now_pos = (toe_ik_pos - leg_ik_pos).normalized()
-                    #         toe_now_pos.setY(0)
+                    if replace_model.bones[k].global_ik_offset != QVector3D() and k in global_ik_links:
+                        # グローバルIKオフセットが入っている場合、オフセット調整
+                        # つま先までのグローバル位置
+                        _, _, _, _, rep_ik_global_3ds = utils.create_matrix_global(replace_model, global_ik_links[k]["rep_link"], motion.frames, bf, None)
+                        # 先モデルの足IKが向いている回転量
+                        rep_leg_direction_qq = bf.rotation
+                        if "つま先ＩＫ" in global_ik_links[k]["index"]:
+                            # つま先IKがある場合、つま先IKの向きも保持する
+                            toe_ik_pos = rep_ik_global_3ds[len(rep_ik_global_3ds) - global_ik_links[k]["rep_index"]["つま先ＩＫ"] - 1]
+                            leg_ik_pos = rep_ik_global_3ds[len(rep_ik_global_3ds) - global_ik_links[k]["rep_index"]["足ＩＫ"] - 1]
+                            logger.debug("toe_ik_pos: %s", toe_ik_pos)
+                            logger.debug("leg_ik_pos: %s", leg_ik_pos)
+                            toe_initial_pos = (replace_model.bones[global_ik_links[k]["toe"]].position - replace_model.bones[k].position).normalized()
+                            toe_initial_pos.setY(0)
+                            toe_now_pos = (toe_ik_pos - leg_ik_pos).normalized()
+                            toe_now_pos.setY(0)
 
-                    #         rep_leg_direction_qq = QQuaternion.rotationTo(toe_initial_pos, toe_now_pos)
-                    #     logger.info("f: %s, k: %s, rot: %s", bf.frame, k, rep_leg_direction_qq.toEulerAngles())
-                    #     # 正面向きにオフセット加算
-                    #     rep_front_ik = utils.create_direction_pos(rep_leg_direction_qq.inverted(), bf.position)
-                    #     rep_front_ik += replace_model.bones[k].global_ik_offset
-                    #     # 元の向きに戻した時のセンター位置
-                    #     rep_ik = utils.create_direction_pos(rep_leg_direction_qq, rep_front_ik)
-                    #     logger.info("bf.position: %s", bf.position)
-                    #     logger.info("rep_ik: %s", rep_ik)
-                    #     bf.position = rep_ik
+                            rep_leg_direction_qq = QQuaternion.rotationTo(toe_initial_pos, toe_now_pos)
+                        logger.debug("f: %s, k: %s, rot: %s", bf.frame, k, rep_leg_direction_qq.toEulerAngles())
+                        # 正面向きにオフセット加算
+                        rep_front_ik = utils.create_direction_pos(rep_leg_direction_qq.inverted(), bf.position)
+                        rep_front_ik += replace_model.bones[k].global_ik_offset
+                        # 元の向きに戻した時のセンター位置
+                        rep_ik = utils.create_direction_pos(rep_leg_direction_qq, rep_front_ik)
+                        logger.debug("bf.position: %s", bf.position)
+                        logger.debug("rep_ik: %s", rep_ik)
+                        bf.position = rep_ik
 
                 print("移動補正: %s" % k)
 
@@ -295,9 +304,9 @@ def calc_ik_offset(trace_model, replace_model, xz_ratio):
         if abs(left_leg_ik_offset.x()) > abs(rep_left_leg_ik_pos.x() * IK_RATE):
             re_x = rep_left_leg_ik_pos.x() * IK_RATE
             left_leg_ik_offset.setX( re_x * ( 1 if utils.sign(left_leg_ik_offset.x()) == utils.sign(rep_left_leg_ik_pos.x()) else -1 ) )
-        if abs(left_leg_ik_offset.z()) > abs(rep_left_leg_ik_pos.z() * IK_RATE):
-            re_z = rep_left_leg_ik_pos.z() * IK_RATE
-            left_leg_ik_offset.setZ( re_z * ( 1 if utils.sign(left_leg_ik_offset.z()) == utils.sign(rep_left_leg_ik_pos.z()) else -1 ) )
+        # if abs(left_leg_ik_offset.z()) > abs(rep_left_leg_ik_pos.z() * IK_RATE):
+        #     re_z = rep_left_leg_ik_pos.z() * IK_RATE
+        #     left_leg_ik_offset.setZ( re_z * ( 1 if utils.sign(left_leg_ik_offset.z()) == utils.sign(rep_left_leg_ik_pos.z()) else -1 ) )
         logger.info("left_leg_ik_offset after: %s", left_leg_ik_offset)
 
         org_right_leg_ik_pos = trace_model.bones["右足ＩＫ"].position
@@ -309,9 +318,9 @@ def calc_ik_offset(trace_model, replace_model, xz_ratio):
         if abs(right_leg_ik_offset.x()) > abs(rep_right_leg_ik_pos.x() * IK_RATE):
             re_x = rep_right_leg_ik_pos.x() * IK_RATE
             right_leg_ik_offset.setX( re_x * ( 1 if utils.sign(right_leg_ik_offset.x()) == utils.sign(rep_right_leg_ik_pos.x()) else -1 ) )
-        if abs(right_leg_ik_offset.z()) > abs(rep_right_leg_ik_pos.z() * IK_RATE):
-            re_z = rep_right_leg_ik_pos.z() * IK_RATE
-            right_leg_ik_offset.setZ( re_z * ( 1 if utils.sign(right_leg_ik_offset.z()) == utils.sign(rep_right_leg_ik_pos.z()) else -1 ) )
+        # if abs(right_leg_ik_offset.z()) > abs(rep_right_leg_ik_pos.z() * IK_RATE):
+        #     re_z = rep_right_leg_ik_pos.z() * IK_RATE
+        #     right_leg_ik_offset.setZ( re_z * ( 1 if utils.sign(right_leg_ik_offset.z()) == utils.sign(rep_right_leg_ik_pos.z()) else -1 ) )
         logger.info("right_leg_ik_offset after: %s", right_leg_ik_offset)
 
         print("左足IKオフセット: x: %s, z: %s" % ( left_leg_ik_offset.x(), left_leg_ik_offset.z()))
@@ -320,6 +329,9 @@ def calc_ik_offset(trace_model, replace_model, xz_ratio):
         replace_model.bones["左足ＩＫ"].local_offset = left_leg_ik_offset
         replace_model.bones["右足ＩＫ"].local_offset = right_leg_ik_offset
 
+        # replace_model.bones["左足ＩＫ"].global_ik_offset = QVector3D(((trace_model.bones["左足"].position.x() * leg_ratio) - replace_model.bones["左足"].position.x()), 0, 0)
+        # replace_model.bones["右足ＩＫ"].global_ik_offset = QVector3D(((trace_model.bones["右足"].position.x() * leg_ratio) - replace_model.bones["右足"].position.x()), 0, 0)
+
         return True
     
     return False
@@ -327,19 +339,86 @@ def calc_ik_offset(trace_model, replace_model, xz_ratio):
 def cal_center_offset(org_motion_frames, motion, trace_model, replace_model, center_bf, xz_ratio, center_ik_links):
     if "センター" in trace_model.bones and "センター" in replace_model.bones \
         and "左足ＩＫ" in trace_model.bones and "左足ＩＫ" in replace_model.bones and "左足" in trace_model.bones and "左足" in replace_model.bones \
-        and "右足ＩＫ" in trace_model.bones and "右足ＩＫ" in replace_model.bones and "右足" in trace_model.bones and "右足" in replace_model.bones:
+        and "右足ＩＫ" in trace_model.bones and "右足ＩＫ" in replace_model.bones and "右足" in trace_model.bones and "右足" in replace_model.bones \
+        and "上半身" in trace_model.bones and "上半身" in replace_model.bones and "下半身" in trace_model.bones and "下半身" in replace_model.bones:
 
-        # # 元モデルのセンターグローバル位置
-        # _, _, _, _, org_center_global_3ds = utils.create_matrix_global(trace_model, center_ik_links["clink"], org_motion_frames, center_bf, None)
-        # org_center_pos = org_center_global_3ds[len(org_center_global_3ds) - center_ik_links["cindex"]["センター"] - 1]
-        # # 元モデルの右足ＩＫグローバル位置
-        # _, _, _, _, org_right_ik_global_3ds = utils.create_matrix_global(trace_model, center_ik_links["rlink"], org_motion_frames, center_bf, None)
-        # org_right_ik_pos = org_right_ik_global_3ds[len(org_right_ik_global_3ds) - center_ik_links["rindex"]["足ＩＫ"] - 1]
-        # # 元モデルの左足ＩＫグローバル位置
-        # _, _, _, _, org_left_ik_global_3ds = utils.create_matrix_global(trace_model, center_ik_links["llink"], org_motion_frames, center_bf, None)
-        # org_left_ik_pos = org_left_ik_global_3ds[len(org_left_ik_global_3ds) - center_ik_links["lindex"]["足ＩＫ"] - 1]
+        # 元モデルのグローバル位置
+        _, _, _, _, org_center_global_3ds = utils.create_matrix_global(trace_model, center_ik_links["org_clink"], org_motion_frames, center_bf, None)
+        org_global_center_pos = org_center_global_3ds[len(org_center_global_3ds) - center_ik_links["org_cindex"]["センター"] - 1]
+        logger.info("f: %s, org_center_pos: %s", center_bf.frame, org_global_center_pos)
+        _, _, _, _, org_center_global_3ds = utils.create_matrix_global(trace_model, center_ik_links["org_clink"], org_motion_frames, center_bf, None)
+        org_global_lower_pos = org_center_global_3ds[len(org_center_global_3ds) - center_ik_links["org_cindex"]["下半身"] - 1]
+        logger.info("f: %s, org_global_lower_pos: %s", center_bf.frame, org_global_lower_pos)
+        _, _, _, _, org_center_global_3ds = utils.create_matrix_global(trace_model, center_ik_links["org_ulink"], org_motion_frames, center_bf, None)
+        org_global_upper_pos = org_center_global_3ds[len(org_center_global_3ds) - center_ik_links["org_uindex"]["上半身"] - 1]
+        logger.info("f: %s, org_global_upper_pos: %s", center_bf.frame, org_global_upper_pos)
 
-        # 元モデルのセンター位置    
+        # 上半身正面向き
+        org_upper_direction_all_qq = utils.calc_upper_direction_qq(trace_model, center_ik_links["org_ulink"], org_motion_frames, center_bf)
+        org_upper_direction_qq = QQuaternion.fromEulerAngles(0, org_upper_direction_all_qq.toEulerAngles().y(), 0)
+        org_front_global_upper_pos = utils.create_direction_pos(org_upper_direction_qq.inverted(), org_global_upper_pos)
+        logger.info("f: %s, org_front_global_upper_pos: %s", center_bf.frame, org_front_global_upper_pos)
+        org_front_global_upper_center_pos = utils.create_direction_pos(org_upper_direction_qq.inverted(), org_global_center_pos)
+        logger.info("f: %s, org_front_global_upper_center_pos: %s", center_bf.frame, org_front_global_upper_center_pos)
+        # 下半身正面向き
+        org_lower_direction_all_qq = utils.calc_upper_direction_qq(trace_model, center_ik_links["org_clink"], org_motion_frames, center_bf)
+        org_lower_direction_qq = QQuaternion.fromEulerAngles(0, org_lower_direction_all_qq.toEulerAngles().y(), 0)
+        org_front_global_lower_pos = utils.create_direction_pos(org_lower_direction_qq.inverted(), org_global_lower_pos)
+        logger.info("f: %s, org_front_global_lower_pos: %s", center_bf.frame, org_front_global_lower_pos)
+        # センター正面向き
+        org_front_global_lower_center_pos = utils.create_direction_pos(org_lower_direction_qq.inverted(), org_global_center_pos)
+        logger.info("f: %s, org_front_global_lower_center_pos: %s", center_bf.frame, org_front_global_lower_center_pos)
+        org_front_global_center_offset = ((((org_front_global_lower_pos - org_front_global_lower_center_pos) + \
+            (trace_model.bones["センター"].position - trace_model.bones["下半身"].position)) + \
+            ((org_front_global_upper_pos - org_front_global_upper_center_pos) + \
+            (trace_model.bones["センター"].position - trace_model.bones["上半身"].position))) / 2) * xz_ratio
+        org_front_global_center_offset.setX(utils.get_effective_value(org_front_global_center_offset.x()))
+        org_front_global_center_offset.setY(0)
+        org_front_global_center_offset.setZ(utils.get_effective_value(org_front_global_center_offset.z()))
+        logger.info("f: %s, org_front_global_center_offset: %s", center_bf.frame, org_front_global_center_offset)
+        print("f: %s, org_front_global_center_offset: %s" % (center_bf.frame, org_front_global_center_offset))
+
+        # ------------
+
+        # 先モデルのグローバル位置
+        _, _, _, _, rep_center_global_3ds = utils.create_matrix_global(replace_model, center_ik_links["rep_clink"], motion.frames, center_bf, None)
+        rep_global_center_pos = rep_center_global_3ds[len(rep_center_global_3ds) - center_ik_links["rep_cindex"]["センター"] - 1]
+        logger.info("f: %s, rep_center_pos: %s", center_bf.frame, rep_global_center_pos)
+        _, _, _, _, rep_center_global_3ds = utils.create_matrix_global(replace_model, center_ik_links["rep_clink"], motion.frames, center_bf, None)
+        rep_global_lower_pos = rep_center_global_3ds[len(rep_center_global_3ds) - center_ik_links["rep_cindex"]["下半身"] - 1]
+        logger.info("f: %s, rep_global_lower_pos: %s", center_bf.frame, rep_global_lower_pos)
+        _, _, _, _, rep_center_global_3ds = utils.create_matrix_global(replace_model, center_ik_links["rep_ulink"], motion.frames, center_bf, None)
+        rep_global_upper_pos = rep_center_global_3ds[len(rep_center_global_3ds) - center_ik_links["rep_uindex"]["上半身"] - 1]
+        logger.info("f: %s, rep_global_upper_pos: %s", center_bf.frame, rep_global_upper_pos)
+
+        # 上半身正面向き
+        rep_upper_direction_all_qq = utils.calc_upper_direction_qq(replace_model, center_ik_links["rep_ulink"], motion.frames, center_bf)
+        rep_upper_direction_qq = QQuaternion.fromEulerAngles(0, rep_upper_direction_all_qq.toEulerAngles().y(), 0)
+        rep_front_global_upper_pos = utils.create_direction_pos(rep_upper_direction_qq.inverted(), rep_global_upper_pos)
+        logger.info("f: %s, rep_front_global_upper_pos: %s", center_bf.frame, rep_front_global_upper_pos)
+        rep_front_global_upper_center_pos = utils.create_direction_pos(rep_upper_direction_qq.inverted(), rep_global_center_pos)
+        logger.info("f: %s, rep_front_global_upper_center_pos: %s", center_bf.frame, rep_front_global_upper_center_pos)
+        # 下半身正面向き
+        rep_lower_direction_all_qq = utils.calc_upper_direction_qq(replace_model, center_ik_links["rep_clink"], motion.frames, center_bf)
+        rep_lower_direction_qq = QQuaternion.fromEulerAngles(0, rep_lower_direction_all_qq.toEulerAngles().y(), 0)
+        rep_front_global_lower_pos = utils.create_direction_pos(rep_lower_direction_qq.inverted(), rep_global_lower_pos)
+        logger.info("f: %s, rep_front_global_lower_pos: %s", center_bf.frame, rep_front_global_lower_pos)
+        # センター正面向き
+        rep_front_global_lower_center_pos = utils.create_direction_pos(rep_lower_direction_qq.inverted(), rep_global_center_pos)
+        logger.info("f: %s, rep_front_global_lower_center_pos: %s", center_bf.frame, rep_front_global_lower_center_pos)
+        rep_front_global_center_offset = ((((rep_front_global_lower_pos - rep_front_global_lower_center_pos) + \
+            (replace_model.bones["センター"].position - replace_model.bones["下半身"].position)) + \
+            ((rep_front_global_upper_pos - rep_front_global_upper_center_pos) + \
+            (replace_model.bones["センター"].position - replace_model.bones["上半身"].position))) / 2) - org_front_global_center_offset
+        rep_front_global_center_offset.setX(utils.get_effective_value(rep_front_global_center_offset.x()))
+        rep_front_global_center_offset.setY(0)
+        rep_front_global_center_offset.setZ(utils.get_effective_value(rep_front_global_center_offset.z()))
+        logger.info("f: %s, rep_front_global_center_offset: %s", center_bf.frame, rep_front_global_center_offset)
+        print("f: %s, rep_front_global_center_offset: %s" % (center_bf.frame, rep_front_global_center_offset))
+
+        # --------------
+
+        # 元モデルのセンター位置
         org_center_pos = utils.calc_bone_by_complement(org_motion_frames, "センター", center_bf.frame).position
         # 元モデルの左足ＩＫ位置    
         org_left_ik_pos = utils.calc_bone_by_complement(org_motion_frames, "左足ＩＫ", center_bf.frame).position
@@ -347,28 +426,29 @@ def cal_center_offset(org_motion_frames, motion, trace_model, replace_model, cen
         org_right_ik_pos = utils.calc_bone_by_complement(org_motion_frames, "右足ＩＫ", center_bf.frame).position
 
         # 左右の足からセンターのオフセット位置を求める
-        org_center_offset = ((org_left_ik_pos + org_right_ik_pos) / 2) - org_center_pos
+        org_center_offset = (((org_left_ik_pos + org_right_ik_pos) / 2) - org_center_pos) * xz_ratio
         org_center_offset.setX(utils.get_effective_value(org_center_offset.x()))
         org_center_offset.setY(0)
         org_center_offset.setZ(utils.get_effective_value(org_center_offset.z()))
-        logger.info("f: %s, org_offset: %s", center_bf.frame, org_center_offset)
+        logger.debug("f: %s, org_offset: %s", center_bf.frame, org_center_offset)
 
+        # --------
+        
         # 右足とセンターの位置をオフセット算出
         rep_center_pos = utils.calc_bone_by_complement(motion.frames, "センター", center_bf.frame).position
-        logger.info("f: %s, rep_center_pos: %s", center_bf.frame, rep_center_pos)
+        logger.debug("f: %s, rep_center_pos: %s", center_bf.frame, rep_center_pos)
         rep_left_ik_pos = utils.calc_bone_by_complement(motion.frames, "左足ＩＫ", center_bf.frame).position
-        logger.info("f: %s, rep_left_ik_pos: %s", center_bf.frame, rep_left_ik_pos)
+        logger.debug("f: %s, rep_left_ik_pos: %s", center_bf.frame, rep_left_ik_pos)
         rep_right_ik_pos = utils.calc_bone_by_complement(motion.frames, "右足ＩＫ", center_bf.frame).position
-        logger.info("f: %s, rep_right_ik_pos: %s", center_bf.frame, rep_right_ik_pos)
-        logger.info("f: %s, ik_calc: %s", center_bf.frame, (rep_left_ik_pos + rep_right_ik_pos) / 2)
-        logger.info("f: %s, org_calc: %s", center_bf.frame, (org_center_offset * xz_ratio))
-        rep_center_offset = ((rep_left_ik_pos + rep_right_ik_pos) / 2) - rep_center_pos - (org_center_offset * xz_ratio)
+        logger.debug("f: %s, rep_right_ik_pos: %s", center_bf.frame, rep_right_ik_pos)
+        logger.debug("f: %s, ik_calc: %s", center_bf.frame, (rep_left_ik_pos + rep_right_ik_pos) / 2)
+        rep_center_offset = ((rep_left_ik_pos + rep_right_ik_pos) / 2) - rep_center_pos - org_center_offset
         rep_center_offset.setX(utils.get_effective_value(rep_center_offset.x()))
         rep_center_offset.setY(0)
         rep_center_offset.setZ(utils.get_effective_value(rep_center_offset.z()))
-        logger.info("f: %s, rep_offset: %s", center_bf.frame, rep_center_offset)
+        logger.debug("f: %s, rep_offset: %s", center_bf.frame, rep_center_offset)
 
-        return rep_center_offset
+        return rep_center_offset + rep_front_global_center_offset
 
     return QVector3D()
 
