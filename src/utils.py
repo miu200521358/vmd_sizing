@@ -5,7 +5,7 @@ import re
 import logging
 import copy
 import datetime
-from math import atan2, acos, cos, sin, degrees, isnan, isclose, sqrt, pi
+from math import atan2, acos, cos, sin, degrees, isnan, isclose, sqrt, pi, isinf
 from PyQt5.QtGui import QQuaternion, QVector3D, QVector2D, QMatrix4x4, QVector4D
 
 from VmdWriter import VmdWriter, VmdBoneFrame
@@ -585,13 +585,20 @@ def scale_bezier_point(pn, p1, diff):
     # logger.debug("s: %s", s)
 
     # nanになったら0決め打ち
-    if isnan(s.x()):
-        s.setX(0)
-
-    if isnan(s.y()):
-        s.setY(0)
+    s.setX(get_effective_value(s.x()))
+    s.setY(get_effective_value(s.y()))
 
     return s
+
+def get_effective_value(v):
+    if isnan(v):
+        return 0
+    
+    if isinf(v):
+        return 0
+    
+    return v
+
 
 # ベジェ曲線をMMD用の数値に丸める
 def round_bezier_mmd(target):

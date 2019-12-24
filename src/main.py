@@ -41,9 +41,9 @@ def main(motion, trace_model, replace_model, output_vmd_path, \
     error_file_logger = None
 
     # 移動系ボーン縮尺処理
-    is_success = sub_move.exec(motion, trace_model, replace_model, output_vmd_path) and is_success
+    is_success = sub_move.exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames) and is_success
 
-    # 腕スタンス補正処理
+    # スタンス補正処理
     is_success = sub_arm_stance.exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger) and is_success
 
     # 腕IK処理

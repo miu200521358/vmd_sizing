@@ -78,6 +78,7 @@ def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org
 
         # 上半身から上半身2への傾き
         rep_target_slope = (replace_model.bones[target_bone_name].position - replace_model.bones["上半身"].position).normalized()
+        logger.debug("rep_target_slope original: %s", replace_model.bones[target_bone_name].position - replace_model.bones["上半身"].position)
         logger.debug("rep_target_slope: %s", rep_target_slope)
         logger.debug("rep_target_slope: %s", QVector3D.crossProduct(rep_target_slope, QVector3D(-1, 0, 0)))
 
@@ -186,6 +187,7 @@ def calc_upper_rotation(org_motion_frames, motion, trace_model, org_head_links, 
     rep_to_z = rep_front_upper_pos.z() + rep_to_z_diff \
         + ( org_front_to_pos.z() - org_front_upper_pos.z() - org_to_z_diff ) * shoulder_diff_length
     rep_front_to_pos.setZ(rep_to_z)
+    logger.debug("f: %s, rep_front_upper_pos: %s", bf.frame, rep_front_upper_pos)
     logger.debug("f: %s, rep_to_pos: %s", bf.frame, rep_front_to_pos)
 
     # 回転を元に戻した位置
@@ -258,6 +260,9 @@ def calc_upper_rotation(org_motion_frames, motion, trace_model, org_head_links, 
     from_orientation = QQuaternion.fromDirection(direction, up)
     initial = QQuaternion.fromDirection(rep_from_slope, QVector3D.crossProduct(rep_from_slope, QVector3D(-1, 0, 0)).normalized())
     from_rotation = parent_rotation.inverted() * from_orientation * initial.inverted()
+    logger.debug("f: %s, parent: %s", bf.frame, parent_rotation.toEulerAngles())
+    logger.debug("f: %s, initial: %s", bf.frame, initial.toEulerAngles())
+    logger.debug("f: %s, orientation: %s", bf.frame, from_orientation.toEulerAngles())
     logger.debug("f: %s, bf: %s", bf.frame, from_rotation.toEulerAngles())
 
     org_bfs = [x for x in org_motion_frames[from_bone_name] if x.frame == bf.frame]
