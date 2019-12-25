@@ -409,7 +409,11 @@ def cal_center_offset(org_motion_frames, motion, trace_model, replace_model, cen
         rep_front_global_center_offset = ((((rep_front_global_lower_pos - rep_front_global_lower_center_pos) + \
             (replace_model.bones["センター"].position - replace_model.bones["下半身"].position)) + \
             ((rep_front_global_upper_pos - rep_front_global_upper_center_pos) + \
-            (replace_model.bones["センター"].position - replace_model.bones["上半身"].position))) / 2) - org_front_global_center_offset
+            (replace_model.bones["センター"].position - replace_model.bones["上半身"].position))) / 2)
+        if abs(rep_front_global_center_offset.x()) < 0.01 and abs(rep_front_global_center_offset.y()) < 0.01 and abs(rep_front_global_center_offset.z()) < 0.01:
+            rep_front_global_center_offset = org_front_global_center_offset
+        else:
+            rep_front_global_center_offset -= org_front_global_center_offset
         rep_front_global_center_offset.setX(utils.get_effective_value(rep_front_global_center_offset.x()))
         rep_front_global_center_offset.setY(0)
         rep_front_global_center_offset.setZ(utils.get_effective_value(rep_front_global_center_offset.z()))

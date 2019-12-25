@@ -69,6 +69,10 @@ class PmxModel():
     
     # 上半身系ボーンがサイジング可能かチェック
     def check_upper_bone_can_sizing(self):
+        if "首" not in self.bones:
+            # 首までたどれなければ対象外
+            return False
+        
         ss_parent_bones, _ = self.create_link_2_top("首")
         all_parent_bones, _ = self.create_link_2_top_all("首")
 
