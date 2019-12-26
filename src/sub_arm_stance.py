@@ -9,12 +9,15 @@ from VmdWriter import VmdWriter, VmdBoneFrame
 from VmdReader import VmdReader
 from PmxModel import PmxModel, SizingException
 from PmxReader import PmxReader
-import utils, sub_arm_ik
+import utils, sub_arm_ik, sub_move
 
 logger = logging.getLogger("VmdSizing").getChild(__name__)
 
 def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger):
     if motion.motion_cnt > 0:
+        # センタースタンス補正
+        adjust_center_stance(motion, trace_model, replace_model, org_motion_frames)
+
         if trace_model.can_upper_sizing and replace_model.can_upper_sizing:
             # 上半身補正
             adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger)
@@ -24,6 +27,257 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
             adjust_arm_stance(motion, trace_model, replace_model, org_motion_frames)
 
     return True
+
+def adjust_center_stance(motion, trace_model, replace_model, org_motion_frames):
+    # -----------------------------------------------------------------
+    # センター位置補正
+
+    print("■■ センタースタンス補正 -----------------")
+
+    # センター調整に必要なボーン群
+    center_target_bones = ["センター", "上半身", "下半身", "左足ＩＫ", "右足ＩＫ", "左足", "右足"]
+
+    if set(center_target_bones).issubset(trace_model.bones) and set(center_target_bones).issubset(replace_model.bones) and "センター" in motion.frames:
+        all_org_center_links, all_org_center_indexes = trace_model.create_link_2_top_one("下半身")
+        all_org_upper_links, all_org_upper_indexes = trace_model.create_link_2_top_one("上半身")
+        all_org_leg_ik_links, all_org_leg_ik_indexes = trace_model.create_link_2_top_lr("足ＩＫ")
+        all_org_leg_links, all_org_leg_indexes = trace_model.create_link_2_top_lr("足")
+        all_rep_center_links, all_rep_center_indexes = replace_model.create_link_2_top_one("下半身")
+        all_rep_upper_links, all_rep_upper_indexes = replace_model.create_link_2_top_one("上半身")
+        all_rep_leg_ik_links, all_rep_leg_ik_indexes = replace_model.create_link_2_top_lr("足ＩＫ")
+        all_rep_leg_links, all_rep_leg_indexes = replace_model.create_link_2_top_lr("足")
+        
+        org_ik_length = (trace_model.bones["左足"].position - trace_model.bones["左足ＩＫ"].position).length
+        rep_ik_length = (replace_model.bones["左足"].position - replace_model.bones["左足ＩＫ"].position).length
+
+        center_trunk_links = {"rep_rilink": all_rep_leg_ik_links["右"], "rep_riindex": all_rep_leg_ik_indexes["右"], \
+            "rep_lilink": all_rep_leg_ik_links["左"], "rep_liindex": all_rep_leg_ik_indexes["左"], \
+            "org_rilink": all_org_leg_ik_links["右"], "org_riindex": all_org_leg_ik_indexes["右"], \
+            "org_lilink": all_org_leg_ik_links["左"], "org_liindex": all_org_leg_ik_indexes["左"], \
+            "rep_rlink": all_rep_leg_links["右"], "rep_rindex": all_rep_leg_indexes["右"], \
+            "rep_llink": all_rep_leg_links["左"], "rep_lindex": all_rep_leg_indexes["左"], \
+            "org_rlink": all_org_leg_links["右"], "org_rindex": all_org_leg_indexes["右"], \
+            "org_llink": all_org_leg_links["左"], "org_lindex": all_org_leg_indexes["左"], \
+            "rep_clink": all_rep_center_links, "rep_cindex": all_rep_center_indexes, \
+            "rep_ulink": all_rep_upper_links, "rep_uindex": all_rep_upper_indexes, \
+            "org_clink": all_org_center_links, "org_cindex": all_org_center_indexes, \
+            "org_ulink": all_org_upper_links, "org_uindex": all_org_upper_indexes}
+        center_ik_links = {"rep_rilink": all_rep_leg_ik_links["右"], "rep_riindex": all_rep_leg_ik_indexes["右"], \
+            "rep_lilink": all_rep_leg_ik_links["左"], "rep_liindex": all_rep_leg_ik_indexes["左"], \
+            "org_rilink": all_org_leg_ik_links["右"], "org_riindex": all_org_leg_ik_indexes["右"], \
+            "org_lilink": all_org_leg_ik_links["左"], "org_liindex": all_org_leg_ik_indexes["左"], \
+            "rep_rlink": all_rep_leg_links["右"], "rep_rindex": all_rep_leg_indexes["右"], \
+            "rep_llink": all_rep_leg_links["左"], "rep_lindex": all_rep_leg_indexes["左"], \
+            "org_rlink": all_org_leg_links["右"], "org_rindex": all_org_leg_indexes["右"], \
+            "org_llink": all_org_leg_links["左"], "org_lindex": all_org_leg_indexes["左"], \
+            "rep_clink": all_rep_center_links, "rep_cindex": all_rep_center_indexes, \
+            "org_clink": all_org_center_links, "org_cindex": all_org_center_indexes, \
+            "org_ik_rate": org_ik_length, "rep_ik_length": rep_ik_length}
+
+        # 足IKのXYZの比率
+        xz_ratio, y_ratio, leg_ik_stance = sub_move.calc_leg_ik_ratio(trace_model, replace_model, False)
+
+        for bf in motion.frames["センター"]:
+            if bf.key == True:
+                # センターオフセット再計算
+                print("f: %s, ** : %s" % (bf.frame, bf.position))
+                bf.position += calc_center_offset(org_motion_frames, motion, trace_model, replace_model, bf, xz_ratio, center_ik_links)
+                print("f: %s, ** ** : %s" % (bf.frame, bf.position))
+                bf.position += calc_center_trunk_offset(org_motion_frames, motion, trace_model, replace_model, bf, xz_ratio, center_trunk_links)
+                print("f: %s, ** ** ** : %s" % (bf.frame, bf.position))
+
+
+def calc_center_offset(org_motion_frames, motion, trace_model, replace_model, center_bf, xz_ratio, center_ik_links):
+
+    # 元モデルのグローバル位置
+    _, _, _, _, org_center_global_3ds = utils.create_matrix_global(trace_model, center_ik_links["org_clink"], org_motion_frames, center_bf, None)
+    # グルーブがある場合、こちらの方が子のはずなのでグローバル位置優先採用
+    target_org_center_name = "グルーブ" if "グルーブ" in trace_model.bones else "センター"
+    org_global_center_pos = org_center_global_3ds[len(org_center_global_3ds) - center_ik_links["org_cindex"][target_org_center_name] - 1]
+    org_global_lower_pos = org_center_global_3ds[len(org_center_global_3ds) - center_ik_links["org_cindex"]["下半身"] - 1]    
+
+    _, _, _, _, org_left_ik_global_3ds = utils.create_matrix_global(trace_model, center_ik_links["org_lilink"], org_motion_frames, center_bf, None)
+    org_global_left_ik_pos = org_left_ik_global_3ds[len(org_left_ik_global_3ds) - center_ik_links["org_liindex"]["足ＩＫ"] - 1]
+    _, _, _, _, org_right_ik_global_3ds = utils.create_matrix_global(trace_model, center_ik_links["org_rilink"], org_motion_frames, center_bf, None)
+    org_global_right_ik_pos = org_right_ik_global_3ds[len(org_right_ik_global_3ds) - center_ik_links["org_riindex"]["足ＩＫ"] - 1]
+
+    # 左右の足IKとセンターの差分からセンターのオフセット位置を求める
+    org_center_ik_offset = ((org_global_left_ik_pos + org_global_right_ik_pos) / 2 - org_global_center_pos)
+    org_center_ik_offset.setX(utils.get_effective_value(org_center_ik_offset.x()))
+    org_center_ik_offset.setY(0)
+    org_center_ik_offset.setZ(utils.get_effective_value(org_center_ik_offset.z()))
+    print("f: %s, org_center_ik_offset: %s" % (center_bf.frame, org_center_ik_offset))
+
+    org_center_offset = org_center_ik_offset * xz_ratio
+    utils.set_effective_value_vec3(org_center_offset)
+    print("f: %s, org_center_offset: %s" % (center_bf.frame, org_center_offset))
+
+    # --------
+
+    # 先モデルのグローバル位置
+    _, _, _, _, rep_center_global_3ds = utils.create_matrix_global(replace_model, center_ik_links["rep_clink"], motion.frames, center_bf, None)
+    # グルーブがある場合、こちらの方が子のはずなのでグローバル位置優先採用
+    target_rep_center_name = "グルーブ" if "グルーブ" in replace_model.bones else "センター"
+    rep_global_center_pos = rep_center_global_3ds[len(rep_center_global_3ds) - center_ik_links["rep_cindex"][target_rep_center_name] - 1]
+    rep_global_lower_pos = rep_center_global_3ds[len(rep_center_global_3ds) - center_ik_links["rep_cindex"]["下半身"] - 1]    
+
+    _, _, _, _, rep_left_ik_global_3ds = utils.create_matrix_global(replace_model, center_ik_links["rep_lilink"], motion.frames, center_bf, None)
+    rep_global_left_ik_pos = rep_left_ik_global_3ds[len(rep_left_ik_global_3ds) - center_ik_links["rep_liindex"]["足ＩＫ"] - 1]
+    _, _, _, _, rep_right_ik_global_3ds = utils.create_matrix_global(replace_model, center_ik_links["rep_rilink"], motion.frames, center_bf, None)
+    rep_global_right_ik_pos = rep_right_ik_global_3ds[len(rep_right_ik_global_3ds) - center_ik_links["rep_riindex"]["足ＩＫ"] - 1]
+
+    # --------------
+
+    # 左右の足IKとセンターの差分からセンターのオフセット位置を求める
+    rep_center_ik_offset = ((rep_global_left_ik_pos + rep_global_right_ik_pos) / 2 - rep_global_center_pos)
+    utils.set_effective_value_vec3(rep_center_ik_offset)
+    rep_center_ik_offset.setY(0)
+    print("f: %s, rep_center_ik_offset: %s" % (center_bf.frame, rep_center_ik_offset))
+
+    rep_center_offset = rep_center_ik_offset - org_center_offset
+    utils.set_effective_value_vec3(rep_center_offset)
+    print("f: %s, rep_center_offset: %s" % (center_bf.frame, rep_center_offset))
+
+    return rep_center_offset
+
+def calc_center_trunk_offset(org_motion_frames, motion, trace_model, replace_model, center_bf, xz_ratio, center_trunk_links):
+    # 元モデルのグローバル位置
+    _, _, _, _, org_normal_center_global_3ds = utils.create_matrix_global(trace_model, center_trunk_links["org_clink"], org_motion_frames, center_bf, None)
+    org_global_normal_center_pos = org_normal_center_global_3ds[len(org_normal_center_global_3ds) - center_trunk_links["org_cindex"]["センター"] - 1]
+
+    # --------
+
+    # 上半身正面向き
+    org_normal_upper_direction_all_qq = utils.calc_upper_direction_qq(trace_model, center_trunk_links["org_ulink"], org_motion_frames, center_bf)
+    org_normal_upper_direction_qq = QQuaternion.fromEulerAngles(0, org_normal_upper_direction_all_qq.toEulerAngles().y(), 0)
+    org_front_global_normal_upper_center_pos = utils.create_direction_pos(org_normal_upper_direction_qq.inverted(), org_global_normal_center_pos)
+
+    org_upper_motion_frames = {}
+    for e, l in enumerate(center_trunk_links["org_ulink"]):
+        bone = utils.calc_bone_by_complement(org_motion_frames, l.name, center_bf.frame)
+        if e == len(center_trunk_links["org_ulink"]) - 1:
+            #一番親に上半身の位置を追加する
+            bone.position += QVector3D(trace_model.bones["上半身"].position.x() - trace_model.bones["センター"].position.x(), 0, trace_model.bones["上半身"].position.z() - trace_model.bones["センター"].position.z())
+        org_upper_motion_frames[bone.format_name] = [bone]
+
+    # 上半身位置に基づく元モデルのグローバル位置
+    _, _, _, _, org_upper_center_global_3ds = utils.create_matrix_global(trace_model, center_trunk_links["org_ulink"], org_upper_motion_frames, center_bf, None)
+    org_global_upper_center_pos = org_upper_center_global_3ds[len(org_upper_center_global_3ds) - center_trunk_links["org_uindex"]["センター"] - 1]
+
+    # 上半身位置に基づく上半身正面向き
+    org_upper_upper_direction_all_qq = utils.calc_upper_direction_qq(trace_model, center_trunk_links["org_ulink"], org_upper_motion_frames, center_bf)
+    org_upper_upper_direction_qq = QQuaternion.fromEulerAngles(0, org_upper_upper_direction_all_qq.toEulerAngles().y(), 0)
+    org_front_global_upper_upper_center_pos = utils.create_direction_pos(org_upper_upper_direction_qq.inverted(), org_global_upper_center_pos)
+    org_front_global_upper_upper_center_pos -= QVector3D(trace_model.bones["上半身"].position.x() - trace_model.bones["センター"].position.x(), 0, trace_model.bones["上半身"].position.z() - trace_model.bones["センター"].position.z())
+
+    # ------------
+
+    # 下半身正面向き
+    org_normal_lower_direction_all_qq = utils.calc_upper_direction_qq(trace_model, center_trunk_links["org_clink"], org_motion_frames, center_bf)
+    org_normal_lower_direction_qq = QQuaternion.fromEulerAngles(0, org_normal_lower_direction_all_qq.toEulerAngles().y(), 0)
+    org_front_global_normal_lower_center_pos = utils.create_direction_pos(org_normal_lower_direction_qq.inverted(), org_global_normal_center_pos)
+
+    org_lower_motion_frames = {}
+    for e, l in enumerate(center_trunk_links["org_ulink"]):
+        bone = utils.calc_bone_by_complement(org_motion_frames, l.name, center_bf.frame)
+        if e == len(center_trunk_links["org_ulink"]) - 1:
+            #一番親に下半身の位置を追加する
+            bone.position += QVector3D(trace_model.bones["下半身"].position.x() - trace_model.bones["センター"].position.x(), 0, trace_model.bones["下半身"].position.z() - trace_model.bones["センター"].position.z())
+        org_lower_motion_frames[bone.format_name] = [bone]
+
+    # 下半身位置に基づく元モデルのグローバル位置
+    _, _, _, _, org_lower_center_global_3ds = utils.create_matrix_global(trace_model, center_trunk_links["org_clink"], org_lower_motion_frames, center_bf, None)
+    org_global_lower_center_pos = org_lower_center_global_3ds[len(org_lower_center_global_3ds) - center_trunk_links["org_cindex"]["センター"] - 1]
+
+    # 下半身位置に基づく下半身正面向き
+    org_lower_lower_direction_all_qq = utils.calc_upper_direction_qq(trace_model, center_trunk_links["org_ulink"], org_lower_motion_frames, center_bf)
+    org_lower_lower_direction_qq = QQuaternion.fromEulerAngles(0, org_lower_lower_direction_all_qq.toEulerAngles().y(), 0)
+    org_front_global_lower_lower_center_pos = utils.create_direction_pos(org_lower_lower_direction_qq.inverted(), org_global_lower_center_pos)
+    org_front_global_lower_lower_center_pos -= QVector3D(trace_model.bones["下半身"].position.x() - trace_model.bones["センター"].position.x(), 0, trace_model.bones["下半身"].position.z() - trace_model.bones["センター"].position.z())
+
+    # ---------------------------------
+
+    # 先モデルのグローバル位置
+    _, _, _, _, rep_normal_center_global_3ds = utils.create_matrix_global(replace_model, center_trunk_links["rep_clink"], motion.frames, center_bf, None)
+    rep_global_normal_center_pos = rep_normal_center_global_3ds[len(rep_normal_center_global_3ds) - center_trunk_links["rep_cindex"]["センター"] - 1]
+
+    # --------
+
+    # 上半身正面向き
+    rep_normal_upper_direction_all_qq = utils.calc_upper_direction_qq(replace_model, center_trunk_links["rep_ulink"], motion.frames, center_bf)
+    rep_normal_upper_direction_qq = QQuaternion.fromEulerAngles(0, rep_normal_upper_direction_all_qq.toEulerAngles().y(), 0)
+    rep_front_global_normal_upper_center_pos = utils.create_direction_pos(rep_normal_upper_direction_qq.inverted(), rep_global_normal_center_pos)
+
+    rep_upper_motion_frames = {}
+    for e, l in enumerate(center_trunk_links["rep_ulink"]):
+        bone = utils.calc_bone_by_complement(motion.frames, l.name, center_bf.frame)
+        if e == len(center_trunk_links["rep_ulink"]) - 1:
+            #一番親に上半身の位置を追加する
+            bone.position += QVector3D(replace_model.bones["上半身"].position.x() - replace_model.bones["センター"].position.x(), 0, replace_model.bones["上半身"].position.z() - replace_model.bones["センター"].position.z())
+        rep_upper_motion_frames[bone.format_name] = [bone]
+
+    # 上半身位置に基づく元モデルのグローバル位置
+    _, _, _, _, rep_upper_center_global_3ds = utils.create_matrix_global(replace_model, center_trunk_links["rep_ulink"], rep_upper_motion_frames, center_bf, None)
+    rep_global_upper_center_pos = rep_upper_center_global_3ds[len(rep_upper_center_global_3ds) - center_trunk_links["rep_uindex"]["センター"] - 1]
+
+    # 上半身位置に基づく上半身正面向き
+    rep_upper_upper_direction_all_qq = utils.calc_upper_direction_qq(replace_model, center_trunk_links["rep_ulink"], rep_upper_motion_frames, center_bf)
+    rep_upper_upper_direction_qq = QQuaternion.fromEulerAngles(0, rep_upper_upper_direction_all_qq.toEulerAngles().y(), 0)
+    rep_front_global_upper_upper_center_pos = utils.create_direction_pos(rep_upper_upper_direction_qq.inverted(), rep_global_upper_center_pos)
+    rep_front_global_upper_upper_center_pos -= QVector3D(replace_model.bones["上半身"].position.x() - replace_model.bones["センター"].position.x(), 0, replace_model.bones["上半身"].position.z() - replace_model.bones["センター"].position.z())
+
+    # ------------
+
+    # 下半身正面向き
+    rep_normal_lower_direction_all_qq = utils.calc_upper_direction_qq(replace_model, center_trunk_links["rep_clink"], motion.frames, center_bf)
+    rep_normal_lower_direction_qq = QQuaternion.fromEulerAngles(0, rep_normal_lower_direction_all_qq.toEulerAngles().y(), 0)
+    rep_front_global_normal_lower_center_pos = utils.create_direction_pos(rep_normal_lower_direction_qq.inverted(), rep_global_normal_center_pos)
+
+    rep_lower_motion_frames = {}
+    for e, l in enumerate(center_trunk_links["rep_ulink"]):
+        bone = utils.calc_bone_by_complement(motion.frames, l.name, center_bf.frame)
+        if e == len(center_trunk_links["rep_ulink"]) - 1:
+            #一番親に下半身の位置を追加する
+            bone.position += QVector3D(replace_model.bones["下半身"].position.x() - replace_model.bones["センター"].position.x(), 0, replace_model.bones["下半身"].position.z() - replace_model.bones["センター"].position.z())
+        rep_lower_motion_frames[bone.format_name] = [bone]
+
+    # 下半身位置に基づく元モデルのグローバル位置
+    _, _, _, _, rep_lower_center_global_3ds = utils.create_matrix_global(replace_model, center_trunk_links["rep_clink"], rep_lower_motion_frames, center_bf, None)
+    rep_global_lower_center_pos = rep_lower_center_global_3ds[len(rep_lower_center_global_3ds) - center_trunk_links["rep_cindex"]["センター"] - 1]
+
+    # 下半身位置に基づく下半身正面向き
+    rep_lower_lower_direction_all_qq = utils.calc_upper_direction_qq(replace_model, center_trunk_links["rep_ulink"], rep_lower_motion_frames, center_bf)
+    rep_lower_lower_direction_qq = QQuaternion.fromEulerAngles(0, rep_lower_lower_direction_all_qq.toEulerAngles().y(), 0)
+    rep_front_global_lower_lower_center_pos = utils.create_direction_pos(rep_lower_lower_direction_qq.inverted(), rep_global_lower_center_pos)
+    rep_front_global_lower_lower_center_pos -= QVector3D(replace_model.bones["下半身"].position.x() - replace_model.bones["センター"].position.x(), 0, replace_model.bones["下半身"].position.z() - replace_model.bones["センター"].position.z())
+
+    # --------------------
+    
+    # センターの上半身回転差分
+    front_center_upper_diff = (rep_front_global_normal_upper_center_pos - rep_front_global_upper_upper_center_pos) \
+        - ((org_front_global_normal_upper_center_pos - org_front_global_upper_upper_center_pos) * xz_ratio)
+    utils.set_effective_value_vec3(front_center_upper_diff)
+    front_center_upper_diff.setY(0)
+    print("f: %s, front_center_upper_diff: %s" % (center_bf.frame, front_center_upper_diff))
+
+    # センターの下半身回転差分
+    front_center_lower_diff = (rep_front_global_normal_lower_center_pos - rep_front_global_lower_lower_center_pos) \
+        - ((org_front_global_normal_lower_center_pos - org_front_global_lower_lower_center_pos) * xz_ratio)
+    utils.set_effective_value_vec3(front_center_lower_diff)
+    front_center_lower_diff.setY(0)
+    print("f: %s, front_center_lower_diff: %s" % (center_bf.frame, front_center_lower_diff))
+
+    # ----------
+
+    # 元々の方向に向かせる
+    center_upper_diff = utils.create_direction_pos(rep_normal_upper_direction_qq, front_center_upper_diff)
+    center_lower_diff = utils.create_direction_pos(rep_normal_lower_direction_qq, front_center_lower_diff)
+
+    # 比率差分の平均
+    center_trunk_offset = (center_upper_diff + center_lower_diff) / 2
+    print("f: %s, center_trunk_offset: %s" % (center_bf.frame, center_trunk_offset))
+
+    return center_trunk_offset
 
 def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger):
     # -----------------------------------------------------------------
@@ -61,8 +315,8 @@ def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org
         target_bone_name = "上半身2" if "上半身2" in trace_model.bones and "上半身2" in replace_model.bones else "頭"
         org_target_upper_z_diff = trace_model.bones[target_bone_name].position.z() - trace_model.bones["上半身"].position.z()
         rep_target_upper_z_diff = replace_model.bones[target_bone_name].position.z() - replace_model.bones["上半身"].position.z()
-        logger.info("org_upper_z_diff: %s", org_target_upper_z_diff)
-        logger.info("rep_upper_z_diff: %s", rep_target_upper_z_diff)
+        logger.debug("org_upper_z_diff: %s", org_target_upper_z_diff)
+        logger.debug("rep_upper_z_diff: %s", rep_target_upper_z_diff)
 
         # 左腕と上半身のZ差
         org_left_arm_z_diff = trace_model.bones["左腕"].position.z() - trace_model.bones["上半身"].position.z()
@@ -81,9 +335,9 @@ def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org
         logger.info("rep_target_slope original: %s", replace_model.bones[target_bone_name].position - replace_model.bones["上半身"].position)
         logger.info("rep_target_slope normalize: %s", rep_target_slope)
         # Z差の方がY差より大きい場合（四つん這い）、直角方向を変える
-        if abs(rep_target_slope.y()) < abs(rep_target_slope.z()) and abs(rep_target_slope.y()) > 0.5:
+        if abs(rep_target_slope.y()) < abs(rep_target_slope.z()) and -0.9 < rep_target_slope.z() < -0.4:
             rep_target_slope = QVector3D(rep_target_slope.x(), 0, -rep_target_slope.y())
-        logger.info("rep_target_slope: %s", rep_target_slope)
+        print("rep_target_slope: %s" % rep_target_slope)
         logger.info("rep_target_slope: %s", QVector3D.crossProduct(rep_target_slope, QVector3D(-1, 0, 0)))
 
         # 準備（細分化）
@@ -110,18 +364,18 @@ def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org
             rep_head_upper_z_diff = replace_model.bones["頭"].position.z() - replace_model.bones["上半身"].position.z()
             # if abs(rep_head_upper_z_diff) > abs(replace_model.bones["頭"].position.y() - replace_model.bones["上半身"].position.y()):
             #     rep_head_upper_z_diff = 0
-            logger.info("org_head_upper_z_diff: %s", org_head_upper_z_diff)
-            logger.info("rep_head_upper_z_diff: %s", rep_head_upper_z_diff)
+            logger.debug("org_head_upper_z_diff: %s", org_head_upper_z_diff)
+            logger.debug("rep_head_upper_z_diff: %s", rep_head_upper_z_diff)
 
             # 上半身から上半身2への傾き
             rep_head_slope = (replace_model.bones["頭"].position - replace_model.bones["上半身2"].position).normalized()
-            logger.info("rep_head_slope original: %s", replace_model.bones["頭"].position - replace_model.bones["上半身"].position)
-            logger.info("rep_head_slope normalize: %s", rep_head_slope)
+            logger.debug("rep_head_slope original: %s", replace_model.bones["頭"].position - replace_model.bones["上半身2"].position)
+            logger.debug("rep_head_slope normalize: %s", rep_head_slope)
             # Z差の方がY差より大きい場合（四つん這い）、直角方向を変える
-            if abs(rep_head_slope.y()) < abs(rep_head_slope.z()) and abs(rep_head_slope.y()) > 0.5:
+            if abs(rep_head_slope.y()) < abs(rep_head_slope.z()) and -0.9 < rep_head_slope.z() < -0.4:
                 rep_head_slope = QVector3D(rep_head_slope.x(), 0, -rep_head_slope.y())
-            logger.info("rep_head_slope: %s", rep_head_slope)
-            logger.info("rep_head_slope: %s", QVector3D.crossProduct(rep_head_slope, QVector3D(-1, 0, 0)))
+            print("rep_head_slope: %s" % rep_head_slope)
+            logger.debug("rep_head_slope: %s", QVector3D.crossProduct(rep_head_slope, QVector3D(-1, 0, 0)))
 
             # 準備
             prepare_upper_stance(motion, "上半身2")
@@ -198,8 +452,8 @@ def calc_upper_rotation(org_motion_frames, motion, trace_model, org_head_links, 
     rep_to_z = rep_front_upper_pos.z() + rep_to_z_diff \
         + ( org_front_to_pos.z() - org_front_upper_pos.z() - org_to_z_diff ) * shoulder_diff_length
     rep_front_to_pos.setZ(rep_to_z)
-    logger.info("f: %s, rep_front_upper_pos: %s", bf.frame, rep_front_upper_pos)
-    logger.info("f: %s, rep_to_pos: %s", bf.frame, rep_front_to_pos)
+    logger.debug("f: %s, rep_front_upper_pos: %s", bf.frame, rep_front_upper_pos)
+    logger.debug("f: %s, rep_to_pos: %s", bf.frame, rep_front_to_pos)
 
     # 回転を元に戻した位置
     rep_to_pos = utils.create_direction_pos(rep_from_direction_qq, rep_front_to_pos)
@@ -276,8 +530,8 @@ def calc_upper_rotation(org_motion_frames, motion, trace_model, org_head_links, 
     logger.debug("f: %s, orientation: %s", bf.frame, from_orientation.toEulerAngles())
     logger.debug("f: %s, bf: %s", bf.frame, from_rotation.toEulerAngles())
 
-    if rep_from_slope.y() == 0:
-        # 傾きYが0の場合、四つん這いモデルなので、チェックなしで適用
+    if rep_from_slope.z() < -0.4:
+        # 傾きZが-0.5以下の場合、四つん這いモデルなので、チェックなしで適用
         bf.rotation = from_rotation
     else:
         org_bfs = [x for x in org_motion_frames[from_bone_name] if x.frame == bf.frame]

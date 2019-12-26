@@ -600,6 +600,12 @@ def get_effective_value(v):
     return v
 
 
+def set_effective_value_vec3(vec3):
+    vec3.setX(get_effective_value(vec3.x()))
+    vec3.setY(get_effective_value(vec3.y()))
+    vec3.setZ(get_effective_value(vec3.z()))
+
+
 # ベジェ曲線をMMD用の数値に丸める
 def round_bezier_mmd(target):
     t2 = QVector2D()
