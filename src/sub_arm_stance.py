@@ -23,7 +23,9 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
             adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger)
 
         if trace_model.can_arm_sizing and replace_model.can_arm_sizing:
-            # 腕構造チェックがTRUEの場合のみ腕スタンス補正
+            # 肩補正
+            adjust_shoulder_stance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger)
+            # 腕補正
             adjust_arm_stance(motion, trace_model, replace_model, org_motion_frames)
 
     return True
@@ -279,6 +281,7 @@ def calc_center_trunk_offset(org_motion_frames, motion, trace_model, replace_mod
 
     return center_trunk_offset
 
+# ------------------------
 def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger):
     # -----------------------------------------------------------------
     # 上半身の角度補正
@@ -292,43 +295,16 @@ def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org
     is_error_outputed = False
 
     if set(upper_target_bones).issubset(trace_model.bones) and set(upper_target_bones).issubset(replace_model.bones) and "上半身" in motion.frames:
+        target_bone_name = "上半身2" if "上半身2" in trace_model.bones and "上半身2" in replace_model.bones else "頭"
+
         # 元モデルのリンク生成
         org_head_links, org_head_indexes = trace_model.create_link_2_top_one("頭")
+        org_upper_links, org_upper_indexes = trace_model.create_link_2_top_one("上半身")
         org_arm_links, org_arm_indexes = trace_model.create_link_2_top_lr("腕")
         # 変換先モデルのリンク生成
         rep_head_links, rep_head_indexes = replace_model.create_link_2_top_one("頭")
+        rep_upper_links, rep_upper_indexes = replace_model.create_link_2_top_one("上半身")
         rep_arm_links, rep_arm_indexes = replace_model.create_link_2_top_lr("腕")
-
-        # 肩幅の差
-        org_shoulder_length = (trace_model.bones["左腕"].position - trace_model.bones["右腕"].position).length()
-        rep_shoulder_length = (replace_model.bones["左腕"].position - replace_model.bones["右腕"].position).length()
-        shoulder_diff_length = rep_shoulder_length / org_shoulder_length
-        print("肩幅比率: %s" % shoulder_diff_length)
-
-        # 上半身の差
-        org_upper_length = (trace_model.bones["頭"].position - trace_model.bones["上半身"].position).length()
-        rep_upper_length = (replace_model.bones["頭"].position - replace_model.bones["上半身"].position).length()
-        upper_diff_length = rep_upper_length / org_upper_length
-        print("上半身比率: %s" % upper_diff_length)
-
-        # 頭と上半身の差
-        target_bone_name = "上半身2" if "上半身2" in trace_model.bones and "上半身2" in replace_model.bones else "頭"
-        org_target_upper_z_diff = trace_model.bones[target_bone_name].position.z() - trace_model.bones["上半身"].position.z()
-        rep_target_upper_z_diff = replace_model.bones[target_bone_name].position.z() - replace_model.bones["上半身"].position.z()
-        logger.debug("org_upper_z_diff: %s", org_target_upper_z_diff)
-        logger.debug("rep_upper_z_diff: %s", rep_target_upper_z_diff)
-
-        # 左腕と上半身のZ差
-        org_left_arm_z_diff = trace_model.bones["左腕"].position.z() - trace_model.bones["上半身"].position.z()
-        rep_left_arm_z_diff = replace_model.bones["左腕"].position.z() - replace_model.bones["上半身"].position.z()
-        logger.debug("org_left_arm_z_diff: %s", org_left_arm_z_diff)
-        logger.debug("rep_left_arm_z_diff: %s", rep_left_arm_z_diff)
-
-        # 右腕と上半身のZ差
-        org_right_arm_z_diff = trace_model.bones["右腕"].position.z() - trace_model.bones["上半身"].position.z()
-        rep_right_arm_z_diff = replace_model.bones["右腕"].position.z() - replace_model.bones["上半身"].position.z()
-        logger.debug("org_right_arm_z_diff: %s", org_right_arm_z_diff)
-        logger.debug("rep_right_arm_z_diff: %s", rep_right_arm_z_diff)
 
         # 上半身から上半身2への傾き
         rep_target_slope = (replace_model.bones[target_bone_name].position - replace_model.bones["上半身"].position).normalized()
@@ -347,11 +323,9 @@ def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org
 
         for bf in motion.frames["上半身"]:
             if bf.key == True:
-                calc_upper_rotation(org_motion_frames, motion, trace_model, org_head_links, org_head_indexes, org_arm_links, org_arm_indexes, \
-                    replace_model, rep_head_links, rep_head_indexes, rep_arm_links, rep_arm_indexes, "上半身", target_bone_name, \
-                    shoulder_diff_length, upper_diff_length, org_target_upper_z_diff, rep_target_upper_z_diff, \
-                    org_left_arm_z_diff, rep_left_arm_z_diff, org_right_arm_z_diff, rep_right_arm_z_diff, rep_target_slope, \
-                    is_error_outputed, error_file_logger, output_vmd_path, bf)
+                calc_upper_rotation(org_motion_frames, motion, trace_model, org_upper_links, org_upper_indexes, org_head_links, org_head_indexes, org_arm_links, org_arm_indexes, \
+                    replace_model, rep_upper_links, rep_upper_indexes, rep_head_links, rep_head_indexes, rep_arm_links, rep_arm_indexes, "上半身", "頭", "上半身", \
+                    rep_target_slope, QVector3D(-1, 0, 0), is_error_outputed, error_file_logger, output_vmd_path, bf)
 
         print("上半身スタンス補正終了")
 
@@ -359,17 +333,13 @@ def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org
         upper2_target_bones = ["上半身", "上半身2", "頭", "首", "左腕", "右腕"]
 
         if set(upper2_target_bones).issubset(trace_model.bones) and set(upper2_target_bones).issubset(replace_model.bones) and "上半身2" in motion.frames:
-            # 頭と上半身の差
-            org_head_upper_z_diff = trace_model.bones["頭"].position.z() - trace_model.bones["上半身"].position.z()
-            rep_head_upper_z_diff = replace_model.bones["頭"].position.z() - replace_model.bones["上半身"].position.z()
-            # if abs(rep_head_upper_z_diff) > abs(replace_model.bones["頭"].position.y() - replace_model.bones["上半身"].position.y()):
-            #     rep_head_upper_z_diff = 0
-            logger.debug("org_head_upper_z_diff: %s", org_head_upper_z_diff)
-            logger.debug("rep_head_upper_z_diff: %s", rep_head_upper_z_diff)
+            # リンク生成
+            org_head_links, org_head_indexes = trace_model.create_link_2_top_one("頭")
+            rep_head_links, rep_head_indexes = replace_model.create_link_2_top_one("頭")
 
             # 上半身から上半身2への傾き
-            rep_head_slope = (replace_model.bones["頭"].position - replace_model.bones["上半身2"].position).normalized()
-            logger.debug("rep_head_slope original: %s", replace_model.bones["頭"].position - replace_model.bones["上半身2"].position)
+            rep_head_slope = (replace_model.bones["頭"].position - replace_model.bones["上半身"].position).normalized()
+            logger.debug("rep_head_slope original: %s", replace_model.bones["頭"].position - replace_model.bones["上半身"].position)
             logger.debug("rep_head_slope normalize: %s", rep_head_slope)
             # Z差の方がY差より大きい場合（四つん這い）、直角方向を変える
             if abs(rep_head_slope.y()) < abs(rep_head_slope.z()) and -0.9 < rep_head_slope.z() < -0.4:
@@ -385,84 +355,253 @@ def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org
             for bf in motion.frames["上半身2"]:
                 if bf.key == True:
                     # 同一フレームの上半身の回転量
-                    calc_upper_rotation(org_motion_frames, motion, trace_model, org_head_links, org_head_indexes, org_arm_links, org_arm_indexes, \
-                        replace_model, rep_head_links, rep_head_indexes, rep_arm_links, rep_arm_indexes, "上半身2", "頭", \
-                        shoulder_diff_length, upper_diff_length, org_head_upper_z_diff, rep_head_upper_z_diff, \
-                        org_left_arm_z_diff, rep_left_arm_z_diff, org_right_arm_z_diff, rep_right_arm_z_diff, rep_head_slope, \
-                        is_error_outputed, error_file_logger, output_vmd_path, bf)
+                    calc_upper_rotation(org_motion_frames, motion, trace_model, org_upper_links, org_upper_indexes, org_head_links, org_head_indexes, org_arm_links, org_arm_indexes, \
+                        replace_model, rep_upper_links, rep_upper_indexes, rep_head_links, rep_head_indexes, rep_arm_links, rep_arm_indexes, "上半身2", "頭", "上半身", \
+                        rep_head_slope, QVector3D(-1, 0, 0), is_error_outputed, error_file_logger, output_vmd_path, bf)
 
             print("上半身2スタンス補正終了")
 
         # 首の角度調整
         adjust_neck_rotation(org_motion_frames, motion, trace_model, replace_model)
 
-def calc_upper_rotation(org_motion_frames, motion, trace_model, org_head_links, org_head_indexes, org_arm_links, org_arm_indexes, \
-    replace_model, rep_head_links, rep_head_indexes, rep_arm_links, rep_arm_indexes, from_bone_name, to_bone_name, \
-    shoulder_diff_length, from_diff_length, org_to_z_diff, rep_to_z_diff, org_left_arm_z_diff, rep_left_arm_z_diff, org_right_arm_z_diff, rep_right_arm_z_diff, rep_from_slope, \
-    is_error_outputed, error_file_logger, output_vmd_path, bf):
+# 上半身スタンス補正
+def calc_upper_rotation(org_motion_frames, motion, trace_model, org_base_links, org_base_indexes, org_head_links, org_head_indexes, org_arm_links, org_arm_indexes, \
+    replace_model, rep_base_links, rep_base_indexes, rep_head_links, rep_head_indexes, rep_arm_links, rep_arm_indexes, from_bone_name, to_bone_name, rot_bone_name, \
+    rep_from_slope, rep_from_slope_cross, is_error_outputed, error_file_logger, output_vmd_path, bf):
+
+    calc_rotation_stance(org_motion_frames, motion, trace_model, org_base_links, org_base_indexes, org_head_links, org_head_indexes, org_arm_links, org_arm_indexes, \
+        replace_model, rep_base_links, rep_base_indexes, rep_head_links, rep_head_indexes, rep_arm_links, rep_arm_indexes, "", "上半身", from_bone_name, to_bone_name, rot_bone_name, \
+        rep_from_slope, rep_from_slope_cross, is_error_outputed, error_file_logger, output_vmd_path, bf, define_is_upper_rotation_no_check, 0.9, QVector3D(1, 1, 1))
+
+def define_is_upper_rotation_no_check(rep_from_slope):
+    return rep_from_slope.z() < -0.4    
+
+# ------------------------
+def adjust_shoulder_stance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger):
+    # -----------------------------------------------------------------
+    # 肩の角度補正
+
+    print("■■ 肩スタンス補正 -----------------")
+
+    adjust_shoulder_stance_direction(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger, "左")
+    adjust_shoulder_stance_direction(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger, "右")
+
+
+def adjust_shoulder_stance_direction(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger, direction):
+    # -----------------------------------------------------------------
+    # 肩の角度補正
+
+    shoulder_name = "{0}肩".format(direction)
+    arm_name = "{0}腕".format(direction)
+    elbow_name = "{0}ひじ".format(direction)
+
+    # 肩調整に必要なボーン群
+    shoulder_target_bones = ["頭", "首", shoulder_name, arm_name, "左腕", "右腕"]
+
+    # エラーを一度でも出力しているか
+    is_error_outputed = False
+
+    if set(shoulder_target_bones).issubset(trace_model.bones) and set(shoulder_target_bones).issubset(replace_model.bones) and shoulder_name in motion.frames:
+        # 元モデルのリンク生成
+        org_shoulder_links, org_shoulder_indexes = trace_model.create_link_2_top_one(arm_name)
+        org_neck_links, org_neck_indexes = trace_model.create_link_2_top_one("首")
+        org_arm_links, org_arm_indexes = trace_model.create_link_2_top_lr("腕")
+        # 変換先モデルのリンク生成
+        rep_shoulder_links, rep_shoulder_indexes = replace_model.create_link_2_top_one(arm_name)
+        rep_neck_links, rep_neck_indexes = replace_model.create_link_2_top_one("首")
+        rep_arm_links, rep_arm_indexes = replace_model.create_link_2_top_lr("腕")
+
+        # 肩から腕への傾き
+        rep_target_slope = (replace_model.bones[shoulder_name].position - replace_model.bones[arm_name].position).normalized()
+        logger.info("rep_target_slope original: %s", replace_model.bones[shoulder_name].position - replace_model.bones[arm_name].position)
+        logger.info("rep_target_slope normalize: %s", rep_target_slope)
+        # Z差の方がY差より大きい場合（四つん這い）、直角方向を変える
+        if abs(rep_target_slope.y()) < abs(rep_target_slope.z()) and -0.9 < rep_target_slope.z() < -0.4:
+            rep_target_slope = QVector3D(rep_target_slope.x(), 0, -rep_target_slope.y())
+        rep_target_slope_normal = QVector3D(-rep_target_slope.x(), -rep_target_slope.y(), rep_target_slope.z())
+        print("rep_target_slope: %s" % rep_target_slope)
+
+        rot_bone_name = "上半身2" if "上半身2" in trace_model.bones and "上半身2" in replace_model.bones else "上半身"
+
+        # 準備（細分化）
+        prepare_upper_stance(motion, shoulder_name)
+
+        print("{0}スタンス準備終了".format(shoulder_name))
+
+        for bf in motion.frames[shoulder_name]:
+            if bf.key == True:
+                calc_shoulder_rotation(org_motion_frames, motion, trace_model, org_neck_links, org_neck_indexes, org_shoulder_links, org_shoulder_indexes, org_arm_links, org_arm_indexes, \
+                    replace_model, rep_neck_links, rep_neck_indexes, rep_shoulder_links, rep_shoulder_indexes, rep_arm_links, rep_arm_indexes, direction, "首", "肩", "腕", rot_bone_name, \
+                    rep_target_slope_normal, QVector3D(-1, 0, 0), is_error_outputed, error_file_logger, output_vmd_path, bf, 0.3)
+
+        print("{0}スタンス補正終了".format(shoulder_name))
+
+        # # ----------------------
+
+        # # 腕調整に必要なボーン群
+        # arm_target_bones = ["頭", "首", arm_name, elbow_name, "左腕", "右腕"]
+
+        # if set(arm_target_bones).issubset(trace_model.bones) and set(arm_target_bones).issubset(replace_model.bones) and arm_name in motion.frames:
+        #     is_execed = True
+
+        #     # 元モデルのリンク生成
+        #     org_elbow_links, org_elbow_indexes = trace_model.create_link_2_top_one(elbow_name)
+        #     # 変換先モデルのリンク生成
+        #     rep_elbow_links, rep_elbow_indexes = replace_model.create_link_2_top_one(elbow_name)
+
+        #     # 腕からひじの差
+        #     org_arm_length = (trace_model.bones[elbow_name].position - trace_model.bones[arm_name].position).length()
+        #     rep_arm_length = (replace_model.bones[elbow_name].position - replace_model.bones[arm_name].position).length()
+        #     arm_diff_length = rep_arm_length / org_arm_length
+
+        #     # 腕からひじのZ差
+        #     org_target_arm_z_diff = trace_model.bones[elbow_name].position.z() - trace_model.bones[arm_name].position.z()
+        #     rep_target_arm_z_diff = replace_model.bones[elbow_name].position.z() - replace_model.bones[arm_name].position.z()
+        #     logger.debug("org_target_arm_z_diff: %s", org_target_arm_z_diff)
+        #     logger.debug("rep_target_arm_z_diff: %s", rep_target_arm_z_diff)
+
+        #     # 腕からひじへの傾き
+        #     rep_target_slope = (replace_model.bones[elbow_name].position - replace_model.bones[arm_name].position).normalized()
+        #     logger.info("rep_target_slope original: %s", replace_model.bones[elbow_name].position - replace_model.bones[arm_name].position)
+        #     logger.info("rep_target_slope normalize: %s", rep_target_slope)
+        #     # Z差の方がY差より大きい場合（四つん這い）、直角方向を変える
+        #     if abs(rep_target_slope.y()) < abs(rep_target_slope.z()) and -0.9 < rep_target_slope.z() < -0.4:
+        #         rep_target_slope = QVector3D(rep_target_slope.x(), 0, -rep_target_slope.y())
+        #     print("rep_target_slope: %s" % rep_target_slope)
+        #     logger.info("rep_target_slope: %s", QVector3D.crossProduct(rep_target_slope, QVector3D(-1, 0, 0)))
+        #     rep_arm_slope_cross = QVector3D(-1, 0, 0)
+        #     # rep_arm_slope_cross = QVector3D(rep_target_slope.y(), -rep_target_slope.x(), rep_target_slope.z())
+        #     # rep_arm_slope_cross = QVector3D(-rep_target_slope.y(), rep_target_slope.x(), rep_target_slope.z())
+        #     # rep_arm_slope_cross = QVector3D(rep_target_slope.z(), -rep_target_slope.y(), rep_target_slope.x())
+        #     # rep_arm_slope_cross = QVector3D(-rep_target_slope.z(), rep_target_slope.y(), rep_target_slope.x())
+        #     # rep_arm_slope_cross = QVector3D(rep_target_slope.y(), -rep_target_slope.x(), rep_target_slope.z())
+        #     # rep_arm_slope_cross = QVector3D(-rep_target_slope.y(), rep_target_slope.x(), rep_target_slope.z())
+
+        #     # 準備（細分化）
+        #     prepare_upper_stance(motion, arm_name)
+
+        #     print("{0}スタンス準備終了".format(arm_name))
+
+        #     for bf in motion.frames[arm_name]:
+        #         if bf.key == True:
+        #             calc_shoulder_rotation(org_motion_frames, motion, trace_model, org_elbow_links, org_elbow_indexes, org_arm_links, org_arm_indexes, \
+        #                 replace_model, rep_elbow_links, rep_elbow_indexes, rep_arm_links, rep_arm_indexes, direction, "腕", "腕", "ひじ", \
+        #                 shoulder_diff_length, arm_diff_length, org_target_arm_z_diff, rep_target_arm_z_diff, org_left_arm_z_diff, rep_left_arm_z_diff, org_right_arm_z_diff, rep_right_arm_z_diff, rep_target_slope, rep_arm_slope_cross, \
+        #                 is_error_outputed, error_file_logger, output_vmd_path, bf, 0.0, 0.0)
+
+        #     print("{0}スタンス補正終了".format(arm_name))
+
+
+# 肩スタンス補正
+def calc_shoulder_rotation(org_motion_frames, motion, trace_model, org_base_links, org_base_indexes, org_shoulder_links, org_shoulder_indexes, org_arm_links, org_arm_indexes, \
+    replace_model, rep_base_links, rep_base_indexes, rep_shoulder_links, rep_shoulder_indexes, rep_arm_links, rep_arm_indexes, direction, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
+    rep_from_slope, rep_from_slope_cross, is_error_outputed, error_file_logger, output_vmd_path, bf, dot_limit):
+
+    calc_rotation_stance(org_motion_frames, motion, trace_model, org_base_links, org_base_indexes, org_shoulder_links, org_shoulder_indexes, org_arm_links, org_arm_indexes, \
+        replace_model, rep_base_links, rep_base_indexes, rep_shoulder_links, rep_shoulder_indexes, rep_arm_links, rep_arm_indexes, direction, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
+        rep_from_slope, rep_from_slope_cross, is_error_outputed, error_file_logger, output_vmd_path, bf, define_is_arm_rotation_no_check, dot_limit, QVector3D(1, 1, 1))
+
+def define_is_arm_rotation_no_check(rep_from_slope):
+    return rep_from_slope.z() < -0.4    
+
+
+def calc_rotation_stance(org_motion_frames, motion, trace_model, org_base_links, org_base_indexes, org_target_links, org_target_indexes, org_arm_links, org_arm_indexes, \
+    replace_model, rep_base_links, rep_base_indexes, rep_target_links, rep_target_indexes, rep_arm_links, rep_arm_indexes, direction_name, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
+    rep_from_slope, rep_from_slope_cross, is_error_outputed, error_file_logger, output_vmd_path, bf, define_is_rotation_no_check, dot_limit, diff_fill_ratio):
+    dot_limit = 0
 
     # 処理対象までのモーション情報(処理対象以上のモーション情報を含まない)
-    org_target_motion_frames = {}
-    for l in org_head_links[org_head_indexes[from_bone_name]:]:
+    org_base_motion_frames = {}
+    for l in org_base_links[org_base_indexes[base_bone_name]:]:
         bone = utils.calc_bone_by_complement(org_motion_frames, l.name, bf.frame)
-        org_target_motion_frames[bone.format_name] = [bone]
-    
-    rep_target_motion_frames = {}
-    for l in rep_head_links[rep_head_indexes[from_bone_name]:]:
+        org_base_motion_frames[bone.format_name] = [bone]
+
+    org_from_motion_frames = {}
+    for l in org_target_links[org_target_indexes[from_bone_name]:]:
+        bone = utils.calc_bone_by_complement(org_motion_frames, l.name, bf.frame)
+        org_from_motion_frames[bone.format_name] = [bone]
+
+    rep_base_motion_frames = {}
+    for l in rep_base_links[rep_base_indexes[base_bone_name]:]:
         bone = utils.calc_bone_by_complement(motion.frames, l.name, bf.frame)
-        rep_target_motion_frames[bone.format_name] = [bone]
-    
+        rep_base_motion_frames[bone.format_name] = [bone]
+
+    rep_from_motion_frames = {}
+    for l in rep_target_links[rep_target_indexes[from_bone_name]:]:
+        bone = utils.calc_bone_by_complement(motion.frames, l.name, bf.frame)
+        rep_from_motion_frames[bone.format_name] = [bone]
+
     # FROMより親の回転量
-    parent_rotation = utils.calc_upper_direction_qq(replace_model, rep_head_links[rep_head_indexes[from_bone_name]+1:], motion.frames, bf)
+    parent_rotation = utils.calc_upper_direction_qq(replace_model, rep_target_links[rep_target_indexes[from_bone_name]+1:], motion.frames, bf)
 
-    # 元モデルの向いている回転量
-    org_from_direction_qq = utils.calc_upper_direction_qq(trace_model, org_head_links[org_head_indexes[from_bone_name]:], org_target_motion_frames, bf)
-    # 先モデルの向いている回転量
-    rep_from_direction_qq = utils.calc_upper_direction_qq(replace_model, rep_head_links[rep_head_indexes[from_bone_name]:], rep_target_motion_frames, bf)
-    
-    # 頭までの位置
-    _, _, _, _, org_head_global_3ds = utils.create_matrix_global(trace_model, org_head_links, org_target_motion_frames, bf, None)
-    _, _, _, _, rep_head_global_3ds = utils.create_matrix_global(replace_model, rep_head_links, rep_target_motion_frames, bf, None)
+    # 元モデルの向いている回転量(FROM)
+    org_from_direction_qq = utils.calc_upper_direction_qq(trace_model, org_target_links[org_target_indexes[from_bone_name]:], org_from_motion_frames, bf)
+    # 先モデルの向いている回転量(FROM)
+    rep_from_direction_qq = utils.calc_upper_direction_qq(replace_model, rep_target_links[rep_target_indexes[from_bone_name]:], rep_from_motion_frames, bf)
 
-    # 正面向きの頭までの位置
-    org_front_head_global_3ds = utils.create_direction_pos_all(org_from_direction_qq.inverted(), org_head_global_3ds)
-    rep_front_head_global_3ds = utils.create_direction_pos_all(rep_from_direction_qq.inverted(), rep_head_global_3ds)
+    # 基準ボーンまでの位置
+    _, _, _, _, org_base_global_3ds = utils.create_matrix_global(trace_model, org_base_links, org_base_motion_frames, bf, None)
+    _, _, _, _, rep_base_global_3ds = utils.create_matrix_global(replace_model, rep_base_links, rep_base_motion_frames, bf, None)
 
-    # 上半身位置
-    org_front_upper_pos = org_front_head_global_3ds[len(org_front_head_global_3ds) - org_head_indexes["上半身"] - 1]
-    # TOボーン(上半身2 or 頭/頭)位置
-    org_front_to_pos = org_front_head_global_3ds[len(org_front_head_global_3ds) - org_head_indexes[to_bone_name] - 1]
+    # 正面向きの基準ボーンまでの位置
+    org_front_base_global_3ds = utils.create_direction_pos_all(org_from_direction_qq.inverted(), org_base_global_3ds)
+    rep_front_base_global_3ds = utils.create_direction_pos_all(rep_from_direction_qq.inverted(), rep_base_global_3ds)
 
-    rep_front_upper_pos = rep_front_head_global_3ds[len(rep_front_head_global_3ds) - rep_head_indexes["上半身"] - 1]
-    rep_front_to_pos = rep_front_head_global_3ds[len(rep_front_head_global_3ds) - rep_head_indexes[to_bone_name] - 1]
+    # 処理対象ボーンまでの位置
+    _, _, _, _, org_to_global_3ds = utils.create_matrix_global(trace_model, org_target_links[org_target_indexes[to_bone_name]:], org_from_motion_frames, bf, None)
+    _, _, _, _, rep_to_global_3ds = utils.create_matrix_global(replace_model, rep_target_links[rep_target_indexes[to_bone_name]:], rep_from_motion_frames, bf, None)
 
-    rep_from_pos = rep_head_global_3ds[len(rep_head_global_3ds) - rep_head_indexes[from_bone_name] - 1]
+    # 正面向きの処理対象ボーンまでの位置
+    org_front_to_global_3ds = utils.create_direction_pos_all(org_from_direction_qq.inverted(), org_to_global_3ds)
+    rep_front_to_global_3ds = utils.create_direction_pos_all(rep_from_direction_qq.inverted(), rep_to_global_3ds)
+
+    # 基準位置
+    org_front_base_pos = org_front_base_global_3ds[len(org_front_base_global_3ds) - org_base_indexes[base_bone_name] - 1]
+    rep_front_base_pos = rep_front_base_global_3ds[len(rep_front_base_global_3ds) - rep_base_indexes[base_bone_name] - 1]
+
+    # TOボーン位置
+    org_front_to_pos = org_front_to_global_3ds[len(org_front_to_global_3ds) - org_target_indexes[to_bone_name] - 1]
+    rep_front_to_pos = rep_front_to_global_3ds[len(rep_front_to_global_3ds) - rep_target_indexes[to_bone_name] - 1]
+
+    # FROMボーン位置
+    _, _, _, _, rep_from_global_3ds = utils.create_matrix_global(replace_model, rep_target_links[rep_target_indexes[from_bone_name]:], rep_from_motion_frames, bf, None)
+    rep_from_pos = rep_from_global_3ds[-1]
+
+    # FROM差分
+    org_from_diff = (org_target_links[org_target_indexes[from_bone_name]].position - org_base_links[org_base_indexes[base_bone_name]].position)
+    rep_from_diff = (rep_target_links[rep_target_indexes[from_bone_name]].position - rep_base_links[rep_base_indexes[base_bone_name]].position)
+
+    # 長さ比率
+    org_to_diff = (org_target_links[org_target_indexes[to_bone_name]].position - org_base_links[org_base_indexes[base_bone_name]].position)
+    rep_to_diff = (rep_target_links[rep_target_indexes[to_bone_name]].position - rep_base_links[rep_base_indexes[base_bone_name]].position)
+    to_diff_length = rep_to_diff.length() / org_to_diff.length()
+    to_diff = rep_to_diff / org_to_diff
+    utils.set_effective_value_vec3(to_diff)
 
     # ---------------
     # TOボーンの位置再設定
+    
+    rep_front_to_x = rep_front_base_pos.x() + (rep_to_diff.x() * diff_fill_ratio.x()) \
+        + ( org_front_to_pos.x() - org_front_base_pos.x() + (org_to_diff.x() * diff_fill_ratio.x()) ) * to_diff.x()
 
-    rep_to_x = rep_front_upper_pos.x() \
-        + ( org_front_to_pos.x() - org_front_upper_pos.x() ) * shoulder_diff_length
-    rep_front_to_pos.setX(rep_to_x)
+    rep_front_to_y = rep_front_base_pos.y() + (rep_to_diff.y() * diff_fill_ratio.y()) \
+        + ( org_front_to_pos.y() - org_front_base_pos.y() + (org_to_diff.y() * diff_fill_ratio.y()) ) * to_diff_length
 
-    rep_to_y = rep_front_upper_pos.y() \
-        + ( org_front_to_pos.y() - org_front_upper_pos.y() ) * from_diff_length
-    rep_front_to_pos.setY(rep_to_y)
+    rep_front_to_z = rep_front_base_pos.z() + (rep_to_diff.z() * diff_fill_ratio.z()) \
+        + ( org_front_to_pos.z() - org_front_base_pos.z() + (org_to_diff.z() * diff_fill_ratio.z()) ) * to_diff.z()
 
-    rep_to_z = rep_front_upper_pos.z() + rep_to_z_diff \
-        + ( org_front_to_pos.z() - org_front_upper_pos.z() - org_to_z_diff ) * shoulder_diff_length
-    rep_front_to_pos.setZ(rep_to_z)
-    logger.debug("f: %s, rep_front_upper_pos: %s", bf.frame, rep_front_upper_pos)
+    new_rep_front_to_pos = QVector3D(rep_front_to_x, rep_front_to_y, rep_front_to_z)
+    logger.debug("f: %s, new_rep_front_to_pos: %s", bf.frame, new_rep_front_to_pos)
     logger.debug("f: %s, rep_to_pos: %s", bf.frame, rep_front_to_pos)
 
     # 回転を元に戻した位置
-    rep_to_pos = utils.create_direction_pos(rep_from_direction_qq, rep_front_to_pos)
+    rep_to_pos = utils.create_direction_pos(rep_from_direction_qq, new_rep_front_to_pos)
 
     # ---------------
 
     # 左腕までの位置
-    _, _, _, _, org_left_arm_global_3ds = utils.create_matrix_global(trace_model, org_arm_links["左"], org_target_motion_frames, bf, None)
-    _, _, _, _, rep_left_arm_global_3ds = utils.create_matrix_global(replace_model, rep_arm_links["左"], rep_target_motion_frames, bf, None)
+    _, _, _, _, org_left_arm_global_3ds = utils.create_matrix_global(trace_model, org_arm_links["左"], org_from_motion_frames, bf, None)
+    _, _, _, _, rep_left_arm_global_3ds = utils.create_matrix_global(replace_model, rep_arm_links["左"], rep_from_motion_frames, bf, None)
 
     # 正面向きの左腕までの位置
     org_front_left_arm_global_3ds = utils.create_direction_pos_all(org_from_direction_qq.inverted(), org_left_arm_global_3ds)
@@ -472,27 +611,36 @@ def calc_upper_rotation(org_motion_frames, motion, trace_model, org_head_links, 
     org_front_left_arm_pos = org_front_left_arm_global_3ds[len(org_front_left_arm_global_3ds) - org_arm_indexes["左"]["腕"] - 1]
     rep_front_left_arm_pos = rep_front_left_arm_global_3ds[len(rep_front_left_arm_global_3ds) - rep_arm_indexes["左"]["腕"] - 1]
 
-    rep_front_left_arm_x = rep_front_upper_pos.x() \
-        + ( org_front_left_arm_pos.x() - org_front_upper_pos.x() ) * shoulder_diff_length
-    rep_front_left_arm_pos.setX(rep_front_left_arm_x)
+    # 長さ比率
+    org_left_arm_diff = (org_arm_links["左"][org_arm_indexes["左"]["腕"]].position - org_base_links[org_base_indexes[base_bone_name]].position)
+    rep_left_arm_diff = (rep_arm_links["左"][rep_arm_indexes["左"]["腕"]].position - rep_base_links[rep_base_indexes[base_bone_name]].position)
+    left_arm_diff_length = rep_left_arm_diff.length() / org_left_arm_diff.length()
+    left_arm_diff = rep_left_arm_diff / org_left_arm_diff
+    utils.set_effective_value_vec3(left_arm_diff)
 
-    rep_front_left_arm_y = rep_front_upper_pos.y() \
-        + ( org_front_left_arm_pos.y() - org_front_upper_pos.y() ) * from_diff_length
-    rep_front_left_arm_pos.setY(rep_front_left_arm_y)
-
-    rep_front_left_arm_z = rep_front_upper_pos.z() + rep_left_arm_z_diff \
-        + ( org_front_left_arm_pos.z() - org_front_upper_pos.z() - org_left_arm_z_diff ) * shoulder_diff_length
-    rep_front_left_arm_pos.setZ(rep_front_left_arm_z)
-    logger.debug("f: %s, rep_left_arm_pos: %s", bf.frame, rep_front_left_arm_pos)
+    # ---------------
     
+    rep_front_left_arm_x = rep_front_base_pos.x() + (rep_left_arm_diff.x() * diff_fill_ratio.x()) \
+        + ( org_front_left_arm_pos.x() - org_front_base_pos.x() + (org_left_arm_diff.x() * diff_fill_ratio.x()) ) * left_arm_diff.x()
+
+    rep_front_left_arm_y = rep_front_base_pos.y() + (rep_left_arm_diff.y() * diff_fill_ratio.y()) \
+        + ( org_front_left_arm_pos.y() - org_front_base_pos.y() + (org_left_arm_diff.y() * diff_fill_ratio.y()) ) * left_arm_diff_length
+
+    rep_front_left_arm_z = rep_front_base_pos.z() + (rep_left_arm_diff.z() * diff_fill_ratio.z())  \
+        + ( org_front_left_arm_pos.z() - org_front_base_pos.z() + (org_left_arm_diff.z() * diff_fill_ratio.z()) ) * left_arm_diff.z()
+
+    new_rep_front_left_arm_pos = QVector3D(rep_front_left_arm_x, rep_front_left_arm_y, rep_front_left_arm_z)
+    logger.debug("f: %s, new_rep_front_left_arm_pos: %s", bf.frame, new_rep_front_left_arm_pos)
+    logger.debug("f: %s, rep_left_arm_pos: %s", bf.frame, rep_front_left_arm_pos)
+
     # 回転を元に戻した位置
-    rep_left_arm_pos = utils.create_direction_pos(rep_from_direction_qq, rep_front_left_arm_pos)
+    rep_left_arm_pos = utils.create_direction_pos(rep_from_direction_qq, new_rep_front_left_arm_pos)
 
     # ---------------
 
     # 右腕までの位置
-    _, _, _, _, org_right_arm_global_3ds = utils.create_matrix_global(trace_model, org_arm_links["右"], org_target_motion_frames, bf, None)
-    _, _, _, _, rep_right_arm_global_3ds = utils.create_matrix_global(replace_model, rep_arm_links["右"], rep_target_motion_frames, bf, None)
+    _, _, _, _, org_right_arm_global_3ds = utils.create_matrix_global(trace_model, org_arm_links["右"], org_from_motion_frames, bf, None)
+    _, _, _, _, rep_right_arm_global_3ds = utils.create_matrix_global(replace_model, rep_arm_links["右"], rep_from_motion_frames, bf, None)
 
     # 正面向きの右腕までの位置
     org_front_right_arm_global_3ds = utils.create_direction_pos_all(org_from_direction_qq.inverted(), org_right_arm_global_3ds)
@@ -502,44 +650,54 @@ def calc_upper_rotation(org_motion_frames, motion, trace_model, org_head_links, 
     org_front_right_arm_pos = org_front_right_arm_global_3ds[len(org_front_right_arm_global_3ds) - org_arm_indexes["右"]["腕"] - 1]
     rep_front_right_arm_pos = rep_front_right_arm_global_3ds[len(rep_front_right_arm_global_3ds) - rep_arm_indexes["右"]["腕"] - 1]
 
-    rep_front_right_arm_x = rep_front_upper_pos.x() \
-        + ( org_front_right_arm_pos.x() - org_front_upper_pos.x() ) * shoulder_diff_length
-    rep_front_right_arm_pos.setX(rep_front_right_arm_x)
+    # 長さ比率
+    org_right_arm_diff = (org_arm_links["右"][org_arm_indexes["右"]["腕"]].position - org_base_links[org_base_indexes[base_bone_name]].position)
+    rep_right_arm_diff = (rep_arm_links["右"][rep_arm_indexes["右"]["腕"]].position - rep_base_links[rep_base_indexes[base_bone_name]].position)
+    right_arm_diff_length = rep_right_arm_diff.length() / org_right_arm_diff.length()
+    right_arm_diff = rep_right_arm_diff / org_right_arm_diff
+    utils.set_effective_value_vec3(right_arm_diff)
 
-    rep_front_right_arm_y = rep_front_upper_pos.y() \
-        + ( org_front_right_arm_pos.y() - org_front_upper_pos.y() ) * from_diff_length
-    rep_front_right_arm_pos.setY(rep_front_right_arm_y)
-
-    rep_front_right_arm_z = rep_front_upper_pos.z() + rep_right_arm_z_diff \
-        + ( org_front_right_arm_pos.z() - org_front_upper_pos.z() - org_right_arm_z_diff ) * shoulder_diff_length
-    rep_front_right_arm_pos.setZ(rep_front_right_arm_z)
-    logger.debug("f: %s, rep_right_arm_pos: %s", bf.frame, rep_front_right_arm_pos)
+    # ---------------
     
+    rep_front_right_arm_x = rep_front_base_pos.x() + (rep_right_arm_diff.x() * diff_fill_ratio.x()) \
+        + ( org_front_right_arm_pos.x() - org_front_base_pos.x() + (org_right_arm_diff.x() * diff_fill_ratio.x()) ) * right_arm_diff.x()
+
+    rep_front_right_arm_y = rep_front_base_pos.y() + (rep_right_arm_diff.y() * diff_fill_ratio.y()) \
+        + ( org_front_right_arm_pos.y() - org_front_base_pos.y() + (org_right_arm_diff.y() * diff_fill_ratio.y()) ) * right_arm_diff_length
+
+    rep_front_right_arm_z = rep_front_base_pos.z() + (rep_right_arm_diff.z() * diff_fill_ratio.z()) \
+        + ( org_front_right_arm_pos.z() - org_front_base_pos.z() + (org_right_arm_diff.z() * diff_fill_ratio.z()) ) * right_arm_diff.z()
+
+    new_rep_front_right_arm_pos = QVector3D(rep_front_right_arm_x, rep_front_right_arm_y, rep_front_right_arm_z)
+    logger.debug("f: %s, new_rep_front_right_arm_pos: %s", bf.frame, new_rep_front_right_arm_pos)
+    logger.debug("f: %s, rep_right_arm_pos: %s", bf.frame, rep_front_right_arm_pos)
+
     # 回転を元に戻した位置
-    rep_right_arm_pos = utils.create_direction_pos(rep_from_direction_qq, rep_front_right_arm_pos)
+    rep_right_arm_pos = utils.create_direction_pos(rep_from_direction_qq, new_rep_front_right_arm_pos)
 
     # ---------------
     # FROMの回転量を再計算する
     direction = rep_to_pos - rep_from_pos
     up = QVector3D.crossProduct(direction, (rep_right_arm_pos - rep_left_arm_pos)).normalized()
     from_orientation = QQuaternion.fromDirection(direction, up)
-    initial = QQuaternion.fromDirection(rep_from_slope, QVector3D.crossProduct(rep_from_slope, QVector3D(-1, 0, 0)).normalized())
+    initial = QQuaternion.fromDirection(rep_from_slope, QVector3D.crossProduct(rep_from_slope, rep_from_slope_cross).normalized())
     from_rotation = parent_rotation.inverted() * from_orientation * initial.inverted()
     logger.debug("f: %s, parent: %s", bf.frame, parent_rotation.toEulerAngles())
     logger.debug("f: %s, initial: %s", bf.frame, initial.toEulerAngles())
     logger.debug("f: %s, orientation: %s", bf.frame, from_orientation.toEulerAngles())
     logger.debug("f: %s, bf: %s", bf.frame, from_rotation.toEulerAngles())
 
-    if rep_from_slope.z() < -0.4:
-        # 傾きZが-0.5以下の場合、四つん這いモデルなので、チェックなしで適用
+    if define_is_rotation_no_check and define_is_rotation_no_check(rep_from_slope):
+        # チェックなし条件に合致する場合、チェックなしで適用
         bf.rotation = from_rotation
     else:
-        org_bfs = [x for x in org_motion_frames[from_bone_name] if x.frame == bf.frame]
+        target_from_bone_name = "{0}{1}".format(direction_name, from_bone_name)
+        org_bfs = [x for x in org_motion_frames[target_from_bone_name] if x.frame == bf.frame]
         if len(org_bfs) > 0:
             # 元にもあるキーである場合、内積チェック
             uad = abs(QQuaternion.dotProduct(from_rotation, org_bfs[0].rotation))
-            if uad < 0.90:
-                print("%sフレーム目%sスタンス補正失敗: 角度:%s, uad: %s" % (bf.frame, from_bone_name, from_rotation.toEulerAngles(), uad))
+            if uad < dot_limit:
+                print("%sフレーム目%sスタンス補正失敗: 角度:%s, uad: %s" % (bf.frame, target_from_bone_name, from_rotation.toEulerAngles(), uad))
 
                 # 失敗時のみエラーログ出力
                 if not is_error_outputed:
@@ -547,7 +705,7 @@ def calc_upper_rotation(org_motion_frames, motion, trace_model, org_head_links, 
                     if not error_file_logger:
                         error_file_logger = utils.create_error_file_logger(motion, trace_model, replace_model, output_vmd_path)
 
-                error_file_logger.warning("%sフレーム目%sスタンス補正失敗: 角度:%s, uad: %s" , bf.frame, from_bone_name, from_rotation.toEulerAngles(), uad)
+                error_file_logger.warning("%sフレーム目%sスタンス補正失敗: 角度:%s, uad: %s" , bf.frame, target_from_bone_name, from_rotation.toEulerAngles(), uad)
             else:
                 # 内積の差が小さい場合、回転適用
                 bf.rotation = from_rotation
@@ -667,7 +825,12 @@ def adjust_arm_stance(motion, trace_model, replace_model, org_motion_frames):
                 # 腕
                 for bf in motion.frames[dlist["腕"]]:
                     if bf.key == True:
-                        bf.rotation = bf.rotation * arm_stance_qqs[dlist["腕"]]
+                        # 元々の肩回転量
+                        org_shoulder_bone = utils.calc_bone_by_complement(org_motion_frames, dlist["肩"], bf.frame)
+                        # 修正後の肩回転量
+                        rep_shoulder_bone = utils.calc_bone_by_complement(motion.frames, dlist["肩"], bf.frame)
+
+                        bf.rotation = rep_shoulder_bone.rotation.inverted() * org_shoulder_bone.rotation * bf.rotation * arm_stance_qqs[dlist["腕"]]
 
             if dlist["ひじ"] in motion.frames:
                 # ひじ
