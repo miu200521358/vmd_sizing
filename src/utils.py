@@ -210,6 +210,38 @@ def create_matrix(model, links, frames, bf, scales=None):
     
     return trans_vs, add_qs, scale_l, matrixs
 
+def create_matrix_twist_qq(model, links, frames, bf, parent_qq, scales=None):
+    trans_vs, add_qs, scale_l = create_matrix_parts(model, links, frames, bf, scales)
+    
+    twist_qq = QQuaternion()
+    remaining_qq = QQuaternion()
+
+    # 親の回転から捩り分を抽出
+    parent_euler = parent_qq.toEulerAngles()
+    if parent_euler.x() > 45:
+        twist_qq = QQuaternion.fromEulerAngles(parent_euler.x() - 45, 0, 0)
+    elif parent_euler.x() < -45:
+        twist_qq = QQuaternion.fromEulerAngles(360 - abs(parent_euler.x() + 45), 0, 0)
+    
+    total_add_qs = QQuaternion()
+    for e, q in enumerate(add_qs):
+        if e == 0:
+            total_add_qs = copy.deepcopy(q)
+        else:
+            total_add_qs *= copy.deepcopy(q)
+    
+    total_add_qs *= twist_qq
+
+    degree = degrees(2 * acos(total_add_qs.scalar()))
+
+    # 軸固定の場合、回転を制限する
+    result_qq = QQuaternion.fromAxisAndAngle(links[0].fixed_axis, degree)
+
+    # 残りは捩り分を除いて再設定
+    remaining_qq = parent_qq * result_qq.inverted()
+     
+    return result_qq, remaining_qq
+
 # グローバル座標リスト生成
 def create_matrix_global(model, links, frames, bf, scales=None):
     trans_vs, add_qs, scale_l, matrixs = create_matrix(model, links, frames, bf, scales)
@@ -350,6 +382,9 @@ def calc_upper_direction_qq(model, links, frames, bf):
 
     # XYZ全方向の回転を参照するため、そのまま返す
     return total_qq
+
+
+
 
 
 # 回転補間曲線のインデックス
