@@ -2,6 +2,7 @@
 # 腕IK処理テスト
 # 
 
+import random
 import copy
 import os
 import sys
@@ -68,6 +69,34 @@ class TestSubStance(unittest.TestCase):
             up_up_test_param_param, up_up_test_param_param, up_up_test_param_param))
 
         target_test_params = [(a, b, c, d, e, g, h, i, j, k) for (a, b, c, d, e, g, h, i, j, k) in target_test_params_base if a != b and g != h]
+        ok_list = self.calc_stance(target_test_params, 0.5, False)
+
+        print("ok_list LIST: %s" % ok_list)
+        self.assertGreater(len(ok_list), 0)
+    
+    def test_upper_stance_upper2_up_03(self):
+        # DIRECTIONパターン
+        rep_upper2_slope_direction_test_param_base = ["上半身", "上半身2", "頭", "首"]
+        rep_upper2_slope_direction_test_param_all_list = list(itertools.product(rep_upper2_slope_direction_test_param_base, repeat=4))
+        rep_upper2_slope_direction_test_param_list = [(a, b, c, d) for (a, b, c, d) in rep_upper2_slope_direction_test_param_all_list if a != b and c != d]
+
+        # XYZ パターン
+        rep_upper2_slope_up_up_test_param_xyz_base = ["x", "x-", "y", "y-", "z", "z-"]
+        rep_upper2_slope_up_up_test_param_xyz_all_list = list(itertools.product(rep_upper2_slope_up_up_test_param_xyz_base, repeat=3))
+        rep_upper2_slope_up_up_test_param_xyz_list = [(x, y, z) for (x, y, z) in rep_upper2_slope_up_up_test_param_xyz_all_list if x[0] not in [y[0], z[0]] and y[0] not in [x[0], z[0]]]
+
+        # 数値パターン
+        rep_upper2_slope_up_up_test_param_number_base = ["0","1-","1"]
+        rep_upper2_slope_up_up_test_param_number_list = list(itertools.product(rep_upper2_slope_up_up_test_param_number_base, repeat=3))
+
+        # 直積
+        rep_upper2_slope_test_param_xyz_list = list(itertools.product(rep_upper2_slope_direction_test_param_list, rep_upper2_slope_up_up_test_param_xyz_list))
+        rep_upper2_slope_test_param_number_list = list(itertools.product(rep_upper2_slope_direction_test_param_list, rep_upper2_slope_up_up_test_param_number_list))
+
+        target_test_params_base_list = rep_upper2_slope_test_param_xyz_list + rep_upper2_slope_test_param_number_list
+        random.shuffle(target_test_params_base_list)
+
+        target_test_params = [[a, b, c, d, e, f, g] for ((a, b, c, d), (e, f, g)) in target_test_params_base_list]
         ok_list = self.calc_stance(target_test_params, 0.5, False)
 
         print("ok_list LIST: %s" % ok_list)
@@ -190,4 +219,4 @@ class TestSubStance(unittest.TestCase):
         return ok_list
 
 if __name__ == "__main__":
-    unittest.main(defaultTest="TestSubStance.test_upper_stance_upper2_up_02")
+    unittest.main(defaultTest="TestSubStance.test_upper_stance_upper2_up_03")

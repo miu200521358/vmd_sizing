@@ -24,6 +24,12 @@ loggers = {}
 def sign(x):
     return (x > 0) - (x < 0)
 
+def output_message(text, is_print=False):
+    if is_print == True:
+        print(text)
+    else:
+        pass
+
 def create_custom_logger(name, handler):
     global loggers
 

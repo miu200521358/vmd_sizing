@@ -16,12 +16,15 @@ from PmxModel import PmxModel, SizingException
 from PmxReader import PmxReader
 from VmdWriter import VmdWriter, VmdMorphFrame
 from VmdReader import VmdReader, VmdMotion
-import wrapperutils
+import wrapperutils, utils
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+is_print = False
+
 def main(pmx_path, min_value, max_value, iter_value, target_morphs):
+
     print("処理対象PMXファイル: %s" % pmx_path)
     print("モーフ最小値: %s" % min_value)
     print("モーフ最大値: %s" % max_value)
@@ -31,14 +34,14 @@ def main(pmx_path, min_value, max_value, iter_value, target_morphs):
     try:
         # PMX読み込み
         model = PmxReader().read_pmx_file(pmx_path)
-        logger.info("model: %s", model.name)
+        logger.debug("model: %s", model.name)
 
-        logger.info("min: %s, %s", min_value, min_value/iter_value)
-        logger.info("max: %s, %s", max_value, max_value/iter_value)
+        logger.debug("min: %s, %s", min_value, min_value/iter_value)
+        logger.debug("max: %s, %s", max_value, max_value/iter_value)
 
         # キーを打つタイミング
         mframe_cnt = math.ceil(max_value/iter_value - min_value/iter_value)
-        logger.info("mframe_cnt: %s", mframe_cnt)
+        logger.debug("mframe_cnt: %s", mframe_cnt)
 
         all_morphs = []
         all_morph_names = []
@@ -48,8 +51,15 @@ def main(pmx_path, min_value, max_value, iter_value, target_morphs):
                 all_morphs.append(mv)
                 all_morph_names.append(mk)
 
-        # 変化量
+        # 変化量(少ない方のの割合を多くする)
         ratio_values = [iter_value*x for x in range(math.ceil(min_value/iter_value),math.ceil(max_value/iter_value)+1)]
+        ratio_lower_values = [iter_value*x for x in range(math.ceil(min_value/iter_value),math.ceil(max_value/iter_value/2)+1)]
+        ratio_zero_values = [0 for x in range(len(target_morphs))]
+
+        ratio_values.extend(ratio_lower_values)
+        ratio_values.extend(ratio_lower_values)
+        ratio_values.extend(ratio_zero_values)
+        utils.output_message("モーフ増加量: %s" % ratio_values, is_print)
 
         brend_cnt = 0
         brend_morph_by_frames = {}
@@ -58,70 +68,47 @@ def main(pmx_path, min_value, max_value, iter_value, target_morphs):
         # モーフの組合せ数別に出力
         morph_cnt = len(all_morphs)
 
-        # モーフの組合せ
-        morph_comb = list(itertools.combinations(all_morphs, morph_cnt))
+        # # モーフの組合せ
+        # morph_comb = list(itertools.combinations(all_morphs, morph_cnt))
+        # utils.output_message("morph_comb: %s, now: %s" % (len(morph_comb), datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')), is_print)
 
-        # 変化量の直積（同じ値を許容する）
-        ratio_product = list(itertools.product(ratio_values, repeat=morph_cnt))
+        # # 変化量の直積（同じ値を許容する）
+        # ratio_product = list(itertools.product(ratio_values, repeat=morph_cnt))
+        # utils.output_message("ratio_product: %s, now: %s" % (len(ratio_product), datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')), is_print)
 
-        # モーフと変化量の組み合わせ
-        brend_mr_pairs_list = list(itertools.product(morph_comb, ratio_product))
-        logger.debug("mr_pairs_list: %s", brend_mr_pairs_list)
-
-        brend_cnt += len(brend_mr_pairs_list)
+        # # モーフと変化量の組み合わせ
+        # brend_mr_pairs_list = list(itertools.product(morph_comb, ratio_product))
+        # utils.output_message("brend_mr_pairs_list: %s, now: %s" % (len(brend_mr_pairs_list), datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')), is_print)
 
         writer = VmdWriter()
+        target_morph_frames = []
 
-        for (morph_list, ratio_list) in brend_mr_pairs_list:
-            # ファイル用モーションデータ
+        for mframe in range(1000):
+            for morph_name in target_morphs:
+                if len(target_morph_frames) > 19000:
+                    # 上限までしか登録しない
+                    break
 
-            # モーフ名組合せタプル
-            morph_names = tuple([x.name for x in morph_list])
-            
-            # モーフ登録フレーム設定
-            mframe = len(brend_morph_by_frames)
-            if mframe not in brend_morph_by_frames:
-                brend_morph_by_frames[mframe] = []
-            
-            # 指定フレームにモーフ登録
-            for (mv, ratio) in zip(morph_list, ratio_list):
+                ratio = ratio_values[random.randint(0, len(ratio_values) - 1)]
+
                 morph = VmdMorphFrame()
                 morph.frame = mframe
-                morph.format_name = mv.name
+                morph.format_name = morph_name
                 # ～とかが出力できないので、回避策
-                morph.name = mv.name.encode('cp932').decode('shift_jis').encode('shift_jis')
+                morph.name = morph_name.encode('cp932').decode('shift_jis').encode('shift_jis')
                 morph.ratio = ratio
                 morph.key = True
                 
-                brend_morph_by_frames[mframe].append(morph)
+                target_morph_frames.append(morph)
 
-                sum_cnt = len(brend_morph_by_frames) * len(target_morphs)
-                if sum_cnt // 10000 > prev_sum:
-                    print("ブレンド: 総モーフ数: %s" % sum_cnt)
-                    prev_sum = sum_cnt // 10000
+            if len(target_morph_frames) > 19000:
+                # 上限までしか登録しない
+                break
 
-        # target_morph_frames = [x for x in brend_morph_frames if x.key == True]
-        # フレーム番号順にソート
-        # sorted_brend_morph_by_frames = sorted(brend_morph_by_frames.items())
-        # シャッフル
-        sorted_brend_morph_by_frames = random.sample(brend_morph_by_frames.items(), len(brend_morph_by_frames))
-
-        # 区切りはモーフ上限以内で
-        step = int(19000 / len(target_morphs))
-        for idx in range(0, len(sorted_brend_morph_by_frames), step):
-            # モーフの組合せ分ずつに区切って出力する
-            start = idx
-            end = min(idx + step, len(sorted_brend_morph_by_frames))
-
-            target_morph_frames = []
-            for n in range(start, end):
-                for mf in sorted_brend_morph_by_frames[n][1]:
-                    mf.frame = n - start
-                    target_morph_frames.append(mf)
-
-            fpath = re.sub(r'\.pmx$', "_blend_{0:%Y%m%d_%H%M%S}_{1:08d}.vmd".format(datetime.now(), end), pmx_path)
-            writer.write_vmd_file(fpath, model.name, [], target_morph_frames, [], [], [], [])
-            print("モーフブレンドVMD出力成功(%s): %s" % (len(target_morph_frames), fpath))
+        fpath = re.sub(r'\.pmx$', "_blend_{0:%Y%m%d_%H%M%S}_{1}".format(datetime.now(), ','.join([str(i) for i in target_morphs])), pmx_path)
+        fpath = "{0}.vmd".format(fpath[:200])
+        writer.write_vmd_file(fpath, model.name, [], target_morph_frames, [], [], [], [])
+        print("モーフブレンドVMD出力成功(%s): %s" % (len(target_morph_frames), fpath))
 
         #         # # モーフと変化量の組み合わせの全リスト
         #         # mr_pairs_list = [p for p in itertools.product(*list(mv_rv_pair.values())) if len(set(p)) == len(p)]

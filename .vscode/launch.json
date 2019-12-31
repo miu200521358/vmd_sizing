@@ -109,6 +109,17 @@
             ]
         },
         {
+            "name": "Python: debug_exec_test",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "pythonPath": "${config:python.pythonPath}",
+            "stopOnEntry": true,
+            "args": [
+            ]
+        },
+        {
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",

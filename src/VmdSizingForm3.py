@@ -1018,7 +1018,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		bSizerBlend4 = wx.BoxSizer( wx.VERTICAL )
 
-		self.m_blend_staticText7 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"指定されたPMXファイルのモーフを徐々に変化させた結果を、VMDファイルとして出力します。\n最小値から最大値までの範囲で増加量ごとに区切ってモーフを登録していきます。\n指定されたモーフの数によってVMDファイルが沢山出力されます。（最大10個）\nモーフの組み合わせが多くなると破綻する確率が非常に高くなりますので、その状態での公開は避けてください。", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_blend_staticText7 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"指定されたPMXファイルのモーフをランダムに変化させた結果を、VMDファイルとして出力します。\nモーフは合計で最大100個まで選択できます。\nモーフの組み合わせが多くなると破綻する確率が非常に高くなりますので、その状態での公開は避けてください。", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_blend_staticText7.Wrap( -1 )
 
 		bSizerBlend4.Add( self.m_blend_staticText7, 0, wx.ALL, 5 )
@@ -1107,7 +1107,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_blend_staticText10.Wrap( -1 )
 		bSizerBlend5.Add( self.m_blend_staticText10, 0, wx.ALL, 5 )
 
-		self.m_blend_spinInc = wx.SpinCtrlDouble( self.m_panelBlend, id=wx.ID_ANY, size=wx.Size( 80,-1 ), min=0, max=1, initial=0.2, inc=0.1 )
+		self.m_blend_spinInc = wx.SpinCtrlDouble( self.m_panelBlend, id=wx.ID_ANY, size=wx.Size( 80,-1 ), min=0, max=1, initial=0.1, inc=0.1 )
 		bSizerBlend5.Add( self.m_blend_spinInc, 0, wx.ALL, 5 )
 
 		bSizerBlend4.Add( bSizerBlend5, 0, wx.ALL, 5 )
@@ -1214,6 +1214,10 @@ class VmdSizingForm3 ( wx.Frame ):
 		# self.m_blend_filePmx.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_blend_filePmx.GetTextCtrl()))
 		# メッセージ欄も全選択可とする
 		self.m_txtConsole.Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_txtConsole))
+		self.m_blend_listEye.Bind(wx.EVT_CHAR, lambda event: self.OnListSelectAll(event, self.m_blend_listEye))
+		self.m_blend_listEyebrow.Bind(wx.EVT_CHAR, lambda event: self.OnListSelectAll(event, self.m_blend_listEyebrow))
+		self.m_blend_listLip.Bind(wx.EVT_CHAR, lambda event: self.OnListSelectAll(event, self.m_blend_listLip))
+		self.m_blend_listOther.Bind(wx.EVT_CHAR, lambda event: self.OnListSelectAll(event, self.m_blend_listOther))
 
 		# タブ押下時の処理
 		self.m_note.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.OnTabChange)
@@ -1280,6 +1284,14 @@ class VmdSizingForm3 ( wx.Frame ):
 		keyInput = event.GetKeyCode()
 		if keyInput == 1:  # 1 stands for 'ctrl+a'
 			target_ctrl.SelectAll()
+		event.Skip()		
+
+	# ファイル入力欄で全選択イベント
+	def OnListSelectAll(self, event, target_ctrl):
+		keyInput = event.GetKeyCode()
+		if keyInput == 1:  # 1 stands for 'ctrl+a'
+			for idx in range(target_ctrl.GetCount()):
+				target_ctrl.SetSelection(idx)
 		event.Skip()		
 
 	def OnCsvExec( self, event ):
@@ -2661,10 +2673,8 @@ class VmdSizingForm3 ( wx.Frame ):
 		for idx in self.m_blend_listOther.GetSelections():
 			target_morphs.append(self.m_blend_listOther.GetString(idx))
 
-		print("target_morphs: %s" % target_morphs)
-
-		if len(target_morphs) < 2 or len(target_morphs) > 10:
-			print("組み合わせる対象のモーフは2～10個の範囲内で選んで下さい。")
+		if len(target_morphs) < 2 or len(target_morphs) > 100:
+			print("組み合わせる対象のモーフは2～100個の範囲内で選んで下さい。")
 
 			self.EnableInput()
 			# プログレス非表示
