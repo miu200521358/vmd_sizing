@@ -10,6 +10,10 @@ class VmdMorphFrame():
         self.format_name = ''
         self.frame = frame
         self.ratio = 0
+        # 登録対象であるか否か
+        self.key = False
+        # VMD読み込み処理で読み込んだキーか
+        self.read = False
     
     def write(self, fout):
         fout.write(self.name)

@@ -210,18 +210,20 @@ def create_matrix(model, links, frames, bf, scales=None):
     
     return trans_vs, add_qs, scale_l, matrixs
 
-def create_matrix_twist_qq(model, links, frames, bf, parent_qq, scales=None):
+def split_qq(model, links, frames, bf, bone_name, min_qq, max_qq, parent_qq, scales=None):
     trans_vs, add_qs, scale_l = create_matrix_parts(model, links, frames, bf, scales)
     
-    twist_qq = QQuaternion()
+    chicl_qq = QQuaternion()
     remaining_qq = QQuaternion()
 
     # 親の回転から捩り分を抽出
+    
+
     parent_euler = parent_qq.toEulerAngles()
     if parent_euler.x() > 45:
-        twist_qq = QQuaternion.fromEulerAngles(parent_euler.x() - 45, 0, 0)
+        chicl_qq = QQuaternion.fromEulerAngles(parent_euler.x() - 45, 0, 0)
     elif parent_euler.x() < -45:
-        twist_qq = QQuaternion.fromEulerAngles(360 - abs(parent_euler.x() + 45), 0, 0)
+        chicl_qq = QQuaternion.fromEulerAngles(360 - abs(parent_euler.x() + 45), 0, 0)
     
     total_add_qs = QQuaternion()
     for e, q in enumerate(add_qs):
@@ -230,7 +232,7 @@ def create_matrix_twist_qq(model, links, frames, bf, parent_qq, scales=None):
         else:
             total_add_qs *= copy.deepcopy(q)
     
-    total_add_qs *= twist_qq
+    total_add_qs *= chicl_qq
 
     degree = degrees(2 * acos(total_add_qs.scalar()))
 
@@ -395,27 +397,27 @@ R_y2_idxs = [15, 30, 45, 60]
 
 # X移動補間曲線のインデックス
 MX_x1_idxs = [0, 0, 0, 0]
-MX_y1_idxs = [4, 4, 4, 4]
-MX_x2_idxs = [8, 8, 8, 8]
-MX_y2_idxs = [12, 12, 12, 12]
+MX_y1_idxs = [4, 19, 34, 49]
+MX_x2_idxs = [8, 23, 38, 53]
+MX_y2_idxs = [12, 27, 42, 57]
 
 # Y移動補間曲線のインデックス
-MY_x1_idxs = [16, 16, 16, 16]
-MY_y1_idxs = [20, 20, 20, 20]
-MY_x2_idxs = [24, 24, 24, 24]
-MY_y2_idxs = [28, 28, 28, 28]
+MY_x1_idxs = [1, 16, 16, 16]
+MY_y1_idxs = [5, 20, 36, 50]
+MY_x2_idxs = [9, 24, 39, 54]
+MY_y2_idxs = [13, 28, 43, 58]
 
 # Z移動補間曲線のインデックス
-MZ_x1_idxs = [32, 32, 32, 32]
-MZ_y1_idxs = [36, 36, 36, 36]
-MZ_x2_idxs = [40, 40, 40, 40]
-MZ_y2_idxs = [44, 44, 44, 44]
+MZ_x1_idxs = [2, 17, 33, 32]
+MZ_y1_idxs = [6, 21, 36, 51]
+MZ_x2_idxs = [10, 25, 40, 55]
+MZ_y2_idxs = [14, 29, 44, 59]
 
 
 # 補間曲線を考慮した指定フレーム番号の位置
 # https://www55.atwiki.jp/kumiho_k/pages/15.html
 # https://harigane.at.webry.info/201103/article_1.html
-def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False):
+def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False, is_read=False):
     fillbf = VmdBoneFrame()
 
     # ボーン登録がなければ初期値
@@ -435,6 +437,10 @@ def calc_bone_by_complement(frames, bone_name, frameno, is_calc_complement=False
                 logger.debug("calc_bone_by_complement 同一キーあり: %s, %s, read: %s", frameno, bone_name, fillbf.read)
             return fillbf
         elif (not is_calc_complement and bf.frame > frameno) or (is_calc_complement and bf.frame > frameno and bf.read):
+            # 同一フレームのキーがなく、読み込みキーのみ欲しい場合、前のキーを返す
+            if is_read and bidx > 0:
+                return copy.deepcopy(frames[bone_name][bidx - 1])
+
             # 補間曲線の再計算がない場合、そのまま次の。再計算ありの場合、読み込みキーのみチェック対象とする
             # 同一フレームのキーがない場合、挿入
             fillbf.name = bf.name

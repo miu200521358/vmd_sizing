@@ -21,12 +21,7 @@ from pathlib import Path
 from threading import Thread, Event
 import traceback
 
-import wrapperutils
-import convert_vmd
-import blend_pmx
-import convert_csv
-import form_bezier
-import utils
+import wrapperutils, convert_vmd, blend_pmx, convert_csv, convert_smooth, form_bezier, utils
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VmdSizing").getChild(__name__)
@@ -38,7 +33,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver4.05_β13", pos = wx.DefaultPosition, size = wx.Size( 600,650 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver4.05_β14", pos = wx.DefaultPosition, size = wx.Size( 600,650 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -55,6 +50,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.rep_pmx_data = None
 		self.camera_vmd_data = None
 		self.camera_pmx_data = None
+		self.blend_pmx_data = None
 
 		# モーフプルダウン
 		self.vmd_morphs = None
@@ -75,6 +71,8 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.slice_worker = None
 		# ブレンドスレッド用
 		self.blend_worker = None
+		# 円滑化スレッド用
+		self.smooth_worker = None
 
 		# ファイル履歴
 		self.file_hitories = {"vmd":[],"org_pmx":[],"rep_pmx":[],"camera_vmd":[],"camera_pmx":[],"max":20}
@@ -501,90 +499,6 @@ class VmdSizingForm3 ( wx.Frame ):
 		bSizer13.Fit( self.m_panelArm )
 		self.m_note.AddPage( self.m_panelArm, u"腕", False )
 
-		# # モーフブレンド ------------------------------------
-
-		# self.m_panelBlend = wx.Panel( self.m_note, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-
-		# bSizerBlend3 = wx.BoxSizer( wx.VERTICAL )
-
-		# bSizerBlend4 = wx.BoxSizer( wx.VERTICAL )
-
-		# self.m_blend_staticText7 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"指定されたPMXファイルのモーフを徐々に変化させた結果を、PMXファイルとして出力します。\n最小値から最大値までの範囲で増加量ごとに区切ってモーフを登録していきます。\nモーフの組み合わせが多くなると破綻する確率が非常に高くなりますので、その状態での公開は避けてください。", wx.DefaultPosition, wx.DefaultSize, 0 )
-		# self.m_blend_staticText7.Wrap( -1 )
-
-		# bSizerBlend4.Add( self.m_blend_staticText7, 0, wx.ALL, 5 )
-
-		# self.m_blend_staticline5 = wx.StaticLine( self.m_panelBlend, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
-		# bSizerBlend4.Add( self.m_blend_staticline5, 0, wx.EXPAND |wx.ALL, 5 )
-
-		# self.m_blend_staticText1 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"PMXファイル", wx.DefaultPosition, wx.DefaultSize, 0 )
-		# self.m_blend_staticText1.Wrap( -1 )
-
-		# bSizerBlend4.Add( self.m_blend_staticText1, 0, wx.ALL, 5 )
-
-		# self.m_blend_filePmx = wx.FilePickerCtrl( self.m_panelBlend, wx.ID_ANY, wx.EmptyString, u"PMXファイルを選択してください", u"PMXファイル (*.pmx)|*.pmx|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.Size( -1,-1 ), wx.FLP_DEFAULT_STYLE )
-		# self.m_blend_filePmx.GetPickerCtrl().SetLabel("開く")
-		# bSizerBlend4.Add( self.m_blend_filePmx, 0, wx.ALL|wx.EXPAND, 5 )
-
-		# bSizerBlend5 = wx.BoxSizer( wx.HORIZONTAL )
-
-		# # # 対象パネル
-		# # self.m_blend_staticText11 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"パネル", wx.DefaultPosition, wx.DefaultSize, 0 )
-		# # self.m_blend_staticText11.SetToolTip( u"モーフを生成するパネルを選択してください。" )
-		# # self.m_blend_staticText11.Wrap( -1 )
-		# # bSizerBlend5.Add( self.m_blend_staticText11, 0, wx.ALL, 5 )
-
-		# # self.m_blend_comboPanel = wx.ComboBox( self.m_panelBlend, id=wx.ID_ANY, value="目", pos=wx.DefaultPosition, size=wx.DefaultSize, choices=["目","眉","口","他"], style=wx.CB_DROPDOWN|wx.CB_READONLY )
-		# # bSizerBlend5.Add( self.m_blend_comboPanel, 0, wx.ALL, 5 )
-
-		# # モーフ最小値
-		# self.m_blend_staticText8 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"最小値", wx.DefaultPosition, wx.DefaultSize, 0 )
-		# self.m_blend_staticText8.SetToolTip( u"モーフ増減の最小値です。-10から10の間で設定できます。（小数点可）" )
-		# self.m_blend_staticText8.Wrap( -1 )
-		# bSizerBlend5.Add( self.m_blend_staticText8, 0, wx.ALL, 5 )
-
-		# self.m_blend_spinMin = wx.SpinCtrlDouble( self.m_panelBlend, id=wx.ID_ANY, size=wx.Size( 80,-1 ), min=-10, max=10, initial=0.0, inc=0.1 )
-		# bSizerBlend5.Add( self.m_blend_spinMin, 0, wx.ALL, 5 )
-
-		# # モーフ最大値
-		# self.m_blend_staticText9 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"最大値", wx.DefaultPosition, wx.DefaultSize, 0 )
-		# self.m_blend_staticText9.SetToolTip( u"モーフ増減の最大値です。-10から10の間で設定できます。（小数点可）" )
-		# self.m_blend_staticText9.Wrap( -1 )
-		# bSizerBlend5.Add( self.m_blend_staticText9, 0, wx.ALL, 5 )
-
-		# self.m_blend_spinMax = wx.SpinCtrlDouble( self.m_panelBlend, id=wx.ID_ANY, size=wx.Size( 80,-1 ), min=-10, max=10, initial=1.0, inc=0.1 )
-		# bSizerBlend5.Add( self.m_blend_spinMax, 0, wx.ALL, 5 )
-
-		# # モーフ増加量
-		# self.m_blend_staticText10 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"増加量", wx.DefaultPosition, wx.DefaultSize, 0 )
-		# self.m_blend_staticText10.SetToolTip( u"モーフ増減の増加量です。この増加量分ごとにモーフ組み合わせを生成していきます。0から1の間で設定できます。（小数点可）" )
-		# self.m_blend_staticText10.Wrap( -1 )
-		# bSizerBlend5.Add( self.m_blend_staticText10, 0, wx.ALL, 5 )
-
-		# self.m_blend_spinInc = wx.SpinCtrlDouble( self.m_panelBlend, id=wx.ID_ANY, size=wx.Size( 80,-1 ), min=0, max=1, initial=0.1, inc=0.1 )
-		# bSizerBlend5.Add( self.m_blend_spinInc, 0, wx.ALL, 5 )
-
-		# bSizerBlend4.Add( bSizerBlend5, 0, wx.ALL, 5 )
-
-		# self.m_blend_btnExec = wx.Button( self.m_panelBlend, wx.ID_ANY, u"モーフブレンドVMD生成", wx.DefaultPosition, wx.Size( 200,50 ), 0 )
-		# bSizerBlend4.Add( self.m_blend_btnExec, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
-
-		# self.m_blend_txtConsole = wx.TextCtrl( self.m_panelBlend, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( -1,370 ), wx.TE_MULTILINE|wx.TE_READONLY|wx.BORDER_NONE|wx.HSCROLL|wx.VSCROLL|wx.WANTS_CHARS )
-		# self.m_blend_txtConsole.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_3DLIGHT ) )
-
-		# bSizerBlend4.Add( self.m_blend_txtConsole, 1, wx.ALL|wx.EXPAND, 5 )
-
-		# self.m_blend_Gauge = wx.Gauge( self.m_panelBlend, wx.ID_ANY, 100, wx.DefaultPosition, wx.DefaultSize, wx.GA_HORIZONTAL )
-		# self.m_blend_Gauge.SetValue( 0 )
-		# bSizerBlend4.Add( self.m_blend_Gauge, 0, wx.ALL|wx.EXPAND, 5 )
-	
-		# bSizerBlend3.Add( bSizerBlend4, 0, wx.EXPAND, 5 )
-
-		# self.m_panelBlend.SetSizer( bSizerBlend3 )
-		# self.m_panelBlend.Layout()
-		# bSizerBlend3.Fit( self.m_panelBlend )
-		# self.m_note.AddPage( self.m_panelBlend, u"モーフブレンド", False )
-
 		# カメラタブ ------------------------------------
 
 		self.m_panelCamera = wx.Panel( self.m_note, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
@@ -779,6 +693,50 @@ class VmdSizingForm3 ( wx.Frame ):
 		bSizerVmd3.Fit( self.m_panelVmd )
 		self.m_note.AddPage( self.m_panelVmd, u"VMD", False )
 
+
+		# # 円滑化 ------------------------------------
+
+		# self.m_panelSmooth = wx.Panel( self.m_note, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+
+		# bSizerSmooth3 = wx.BoxSizer( wx.VERTICAL )
+
+		# bSizerSmooth4 = wx.BoxSizer( wx.VERTICAL )
+
+		# self.m_smooth_staticText7 = wx.StaticText( self.m_panelSmooth, wx.ID_ANY, u"指定されたVMDファイルのキーの間を補間曲線で繋いで、再出力します。", wx.DefaultPosition, wx.DefaultSize, 0 )
+		# self.m_smooth_staticText7.Wrap( -1 )
+
+		# bSizerSmooth4.Add( self.m_smooth_staticText7, 0, wx.ALL, 5 )
+
+		# self.m_smooth_staticline5 = wx.StaticLine( self.m_panelSmooth, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
+		# bSizerSmooth4.Add( self.m_smooth_staticline5, 0, wx.EXPAND |wx.ALL, 5 )
+
+		# self.m_smooth_staticText1 = wx.StaticText( self.m_panelSmooth, wx.ID_ANY, u"VMDファイル", wx.DefaultPosition, wx.DefaultSize, 0 )
+		# self.m_smooth_staticText1.Wrap( -1 )
+
+		# bSizerSmooth4.Add( self.m_smooth_staticText1, 0, wx.ALL, 5 )
+
+		# self.m_smooth_fileVmd = wx.FilePickerCtrl( self.m_panelSmooth, wx.ID_ANY, wx.EmptyString, u"VMDファイルを選択してください", u"VMDファイル (*.vmd)|*.vmd|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.Size( -1,-1 ), wx.FLP_DEFAULT_STYLE )
+		# self.m_smooth_fileVmd.GetPickerCtrl().SetLabel("開く")
+		# bSizerSmooth4.Add( self.m_smooth_fileVmd, 0, wx.ALL|wx.EXPAND, 5 )
+
+		# self.m_smooth_btnExec = wx.Button( self.m_panelSmooth, wx.ID_ANY, u"円滑化変換実行", wx.DefaultPosition, wx.Size( 200,50 ), 0 )
+		# bSizerSmooth4.Add( self.m_smooth_btnExec, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+		# self.m_smooth_txtConsole = wx.TextCtrl( self.m_panelSmooth, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( -1,420 ), wx.TE_MULTILINE|wx.TE_READONLY|wx.BORDER_NONE|wx.HSCROLL|wx.VSCROLL|wx.WANTS_CHARS )
+		# self.m_smooth_txtConsole.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_3DLIGHT ) )
+
+		# bSizerSmooth4.Add( self.m_smooth_txtConsole, 1, wx.ALL|wx.EXPAND, 5 )
+
+		# self.m_smooth_Gauge = wx.Gauge( self.m_panelSmooth, wx.ID_ANY, 100, wx.DefaultPosition, wx.DefaultSize, wx.GA_HORIZONTAL )
+		# self.m_smooth_Gauge.SetValue( 0 )
+		# bSizerSmooth4.Add( self.m_smooth_Gauge, 0, wx.ALL|wx.EXPAND, 5 )
+	
+		# bSizerSmooth3.Add( bSizerSmooth4, 0, wx.EXPAND, 5 )
+
+		# self.m_panelSmooth.SetSizer( bSizerSmooth3 )
+		# self.m_panelSmooth.Layout()
+		# bSizerSmooth3.Fit( self.m_panelSmooth )
+		# self.m_note.AddPage( self.m_panelSmooth, u"円滑化", False )
 
 		# 分割タブ ------------------------------------
 
@@ -1052,6 +1010,129 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		bSizer1.Add( self.m_note, 1, wx.EXPAND, 5 )
 
+		# モーフブレンド ------------------------------------
+
+		self.m_panelBlend = wx.Panel( self.m_note, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+
+		bSizerBlend3 = wx.BoxSizer( wx.VERTICAL )
+
+		bSizerBlend4 = wx.BoxSizer( wx.VERTICAL )
+
+		self.m_blend_staticText7 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"指定されたPMXファイルのモーフを徐々に変化させた結果を、VMDファイルとして出力します。\n最小値から最大値までの範囲で増加量ごとに区切ってモーフを登録していきます。\n指定されたモーフの数によってVMDファイルが沢山出力されます。（最大10個）\nモーフの組み合わせが多くなると破綻する確率が非常に高くなりますので、その状態での公開は避けてください。", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_blend_staticText7.Wrap( -1 )
+
+		bSizerBlend4.Add( self.m_blend_staticText7, 0, wx.ALL, 5 )
+
+		self.m_blend_staticline5 = wx.StaticLine( self.m_panelBlend, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
+		bSizerBlend4.Add( self.m_blend_staticline5, 0, wx.EXPAND |wx.ALL, 5 )
+
+		self.m_blend_staticText1 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"PMXファイル", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_blend_staticText1.Wrap( -1 )
+
+		bSizerBlend4.Add( self.m_blend_staticText1, 0, wx.ALL, 5 )
+
+		self.m_blend_filePmx = wx.FilePickerCtrl( self.m_panelBlend, wx.ID_ANY, wx.EmptyString, u"PMXファイルを選択してください", u"PMXファイル (*.pmx)|*.pmx|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.Size( -1,-1 ), wx.FLP_DEFAULT_STYLE )
+		self.m_blend_filePmx.GetPickerCtrl().SetLabel("開く")
+		bSizerBlend4.Add( self.m_blend_filePmx, 0, wx.ALL|wx.EXPAND, 5 )
+
+		# ---------------
+
+		bSizerBlend15 = wx.BoxSizer( wx.HORIZONTAL )
+
+		# 目の処理対象
+		self.m_blend_staticText11 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"目", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_blend_staticText11.SetToolTip( u"ブレンド対象となるモーフを選択して下さい。" )
+		self.m_blend_staticText11.Wrap( -1 )
+		bSizerBlend15.Add( self.m_blend_staticText11, 0, wx.ALL, 5 )
+
+		self.m_blend_listEye = wx.ListBox( self.m_panelBlend, id=wx.ID_ANY, pos=wx.DefaultPosition, size=(100, 100), choices=[], style=wx.LB_MULTIPLE|wx.LB_ALWAYS_SB )
+		bSizerBlend15.Add( self.m_blend_listEye, 0, wx.ALL, 5 )
+
+		# 眉の処理対象
+		self.m_blend_staticText11 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"眉", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_blend_staticText11.SetToolTip( u"ブレンド対象となるモーフを選択して下さい。" )
+		self.m_blend_staticText11.Wrap( -1 )
+		bSizerBlend15.Add( self.m_blend_staticText11, 0, wx.ALL, 5 )
+
+		self.m_blend_listEyebrow = wx.ListBox( self.m_panelBlend, id=wx.ID_ANY, pos=wx.DefaultPosition, size=(100, 100), choices=[], style=wx.LB_MULTIPLE|wx.LB_ALWAYS_SB )
+		bSizerBlend15.Add( self.m_blend_listEyebrow, 0, wx.ALL, 5 )
+
+		# 口の処理対象
+		self.m_blend_staticText11 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"口", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_blend_staticText11.SetToolTip( u"ブレンド対象となるモーフを選択して下さい。" )
+		self.m_blend_staticText11.Wrap( -1 )
+		bSizerBlend15.Add( self.m_blend_staticText11, 0, wx.ALL, 5 )
+
+		self.m_blend_listLip = wx.ListBox( self.m_panelBlend, id=wx.ID_ANY, pos=wx.DefaultPosition, size=(100, 100), choices=[], style=wx.LB_MULTIPLE|wx.LB_ALWAYS_SB )
+		bSizerBlend15.Add( self.m_blend_listLip, 0, wx.ALL, 5 )
+
+		# 他の処理対象
+		self.m_blend_staticText11 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"他", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_blend_staticText11.SetToolTip( u"ブレンド対象となるモーフを選択して下さい。" )
+		self.m_blend_staticText11.Wrap( -1 )
+		bSizerBlend15.Add( self.m_blend_staticText11, 0, wx.ALL, 5 )
+
+		self.m_blend_listOther = wx.ListBox( self.m_panelBlend, id=wx.ID_ANY, pos=wx.DefaultPosition, size=(100, 100), choices=[], style=wx.LB_MULTIPLE|wx.LB_ALWAYS_SB )
+		bSizerBlend15.Add( self.m_blend_listOther, 0, wx.ALL, 5 )
+
+
+
+		bSizerBlend4.Add( bSizerBlend15, 0, wx.EXPAND, 5 )
+
+		# -------------------
+
+		bSizerBlend5 = wx.BoxSizer( wx.HORIZONTAL )
+
+		# モーフ最小値
+		self.m_blend_staticText8 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"最小値", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_blend_staticText8.SetToolTip( u"モーフ増減の最小値です。-10から10の間で設定できます。（小数点可）" )
+		self.m_blend_staticText8.Wrap( -1 )
+		bSizerBlend5.Add( self.m_blend_staticText8, 0, wx.ALL, 5 )
+
+		self.m_blend_spinMin = wx.SpinCtrlDouble( self.m_panelBlend, id=wx.ID_ANY, size=wx.Size( 80,-1 ), min=-10, max=10, initial=0.0, inc=0.1 )
+		bSizerBlend5.Add( self.m_blend_spinMin, 0, wx.ALL, 5 )
+
+		# モーフ最大値
+		self.m_blend_staticText9 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"最大値", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_blend_staticText9.SetToolTip( u"モーフ増減の最大値です。-10から10の間で設定できます。（小数点可）" )
+		self.m_blend_staticText9.Wrap( -1 )
+		bSizerBlend5.Add( self.m_blend_staticText9, 0, wx.ALL, 5 )
+
+		self.m_blend_spinMax = wx.SpinCtrlDouble( self.m_panelBlend, id=wx.ID_ANY, size=wx.Size( 80,-1 ), min=-10, max=10, initial=1.0, inc=0.1 )
+		bSizerBlend5.Add( self.m_blend_spinMax, 0, wx.ALL, 5 )
+
+		# モーフ増加量
+		self.m_blend_staticText10 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"増加量", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_blend_staticText10.SetToolTip( u"モーフ増減の増加量です。この増加量分ごとにモーフ組み合わせを生成していきます。0から1の間で設定できます。（小数点可）" )
+		self.m_blend_staticText10.Wrap( -1 )
+		bSizerBlend5.Add( self.m_blend_staticText10, 0, wx.ALL, 5 )
+
+		self.m_blend_spinInc = wx.SpinCtrlDouble( self.m_panelBlend, id=wx.ID_ANY, size=wx.Size( 80,-1 ), min=0, max=1, initial=0.2, inc=0.1 )
+		bSizerBlend5.Add( self.m_blend_spinInc, 0, wx.ALL, 5 )
+
+		bSizerBlend4.Add( bSizerBlend5, 0, wx.ALL, 5 )
+
+		self.m_blend_btnExec = wx.Button( self.m_panelBlend, wx.ID_ANY, u"モーフブレンドVMD生成", wx.DefaultPosition, wx.Size( 200,50 ), 0 )
+		bSizerBlend4.Add( self.m_blend_btnExec, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+		self.m_blend_txtConsole = wx.TextCtrl( self.m_panelBlend, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( -1,370 ), wx.TE_MULTILINE|wx.TE_READONLY|wx.BORDER_NONE|wx.HSCROLL|wx.VSCROLL|wx.WANTS_CHARS )
+		self.m_blend_txtConsole.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_3DLIGHT ) )
+
+		bSizerBlend4.Add( self.m_blend_txtConsole, 1, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_blend_Gauge = wx.Gauge( self.m_panelBlend, wx.ID_ANY, 100, wx.DefaultPosition, wx.DefaultSize, wx.GA_HORIZONTAL )
+		self.m_blend_Gauge.SetValue( 0 )
+		bSizerBlend4.Add( self.m_blend_Gauge, 0, wx.ALL|wx.EXPAND, 5 )
+	
+		bSizerBlend3.Add( bSizerBlend4, 0, wx.EXPAND, 5 )
+
+		# ------------------
+
+		self.m_panelBlend.SetSizer( bSizerBlend3 )
+		self.m_panelBlend.Layout()
+		bSizerBlend3.Fit( self.m_panelBlend )
+		self.m_note.AddPage( self.m_panelBlend, u"ブレンド", False )
+
 		# イベント登録 -----------------------
 
 		# redirect text here
@@ -1065,7 +1146,8 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_btnMorphImport.Bind( wx.EVT_BUTTON, self.OnMorphImport )
 		self.m_csv_btnExec.Bind( wx.EVT_BUTTON, self.OnCsvExec )
 		self.m_vmd_btnExec.Bind( wx.EVT_BUTTON, self.OnVmdExec )
-		# self.m_blend_btnExec.Bind( wx.EVT_BUTTON, self.OnBlendExec )
+		# self.m_smooth_btnExec.Bind( wx.EVT_BUTTON, self.OnSmoothExec )
+		self.m_blend_btnExec.Bind( wx.EVT_BUTTON, self.OnBlendExec )
 		# self.m_slice_btnAddLine.Bind( wx.EVT_BUTTON, self.OnAddSliceCell )
 		# self.m_slice_btnExec.Bind( wx.EVT_BUTTON, self.OnSliceExec )
 		
@@ -1077,10 +1159,12 @@ class VmdSizingForm3 ( wx.Frame ):
 		VMD_EVT_RESULT(self, self.OnVmdResult)
 		# SLICE_EVT_RESULT(self, self.OnSliceResult)
 		BLEND_EVT_RESULT(self, self.OnBlendResult)
+		SMOOTH_EVT_RESULT(self, self.OnSmoothResult)
 
 		# And indicate we don't have a worker thread yet
 		self.worker = None
 		self.csv_worker = None
+		self.smooth_worker = None
 		self.vmd_worker = None
 		# self.slice_worker = None
 		self.blend_worker = None
@@ -1097,8 +1181,8 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_vmd_fileCsvBone.SetDropTarget(MyFileDropTarget(self, self.m_vmd_fileCsvBone, self.m_vmd_staticText1, ".csv"))
 		self.m_vmd_fileCsvMorph.SetDropTarget(MyFileDropTarget(self, self.m_vmd_fileCsvMorph, self.m_vmd_morph_staticText1, ".csv"))
 		self.m_vmd_fileCsvCamera.SetDropTarget(MyFileDropTarget(self, self.m_vmd_fileCsvCamera, self.m_vmd_camera_staticText1, ".csv"))
+		self.m_blend_filePmx.SetDropTarget(MyFileDropTarget(self, self.m_blend_filePmx, self.m_blend_staticText1, ".pmx"))
 		# self.m_slice_fileVmd.SetDropTarget(MyFileDropTarget(self, self.m_slice_fileVmd, self.m_slice_staticText1, ".vmd"))
-		# self.m_blend_filePmx.SetDropTarget(MyFileDropTarget(self, self.m_blend_filePmx, self.m_staticText11, ".pmx"))
 
 		# ファイルパス変更時の処理
 		self.m_fileVmd.Bind( wx.EVT_FILEPICKER_CHANGED, lambda event: self.OnChangeFile(event, self.m_fileVmd, self.m_staticText9, ".vmd"))
@@ -1106,6 +1190,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_fileRepPmx.Bind( wx.EVT_FILEPICKER_CHANGED, lambda event: self.OnChangeFile(event, self.m_fileRepPmx, self.m_staticText11, ".pmx"))
 		self.m_camera_fileVmd.Bind( wx.EVT_FILEPICKER_CHANGED, lambda event: self.OnChangeFile(event, self.m_camera_fileVmd, self.m_camera_staticText9, ".vmd"))
 		self.m_camera_fileOrgPmx.Bind( wx.EVT_FILEPICKER_CHANGED, lambda event: self.OnChangeFile(event, self.m_camera_fileOrgPmx, self.m_camera_staticText10, ".pmx"))
+		self.m_blend_filePmx.Bind( wx.EVT_FILEPICKER_CHANGED, lambda event: self.OnChangeFileByBlend(event, self.m_blend_filePmx, self.m_blend_staticText1, ".pmx"))
 
 		# ファイル履歴ボタン押下時の処理
 		self.m_btnHistoryVmd.Bind(wx.EVT_BUTTON, lambda event: self.OnShowHistory(event, self.file_hitories["vmd"], self.file_hitories["max"]+1, self.m_fileVmd, self.m_staticText9, ".vmd"))
@@ -1232,6 +1317,40 @@ class VmdSizingForm3 ( wx.Frame ):
 			sys.stdout = self.m_txtConsole
 
 
+	def OnSmoothExec( self, event ):
+		self.DisableInput()
+
+		self.m_smooth_txtConsole.Clear()
+		wx.GetApp().Yield()
+
+		# SMOOTHコンソールに切り替え
+		sys.stdout = self.m_smooth_txtConsole
+
+		self.DisableInput()
+
+		if wrapperutils.is_valid_file(self.m_smooth_fileVmd.GetPath(), "VMDファイル", ".vmd", True) == False:
+
+			self.EnableInput()
+			# プログレス非表示
+			self.m_smooth_Gauge.SetValue(0)
+
+			# 元に戻す
+			sys.stdout = self.m_txtConsole
+
+			event.Skip()
+			return
+
+		if not self.smooth_worker:
+			# スレッド実行
+			self.smooth_worker = SmoothWorkerThread(self)
+			self.smooth_worker.start()
+			self.smooth_worker.stop_event.set()
+		else:
+			print("まだ処理が実行中です。終了してから再度実行してください。")
+
+			# 元に戻す
+			sys.stdout = self.m_txtConsole
+
 	def OnVmdExec( self, event ):
 		self.DisableInput()
 
@@ -1291,44 +1410,6 @@ class VmdSizingForm3 ( wx.Frame ):
 			sys.stdout = self.m_txtConsole
 
 
-	def OnSliceExec( self, event ):
-		self.DisableInput()
-
-		self.m_slice_txtConsole.Clear()
-		wx.GetApp().Yield()
-
-		# 分割コンソールに切り替え
-		sys.stdout = self.m_slice_txtConsole
-
-		self.DisableInput()
-
-		if wrapperutils.is_valid_file(self.m_slice_fileVmd.GetPath(), "VMDファイル", ".vmd", True) == False:
-
-			self.EnableInput()
-			# プログレス非表示
-			self.m_slice_Gauge.SetValue(0)
-
-			# 元に戻す
-			sys.stdout = self.m_txtConsole
-
-			event.Skip()
-			return
-
-		if not self.slice_worker:
-			# 分割キーデータ生成				
-			self.slice_frame_values = self.create_slice_frame_data()
-
-			# スレッド実行
-			self.slice_worker = SliceWorkerThread(self)
-			self.slice_worker.start()
-			self.slice_worker.stop_event.set()
-		else:
-			print("まだ処理が実行中です。終了してから再度実行してください。")
-
-			# 元に戻す
-			sys.stdout = self.m_txtConsole
-
-
 	def OnShowHistory(self, event, hitories, maxc, target_ctrl, label_ctrl, ext):
 		# 入力行を伸ばす
 		hs = copy.deepcopy(hitories)
@@ -1370,6 +1451,11 @@ class VmdSizingForm3 ( wx.Frame ):
 			# スレッドを止める
 			self.csv_worker.stop()
 			self.csv_worker = None
+
+		if self.smooth_worker:
+			# スレッドを止める
+			self.smooth_worker.stop()
+			self.smooth_worker = None
 
 		# 入力履歴を保存		
 		try:
@@ -1466,12 +1552,6 @@ class VmdSizingForm3 ( wx.Frame ):
 			event.Skip()
 			return 
 
-		# if self.blend_worker:
-		# 	# ブレンドモーフ生成時はタブ移動不可
-		# 	self.m_note.SetSelection(3)
-		# 	event.Skip()
-		# 	return 
-
 		if self.csv_worker:
 			# CSVコンバート時はタブ移動不可
 			self.m_note.SetSelection(4)
@@ -1483,6 +1563,25 @@ class VmdSizingForm3 ( wx.Frame ):
 			self.m_note.SetSelection(5)
 			event.Skip()
 			return 
+
+		if self.smooth_worker:
+			# 円滑化時はタブ移動不可
+			self.m_note.SetSelection(6)
+			event.Skip()
+			return 
+
+		if self.blend_worker:
+			# ブレンドモーフ生成時はタブ移動不可
+			self.m_note.SetSelection(7)
+			event.Skip()
+			return 
+		
+		if self.m_note.GetSelection() == 7:
+			# ブレンドはPMX読み込みがあるので、コンソール委譲
+			sys.stdout = self.m_blend_txtConsole
+		else:
+			# 元に戻す
+			sys.stdout = self.m_txtConsole
 
 		if self.m_note.GetSelection() == 1:
 
@@ -1896,6 +1995,18 @@ class VmdSizingForm3 ( wx.Frame ):
 			else:
 				return True
 
+		if target_ctrl == self.m_blend_filePmx:
+			if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, is_print):
+				logger.debug("blend_pmx_data クリア: %s", target_ctrl.GetPath())
+				self.blend_pmx_data = None
+
+				if is_print:
+					print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+
+				return False
+			else:
+				return True
+
 		# メインスレッドで読み込む
 		if target_ctrl == self.m_camera_fileVmd:
 			if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, is_print):
@@ -1921,6 +2032,7 @@ class VmdSizingForm3 ( wx.Frame ):
 				return False
 			else:
 				return True
+
 
 	def LoadOneFile(self, target_ctrl, label_ctrl, ext, is_print=True):
 		# 先頭と末尾の改行は除去
@@ -2085,6 +2197,50 @@ class VmdSizingForm3 ( wx.Frame ):
 
 				return True
 
+		if target_ctrl == self.m_blend_filePmx:
+			if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, is_print):
+				logger.debug("blend_pmx_data クリア: %s", target_ctrl.GetPath())
+				self.blend_pmx_data = None
+
+				if is_print:
+					print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+
+				return False
+			else:
+				logger.debug("blend_pmx_data 読み込み: %s", target_ctrl.GetPath())
+				# 先PMX読み込む
+				new_blend_pmx_data = wrapperutils.read_pmx(target_ctrl.GetPath(), label_ctrl.GetLabel(), is_print)
+
+				if not self.blend_pmx_data or not new_blend_pmx_data or (self.blend_pmx_data and new_blend_pmx_data and self.blend_pmx_data.digest != new_blend_pmx_data.digest):
+					# ハッシュが違う場合、データが違うとみなして更新
+					self.blend_pmx_data = new_blend_pmx_data
+
+				if is_print:
+					if new_blend_pmx_data:
+						print("%s 読み込み成功: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+					else:
+						print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+						return False
+
+				return True
+
+	def OnChangeFileByBlend(self, event, target_ctrl, label_ctrl, ext):
+		# まず、ファイル変更処理実行
+		self.OnChangeFile(event, target_ctrl, label_ctrl, ext)
+		# その後読み込み処理実行
+		if self.LoadOneFile(target_ctrl, label_ctrl, ext, True):
+			# 読み込みが成功したら、モーフ入れ替え表示
+			
+			morph_names = {"目": [], "眉": [], "口": [], "他": []}
+
+			for mk, mv in self.blend_pmx_data.morphs.items():
+				if mv.display:
+					morph_names[mv.get_panel_name()].append(mk)
+
+			self.m_blend_listEye.SetItems(morph_names["目"])
+			self.m_blend_listEyebrow.SetItems(morph_names["眉"])
+			self.m_blend_listLip.SetItems(morph_names["口"])
+			self.m_blend_listOther.SetItems(morph_names["他"])
 
 	# ファイル切り替え処理実行
 	def OnChangeFile(self, event, target_ctrl, label_ctrl, ext):
@@ -2120,6 +2276,9 @@ class VmdSizingForm3 ( wx.Frame ):
 		if target_ctrl == self.m_camera_fileOrgPmx:
 			self.camera_pmx_data = None
 
+		if target_ctrl == self.m_blend_filePmx:
+			self.blend_pmx_data = None
+
 		event.Skip()
 		return
 
@@ -2131,8 +2290,11 @@ class VmdSizingForm3 ( wx.Frame ):
 		if self.csv_worker:
 			self.m_csv_Gauge.Pulse()
 
-		# if self.blend_worker:
-		# 	self.m_blend_Gauge.Pulse()
+		if self.smooth_worker:
+			self.m_smooth_Gauge.Pulse()
+
+		if self.blend_worker:
+			self.m_blend_Gauge.Pulse()
 
 	# チェックボタン押下
 	def OnCheck(self, event):
@@ -2422,6 +2584,18 @@ class VmdSizingForm3 ( wx.Frame ):
 		sys.stdout = self.m_txtConsole		
 
 	# スレッド実行結果
+	def OnSmoothResult(self, event):
+		# スレッド削除
+		self.smooth_worker = None
+		# 入力有効化
+		self.EnableInput()
+		# プログレス非表示
+		self.m_smooth_Gauge.SetValue(0)
+
+		# コンソールを元に戻す
+		sys.stdout = self.m_txtConsole		
+
+	# スレッド実行結果
 	def OnVmdResult(self, event):
 		# スレッド削除
 		self.vmd_worker = None
@@ -2453,9 +2627,6 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_blend_txtConsole.Clear()
 		wx.GetApp().Yield()
 
-		# BLENDコンソールに切り替え
-		sys.stdout = self.m_blend_txtConsole
-
 		self.DisableInput()
 
 		if wrapperutils.is_valid_file(self.m_blend_filePmx.GetPath(), "PMXファイル", ".pmx", True) == False:
@@ -2477,15 +2648,34 @@ class VmdSizingForm3 ( wx.Frame ):
 			# プログレス非表示
 			self.m_blend_Gauge.SetValue(0)
 
-			# 元に戻す
-			sys.stdout = self.m_txtConsole
+			event.Skip()
+			return
+
+		target_morphs = []
+		for idx in self.m_blend_listEye.GetSelections():
+			target_morphs.append(self.m_blend_listEye.GetString(idx))
+		for idx in self.m_blend_listEyebrow.GetSelections():
+			target_morphs.append(self.m_blend_listEyebrow.GetString(idx))
+		for idx in self.m_blend_listLip.GetSelections():
+			target_morphs.append(self.m_blend_listLip.GetString(idx))
+		for idx in self.m_blend_listOther.GetSelections():
+			target_morphs.append(self.m_blend_listOther.GetString(idx))
+
+		print("target_morphs: %s" % target_morphs)
+
+		if len(target_morphs) < 2 or len(target_morphs) > 10:
+			print("組み合わせる対象のモーフは2～10個の範囲内で選んで下さい。")
+
+			self.EnableInput()
+			# プログレス非表示
+			self.m_blend_Gauge.SetValue(0)
 
 			event.Skip()
 			return
 
 		if not self.blend_worker:
 			# スレッド実行
-			self.blend_worker = BlendWorkerThread(self)
+			self.blend_worker = BlendWorkerThread(self, target_morphs)
 			self.blend_worker.start()
 			self.blend_worker.stop_event.set()
 		else:
@@ -2502,9 +2692,6 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.EnableInput()
 		# プログレス非表示
 		self.m_blend_Gauge.SetValue(0)
-
-		# コンソールを元に戻す
-		sys.stdout = self.m_txtConsole		
 		
 	def ShowTraceModel(self, event):
 		if wrapperutils.is_valid_file(self.m_fileVmd.GetPath(), "調整対象VMDファイル", ".vmd", False) == False:
@@ -2716,6 +2903,7 @@ CSV_EVT_RESULT_ID = wx.NewId()
 VMD_EVT_RESULT_ID = wx.NewId()
 SLICE_EVT_RESULT_ID = wx.NewId()
 BLEND_EVT_RESULT_ID = wx.NewId()
+SMOOTH_EVT_RESULT_ID = wx.NewId()
 
 def EVT_RESULT(win, func):
 	"""Define Result Event."""
@@ -2737,12 +2925,23 @@ def SLICE_EVT_RESULT(win, func):
 	"""Define Result Event."""
 	win.Connect(-1, -1, SLICE_EVT_RESULT_ID, func)
 
+def SMOOTH_EVT_RESULT(win, func):
+	"""Define Result Event."""
+	win.Connect(-1, -1, SMOOTH_EVT_RESULT_ID, func)
+
 class ResultEvent(wx.PyEvent):
 	"""Simple event to carry arbitrary result data."""
 	def __init__(self, data):
 		"""Init Result Event."""
 		wx.PyEvent.__init__(self)
 		self.SetEventType(EVT_RESULT_ID)
+
+class SmoothResultEvent(wx.PyEvent):
+	"""Simple event to carry arbitrary result data."""
+	def __init__(self, data):
+		"""Init Result Event."""
+		wx.PyEvent.__init__(self)
+		self.SetEventType(SMOOTH_EVT_RESULT_ID)
 
 class CsvResultEvent(wx.PyEvent):
 	"""Simple event to carry arbitrary result data."""
@@ -2914,10 +3113,9 @@ class VmdWorkerThread(Thread):
 		self._want_abort = 1
 
 
-
 # Thread class that executes processing
 # http://nobunaga.hatenablog.jp/entry/2016/06/03/204450
-class SliceWorkerThread(Thread):
+class SmoothWorkerThread(Thread):
 	"""Worker Thread Class."""
 	def __init__(self, notify_window):
 		"""Init Worker Thread Class."""
@@ -2938,12 +3136,12 @@ class SliceWorkerThread(Thread):
 		# need to structure your processing so that you periodically
 		# peek at the abort variable
 
-		slice_frame_keys.main(self._notify_window.m_slice_fileVmd.GetPath(), self._notify_window.slice_frame_values)
+		convert_smooth.main(self._notify_window.m_smooth_fileVmd.GetPath())
 
 		# Here's where the result would be returned (this is an
 		# example fixed result of the number 10, but it could be
 		# any Python object)
-		wx.PostEvent(self._notify_window, SliceResultEvent(None))
+		wx.PostEvent(self._notify_window, SmoothResultEvent(None))
 
 	def abort(self):
 		"""abort worker thread."""
@@ -2955,7 +3153,7 @@ class SliceWorkerThread(Thread):
 # http://nobunaga.hatenablog.jp/entry/2016/06/03/204450
 class BlendWorkerThread(Thread):
 	"""Worker Thread Class."""
-	def __init__(self, notify_window):
+	def __init__(self, notify_window, target_morphs):
 		"""Init Worker Thread Class."""
 		Thread.__init__(self)
 		self._notify_window = notify_window
@@ -2963,6 +3161,7 @@ class BlendWorkerThread(Thread):
 		self.stop_event = Event()
 		# メイン終了時にもスレッド終了する
 		self.daemon = True
+		self.target_morphs = target_morphs
 
 	def stop(self):
 		self.stop_event.set()
@@ -2978,8 +3177,8 @@ class BlendWorkerThread(Thread):
 			self._notify_window.m_blend_filePmx.GetPath(), \
 			self._notify_window.m_blend_spinMin.GetValue(), \
 			self._notify_window.m_blend_spinMax.GetValue(), \
-			self._notify_window.m_blend_spinInc.GetValue() \
-			# self._notify_window.m_blend_comboPanel.GetValue()
+			self._notify_window.m_blend_spinInc.GetValue(), \
+			self.target_morphs
 		)
 
 		# Here's where the result would be returned (this is an
@@ -3041,6 +3240,11 @@ class MyFileDropTarget(wx.FileDropTarget):
 
 			if self.target_ctrl == self.window.m_camera_fileOrgPmx:
 				self.window.camera_pmx_data = None
+				
+			if self.target_ctrl == self.window.m_blend_filePmx:
+				self.window.blend_pmx_data = None
+				# ブレンドだけは読み込み
+				self.window.LoadOneFile(wx.EVT_FILEPICKER_CHANGED, self.target_ctrl, self.label_ctrl, self.ext)
 				
 			# # 出力ファイル以外はデータ読み込み
 			# if self.target_ctrl != self.window.m_fileOutputVmd:

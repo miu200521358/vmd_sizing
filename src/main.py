@@ -26,7 +26,7 @@ level = {0:logging.ERROR,
 
 def main(motion, trace_model, replace_model, output_vmd_path, \
     is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, vmd_choice_values, rep_choice_values, rep_rate_values, \
-    camera_motion, camera_vmd_path, camera_pmx, output_camera_vmd_path, camera_y_offset):   
+    camera_motion, camera_vmd_path, camera_pmx, output_camera_vmd_path, camera_y_offset, test_param):   
     # print("モーション: %s" % motion.path)
     # if camera_motion:
     #     print("カメラモーション: %s" % camera_motion.path)
@@ -44,7 +44,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, \
     is_success = sub_move.exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames) and is_success
 
     # スタンス補正処理
-    is_success = sub_arm_stance.exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger) and is_success
+    is_success = sub_arm_stance.exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger, test_param) and is_success
 
     # 腕IK処理
     is_success = sub_arm_ik.exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, org_motion_frames, error_file_logger) and is_success
@@ -128,6 +128,8 @@ if __name__=="__main__":
     parser.add_argument('--camera_vmd_path', dest='camera_vmd_path', help='camera_vmd_path', type=str)
     parser.add_argument('--camera_pmx_path', dest='camera_pmx_path', help='camera_pmx_path', type=str)
     parser.add_argument('--camera_y_offset', dest='camera_y_offset', help='camera_y_offset', type=float)
+    parser.add_argument('--output_path', dest='output_path', help='output_path', default="", type=str)
+    parser.add_argument('--test_param', dest='test_param', help='test_param', default="", type=str)
     parser.add_argument('--verbose', dest='verbose', help='verbose', type=int)
     args = parser.parse_args()
 
@@ -146,8 +148,11 @@ if __name__=="__main__":
         replace_model = PmxReader().read_pmx_file(args.replace_pmx_path)
 
         # 出力ファイルパス
-        bone_filename, _ = os.path.splitext(os.path.basename(args.replace_pmx_path))
-        output_vmd_path = os.path.join(str(Path(args.vmd_path).resolve().parents[0]), os.path.basename(args.vmd_path).replace(".vmd", "_{1}_{0:%Y%m%d_%H%M%S}.vmd".format(datetime.now(), bone_filename)))
+        if not args.output_path:
+            bone_filename, _ = os.path.splitext(os.path.basename(args.replace_pmx_path))
+            output_vmd_path = os.path.join(str(Path(args.vmd_path).resolve().parents[0]), os.path.basename(args.vmd_path).replace(".vmd", "_{1}_{0:%Y%m%d_%H%M%S}.vmd".format(datetime.now(), bone_filename)))
+        else:
+            output_vmd_path = args.output_path
 
         # 接触回避処理
         is_avoidance = True if args.avoidance == 1 else False
@@ -174,11 +179,10 @@ if __name__=="__main__":
         if args.camera_pmx_path:
             camera_pmx = VmdReader().read_vmd_file(args.camera_pmx_path)
 
-
         main(motion, trace_model, replace_model, output_vmd_path, \
             is_avoidance, is_avoidance_finger, is_hand_ik, args.hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, args.hand_floor_distance, args.leg_floor_distance, \
             is_finger_ik, args.finger_distance, args.vmd_choice_values.split(","), args.rep_choice_values.split(","), args.rep_rate_values.split(","), \
-            camera_motion, args.camera_vmd_path, camera_pmx, output_camera_vmd_path, args.camera_y_offset)
+            camera_motion, args.camera_vmd_path, camera_pmx, output_camera_vmd_path, args.camera_y_offset, args.test_param.split(","))
 
     except SizingException as e:
         print("■■■■■■■■■■■■■■■■■")

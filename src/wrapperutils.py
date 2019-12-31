@@ -409,7 +409,7 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
             # 読み込んだモーションデータそのものを弄らないよう、コピーした結果を渡す
             is_success = main.main(copy.deepcopy(motion), org_pmx, rep_pmx, output_vmd_path, \
                 is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger, finger_distance, vmd_choice_values, rep_choice_values, rep_rate_values, \
-                copy.deepcopy(camera_motion), camera_vmd_path, camera_pmx_data, output_camera_vmd_path, camera_y_offset)
+                copy.deepcopy(camera_motion), camera_vmd_path, camera_pmx_data, output_camera_vmd_path, camera_y_offset, "")
 
             logger.debug("is_shortage: %s, is_success: %s", is_shortage, is_success)
 

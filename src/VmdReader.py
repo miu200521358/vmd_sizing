@@ -161,6 +161,8 @@ class VmdReader():
         # 1F分のモーフ情報
         for n in range(motion.morph_cnt):
             morph = VmdMorphFrame()
+            morph.key = True
+            morph.read = True
             
             # ボーン ----------------------
             # ボーン名

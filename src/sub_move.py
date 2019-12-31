@@ -280,32 +280,32 @@ def calc_ik_offset(trace_model, replace_model, xz_ratio):
         org_left_leg_pos = trace_model.bones["左足"].position
         rep_left_leg_pos = replace_model.bones["左足"].position
         left_leg_ik_offset = QVector3D(((org_left_leg_ik_pos.x() - org_left_leg_pos.x()) * leg_ratio) - (rep_left_leg_ik_pos.x() - rep_left_leg_pos.x()), 0, (org_left_leg_ik_pos.z() * leg_ratio) - rep_left_leg_ik_pos.z())
-        logger.info("left_leg_ik_offset before: %s", left_leg_ik_offset)
-        logger.info("rep_left_leg_ik_pos: %s", rep_left_leg_ik_pos)
-        logger.info("rep_left_leg_ik_pos*IK: %s", rep_left_leg_ik_pos * IK_RATE)
+        logger.debug("left_leg_ik_offset before: %s", left_leg_ik_offset)
+        logger.debug("rep_left_leg_ik_pos: %s", rep_left_leg_ik_pos)
+        logger.debug("rep_left_leg_ik_pos*IK: %s", rep_left_leg_ik_pos * IK_RATE)
         if abs(left_leg_ik_offset.x()) > abs(rep_left_leg_ik_pos.x() * IK_RATE):
             re_x = rep_left_leg_ik_pos.x() * IK_RATE
             left_leg_ik_offset.setX( re_x * ( 1 if utils.sign(left_leg_ik_offset.x()) == utils.sign(rep_left_leg_ik_pos.x()) else -1 ) )
         # if abs(left_leg_ik_offset.z()) > abs(rep_left_leg_ik_pos.z() * IK_RATE):
         #     re_z = rep_left_leg_ik_pos.z() * IK_RATE
         #     left_leg_ik_offset.setZ( re_z * ( 1 if utils.sign(left_leg_ik_offset.z()) == utils.sign(rep_left_leg_ik_pos.z()) else -1 ) )
-        logger.info("left_leg_ik_offset after: %s", left_leg_ik_offset)
+        logger.debug("left_leg_ik_offset after: %s", left_leg_ik_offset)
 
         org_right_leg_ik_pos = trace_model.bones["右足ＩＫ"].position
         rep_right_leg_ik_pos = replace_model.bones["右足ＩＫ"].position
         org_right_leg_pos = trace_model.bones["右足"].position
         rep_right_leg_pos = replace_model.bones["右足"].position
         right_leg_ik_offset = QVector3D(((org_right_leg_ik_pos.x() - org_right_leg_pos.x()) * leg_ratio) - (rep_right_leg_ik_pos.x() - rep_right_leg_pos.x()), 0, (org_right_leg_ik_pos.z() * leg_ratio) - rep_right_leg_ik_pos.z())
-        logger.info("right_leg_ik_offset before: %s", right_leg_ik_offset)
-        logger.info("rep_right_leg_ik_pos: %s", rep_right_leg_ik_pos)
-        logger.info("rep_right_leg_ik_pos*IK: %s", rep_right_leg_ik_pos * IK_RATE)
+        logger.debug("right_leg_ik_offset before: %s", right_leg_ik_offset)
+        logger.debug("rep_right_leg_ik_pos: %s", rep_right_leg_ik_pos)
+        logger.debug("rep_right_leg_ik_pos*IK: %s", rep_right_leg_ik_pos * IK_RATE)
         if abs(right_leg_ik_offset.x()) > abs(rep_right_leg_ik_pos.x() * IK_RATE):
             re_x = rep_right_leg_ik_pos.x() * IK_RATE
             right_leg_ik_offset.setX( re_x * ( 1 if utils.sign(right_leg_ik_offset.x()) == utils.sign(rep_right_leg_ik_pos.x()) else -1 ) )
         # if abs(right_leg_ik_offset.z()) > abs(rep_right_leg_ik_pos.z() * IK_RATE):
         #     re_z = rep_right_leg_ik_pos.z() * IK_RATE
         #     right_leg_ik_offset.setZ( re_z * ( 1 if utils.sign(right_leg_ik_offset.z()) == utils.sign(rep_right_leg_ik_pos.z()) else -1 ) )
-        logger.info("right_leg_ik_offset after: %s", right_leg_ik_offset)
+        logger.debug("right_leg_ik_offset after: %s", right_leg_ik_offset)
 
         print("左足IKオフセット: x: %s, z: %s" % ( left_leg_ik_offset.x(), left_leg_ik_offset.z()))
         print("右足IKオフセット: x: %s, z: %s" % ( right_leg_ik_offset.x(), right_leg_ik_offset.z()))
