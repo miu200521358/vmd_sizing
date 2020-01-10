@@ -81,10 +81,10 @@
             "stopOnEntry": false,
             "args": [
                 // "--vmd_path", "E:/MMD/MikuMikuDance_v926x64/Work/201805_auto/misozi/kenbu/kenbu3_20190429_205936/kenbu3_json_20190429_205936_idx01/あにまさ式ミクボーン_20190429_210136_h0.0_z1.0_s1_p0.5_r3.0_reduce.vmd",
-                "--vmd_path", "E:/MMD/MikuMikuDance_v926x64/Work/202001_sizing/smooth_vmd/円滑化テスト07_腕線形.vmd",
-                // "--vmd_path", "E:/MMD/MikuMikuDance_v926x64/Work/202001_sizing/smooth_vmd/円滑化テスト09_明かり.vmd",
-                "--pos_repeat", "2",
-                "--rot_repeat", "2",
+                // "--vmd_path", "E:/MMD/MikuMikuDance_v926x64/Work/202001_sizing/smooth_vmd/円滑化テスト07_腕線形.vmd",
+                "--vmd_path", "E:/MMD/MikuMikuDance_v926x64/Work/202001_sizing/smooth_vmd/円滑化テスト09_明かり.vmd",
+                "--pos_repeat", "5",
+                "--rot_repeat", "5",
             ]
         },
         {
