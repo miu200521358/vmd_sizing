@@ -748,8 +748,35 @@ def calc_interpolate_bezier_by_t(x1v, y1v, x2v, y2v, start, end, t):
 
     return x3, x, y
 
-# 指定された3点を通るベジェ曲線を返す
-def calc_smooth_bezier(x1, y1, x2, y2, x3, y3):
+# 回転用ベジェ曲線 - 指定された3点を通るベジェ曲線を返す
+def calc_smooth_bezier_rot(x1, y1, x2, y2, x3, y3):
+    t = (x2 - x1) / (x3 - x1)
+
+    if (x1 >= x2 or x1 >= x3 or x2 >= x3) or t <= 0 or t >= 1:
+        # 正常に計算できない場合、計算対象外
+        return False, False, \
+            [QVector2D(0, 0), QVector2D(20, 20), QVector2D(107, 107), QVector2D(COMPLEMENT_MMD_MAX, COMPLEMENT_MMD_MAX)]
+
+    if y1 == y2 == y3:
+        # 等間隔に変化する場合、線形補間(補間曲線は設定する)
+        return True, True, \
+            [QVector2D(0, 0), QVector2D(20, 20), QVector2D(107, 107), QVector2D(COMPLEMENT_MMD_MAX, COMPLEMENT_MMD_MAX)]
+
+    # 線形移動量
+    cx1 = x1 + (x2 - x1) / 2
+    cy1 = y1 + (y2 - y1) / 2
+
+    cx2 = x2 + (x3 - x2) / 2
+    cy2 = y2 + (y3 - y2) / 2
+
+    # 中間フレームで繋いだ開始フレームと終端フレームの三次ベジェ曲線
+    bz = calc_cubic_bezier_4point(x1, y1, cx1, cy1, cx2, cy2, x3, y3, (x2 - x1) / (x3 - x1))
+
+    return True, is_fit_bezier_mmd(bz), bz
+
+
+# 移動用ベジェ曲線 - 指定された3点を通るベジェ曲線を返す
+def calc_smooth_bezier_pos(x1, y1, x2, y2, x3, y3):
     t = (x2 - x1) / (x3 - x1)
 
     if (x1 >= x2 or x1 >= x3 or x2 >= x3) or t <= 0 or t >= 1:
@@ -783,14 +810,6 @@ def calc_smooth_bezier(x1, y1, x2, y2, x3, y3):
     bz = calc_cubic_bezier_4point(x1, y1, cx1, cy1, cx2, cy2, x3, y3, (x2 - x1) / (x3 - x1))
 
     return True, is_fit_bezier_mmd(bz), bz
-
-    # # # 始点と終点のベジェ曲線
-    # # bz = calc_bezier_by_cross(x1, y1, cx1, cy1, x2, y2, cx2, cy2, x3, y3)
-
-    # # 中間点で分割する
-    # t, x, y, bresult, aresult, before_bz, after_bz = calc_bezier_split(bz[1].x(), bz[1].y(), bz[2].x(), bz[2].y(), x1, x3, x2, "")
-
-    # return True, bresult and aresult, [before_bz[0], before_bz[1], after_bz[2], after_bz[3]]
 
 # http://apoorvaj.io/cubic-bezier-through-four-points.html
 def calc_cubic_bezier_4point(x1, y1, cx1, cy1, cx2, cy2, x3, y3, alpha):

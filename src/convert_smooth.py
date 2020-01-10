@@ -65,9 +65,6 @@ def main(vmd_path, pos_repeat, rot_repeat):
                     next_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, now_bf.frame + 1, is_only=False, is_exist=True)
                     if not next_bf: break
 
-                    # now_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, int(prev_bf.frame + (next_bf.frame - prev_bf.frame) / 2), is_only=False, is_exist=(cnt == 0))
-                    # if not now_bf: break
-
                     while now_bf.frame <= last_frameno:
                         if cnt == 0:
                             # 一回目は根性打ち
@@ -101,9 +98,6 @@ def main(vmd_path, pos_repeat, rot_repeat):
                                 # 次の次を見てた場合は終了
                                 break
 
-                        # now_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, int((prev_bf.frame + next_bf.frame) / 2), is_only=False, is_exist=False)
-                        # if not now_bf: break
-
                     print("ボーン: %s %s回目" % (bone_name, (cnt + 1)))
 
                 for bf in frames_by_bone.values():
@@ -121,6 +115,8 @@ def main(vmd_path, pos_repeat, rot_repeat):
             writer.write_vmd_file(smooth_vmd_fpath, "Smooth Vmd", smoothed_frames, morph_frames, [], [], [], motion.showiks)
 
             print("スムージングVMD出力成功: %s" % smooth_vmd_fpath)
+        else:
+            print("スムージング対象となるキーがないため、終了します。")
 
         if len(motion.cameras) > 0:
             smooth_vmd_fpath = re.sub(r'\.vmd$', "_camera_{0:%Y%m%d_%H%M%S}.csv".format(datetime.now()), vmd_path)
@@ -197,17 +193,21 @@ def smooth_bf(frames_by_bone, bone_name, prev_bf, now_bf, next_bf, last_frameno)
 
 def join_complement_bf(frames_by_bone, bone_name, prev_bf, now_bf, next_bf):
 
-    is_rot_result = smooth_bezier(frames_by_bone, prev_bf, now_bf, next_bf, get_smooth_bezier_y_rot, utils.R_x1_idxs, utils.R_y1_idxs, utils.R_x2_idxs, utils.R_y2_idxs)
-    is_pos_x_result = smooth_bezier(frames_by_bone, prev_bf, now_bf, next_bf, get_smooth_bezier_y_pos_x, utils.MX_x1_idxs, utils.MX_y1_idxs, utils.MX_x2_idxs, utils.MX_y2_idxs)
-    is_pos_y_result = smooth_bezier(frames_by_bone, prev_bf, now_bf, next_bf, get_smooth_bezier_y_pos_y, utils.MY_x1_idxs, utils.MY_y1_idxs, utils.MY_x2_idxs, utils.MY_y2_idxs)
-    is_pos_z_result = smooth_bezier(frames_by_bone, prev_bf, now_bf, next_bf, get_smooth_bezier_y_pos_z, utils.MZ_x1_idxs, utils.MZ_y1_idxs, utils.MZ_x2_idxs, utils.MZ_y2_idxs)
+    is_rot_result = smooth_bezier(frames_by_bone, prev_bf, now_bf, next_bf, get_smooth_bezier_y_rot, \
+        utils.R_x1_idxs, utils.R_y1_idxs, utils.R_x2_idxs, utils.R_y2_idxs, utils.calc_smooth_bezier_rot)
+    is_pos_x_result = smooth_bezier(frames_by_bone, prev_bf, now_bf, next_bf, get_smooth_bezier_y_pos_x, \
+        utils.MX_x1_idxs, utils.MX_y1_idxs, utils.MX_x2_idxs, utils.MX_y2_idxs, utils.calc_smooth_bezier_pos)
+    is_pos_y_result = smooth_bezier(frames_by_bone, prev_bf, now_bf, next_bf, get_smooth_bezier_y_pos_y, \
+        utils.MY_x1_idxs, utils.MY_y1_idxs, utils.MY_x2_idxs, utils.MY_y2_idxs, utils.calc_smooth_bezier_pos)
+    is_pos_z_result = smooth_bezier(frames_by_bone, prev_bf, now_bf, next_bf, get_smooth_bezier_y_pos_z, \
+        utils.MZ_x1_idxs, utils.MZ_y1_idxs, utils.MZ_x2_idxs, utils.MZ_y2_idxs, utils.calc_smooth_bezier_pos)
 
     result = is_rot_result == is_pos_x_result == is_pos_y_result == is_pos_z_result
 
     return result
 
 # 滑らかに繋ぐベジェ曲線
-def smooth_bezier(frames_by_bone, prev_bf, now_bf, next_bf, get_smooth_bezier_y, x1_idxs, y1_idxs, x2_idxs, y2_idxs):
+def smooth_bezier(frames_by_bone, prev_bf, now_bf, next_bf, get_smooth_bezier_y, x1_idxs, y1_idxs, x2_idxs, y2_idxs, calc_smooth_bezier):
     if not (prev_bf.frame < now_bf.frame < next_bf.frame):
         # フレーム範囲外はNG
         return False
@@ -222,7 +222,7 @@ def smooth_bezier(frames_by_bone, prev_bf, now_bf, next_bf, get_smooth_bezier_y,
     y2 = get_smooth_bezier_y(prev_bf, now_bf)
     y3 = get_smooth_bezier_y(prev_bf, next_bf)
 
-    is_smooth, result, bz = utils.calc_smooth_bezier(x1, y1, x2, y2, x3, y3)
+    is_smooth, result, bz = calc_smooth_bezier(x1, y1, x2, y2, x3, y3)
 
     if not is_smooth:
         # ベジェ曲線計算対象外の場合、とりあえずTRUEで終了
@@ -246,17 +246,32 @@ def smooth_bezier(frames_by_bone, prev_bf, now_bf, next_bf, get_smooth_bezier_y,
     return False
 
 def get_smooth_bezier_y_rot(before_bf, after_bf):
-    # 現在の回転と角度の中間地点との差(離れているほど値を大きくする)
-    return 1 - abs(QQuaternion.dotProduct(before_bf.rotation, after_bf.rotation))
+    be = before_bf.rotation.toEulerAngles().normalized()
+    ae = after_bf.rotation.toEulerAngles().normalized()
+
+    xdiff = ae.x() - be.x()
+    ydiff = ae.y() - be.y()
+    zdiff = ae.z() - be.z()
+
+    if max(abs(xdiff), abs(ydiff), abs(zdiff)) == abs(xdiff):
+        return xdiff
+
+    if max(abs(xdiff), abs(ydiff), abs(zdiff)) == abs(ydiff):
+        return ydiff
+
+    if max(abs(xdiff), abs(ydiff), abs(zdiff)) == abs(zdiff):
+        return zdiff
+
+    return 0
 
 def get_smooth_bezier_y_pos_x(before_bf, after_bf):
-    return after_bf.position.x() # - before_bf.position.x()
+    return after_bf.position.x()
 
 def get_smooth_bezier_y_pos_y(before_bf, after_bf):
-    return after_bf.position.y() # - before_bf.position.y()
+    return after_bf.position.y()
 
 def get_smooth_bezier_y_pos_z(before_bf, after_bf):
-    return after_bf.position.z() # - before_bf.position.z()
+    return after_bf.position.z()
 
 # 滑らかにした移動
 def get_smooth_middle_pos(prev_bf, now_bf, next_bf, target_bf):
@@ -295,7 +310,7 @@ def get_smooth_middle_pos(prev_bf, now_bf, next_bf, target_bf):
         out.setZ(w.z())
 
     # 円周上の座標とデフォルト値の内積（差分）
-    diff = abs(QVector3D.dotProduct(target_bf.position.normalized(), out.normalized()))
+    diff = 1 - abs(QVector3D.dotProduct(target_bf.position.normalized(), out.normalized()))
 
     # 計算結果と実際の変化量を返す
     return out, diff
@@ -305,13 +320,13 @@ def get_smooth_middle_rot(prev_bf, now_bf, next_bf, target_bf):
     # # 回転を取り直す
     # default_rot = calc_bone_by_complement_rot(prev_bf, next_bf, now_bf)
 
-    t = (target_bf.frame - prev_bf.frame) / ( next_bf.frame - prev_bf.frame)
+    t = (target_bf.frame - prev_bf.frame) / ( now_bf.frame - prev_bf.frame)
 
     # 角度をeulerに変換した際の中間値
     prev_euler = prev_bf.rotation.toEulerAngles()
-    next_euler = next_bf.rotation.toEulerAngles()
+    now_euler = now_bf.rotation.toEulerAngles()
     
-    test_euler = prev_euler + ((next_euler - prev_euler) * t)
+    test_euler = prev_euler + ((now_euler - prev_euler) * t)
 
     test_qq = QQuaternion.fromEulerAngles(test_euler)
 

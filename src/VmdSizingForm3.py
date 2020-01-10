@@ -20,6 +20,7 @@ import copy
 from pathlib import Path
 from threading import Thread, Event
 import traceback
+import winsound
 
 import wrapperutils, convert_vmd, blend_pmx, convert_csv, convert_smooth, form_bezier, utils
 
@@ -606,14 +607,14 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_smooth_fileVmd.GetPickerCtrl().SetLabel("開く")
 		bSizerSmooth4.Add( self.m_smooth_fileVmd, 0, wx.ALL|wx.EXPAND, 5 )
 
-		self.m_smooth_staticText2 = wx.StaticText( self.m_panelSmooth, wx.ID_ANY, u"PMXファイル", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_smooth_staticText2.Wrap( -1 )
+		# self.m_smooth_staticText2 = wx.StaticText( self.m_panelSmooth, wx.ID_ANY, u"PMXファイル", wx.DefaultPosition, wx.DefaultSize, 0 )
+		# self.m_smooth_staticText2.Wrap( -1 )
 
-		bSizerSmooth4.Add( self.m_smooth_staticText2, 0, wx.ALL, 5 )
+		# bSizerSmooth4.Add( self.m_smooth_staticText2, 0, wx.ALL, 5 )
 
-		self.m_smooth_filePmx = wx.FilePickerCtrl( self.m_panelSmooth, wx.ID_ANY, wx.EmptyString, u"PMXファイルを選択してください", u"PMXファイル (*.pmx)|*.pmx|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.Size( -1,-1 ), wx.FLP_DEFAULT_STYLE )
-		self.m_smooth_filePmx.GetPickerCtrl().SetLabel("開く")
-		bSizerSmooth4.Add( self.m_smooth_filePmx, 0, wx.ALL|wx.EXPAND, 5 )
+		# self.m_smooth_filePmx = wx.FilePickerCtrl( self.m_panelSmooth, wx.ID_ANY, wx.EmptyString, u"PMXファイルを選択してください", u"PMXファイル (*.pmx)|*.pmx|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.Size( -1,-1 ), wx.FLP_DEFAULT_STYLE )
+		# self.m_smooth_filePmx.GetPickerCtrl().SetLabel("開く")
+		# bSizerSmooth4.Add( self.m_smooth_filePmx, 0, wx.ALL|wx.EXPAND, 5 )
 
 
 		bSizerSmooth6 = wx.BoxSizer( wx.HORIZONTAL )
@@ -1209,7 +1210,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_vmd_fileCsvCamera.SetDropTarget(MyFileDropTarget(self, self.m_vmd_fileCsvCamera, self.m_vmd_camera_staticText1, ".csv"))
 		self.m_blend_filePmx.SetDropTarget(MyFileDropTarget(self, self.m_blend_filePmx, self.m_blend_staticText1, ".pmx"))
 		self.m_smooth_fileVmd.SetDropTarget(MyFileDropTarget(self, self.m_smooth_fileVmd, self.m_smooth_staticText1, ".vmd"))
-		self.m_smooth_filePmx.SetDropTarget(MyFileDropTarget(self, self.m_smooth_filePmx, self.m_smooth_staticText2, ".pmx"))
+		# self.m_smooth_filePmx.SetDropTarget(MyFileDropTarget(self, self.m_smooth_filePmx, self.m_smooth_staticText2, ".pmx"))
 
 		# ファイルパス変更時の処理
 		self.m_fileVmd.Bind( wx.EVT_FILEPICKER_CHANGED, lambda event: self.OnChangeFile(event, self.m_fileVmd, self.m_staticText9, ".vmd"))
@@ -1379,17 +1380,17 @@ class VmdSizingForm3 ( wx.Frame ):
 			event.Skip()
 			return
 
-		if wrapperutils.is_valid_file(self.m_smooth_filePmx.GetPath(), "PMXファイル", ".pmx", True) == False:
+		# if wrapperutils.is_valid_file(self.m_smooth_filePmx.GetPath(), "PMXファイル", ".pmx", True) == False:
 
-			self.EnableInput()
-			# プログレス非表示
-			self.m_smooth_Gauge.SetValue(0)
+		# 	self.EnableInput()
+		# 	# プログレス非表示
+		# 	self.m_smooth_Gauge.SetValue(0)
 
-			# 元に戻す
-			sys.stdout = self.m_txtConsole
+		# 	# 元に戻す
+		# 	sys.stdout = self.m_txtConsole
 
-			event.Skip()
-			return
+		# 	event.Skip()
+		# 	return
 
 		if not self.smooth_worker:
 			# スレッド実行
@@ -2464,7 +2465,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		# スムージング
 		self.m_smooth_btnExec.Disable()
-		self.m_smooth_filePmx.Disable()
+		# self.m_smooth_filePmx.Disable()
 		self.m_smooth_fileVmd.Disable()
 		self.m_smooth_spinMovCount.Disable()
 		self.m_smooth_spinRotCount.Disable()
@@ -2517,7 +2518,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		# スムージング
 		self.m_smooth_btnExec.Enable()
-		self.m_smooth_filePmx.Enable()
+		# self.m_smooth_filePmx.Enable()
 		self.m_smooth_fileVmd.Enable()
 		self.m_smooth_spinMovCount.Enable()
 		self.m_smooth_spinRotCount.Enable()
@@ -2616,6 +2617,8 @@ class VmdSizingForm3 ( wx.Frame ):
 
 	# スレッド実行結果
 	def OnResult(self, event):
+		# 終了音を鳴らす
+		winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
 
 		# スレッド削除
 		self.worker = None
@@ -3192,7 +3195,6 @@ class SmoothWorkerThread(Thread):
 		# peek at the abort variable
 
 		convert_smooth.main(self._notify_window.m_smooth_fileVmd.GetPath(), \
-			self._notify_window.m_smooth_filePmx.GetPath(), \
 			self._notify_window.m_smooth_spinMovCount.GetValue(), \
 			self._notify_window.m_smooth_spinRotCount.GetValue())
 
