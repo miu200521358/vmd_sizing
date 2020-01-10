@@ -54,10 +54,10 @@ def main(vmd_path, pmx_path, pos_repeat, rot_repeat):
                         # smooth_pos_rot(model, frames_by_bone, bone_name)
                         smooth_filter(model, bone_name, frames_by_bone, pos_repeat > cnt, rot_repeat > cnt, {"freq": 30, "mincutoff": 0.1, "beta": 0.5, "dcutoff": 0.8})
 
-                    # フィルターをかけたら一旦キークリア
-                    for bf in frames_by_bone.values():
-                        if start_frameno < bf.frame < last_frameno:
-                            bf.key = False
+                    # # フィルターをかけたら一旦キークリア
+                    # for bf in frames_by_bone.values():
+                    #     if start_frameno < bf.frame < last_frameno:
+                    #         bf.key = False
                     
                     prev_bf = calc_bone_by_complement_by_bone(model, frames_by_bone, bone_name, start_frameno, is_only=True, is_exist=True)
                     if not prev_bf: break
@@ -77,9 +77,17 @@ def main(vmd_path, pmx_path, pos_repeat, rot_repeat):
                             split_bf(model, frames_by_bone, bone_name, prev_bf, now_bf, next_bf)
                         else:
                             # 二回目以降はベジェ曲線で繋ぐ
-                            smooth_bf(model, frames_by_bone, bone_name, prev_bf, now_bf, next_bf)
+                            next_bf = smooth_bf(model, frames_by_bone, bone_name, prev_bf, now_bf, next_bf, last_frameno)
+                        
+                        if not now_bf or not next_bf: break
 
-                        prev_bf = calc_bone_by_complement_by_bone(model, frames_by_bone, bone_name, now_bf.frame, is_only=True, is_exist=True)
+                        if cnt == 0:
+                            # 一回目はnow～次の区間を埋める
+                            prev_bf = calc_bone_by_complement_by_bone(model, frames_by_bone, bone_name, now_bf.frame, is_only=True, is_exist=True)
+                        else:
+                            # 二回目以降はnextまで補間曲線が設定できたので次
+                            prev_bf = calc_bone_by_complement_by_bone(model, frames_by_bone, bone_name, next_bf.frame, is_only=True, is_exist=True)
+
                         if not prev_bf: break
 
                         now_bf = calc_bone_by_complement_by_bone(model, frames_by_bone, bone_name, prev_bf.frame + 1, is_only=False, is_exist=True)
@@ -102,8 +110,8 @@ def main(vmd_path, pmx_path, pos_repeat, rot_repeat):
                     print("ボーン: %s %s回目" % (bone_name, (cnt + 1)))
 
                 for bf in frames_by_bone.values():
-                    # if bf.key == True:
-                    smoothed_frames.append(bf)
+                    if bf.key == True:
+                        smoothed_frames.append(bf)
 
             morph_frames = []
             for k,v in motion.morphs.items():
@@ -150,74 +158,47 @@ def split_bf(model, frames_by_bone, bone_name, prev_bf, now_bf, next_bf):
         target_bf.key = True
         frames_by_bone[target_bf.frame] = target_bf
 
-    # for f in range(now_bf.frame + 1, next_bf.frame):
-    #     target_bf = VmdBoneFrame()
-    #     target_bf.frame = f
-    #     target_bf.name = bone_name.encode('cp932').decode('shift_jis').encode('shift_jis')
-    #     target_bf.format_name = bone_name
 
-    #     # 現在の補間曲線ではなく、なめらかに繋いだ場合の角度を設定する
-    #     target_rot, rt = get_smooth_middle_rot(prev_bf, next_bf, now_bf, target_bf)
-    #     target_bf.rotation = target_rot
-        
-    #     # 現在の補間曲線ではなく、なめらかに繋いだ場合の位置を設定する
-    #     target_pos, mt = get_smooth_middle_pos(prev_bf, next_bf, now_bf, target_bf)
-    #     target_bf.position = target_pos
+def smooth_bf(model, frames_by_bone, bone_name, prev_bf, now_bf, next_bf, last_frameno):
 
-    #     target_bf.key = True
-    #     frames_by_bone[target_bf.frame] = target_bf
+    is_join = True
+    successed_next_bf = None
 
-
-def smooth_bf(model, frames_by_bone, bone_name, prev_bf, now_bf, next_bf):
-
-    # 現在の補間曲線ではなく、なめらかに繋いだ場合の角度を設定する
-    now_rot, rt = get_smooth_middle_rot(prev_bf, now_bf, next_bf)
-    now_bf.rotation = now_rot
+    while is_join:
     
-    # 現在の補間曲線ではなく、なめらかに繋いだ場合の位置を設定する
-    now_pos, mt = get_smooth_middle_pos(prev_bf, now_bf, next_bf)
-    now_bf.position = now_pos
-
-    # ひとまず補間曲線で繋ぐ
-    is_split = join_complement_bf(model, frames_by_bone, bone_name, prev_bf, now_bf, next_bf, is_add)
+        # ひとまず補間曲線で繋ぐ
+        is_join = join_complement_bf(model, frames_by_bone, bone_name, prev_bf, now_bf, next_bf)
     
-    if not is_split:
-        # 分割できなかった場合、中を細分する
+        if is_join:
+            # 補間曲線が繋げた場合、次へ
+            successed_next_bf = copy.deepcopy(next_bf)
 
-        # 前半 ---------------
-        near_bf = VmdBoneFrame()
-        near_bf.frame = int((prev_bf.frame + now_bf.frame) / 2)
-        near_bf.name = bone_name.encode('cp932').decode('shift_jis').encode('shift_jis')
-        near_bf.format_name = bone_name
+            next_bf = calc_bone_by_complement_by_bone(model, frames_by_bone, bone_name, next_bf.frame + 2, is_only=False, is_exist=True)
+            if not next_bf:
+                # 次が見つからなければ、最後のnextを登録して終了
+                if successed_next_bf:
+                    successed_next_bf.key = True
+                    frames_by_bone[successed_next_bf.frame] = successed_next_bf
+                break
 
-        # # 現在の補間曲線ではなく、なめらかに繋いだ場合の角度を設定する
-        # near_rot, rt = get_smooth_middle_rot(prev_bf, near_bf, now_bf)
-        # near_bf.rotation = near_rot
-        
-        # # 現在の補間曲線ではなく、なめらかに繋いだ場合の位置を設定する
-        # near_pos, mt = get_smooth_middle_pos(prev_bf, near_bf, now_bf)
-        # near_bf.position = near_pos
+            now_bf = calc_bone_by_complement_by_bone(model, frames_by_bone, bone_name, int( prev_bf.frame + (next_bf.frame - prev_bf.frame) / 2), is_only=False, is_exist=True)
+            if not now_bf or (now_bf and now_bf.frame == last_frameno): break
+        else:
+            # 補間曲線が繋げなかった場合、終了
+            if successed_next_bf:
+                successed_next_bf.key = True
+                frames_by_bone[successed_next_bf.frame] = successed_next_bf
+            else:
+                # 一回も補間曲線が登録出来なかった場合、とりあえずnowを登録して次にいく
+                now_bf.key = True
+                frames_by_bone[now_bf.frame] = now_bf
+                successed_next_bf = now_bf
+            break
 
-        smooth_bf(model, frames_by_bone, bone_name, prev_bf, near_bf, now_bf, is_add)
-
-        # 後半 -----------
-        far_bf = VmdBoneFrame()
-        far_bf.frame = int((now_bf.frame + next_bf.frame) / 2)
-        far_bf.name = bone_name.encode('cp932').decode('shift_jis').encode('shift_jis')
-        far_bf.format_name = bone_name
-
-        # # 現在の補間曲線ではなく、なめらかに繋いだ場合の角度を設定する
-        # far_rot, rt = get_smooth_middle_rot(now_bf, far_bf, next_bf)
-        # far_bf.rotation = far_rot
-        
-        # # 現在の補間曲線ではなく、なめらかに繋いだ場合の位置を設定する
-        # far_pos, mt = get_smooth_middle_pos(now_bf, far_bf, next_bf)
-        # far_bf.position = far_pos
-
-        smooth_bf(model, frames_by_bone, bone_name, now_bf, far_bf, next_bf, is_add)
+    return successed_next_bf
 
 
-def join_complement_bf(model, frames_by_bone, bone_name, prev_bf, now_bf, next_bf, is_add):
+def join_complement_bf(model, frames_by_bone, bone_name, prev_bf, now_bf, next_bf):
 
     is_rot_result = True
     if model.bones[bone_name].getRotatable():
@@ -233,14 +214,14 @@ def join_complement_bf(model, frames_by_bone, bone_name, prev_bf, now_bf, next_b
 
     result = is_rot_result == is_pos_x_result == is_pos_y_result == is_pos_z_result
 
-    if not result and (prev_bf.frame >= now_bf.frame or now_bf.frame >= next_bf.frame):
-        # 隣接の場合、そのまま登録して終了
+    # if not result and (prev_bf.frame >= now_bf.frame or now_bf.frame >= next_bf.frame):
+    #     # 隣接の場合、そのまま登録して終了
 
-        frames_by_bone[prev_bf.frame] = prev_bf
-        frames_by_bone[now_bf.frame] = now_bf
-        frames_by_bone[next_bf.frame] = next_bf
+    #     frames_by_bone[prev_bf.frame] = prev_bf
+    #     frames_by_bone[now_bf.frame] = now_bf
+    #     frames_by_bone[next_bf.frame] = next_bf
 
-        return True
+    #     return True
 
     return result
 
@@ -260,13 +241,13 @@ def smooth_bezier(frames_by_bone, prev_bf, now_bf, next_bf, get_smooth_bezier_y,
     y2 = get_smooth_bezier_y(prev_bf, now_bf)
     y3 = get_smooth_bezier_y(prev_bf, next_bf)
 
-    is_smooth, bresult, aresult, before_bz, after_bz = utils.calc_smooth_bezier(x1, y1, x2, y2, x3, y3)
+    is_smooth, result, bz = utils.calc_smooth_bezier(x1, y1, x2, y2, x3, y3)
 
     if not is_smooth:
         # ベジェ曲線計算対象外の場合、とりあえずTRUEで終了
         return True
 
-    if bresult == aresult == True:
+    if result == True:
         # # オフセットを設けているので、その分調整する
         # utils.fit_bezier_split_mmd(bz)
 
@@ -282,38 +263,38 @@ def smooth_bezier(frames_by_bone, prev_bf, now_bf, next_bf, get_smooth_bezier_y,
         # prev_bf.complement[y2_idxs[0]] = prev_bf.complement[y2_idxs[1]] = \
         #     prev_bf.complement[y2_idxs[2]] = prev_bf.complement[y2_idxs[3]] = before_bz[2].y()
 
-        # 中間の始点を、中bfに設定する
-        now_bf.complement[x1_idxs[0]] = now_bf.complement[x1_idxs[1]] = \
-            now_bf.complement[x1_idxs[2]] = now_bf.complement[x1_idxs[3]] = before_bz[1].x()
-        now_bf.complement[y1_idxs[0]] = now_bf.complement[y1_idxs[1]] = \
-            now_bf.complement[y1_idxs[2]] = now_bf.complement[y1_idxs[3]] = before_bz[1].y()
+        # # 中間の始点を、中bfに設定する
+        # now_bf.complement[x1_idxs[0]] = now_bf.complement[x1_idxs[1]] = \
+        #     now_bf.complement[x1_idxs[2]] = now_bf.complement[x1_idxs[3]] = before_bz[1].x()
+        # now_bf.complement[y1_idxs[0]] = now_bf.complement[y1_idxs[1]] = \
+        #     now_bf.complement[y1_idxs[2]] = now_bf.complement[y1_idxs[3]] = before_bz[1].y()
 
-        # 中間の終点を、中bfに設定する
-        now_bf.complement[x2_idxs[0]] = now_bf.complement[x2_idxs[1]] = \
-            now_bf.complement[x2_idxs[2]] = now_bf.complement[x2_idxs[3]] = before_bz[2].x()
-        now_bf.complement[y2_idxs[0]] = now_bf.complement[y2_idxs[1]] = \
-            now_bf.complement[y2_idxs[2]] = now_bf.complement[y2_idxs[3]] = before_bz[2].y()
+        # # 中間の終点を、中bfに設定する
+        # now_bf.complement[x2_idxs[0]] = now_bf.complement[x2_idxs[1]] = \
+        #     now_bf.complement[x2_idxs[2]] = now_bf.complement[x2_idxs[3]] = before_bz[2].x()
+        # now_bf.complement[y2_idxs[0]] = now_bf.complement[y2_idxs[1]] = \
+        #     now_bf.complement[y2_idxs[2]] = now_bf.complement[y2_idxs[3]] = before_bz[2].y()
 
         # 中間の始点を、中bfに設定する
         next_bf.complement[x1_idxs[0]] = next_bf.complement[x1_idxs[1]] = \
-            next_bf.complement[x1_idxs[2]] = next_bf.complement[x1_idxs[3]] = after_bz[1].x()
+            next_bf.complement[x1_idxs[2]] = next_bf.complement[x1_idxs[3]] = bz[1].x()
         next_bf.complement[y1_idxs[0]] = next_bf.complement[y1_idxs[1]] = \
-            next_bf.complement[y1_idxs[2]] = next_bf.complement[y1_idxs[3]] = after_bz[1].y()
+            next_bf.complement[y1_idxs[2]] = next_bf.complement[y1_idxs[3]] = bz[1].y()
 
         # 中間の終点を、中bfに設定する
         next_bf.complement[x2_idxs[0]] = next_bf.complement[x2_idxs[1]] = \
-            next_bf.complement[x2_idxs[2]] = next_bf.complement[x2_idxs[3]] = after_bz[2].x()
+            next_bf.complement[x2_idxs[2]] = next_bf.complement[x2_idxs[3]] = bz[2].x()
         next_bf.complement[y2_idxs[0]] = next_bf.complement[y2_idxs[1]] = \
-            next_bf.complement[y2_idxs[2]] = next_bf.complement[y2_idxs[3]] = after_bz[2].y()
+            next_bf.complement[y2_idxs[2]] = next_bf.complement[y2_idxs[3]] = bz[2].y()
 
         # prev_bf.key = True
         # frames_by_bone[prev_bf.frame] = prev_bf
 
-        now_bf.key = True
-        frames_by_bone[now_bf.frame] = now_bf
+        # now_bf.key = True
+        # frames_by_bone[now_bf.frame] = now_bf
 
-        next_bf.key = True
-        frames_by_bone[next_bf.frame] = next_bf
+        # next_bf.key = True
+        # frames_by_bone[next_bf.frame] = next_bf
 
         return True
 
@@ -520,11 +501,12 @@ def smooth_filter(model, bone_name, frames_by_bone, is_pos_filter, is_rot_filter
     rzfilter = OneEuroFilter(**config)
     rwfilter = OneEuroFilter(**config)
 
-    for frameno in sorted(frames_by_bone.keys()):
+    for e, frameno in enumerate(sorted(frames_by_bone.keys())):
         bf = frames_by_bone[frameno]
 
-        # 2回目以降なので、一旦キーを落とす
-        bf.key = False
+        # 2回目以降なので、間のキーは一旦落とす
+        if 0 < e < len(frames_by_bone.keys()) - 1:
+            bf.key = False
 
         next_bf = calc_bone_by_complement_by_bone(model, frames_by_bone, bone_name, frameno + 1, is_only=False, is_exist=True)
 
