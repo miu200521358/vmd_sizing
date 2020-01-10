@@ -581,6 +581,202 @@ class VmdSizingForm3 ( wx.Frame ):
 		bSizerCamera4.Fit( self.m_panelCamera )
 		self.m_note.AddPage( self.m_panelCamera, u"カメラ", False )
 
+		# 円滑化 ------------------------------------
+
+		self.m_panelSmooth = wx.Panel( self.m_note, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+
+		bSizerSmooth3 = wx.BoxSizer( wx.VERTICAL )
+
+		bSizerSmooth4 = wx.BoxSizer( wx.VERTICAL )
+
+		self.m_smooth_staticText7 = wx.StaticText( self.m_panelSmooth, wx.ID_ANY, u"指定されたVMDファイルを、キーの間を滑らかな補間曲線で繋いで、再出力します。\n上半身等、体幹が回転するタイプのボーンは捻れる確率が高いため、避けて下さい。", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_smooth_staticText7.Wrap( -1 )
+
+		bSizerSmooth4.Add( self.m_smooth_staticText7, 0, wx.ALL, 5 )
+
+		self.m_smooth_staticline5 = wx.StaticLine( self.m_panelSmooth, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
+		bSizerSmooth4.Add( self.m_smooth_staticline5, 0, wx.EXPAND |wx.ALL, 5 )
+
+		self.m_smooth_staticText1 = wx.StaticText( self.m_panelSmooth, wx.ID_ANY, u"VMDファイル", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_smooth_staticText1.Wrap( -1 )
+
+		bSizerSmooth4.Add( self.m_smooth_staticText1, 0, wx.ALL, 5 )
+
+		self.m_smooth_fileVmd = wx.FilePickerCtrl( self.m_panelSmooth, wx.ID_ANY, wx.EmptyString, u"VMDファイルを選択してください", u"VMDファイル (*.vmd)|*.vmd|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.Size( -1,-1 ), wx.FLP_DEFAULT_STYLE )
+		self.m_smooth_fileVmd.GetPickerCtrl().SetLabel("開く")
+		bSizerSmooth4.Add( self.m_smooth_fileVmd, 0, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_smooth_staticText2 = wx.StaticText( self.m_panelSmooth, wx.ID_ANY, u"PMXファイル", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_smooth_staticText2.Wrap( -1 )
+
+		bSizerSmooth4.Add( self.m_smooth_staticText2, 0, wx.ALL, 5 )
+
+		self.m_smooth_filePmx = wx.FilePickerCtrl( self.m_panelSmooth, wx.ID_ANY, wx.EmptyString, u"PMXファイルを選択してください", u"PMXファイル (*.pmx)|*.pmx|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.Size( -1,-1 ), wx.FLP_DEFAULT_STYLE )
+		self.m_smooth_filePmx.GetPickerCtrl().SetLabel("開く")
+		bSizerSmooth4.Add( self.m_smooth_filePmx, 0, wx.ALL|wx.EXPAND, 5 )
+
+
+		bSizerSmooth6 = wx.BoxSizer( wx.HORIZONTAL )
+
+		self.m_staticSmoothText162 = wx.StaticText( self.m_panelSmooth, wx.ID_ANY, u"スムージング回数", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizerSmooth6.Add( self.m_staticSmoothText162, 0, wx.ALL, 0 )
+
+		self.m_smooth_spinMovCount = wx.SpinCtrl( self.m_panelSmooth, id=wx.ID_ANY, size=wx.Size( 100,-1 ), value="3", min=1, max=100, initial=1 )
+		self.m_smooth_spinMovCount.SetToolTip("スムージングを行う回数を指定して下さい。")
+		bSizerSmooth6.Add( self.m_smooth_spinMovCount, 0, wx.EXPAND |wx.ALL, 0 )
+
+		self.m_staticSmoothText161 = wx.StaticText( self.m_panelSmooth, wx.ID_ANY, u"回転スムージング回数", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizerSmooth6.Add( self.m_staticSmoothText161, 0, wx.ALL, 0 )
+
+		self.m_smooth_spinRotCount = wx.SpinCtrl( self.m_panelSmooth, id=wx.ID_ANY, size=wx.Size( 100,-1 ), value="5", min=1, max=100, initial=1 )
+		self.m_smooth_spinRotCount.SetToolTip("回転可能なボーンのスムージングを行う回数を指定して下さい。")
+		bSizerSmooth6.Add( self.m_smooth_spinRotCount, 0, wx.EXPAND |wx.ALL, 0 )
+
+		bSizerSmooth4.Add( bSizerSmooth6, 0, wx.EXPAND |wx.ALL, 2 )
+
+
+		self.m_smooth_btnExec = wx.Button( self.m_panelSmooth, wx.ID_ANY, u"スムージング実行", wx.DefaultPosition, wx.Size( 200,50 ), 0 )
+		bSizerSmooth4.Add( self.m_smooth_btnExec, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+		self.m_smooth_txtConsole = wx.TextCtrl( self.m_panelSmooth, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( -1,420 ), wx.TE_MULTILINE|wx.TE_READONLY|wx.BORDER_NONE|wx.HSCROLL|wx.VSCROLL|wx.WANTS_CHARS )
+		self.m_smooth_txtConsole.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_3DLIGHT ) )
+
+		bSizerSmooth4.Add( self.m_smooth_txtConsole, 1, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_smooth_Gauge = wx.Gauge( self.m_panelSmooth, wx.ID_ANY, 100, wx.DefaultPosition, wx.DefaultSize, wx.GA_HORIZONTAL )
+		self.m_smooth_Gauge.SetValue( 0 )
+		bSizerSmooth4.Add( self.m_smooth_Gauge, 0, wx.ALL|wx.EXPAND, 5 )
+	
+		bSizerSmooth3.Add( bSizerSmooth4, 0, wx.EXPAND, 5 )
+
+		self.m_panelSmooth.SetSizer( bSizerSmooth3 )
+		self.m_panelSmooth.Layout()
+		bSizerSmooth3.Fit( self.m_panelSmooth )
+		self.m_note.AddPage( self.m_panelSmooth, u"スムーズ", False )
+
+		# モーフブレンド ------------------------------------
+
+		self.m_panelBlend = wx.Panel( self.m_note, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+
+		bSizerBlend3 = wx.BoxSizer( wx.VERTICAL )
+
+		bSizerBlend4 = wx.BoxSizer( wx.VERTICAL )
+
+		self.m_blend_staticText7 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"指定されたPMXファイルのモーフをランダムに変化させた結果を、VMDファイルとして出力します。\nモーフは合計で最大100個まで選択できます。\nモーフの組み合わせが多くなると破綻する確率が非常に高くなりますので、その状態での公開は避けてください。", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_blend_staticText7.Wrap( -1 )
+
+		bSizerBlend4.Add( self.m_blend_staticText7, 0, wx.ALL, 5 )
+
+		self.m_blend_staticline5 = wx.StaticLine( self.m_panelBlend, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
+		bSizerBlend4.Add( self.m_blend_staticline5, 0, wx.EXPAND |wx.ALL, 5 )
+
+		self.m_blend_staticText1 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"PMXファイル", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_blend_staticText1.Wrap( -1 )
+
+		bSizerBlend4.Add( self.m_blend_staticText1, 0, wx.ALL, 5 )
+
+		self.m_blend_filePmx = wx.FilePickerCtrl( self.m_panelBlend, wx.ID_ANY, wx.EmptyString, u"PMXファイルを選択してください", u"PMXファイル (*.pmx)|*.pmx|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.Size( -1,-1 ), wx.FLP_DEFAULT_STYLE )
+		self.m_blend_filePmx.GetPickerCtrl().SetLabel("開く")
+		bSizerBlend4.Add( self.m_blend_filePmx, 0, wx.ALL|wx.EXPAND, 5 )
+
+		# ---------------
+
+		bSizerBlend15 = wx.BoxSizer( wx.HORIZONTAL )
+
+		# 目の処理対象
+		self.m_blend_staticText11 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"目", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_blend_staticText11.SetToolTip( u"ブレンド対象となるモーフを選択して下さい。" )
+		self.m_blend_staticText11.Wrap( -1 )
+		bSizerBlend15.Add( self.m_blend_staticText11, 0, wx.ALL, 5 )
+
+		self.m_blend_listEye = wx.ListBox( self.m_panelBlend, id=wx.ID_ANY, pos=wx.DefaultPosition, size=(100, 100), choices=[], style=wx.LB_MULTIPLE|wx.LB_ALWAYS_SB )
+		bSizerBlend15.Add( self.m_blend_listEye, 0, wx.ALL, 5 )
+
+		# 眉の処理対象
+		self.m_blend_staticText11 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"眉", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_blend_staticText11.SetToolTip( u"ブレンド対象となるモーフを選択して下さい。" )
+		self.m_blend_staticText11.Wrap( -1 )
+		bSizerBlend15.Add( self.m_blend_staticText11, 0, wx.ALL, 5 )
+
+		self.m_blend_listEyebrow = wx.ListBox( self.m_panelBlend, id=wx.ID_ANY, pos=wx.DefaultPosition, size=(100, 100), choices=[], style=wx.LB_MULTIPLE|wx.LB_ALWAYS_SB )
+		bSizerBlend15.Add( self.m_blend_listEyebrow, 0, wx.ALL, 5 )
+
+		# 口の処理対象
+		self.m_blend_staticText11 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"口", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_blend_staticText11.SetToolTip( u"ブレンド対象となるモーフを選択して下さい。" )
+		self.m_blend_staticText11.Wrap( -1 )
+		bSizerBlend15.Add( self.m_blend_staticText11, 0, wx.ALL, 5 )
+
+		self.m_blend_listLip = wx.ListBox( self.m_panelBlend, id=wx.ID_ANY, pos=wx.DefaultPosition, size=(100, 100), choices=[], style=wx.LB_MULTIPLE|wx.LB_ALWAYS_SB )
+		bSizerBlend15.Add( self.m_blend_listLip, 0, wx.ALL, 5 )
+
+		# 他の処理対象
+		self.m_blend_staticText11 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"他", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_blend_staticText11.SetToolTip( u"ブレンド対象となるモーフを選択して下さい。" )
+		self.m_blend_staticText11.Wrap( -1 )
+		bSizerBlend15.Add( self.m_blend_staticText11, 0, wx.ALL, 5 )
+
+		self.m_blend_listOther = wx.ListBox( self.m_panelBlend, id=wx.ID_ANY, pos=wx.DefaultPosition, size=(100, 100), choices=[], style=wx.LB_MULTIPLE|wx.LB_ALWAYS_SB )
+		bSizerBlend15.Add( self.m_blend_listOther, 0, wx.ALL, 5 )
+
+
+
+		bSizerBlend4.Add( bSizerBlend15, 0, wx.EXPAND, 5 )
+
+		# -------------------
+
+		bSizerBlend5 = wx.BoxSizer( wx.HORIZONTAL )
+
+		# モーフ最小値
+		self.m_blend_staticText8 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"最小値", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_blend_staticText8.SetToolTip( u"モーフ増減の最小値です。-10から10の間で設定できます。（小数点可）" )
+		self.m_blend_staticText8.Wrap( -1 )
+		bSizerBlend5.Add( self.m_blend_staticText8, 0, wx.ALL, 5 )
+
+		self.m_blend_spinMin = wx.SpinCtrlDouble( self.m_panelBlend, id=wx.ID_ANY, size=wx.Size( 80,-1 ), min=-10, max=10, initial=0.0, inc=0.1 )
+		bSizerBlend5.Add( self.m_blend_spinMin, 0, wx.ALL, 5 )
+
+		# モーフ最大値
+		self.m_blend_staticText9 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"最大値", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_blend_staticText9.SetToolTip( u"モーフ増減の最大値です。-10から10の間で設定できます。（小数点可）" )
+		self.m_blend_staticText9.Wrap( -1 )
+		bSizerBlend5.Add( self.m_blend_staticText9, 0, wx.ALL, 5 )
+
+		self.m_blend_spinMax = wx.SpinCtrlDouble( self.m_panelBlend, id=wx.ID_ANY, size=wx.Size( 80,-1 ), min=-10, max=10, initial=1.0, inc=0.1 )
+		bSizerBlend5.Add( self.m_blend_spinMax, 0, wx.ALL, 5 )
+
+		# モーフ増加量
+		self.m_blend_staticText10 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"増加量", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_blend_staticText10.SetToolTip( u"モーフ増減の増加量です。この増加量分ごとにモーフ組み合わせを生成していきます。0から1の間で設定できます。（小数点可）" )
+		self.m_blend_staticText10.Wrap( -1 )
+		bSizerBlend5.Add( self.m_blend_staticText10, 0, wx.ALL, 5 )
+
+		self.m_blend_spinInc = wx.SpinCtrlDouble( self.m_panelBlend, id=wx.ID_ANY, size=wx.Size( 80,-1 ), min=0, max=1, initial=0.1, inc=0.1 )
+		bSizerBlend5.Add( self.m_blend_spinInc, 0, wx.ALL, 5 )
+
+		bSizerBlend4.Add( bSizerBlend5, 0, wx.ALL, 5 )
+
+		self.m_blend_btnExec = wx.Button( self.m_panelBlend, wx.ID_ANY, u"モーフブレンドVMD生成", wx.DefaultPosition, wx.Size( 200,50 ), 0 )
+		bSizerBlend4.Add( self.m_blend_btnExec, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
+
+		self.m_blend_txtConsole = wx.TextCtrl( self.m_panelBlend, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( -1,370 ), wx.TE_MULTILINE|wx.TE_READONLY|wx.BORDER_NONE|wx.HSCROLL|wx.VSCROLL|wx.WANTS_CHARS )
+		self.m_blend_txtConsole.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_3DLIGHT ) )
+
+		bSizerBlend4.Add( self.m_blend_txtConsole, 1, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_blend_Gauge = wx.Gauge( self.m_panelBlend, wx.ID_ANY, 100, wx.DefaultPosition, wx.DefaultSize, wx.GA_HORIZONTAL )
+		self.m_blend_Gauge.SetValue( 0 )
+		bSizerBlend4.Add( self.m_blend_Gauge, 0, wx.ALL|wx.EXPAND, 5 )
+	
+		bSizerBlend3.Add( bSizerBlend4, 0, wx.EXPAND, 5 )
+
+		# ------------------
+
+		self.m_panelBlend.SetSizer( bSizerBlend3 )
+		self.m_panelBlend.Layout()
+		bSizerBlend3.Fit( self.m_panelBlend )
+		self.m_note.AddPage( self.m_panelBlend, u"ブレンド", False )
+
 		# CSV ------------------------------------
 
 		self.m_panelCsv = wx.Panel( self.m_note, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
@@ -692,51 +888,6 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_panelVmd.Layout()
 		bSizerVmd3.Fit( self.m_panelVmd )
 		self.m_note.AddPage( self.m_panelVmd, u"VMD", False )
-
-
-		# # 円滑化 ------------------------------------
-
-		# self.m_panelSmooth = wx.Panel( self.m_note, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-
-		# bSizerSmooth3 = wx.BoxSizer( wx.VERTICAL )
-
-		# bSizerSmooth4 = wx.BoxSizer( wx.VERTICAL )
-
-		# self.m_smooth_staticText7 = wx.StaticText( self.m_panelSmooth, wx.ID_ANY, u"指定されたVMDファイルのキーの間を補間曲線で繋いで、再出力します。", wx.DefaultPosition, wx.DefaultSize, 0 )
-		# self.m_smooth_staticText7.Wrap( -1 )
-
-		# bSizerSmooth4.Add( self.m_smooth_staticText7, 0, wx.ALL, 5 )
-
-		# self.m_smooth_staticline5 = wx.StaticLine( self.m_panelSmooth, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
-		# bSizerSmooth4.Add( self.m_smooth_staticline5, 0, wx.EXPAND |wx.ALL, 5 )
-
-		# self.m_smooth_staticText1 = wx.StaticText( self.m_panelSmooth, wx.ID_ANY, u"VMDファイル", wx.DefaultPosition, wx.DefaultSize, 0 )
-		# self.m_smooth_staticText1.Wrap( -1 )
-
-		# bSizerSmooth4.Add( self.m_smooth_staticText1, 0, wx.ALL, 5 )
-
-		# self.m_smooth_fileVmd = wx.FilePickerCtrl( self.m_panelSmooth, wx.ID_ANY, wx.EmptyString, u"VMDファイルを選択してください", u"VMDファイル (*.vmd)|*.vmd|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.Size( -1,-1 ), wx.FLP_DEFAULT_STYLE )
-		# self.m_smooth_fileVmd.GetPickerCtrl().SetLabel("開く")
-		# bSizerSmooth4.Add( self.m_smooth_fileVmd, 0, wx.ALL|wx.EXPAND, 5 )
-
-		# self.m_smooth_btnExec = wx.Button( self.m_panelSmooth, wx.ID_ANY, u"円滑化変換実行", wx.DefaultPosition, wx.Size( 200,50 ), 0 )
-		# bSizerSmooth4.Add( self.m_smooth_btnExec, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
-
-		# self.m_smooth_txtConsole = wx.TextCtrl( self.m_panelSmooth, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( -1,420 ), wx.TE_MULTILINE|wx.TE_READONLY|wx.BORDER_NONE|wx.HSCROLL|wx.VSCROLL|wx.WANTS_CHARS )
-		# self.m_smooth_txtConsole.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_3DLIGHT ) )
-
-		# bSizerSmooth4.Add( self.m_smooth_txtConsole, 1, wx.ALL|wx.EXPAND, 5 )
-
-		# self.m_smooth_Gauge = wx.Gauge( self.m_panelSmooth, wx.ID_ANY, 100, wx.DefaultPosition, wx.DefaultSize, wx.GA_HORIZONTAL )
-		# self.m_smooth_Gauge.SetValue( 0 )
-		# bSizerSmooth4.Add( self.m_smooth_Gauge, 0, wx.ALL|wx.EXPAND, 5 )
-	
-		# bSizerSmooth3.Add( bSizerSmooth4, 0, wx.EXPAND, 5 )
-
-		# self.m_panelSmooth.SetSizer( bSizerSmooth3 )
-		# self.m_panelSmooth.Layout()
-		# bSizerSmooth3.Fit( self.m_panelSmooth )
-		# self.m_note.AddPage( self.m_panelSmooth, u"円滑化", False )
 
 		# 分割タブ ------------------------------------
 
@@ -1004,134 +1155,11 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_panelSlice.SetSizer( bSizerSlice8 )
 		self.m_panelSlice.Layout()
 		bSizerSlice8.Fit( self.m_panelSlice )
-		self.m_note.AddPage( self.m_panelSlice, u"分割", False )
+		self.m_note.AddPage( self.m_panelSlice, u"補間", False )
 
 		# ---------------------------
 
 		bSizer1.Add( self.m_note, 1, wx.EXPAND, 5 )
-
-		# モーフブレンド ------------------------------------
-
-		self.m_panelBlend = wx.Panel( self.m_note, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-
-		bSizerBlend3 = wx.BoxSizer( wx.VERTICAL )
-
-		bSizerBlend4 = wx.BoxSizer( wx.VERTICAL )
-
-		self.m_blend_staticText7 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"指定されたPMXファイルのモーフをランダムに変化させた結果を、VMDファイルとして出力します。\nモーフは合計で最大100個まで選択できます。\nモーフの組み合わせが多くなると破綻する確率が非常に高くなりますので、その状態での公開は避けてください。", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_blend_staticText7.Wrap( -1 )
-
-		bSizerBlend4.Add( self.m_blend_staticText7, 0, wx.ALL, 5 )
-
-		self.m_blend_staticline5 = wx.StaticLine( self.m_panelBlend, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
-		bSizerBlend4.Add( self.m_blend_staticline5, 0, wx.EXPAND |wx.ALL, 5 )
-
-		self.m_blend_staticText1 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"PMXファイル", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_blend_staticText1.Wrap( -1 )
-
-		bSizerBlend4.Add( self.m_blend_staticText1, 0, wx.ALL, 5 )
-
-		self.m_blend_filePmx = wx.FilePickerCtrl( self.m_panelBlend, wx.ID_ANY, wx.EmptyString, u"PMXファイルを選択してください", u"PMXファイル (*.pmx)|*.pmx|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.Size( -1,-1 ), wx.FLP_DEFAULT_STYLE )
-		self.m_blend_filePmx.GetPickerCtrl().SetLabel("開く")
-		bSizerBlend4.Add( self.m_blend_filePmx, 0, wx.ALL|wx.EXPAND, 5 )
-
-		# ---------------
-
-		bSizerBlend15 = wx.BoxSizer( wx.HORIZONTAL )
-
-		# 目の処理対象
-		self.m_blend_staticText11 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"目", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_blend_staticText11.SetToolTip( u"ブレンド対象となるモーフを選択して下さい。" )
-		self.m_blend_staticText11.Wrap( -1 )
-		bSizerBlend15.Add( self.m_blend_staticText11, 0, wx.ALL, 5 )
-
-		self.m_blend_listEye = wx.ListBox( self.m_panelBlend, id=wx.ID_ANY, pos=wx.DefaultPosition, size=(100, 100), choices=[], style=wx.LB_MULTIPLE|wx.LB_ALWAYS_SB )
-		bSizerBlend15.Add( self.m_blend_listEye, 0, wx.ALL, 5 )
-
-		# 眉の処理対象
-		self.m_blend_staticText11 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"眉", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_blend_staticText11.SetToolTip( u"ブレンド対象となるモーフを選択して下さい。" )
-		self.m_blend_staticText11.Wrap( -1 )
-		bSizerBlend15.Add( self.m_blend_staticText11, 0, wx.ALL, 5 )
-
-		self.m_blend_listEyebrow = wx.ListBox( self.m_panelBlend, id=wx.ID_ANY, pos=wx.DefaultPosition, size=(100, 100), choices=[], style=wx.LB_MULTIPLE|wx.LB_ALWAYS_SB )
-		bSizerBlend15.Add( self.m_blend_listEyebrow, 0, wx.ALL, 5 )
-
-		# 口の処理対象
-		self.m_blend_staticText11 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"口", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_blend_staticText11.SetToolTip( u"ブレンド対象となるモーフを選択して下さい。" )
-		self.m_blend_staticText11.Wrap( -1 )
-		bSizerBlend15.Add( self.m_blend_staticText11, 0, wx.ALL, 5 )
-
-		self.m_blend_listLip = wx.ListBox( self.m_panelBlend, id=wx.ID_ANY, pos=wx.DefaultPosition, size=(100, 100), choices=[], style=wx.LB_MULTIPLE|wx.LB_ALWAYS_SB )
-		bSizerBlend15.Add( self.m_blend_listLip, 0, wx.ALL, 5 )
-
-		# 他の処理対象
-		self.m_blend_staticText11 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"他", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_blend_staticText11.SetToolTip( u"ブレンド対象となるモーフを選択して下さい。" )
-		self.m_blend_staticText11.Wrap( -1 )
-		bSizerBlend15.Add( self.m_blend_staticText11, 0, wx.ALL, 5 )
-
-		self.m_blend_listOther = wx.ListBox( self.m_panelBlend, id=wx.ID_ANY, pos=wx.DefaultPosition, size=(100, 100), choices=[], style=wx.LB_MULTIPLE|wx.LB_ALWAYS_SB )
-		bSizerBlend15.Add( self.m_blend_listOther, 0, wx.ALL, 5 )
-
-
-
-		bSizerBlend4.Add( bSizerBlend15, 0, wx.EXPAND, 5 )
-
-		# -------------------
-
-		bSizerBlend5 = wx.BoxSizer( wx.HORIZONTAL )
-
-		# モーフ最小値
-		self.m_blend_staticText8 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"最小値", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_blend_staticText8.SetToolTip( u"モーフ増減の最小値です。-10から10の間で設定できます。（小数点可）" )
-		self.m_blend_staticText8.Wrap( -1 )
-		bSizerBlend5.Add( self.m_blend_staticText8, 0, wx.ALL, 5 )
-
-		self.m_blend_spinMin = wx.SpinCtrlDouble( self.m_panelBlend, id=wx.ID_ANY, size=wx.Size( 80,-1 ), min=-10, max=10, initial=0.0, inc=0.1 )
-		bSizerBlend5.Add( self.m_blend_spinMin, 0, wx.ALL, 5 )
-
-		# モーフ最大値
-		self.m_blend_staticText9 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"最大値", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_blend_staticText9.SetToolTip( u"モーフ増減の最大値です。-10から10の間で設定できます。（小数点可）" )
-		self.m_blend_staticText9.Wrap( -1 )
-		bSizerBlend5.Add( self.m_blend_staticText9, 0, wx.ALL, 5 )
-
-		self.m_blend_spinMax = wx.SpinCtrlDouble( self.m_panelBlend, id=wx.ID_ANY, size=wx.Size( 80,-1 ), min=-10, max=10, initial=1.0, inc=0.1 )
-		bSizerBlend5.Add( self.m_blend_spinMax, 0, wx.ALL, 5 )
-
-		# モーフ増加量
-		self.m_blend_staticText10 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"増加量", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_blend_staticText10.SetToolTip( u"モーフ増減の増加量です。この増加量分ごとにモーフ組み合わせを生成していきます。0から1の間で設定できます。（小数点可）" )
-		self.m_blend_staticText10.Wrap( -1 )
-		bSizerBlend5.Add( self.m_blend_staticText10, 0, wx.ALL, 5 )
-
-		self.m_blend_spinInc = wx.SpinCtrlDouble( self.m_panelBlend, id=wx.ID_ANY, size=wx.Size( 80,-1 ), min=0, max=1, initial=0.1, inc=0.1 )
-		bSizerBlend5.Add( self.m_blend_spinInc, 0, wx.ALL, 5 )
-
-		bSizerBlend4.Add( bSizerBlend5, 0, wx.ALL, 5 )
-
-		self.m_blend_btnExec = wx.Button( self.m_panelBlend, wx.ID_ANY, u"モーフブレンドVMD生成", wx.DefaultPosition, wx.Size( 200,50 ), 0 )
-		bSizerBlend4.Add( self.m_blend_btnExec, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
-
-		self.m_blend_txtConsole = wx.TextCtrl( self.m_panelBlend, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size( -1,370 ), wx.TE_MULTILINE|wx.TE_READONLY|wx.BORDER_NONE|wx.HSCROLL|wx.VSCROLL|wx.WANTS_CHARS )
-		self.m_blend_txtConsole.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_3DLIGHT ) )
-
-		bSizerBlend4.Add( self.m_blend_txtConsole, 1, wx.ALL|wx.EXPAND, 5 )
-
-		self.m_blend_Gauge = wx.Gauge( self.m_panelBlend, wx.ID_ANY, 100, wx.DefaultPosition, wx.DefaultSize, wx.GA_HORIZONTAL )
-		self.m_blend_Gauge.SetValue( 0 )
-		bSizerBlend4.Add( self.m_blend_Gauge, 0, wx.ALL|wx.EXPAND, 5 )
-	
-		bSizerBlend3.Add( bSizerBlend4, 0, wx.EXPAND, 5 )
-
-		# ------------------
-
-		self.m_panelBlend.SetSizer( bSizerBlend3 )
-		self.m_panelBlend.Layout()
-		bSizerBlend3.Fit( self.m_panelBlend )
-		self.m_note.AddPage( self.m_panelBlend, u"ブレンド", False )
 
 		# イベント登録 -----------------------
 
@@ -1146,7 +1174,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_btnMorphImport.Bind( wx.EVT_BUTTON, self.OnMorphImport )
 		self.m_csv_btnExec.Bind( wx.EVT_BUTTON, self.OnCsvExec )
 		self.m_vmd_btnExec.Bind( wx.EVT_BUTTON, self.OnVmdExec )
-		# self.m_smooth_btnExec.Bind( wx.EVT_BUTTON, self.OnSmoothExec )
+		self.m_smooth_btnExec.Bind( wx.EVT_BUTTON, self.OnSmoothExec )
 		self.m_blend_btnExec.Bind( wx.EVT_BUTTON, self.OnBlendExec )
 		# self.m_slice_btnAddLine.Bind( wx.EVT_BUTTON, self.OnAddSliceCell )
 		# self.m_slice_btnExec.Bind( wx.EVT_BUTTON, self.OnSliceExec )
@@ -1157,7 +1185,6 @@ class VmdSizingForm3 ( wx.Frame ):
 		EVT_RESULT(self, self.OnResult)
 		CSV_EVT_RESULT(self, self.OnCsvResult)
 		VMD_EVT_RESULT(self, self.OnVmdResult)
-		# SLICE_EVT_RESULT(self, self.OnSliceResult)
 		BLEND_EVT_RESULT(self, self.OnBlendResult)
 		SMOOTH_EVT_RESULT(self, self.OnSmoothResult)
 
@@ -1166,7 +1193,6 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.csv_worker = None
 		self.smooth_worker = None
 		self.vmd_worker = None
-		# self.slice_worker = None
 		self.blend_worker = None
 
 		# D&Dの実装
@@ -1182,7 +1208,8 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_vmd_fileCsvMorph.SetDropTarget(MyFileDropTarget(self, self.m_vmd_fileCsvMorph, self.m_vmd_morph_staticText1, ".csv"))
 		self.m_vmd_fileCsvCamera.SetDropTarget(MyFileDropTarget(self, self.m_vmd_fileCsvCamera, self.m_vmd_camera_staticText1, ".csv"))
 		self.m_blend_filePmx.SetDropTarget(MyFileDropTarget(self, self.m_blend_filePmx, self.m_blend_staticText1, ".pmx"))
-		# self.m_slice_fileVmd.SetDropTarget(MyFileDropTarget(self, self.m_slice_fileVmd, self.m_slice_staticText1, ".vmd"))
+		self.m_smooth_fileVmd.SetDropTarget(MyFileDropTarget(self, self.m_smooth_fileVmd, self.m_smooth_staticText1, ".vmd"))
+		self.m_smooth_filePmx.SetDropTarget(MyFileDropTarget(self, self.m_smooth_filePmx, self.m_smooth_staticText2, ".pmx"))
 
 		# ファイルパス変更時の処理
 		self.m_fileVmd.Bind( wx.EVT_FILEPICKER_CHANGED, lambda event: self.OnChangeFile(event, self.m_fileVmd, self.m_staticText9, ".vmd"))
@@ -1210,9 +1237,9 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_vmd_fileCsvBone.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_vmd_fileCsvBone.GetTextCtrl()))
 		self.m_vmd_fileCsvMorph.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_vmd_fileCsvMorph.GetTextCtrl()))
 		self.m_vmd_fileCsvCamera.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_vmd_fileCsvCamera.GetTextCtrl()))
-		# self.m_slice_fileVmd.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_slice_fileVmd.GetTextCtrl()))
-		# self.m_blend_filePmx.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_blend_filePmx.GetTextCtrl()))
-		# メッセージ欄も全選択可とする
+		self.m_blend_filePmx.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_blend_filePmx.GetTextCtrl()))
+
+		# Ctrl+Aの全選択処理
 		self.m_txtConsole.Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_txtConsole))
 		self.m_blend_listEye.Bind(wx.EVT_CHAR, lambda event: self.OnListSelectAll(event, self.m_blend_listEye))
 		self.m_blend_listEyebrow.Bind(wx.EVT_CHAR, lambda event: self.OnListSelectAll(event, self.m_blend_listEyebrow))
@@ -1290,8 +1317,8 @@ class VmdSizingForm3 ( wx.Frame ):
 	def OnListSelectAll(self, event, target_ctrl):
 		keyInput = event.GetKeyCode()
 		if keyInput == 1:  # 1 stands for 'ctrl+a'
-			for idx in range(target_ctrl.GetCount()):
-				target_ctrl.SetSelection(idx)
+			for n in range(target_ctrl.GetCount()):
+				target_ctrl.SetSelection(n)
 		event.Skip()		
 
 	def OnCsvExec( self, event ):
@@ -1341,6 +1368,18 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.DisableInput()
 
 		if wrapperutils.is_valid_file(self.m_smooth_fileVmd.GetPath(), "VMDファイル", ".vmd", True) == False:
+
+			self.EnableInput()
+			# プログレス非表示
+			self.m_smooth_Gauge.SetValue(0)
+
+			# 元に戻す
+			sys.stdout = self.m_txtConsole
+
+			event.Skip()
+			return
+
+		if wrapperutils.is_valid_file(self.m_smooth_filePmx.GetPath(), "PMXファイル", ".pmx", True) == False:
 
 			self.EnableInput()
 			# プログレス非表示
@@ -1564,31 +1603,31 @@ class VmdSizingForm3 ( wx.Frame ):
 			event.Skip()
 			return 
 
-		if self.csv_worker:
-			# CSVコンバート時はタブ移動不可
-			self.m_note.SetSelection(4)
-			event.Skip()
-			return 
-
-		if self.vmd_worker:
-			# VMDコンバート時はタブ移動不可
-			self.m_note.SetSelection(5)
-			event.Skip()
-			return 
-
 		if self.smooth_worker:
 			# 円滑化時はタブ移動不可
-			self.m_note.SetSelection(6)
+			self.m_note.SetSelection(4)
 			event.Skip()
 			return 
 
 		if self.blend_worker:
 			# ブレンドモーフ生成時はタブ移動不可
-			self.m_note.SetSelection(7)
+			self.m_note.SetSelection(5)
 			event.Skip()
 			return 
 		
-		if self.m_note.GetSelection() == 7:
+		if self.csv_worker:
+			# CSVコンバート時はタブ移動不可
+			self.m_note.SetSelection(6)
+			event.Skip()
+			return 
+
+		if self.vmd_worker:
+			# VMDコンバート時はタブ移動不可
+			self.m_note.SetSelection(7)
+			event.Skip()
+			return 
+
+		if self.m_note.GetSelection() == 8:
 			# ブレンドはPMX読み込みがあるので、コンソール委譲
 			sys.stdout = self.m_blend_txtConsole
 		else:
@@ -2412,20 +2451,23 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_camera_btnHistoryVmd.Disable()
 		self.m_camera_btnHistoryOrgPmx.Disable()
 
-		# # 分割
-		# # 行追加ボタン押下不可
-		# self.m_slice_btnAddLine.Disable()
-		# # 実行ボタン押下不可
-		# self.m_slice_btnExec.Disable()
-		# # ファイル入力不可
-		# self.m_slice_fileVmd.Disable()
+		# ブレンド
+		self.m_blend_btnExec.Disable()
+		self.m_blend_filePmx.Disable()
+		self.m_blend_listEye.Disable()
+		self.m_blend_listEyebrow.Disable()
+		self.m_blend_listLip.Disable()
+		self.m_blend_listOther.Disable()
+		self.m_blend_spinInc.Disable()
+		self.m_blend_spinMax.Disable()
+		self.m_blend_spinMin.Disable()
 
-		# # ブレンド
-		# self.m_blend_filePmx.Disable()
-		# self.m_blend_spinMin.Disable()
-		# self.m_blend_spinMax.Disable()
-		# self.m_blend_spinInc.Disable()
-		# self.m_blend_btnExec.Disable()
+		# スムージング
+		self.m_smooth_btnExec.Disable()
+		self.m_smooth_filePmx.Disable()
+		self.m_smooth_fileVmd.Disable()
+		self.m_smooth_spinMovCount.Disable()
+		self.m_smooth_spinRotCount.Disable()
 	
 	def EnableInput(self):
 		# ファイル入力可
@@ -2462,21 +2504,24 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_camera_btnHistoryVmd.Enable()
 		self.m_camera_btnHistoryOrgPmx.Enable()
 
-		# # 分割
-		# # 行追加ボタン押下不可
-		# self.m_slice_btnAddLine.Enable()
-		# # 実行ボタン押下不可
-		# self.m_slice_btnExec.Enable()
-		# # ファイル入力不可
-		# self.m_slice_fileVmd.Enable()
+		# ブレンド
+		self.m_blend_btnExec.Enable()
+		self.m_blend_filePmx.Enable()
+		self.m_blend_listEye.Enable()
+		self.m_blend_listEyebrow.Enable()
+		self.m_blend_listLip.Enable()
+		self.m_blend_listOther.Enable()
+		self.m_blend_spinInc.Enable()
+		self.m_blend_spinMax.Enable()
+		self.m_blend_spinMin.Enable()
 
-		# # ブレンド
-		# self.m_blend_filePmx.Enable()
-		# self.m_blend_spinMin.Enable()
-		# self.m_blend_spinMax.Enable()
-		# self.m_blend_spinInc.Enable()
-		# self.m_blend_btnExec.Enable()
-	
+		# スムージング
+		self.m_smooth_btnExec.Enable()
+		self.m_smooth_filePmx.Enable()
+		self.m_smooth_fileVmd.Enable()
+		self.m_smooth_spinMovCount.Enable()
+		self.m_smooth_spinRotCount.Enable()
+
 	# 実行ボタン押下
 	def OnExec(self, event):
 		if not self.worker:
@@ -3146,7 +3191,10 @@ class SmoothWorkerThread(Thread):
 		# need to structure your processing so that you periodically
 		# peek at the abort variable
 
-		convert_smooth.main(self._notify_window.m_smooth_fileVmd.GetPath())
+		convert_smooth.main(self._notify_window.m_smooth_fileVmd.GetPath(), \
+			self._notify_window.m_smooth_filePmx.GetPath(), \
+			self._notify_window.m_smooth_spinMovCount.GetValue(), \
+			self._notify_window.m_smooth_spinRotCount.GetValue())
 
 		# Here's where the result would be returned (this is an
 		# example fixed result of the number 10, but it could be

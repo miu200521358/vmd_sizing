@@ -250,7 +250,7 @@ def split_complement(motion, next_x1v, next_y1v, next_x2v, next_y2v, prev_bf, ne
             next_y2v = now_bf.complement[y2_idxs[3]]
 
             # 前半を区切る位置を求める(t=0.5で曲線を半分に分割する位置)
-            now, _ = utils.calc_interpolate_bezier_by_t(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, now_bf.frame, 0.5)
+            now, _, _ = utils.calc_interpolate_bezier_by_t(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.frame, now_bf.frame, 0.5)
             # logger.debug("%s, 【前半】, now: %s", indent, now)
 
             if now > prev_bf.frame:
@@ -288,7 +288,7 @@ def split_complement(motion, next_x1v, next_y1v, next_x2v, next_y2v, prev_bf, ne
             next_y2v = next_bf.complement[y2_idxs[3]]
 
             # 後半を区切る位置を求める
-            now, _ = utils.calc_interpolate_bezier_by_t(next_x1v, next_y1v, next_x2v, next_y2v, now_bf.frame, next_bf.frame, 0.5)
+            now, _, _ = utils.calc_interpolate_bezier_by_t(next_x1v, next_y1v, next_x2v, next_y2v, now_bf.frame, next_bf.frame, 0.5)
             # logger.debug("%s, 【後半】, now: %s", indent, now)
 
             if now > now_bf.frame:

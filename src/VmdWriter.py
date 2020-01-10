@@ -81,7 +81,7 @@ class VmdBoneFrame():
         # fout.write(struct.pack('=64s', c))
         # fout.write(struct.pack('=64s', [ c.encode('unicode_escape') for c in self.complement ][0]))
         # print("f: %s, b: %s, c: %s" % (self.frame, self.format_name, self.complement))
-        fout.write(bytearray(self.complement))
+        fout.write(bytearray([ int(x) for x in self.complement ]))
 
         # for c in self.complement:
         #     # print(c.encode('unicode_escape'))

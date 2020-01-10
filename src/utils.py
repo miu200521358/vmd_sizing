@@ -4,7 +4,7 @@
 import re
 import logging
 import copy
-import datetime
+from datetime import datetime
 from math import atan2, acos, cos, sin, degrees, isnan, isclose, sqrt, pi, isinf
 from PyQt5.QtGui import QQuaternion, QVector3D, QVector2D, QMatrix4x4, QVector4D
 
@@ -17,7 +17,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 
 # MMDでの補間曲線の最大値
 COMPLEMENT_MMD_MAX = 127
-
+is_print = False
 
 loggers = {}
 
@@ -562,18 +562,27 @@ def calc_bezier_split(x1v, y1v, x2v, y2v, start, end, now, bone_name):
 
 
 # ベジェ曲線の値がMMD用に合っているか
-def is_fit_bezier_mmd(bz):
+def is_fit_bezier_mmd(bz, offset=0):
     for b in bz:
         # # 1割以下は誤差として吸収してしまう
         # b.setX( 0 if COMPLEMENT_MMD_MAX-1 <= b.x() < 0 else b.x() )
         # b.setY( COMPLEMENT_MMD_MAX if COMPLEMENT_MMD_MAX < b.x() <= COMPLEMENT_MMD_MAX+1 else b.y() )
 
-        if not (0 <= b.x() <= COMPLEMENT_MMD_MAX) or not (0 <= b.y() <= COMPLEMENT_MMD_MAX):
+        if not (0 - offset <= b.x() <= COMPLEMENT_MMD_MAX + offset) or not (0 - offset <= b.y() <= COMPLEMENT_MMD_MAX + offset):
             # MMD用の範囲内でなければNG
             return False
 
     return True
-    
+
+def fit_bezier_mmd(b):
+    if not (0 <= b.x() <= COMPLEMENT_MMD_MAX) or not (0 <= b.y() <= COMPLEMENT_MMD_MAX):
+        x = 0 if 0 > b.x() else COMPLEMENT_MMD_MAX if COMPLEMENT_MMD_MAX < b.x() else int(b.x())
+        y = 0 if 0 > b.y() else COMPLEMENT_MMD_MAX if COMPLEMENT_MMD_MAX < b.y() else int(b.y())
+
+        return int(x), int(y)
+
+    return int(b.x()), int(b.y())
+
 # オフセット込みの3次ベジェ曲線の分割
 def calc_bezier_split_offset(x1v, y1v, x2v, y2v, start, end, now, bone_name):
     # 補間曲線の進んだ時間分を求める
@@ -737,7 +746,364 @@ def calc_interpolate_bezier_by_t(x1v, y1v, x2v, y2v, start, end, t):
 
     logger.debug(",calc_interpolate_bezier_by_t,x1v,%s, y1v,%s, x2v,%s, y2v,%s, y,%s,x,%s,t,%s,x2,%s,x3,%s",x1v, y1v, x2v, y2v, y, x, t,x2,x3)
 
-    return x3, y
+    return x3, x, y
+
+# 指定された3点を通るベジェ曲線を返す
+def calc_smooth_bezier(x1, y1, x2, y2, x3, y3):
+    t = (x2 - x1) / (x3 - x1)
+
+    if (x1 >= x2 or x1 >= x3 or x2 >= x3) or t <= 0 or t >= 1:
+        # 正常に計算できない場合、計算対象外
+        return False, False, False, \
+            [QVector2D(0, 0), QVector2D(20, 20), QVector2D(107, 107), QVector2D(COMPLEMENT_MMD_MAX, COMPLEMENT_MMD_MAX)], \
+            [QVector2D(0, 0), QVector2D(20, 20), QVector2D(107, 107), QVector2D(COMPLEMENT_MMD_MAX, COMPLEMENT_MMD_MAX)]
+
+    # if (y1 == y2 == y3): # or (y1 / x1 == y2 / x2 == y3 / x3):
+    #     # 値の変化がない場合、線形補間
+    #     return True, [QVector2D(0, 0), QVector2D(20, 20), QVector2D(107, 107), QVector2D(COMPLEMENT_MMD_MAX, COMPLEMENT_MMD_MAX)], \
+    #         [QVector2D(0, 0), QVector2D(20, 20), QVector2D(107, 107), QVector2D(COMPLEMENT_MMD_MAX, COMPLEMENT_MMD_MAX)], \
+    #         [QVector2D(0, 0), QVector2D(20, 20), QVector2D(107, 107), QVector2D(COMPLEMENT_MMD_MAX, COMPLEMENT_MMD_MAX)]
+
+    # 3点を通る二次曲線
+    a, b, c = calc_quadratic_param(x1, y1, x2, y2, x3, y3)
+    output_message("calc_smooth_bezier calc_quadratic_param finish now: %s" % datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'), is_print)
+
+    if a == 0:
+        # 曲線がなく、等間隔に変化する場合、線形補間(補間曲線は設定する)
+        return True, True, True, \
+            [QVector2D(0, 0), QVector2D(20, 20), QVector2D(107, 107), QVector2D(COMPLEMENT_MMD_MAX, COMPLEMENT_MMD_MAX)], \
+            [QVector2D(0, 0), QVector2D(20, 20), QVector2D(107, 107), QVector2D(COMPLEMENT_MMD_MAX, COMPLEMENT_MMD_MAX)]
+
+    # 開始フレームと中間フレームの交点
+    cx1, cy1 = calc_quadratic_cross(a, b, c, x1, y1, x2, y2)
+    output_message("calc_smooth_bezier calc_quadratic_cross finish now: %s" % datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'), is_print)
+
+    # 中間と終点は二次曲線の法線を使用する
+    # 中間フレームと終点フレームの交点
+    cx2, cy2 = calc_quadratic_cross(a, b, c, x2, y2, x3, y3)
+    output_message("calc_smooth_bezier calc_quadratic_cross finish now: %s" % datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'), is_print)
+
+    # # 開始フレームと中間フレームのベジェ曲線
+    # beforebz1, afterbz1 = calc_bezier_split_by_cross(x1, y1v, cx1, cy1v, cx2, cy2v, x3, y3v, t)
+    # output_message("calc_smooth_bezier calc_bezier_split_simple finish now: %s" % datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'), is_print)
+
+    # # 中間フレームと終端フレームのベジェ曲線
+    # beforebz2, afterbz2 = calc_bezier_split_by_cross(cx1, cy1v, x2, y2v, cx2, cy2v, x3, y3v, t)
+    # output_message("calc_smooth_bezier calc_bezier_split_simple finish now: %s" % datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'), is_print)
+
+    # 始点と終点のベジェ曲線
+    bz = calc_bezier_by_cross(x1, y1, cx1, cy1, x2, y2, cx2, cy2, x3, y3)
+
+    # 中間点で分割する
+    t, x, y, bresult, aresult, before_bz, after_bz = calc_bezier_split(bz[1].x(), bz[1].y(), bz[2].x(), bz[2].y(), x1, x3, x2, "")
+
+    return True, bresult, aresult, before_bz, after_bz
+
+# 3点と交点(制御点)から、二次のベジェ曲線の制御点を返す
+def calc_bezier_by_cross(x1, y1, cx1, cy1, x2, y2, cx2, cy2, x3, y3):
+    A = QVector2D(x1, y1)
+    B = QVector2D(cx1, cy1)
+    C = QVector2D(cx2, cy2)
+    D = QVector2D(x3, y3)
+    
+    # スケーリング
+    bA, bB, bC, bD = scale_bezier(A, B, C, D)
+
+    cA = round_bezier_mmd(bA)
+    cB = round_bezier_mmd(bB)
+    cC = round_bezier_mmd(bC)
+    cD = round_bezier_mmd(bD)
+
+    return [cA, cB, cC, cD]
+
+    # max_y = max(abs(y1), abs(y2), abs(y3))
+
+    # # 前半制御点
+    # bx = cx1 / x3
+    # by = cy1 / max_y
+
+    # bxv = round_integer(bx * COMPLEMENT_MMD_MAX)
+    # byv = round_integer(by * COMPLEMENT_MMD_MAX)
+
+    # # 後半制御点
+    # ax = cx2 / x3
+    # ay = cy2 / max_y
+
+    # axv = round_integer(ax * COMPLEMENT_MMD_MAX)
+    # ayv = round_integer(ay * COMPLEMENT_MMD_MAX)
+
+    # return [QVector2D(0, 0), QVector2D(bxv, byv), QVector2D(axv, ayv), QVector2D(COMPLEMENT_MMD_MAX, COMPLEMENT_MMD_MAX)]
+
+# #2点と交点(制御点)から、二次のベジェ曲線の制御点を返す
+# def calc_bezier_control_point(x1, y1, cx1, cy1, x2, y2, x3, y3, is_reverse):
+#     # 制御点を、1～2の割合で取る
+#     fxv = cx1 * ((x2 - x1) / (x3 - x1))
+#     fyv = cy1 * ((y2 - y1) / (y3 - y1))
+
+#     bxv = round_integer(fxv * COMPLEMENT_MMD_MAX)
+#     byv = round_integer(fyv * COMPLEMENT_MMD_MAX)
+
+#     if is_reverse:
+#         bxv = COMPLEMENT_MMD_MAX - bxv
+
+#     return QVector2D(bxv, byv)
+
+
+# def calc_bezier_split_by_cross2(x1, y1, cx1, cy1, cx2, cy2, x2, y2, t):
+
+#     # まず、補間曲線を求める
+#     beforebz, afterbz = calc_bezier_split_simple(x1, y1, cx1, cy1, cx2, cy2, x2, y2, t)
+    
+#     # # 補間曲線がMMD範囲内か調べる
+#     # if not is_fit_bezier_mmd(beforebz):
+#     #     # MMD範囲内ではない場合、ゆがめて納める
+#     #     beforebz = fit_bezier_split(beforebz)
+
+#     # if not is_fit_bezier_mmd(afterbz):
+#     #     # MMD範囲内ではない場合、ゆがめて納める
+#     #     afterbz = fit_bezier_split(afterbz)
+    
+#     return beforebz, afterbz
+
+# # https://seizan.blog.ss-blog.jp/2011-11-06
+# # ラグランジェ補間で4点を通る3次ベジェ曲線のx時点のY値を返す
+# def lagrange_interpolation(t, x1, y1, x2, y2, x3, y3, x4, y4):
+#     size = (x4 - x1)
+#     x1v = x1 / size
+#     x2v = x2 / size
+#     x3v = x3 / size
+#     x4v = x4 / size
+#     y1v = y1 / size
+#     y2v = y2 / size
+#     y3v = y3 / size
+#     y4v = y4 / size
+
+#     y = y4v*(t-x1v/(x4v-x1v) * (t-x2v/(x4v-x2v) * (t-x3v/(x4v-x3v) \
+#         + y1v*(t-x2v/(x1v-x2v) * (t-x3v/(x1v-x3v) * (t-x4v/(x1v-x4v) \
+#         + y2v*(t-x2v/(x2v-x3v) * (t-x4v/(x2v-x4v) * (t-x1v/(x2v-x1v) \
+#         + y3v*(t-x2v/(x3v-x4v) * (t-x1v/(x3v-x1v) * (t-x2v/(x3v-x2v) 
+
+#     return y
+
+def fit_bezier_split_mmd(org_bz):
+    bz1 = QVector2D(0, 0)
+    bz2 = org_bz[1]
+    bz3 = org_bz[2]
+    bz4 = QVector2D(COMPLEMENT_MMD_MAX, COMPLEMENT_MMD_MAX)
+
+    if bz2.y() != 0 and bz2.x() / bz2.y() == 1:
+        bz2.setX(20)
+        bz2.setY(20)
+
+    if bz3.y() != 0 and bz3.x() / bz3.y() == 1:
+        bz3.setX(107)
+        bz3.setY(107)
+
+    if not is_fit_bezier_mmd([bz1, bz2, bz3, bz4]):
+        bz1 = fit_bezier_split(bz1)
+        bz2 = fit_bezier_split(bz2)
+        bz3 = fit_bezier_split(bz3)
+        bz4 = fit_bezier_split(bz4)
+
+    bz = [bz1, bz2, bz3, bz4]
+
+    return bz
+
+# 補間曲線が合わない場合、無理矢理に合わせる
+def fit_bezier_split(xy):
+    if xy.x() < 0:
+        xy.setX(0)
+    elif xy.x() > COMPLEMENT_MMD_MAX:
+        xy.setX(COMPLEMENT_MMD_MAX)
+
+    if xy.y() < 0:
+        xy.setY(0)
+    elif xy.y() > COMPLEMENT_MMD_MAX:
+        xy.setY(COMPLEMENT_MMD_MAX)
+
+# オフセットなしの3次ベジェ曲線の分割
+def calc_bezier_split_simple(x1, y1, cx1, cy1, cx2, cy2, x2, y2, t):
+
+    A = QVector2D(x1/COMPLEMENT_MMD_MAX, y1/COMPLEMENT_MMD_MAX)
+    B = QVector2D(cx1/COMPLEMENT_MMD_MAX, cy1/COMPLEMENT_MMD_MAX)
+    C = QVector2D(cx2/COMPLEMENT_MMD_MAX, cy2/COMPLEMENT_MMD_MAX)
+    D = QVector2D(x2/COMPLEMENT_MMD_MAX, y2/COMPLEMENT_MMD_MAX)
+
+    # A = QVector2D(x1, y1)
+    # B = QVector2D(cx1, cy1)
+    # C = QVector2D(cx2, cy2)
+    # D = QVector2D(x2, y2)
+
+    E = (1-t)*A + t*B
+    F = (1-t)*B + t*C
+    G = (1-t)*C + t*D
+    H = (1-t)*E + t*F
+    I = (1-t)*F + t*G
+    J = (1-t)*H + t*I
+
+    # 新たな4つのベジェ曲線の制御点は、A側がAEHJ、C側がJIGDとなる。
+
+    # スケーリング
+    bA, bE, bH, bJ = scale_bezier(A, E, H, J)
+    aJ, aI, aG, aD = scale_bezier(J, I, G, D)
+
+    bA2 = round_bezier_mmd(bA)
+    bE2 = round_bezier_mmd(bE)
+    bH2 = round_bezier_mmd(bH)
+    bJ2 = round_bezier_mmd(bJ)
+    aJ2 = round_bezier_mmd(aJ)
+    aI2 = round_bezier_mmd(aI)
+    aG2 = round_bezier_mmd(aG)
+    aD2 = round_bezier_mmd(aD)
+
+    return [bA2, bE2, bH2, bJ2], [aJ2, aI2, aG2, aD2]
+
+
+# 指定された2次曲線の交点を求める
+def calc_quadratic_cross(a, b, c, x1, y1, x2, y2):
+
+    # 開始フレームの接線
+    x1_tan1, x1_tan2 = inclinate(a, b, c, x1)
+
+    # 中間フレームの接線
+    x2_tan1, x2_tan2 = inclinate(a, b, c, x2)
+
+    # x1の直線上の点
+    p1 = x1 + 1
+    q1 = (p1 * x1_tan1) + x1_tan2
+
+    # nearの直線上の点
+    p2 = x2 + 1
+    q2 = (p2 * x2_tan1) + x2_tan2
+
+    # x1の接線とnearの接線の交点
+    s1 = (q1-y1)/(p1-x1)
+    s3 = (q2-y2)/(p2-x2)
+
+    cx1 = (s1*x1-y1-s3*x2+y2)/(s1-s3)
+    cy1 = (q1-y1)/(p1-x1)*(cx1-x1)+y1    
+
+    return cx1, cy1
+
+
+# y = ax^2 + bx + c である場合の、xの接線の傾きを求める
+def inclinate(a, b, c, x):
+    return 2*a*x + b, -a*x*x+c
+
+# y = ax^2 + bx + c 
+# 指定された3点を通る二次曲線を返す
+# https://blog.goo.ne.jp/kano08/e/9354000c0311e9a7a0ab01cca34033a3
+def calc_quadratic_param(x1, y1, x2, y2, x3, y3):
+    a = ((y1 - y2) * (x1 - x3) - (y1 - y3) * (x1 - x2)) / ((x1 - x2) * (x1 - x3) * (x2 - x3))
+    b = (y1 - y2) / (x1 - x2) - a * (x1 + x2)
+    c = y1 - a * x1 * x1 - b * x1
+
+    return a, b, c
+
+
+# 指定された3点と半径を通る球の中心点を求める
+# https://oshiete.goo.ne.jp/qa/195295.html
+# https://okwave.jp/qa/q9467739.html
+def calc_sphere_center(pv, wv, nv, r):
+    x1 = pv.x()
+    y1 = pv.y()
+    z1 = pv.z()
+    x2 = wv.x()
+    y2 = wv.y()
+    z2 = wv.z()
+    x3 = nv.x()
+    y3 = nv.y()
+    z3 = nv.z()
+
+    if x1 == x2 == x3:
+        # 同じ値の場合、2次元円として求める
+        cx, cy, r = calc_circle_center(y1, z1, y2, z2, y3, z3)
+        return QVector3D(x1, cx, cy), r
+    
+    if y1 == y2 == y3:
+        cx, cy, r = calc_circle_center(x1, z1, x2, z2, x3, z3)
+        return QVector3D(cx, y1, cy), r
+    
+    if z1 == z2 == z3:
+        cx, cy, r = calc_circle_center(x1, y1, x2, y2, x3, y3)
+        return QVector3D(cx, cy, z1), r
+    
+    tm01=x1**2-x2**2+y1**2-y2**2+z1**2-z2**2
+    tm02=x1**2-x3**2+y1**2-y3**2+z1**2-z3**2
+    tm11=-2*(x1-x2)*(z1-z3)+2*(x1-x3)*(z1-z2)
+    tm12=-2*(y1-y2)*(z1-z3)+2*(y1-y3)*(z1-z2)
+    tm13=tm01*(z1-z3)-tm02*(z1-z2)
+    tm21=-2*(x1-x2)*(y1-y3)+2*(x1-x3)*(y1-y2)
+    tm22=-2*(z1-z2)*(y1-y3)+2*(z1-z3)*(y1-y2)
+    tm23=tm01*(y1-y3)-tm02*(y1-y2)
+    tma=1+tm11**2/tm12**2+tm21**2/tm22**2
+    tmb=-2*x1+2*(y1+tm13/tm12)*tm11/tm12+2*(z1+tm23/tm22)*tm21/tm22
+    tmc=x1**2+(y1+tm13/tm12)**2+(z1+tm23/tm22)**2-r**2
+    xq1=(-tmb+sqrt(tmb**2-4*tma*tmc))/2/tma
+    xq2=(-tmb-sqrt(tmb**2-4*tma*tmc))/2/tma
+    yq1=-tm13/tm12-tm11/tm12*xq1
+    yq2=-tm13/tm12-tm11/tm12*xq2
+    zq1=-tm23/tm22-tm21/tm22*xq1
+    zq2=-tm23/tm22-tm21/tm22*xq2
+
+    c1 = QVector3D(xq1, yq1, zq1)
+    c2 = QVector3D(xq2, yq2, zq2)
+
+    if c1 == c2:
+        # 重解
+        return c1, r
+
+    if c1.distanceToPoint(QVector3D()) > c2.distanceToPoint(QVector3D()):
+        # 原点に近い方を返す
+        return c1, r
+
+    return c2, r
+
+# http://www.iot-kyoto.com/satoh/2016/01/29/tangent-003/
+# http://nobutina.blog86.fc2.com/blog-entry-674.html
+def calc_circle_center(x1, y1, x2, y2, x3, y3):
+
+    G=( y2*x1-y1*x2 +y3*x2-y2*x3 +y1*x3-y3*x1 )
+    Xc= ((x1*x1+y1*y1)*(y2-y3)+(x2*x2+y2*y2)*(y3-y1)+(x3*x3+y3*y3)*(y1-y2))/(2*G)
+    Yc=-((x1*x1+y1*y1)*(x2-x3)+(x2*x2+y2*y2)*(x3-x1)+(x3*x3+y3*y3)*(x1-x2))/(2*G)
+
+    Xd=(((x1*x1+y1*y1)-(x2*x2+y2*y2))*(y2-y3)-((x2*x2+y2*y2)-(x3*x3+y3*y3))*(y1-y2))/(2*((x1-x2)*(y2-y3)-(x2-x3)*(y1-y2)))
+    Yd=(((y1*y1+x1*x1)-(y2*y2+x2*x2))*(x2-x3)-((y2*y2+x2*x2)-(y3*y3+x3*x3))*(x1-x2))/(2*((y1-y2)*(x2-x3)-(y2-y3)*(x1-x2)))
+
+    G=2 * sqrt( (x1 - Xc) * (x1 - Xc) + (y1 - Yc) * (y1 - Yc) )
+
+    return Xd, Yd, G/2
+
+    # a = x2 - x1
+    # b = y2 - y1
+    # c = x3 - x1
+    # d = y3 - y1
+    # cx = 0
+    # cy = 0
+    # r = 0
+
+    # if  ((a and d) or (b and c)):
+    #     ox = x1 + (d * (a * a + b * b) - b * (c * c + d * d)) / (a * d - b * c) / 2
+    #     if b:
+    #         oy = (a * (x1 + x2 - ox - ox) + b * (y1 + y2)) / b / 2
+    #     else:
+    #         oy = (c * (x1 + x3 - ox - ox) + d * (y1 + y3)) / d / 2
+
+    #     r1   = sqrt((ox - x1) * (ox - x1) + (oy - y1) * (oy - y1))
+    #     r2   = sqrt((ox - x2) * (ox - x2) + (oy - y2) * (oy - y2))
+    #     r3   = sqrt((ox - x3) * (ox - x3) + (oy - y3) * (oy - y3))
+
+    #     cx = ox
+    #     cy = oy
+    #     r  = (r1 + r2 + r3) / 3
+
+    # return cx, cy, r    
+
+
+
+# y = ax^2 + bx + c である場合の、xに対するyを返す
+def calc_quadratic_curve(a, b, c, x):
+    return 2*a*x + b * x + c
 
 
 # 指定された方向に向いた場合の位置情報を返す
@@ -754,3 +1120,97 @@ def create_direction_pos(direction_qq, target_pos):
     mat = QMatrix4x4()
     mat.rotate(direction_qq)
     return mat.mapVector(target_pos)
+
+
+
+
+
+# # 指定フレームのX軸とグラフの交点の位置を求める
+# # http://kaerouka.hatenablog.com/entry/2013/12/21/212809
+# def sqrt_newton_method(value, cnt):
+# 	 # x切片
+# 	preval = value
+
+# 	for i in range(cnt):
+# 		preval = 1/2 * (preval + value/preval)
+
+# 	return preval
+
+
+
+# # 補間曲線（ベジェ曲線）の接線を求める
+# def calc_bezier_line_tangent(vx1, vy1, vx2, vy2, vx3, vy3, vx4, vy4, t):
+
+#     bz1 = QVector2D(0, 0)
+#     bz4 = QVector2D(2, 2)
+
+
+
+#     if x2 < x4:
+#         # farよりnowの方が後の場合
+#         bz2 = QVector2D(x2, y2)
+#         bz3 = QVector2D(x4, y4)
+#     else:
+#         # farよりnowの方が前の場合
+#         bz2 = QVector2D(x4, y4)
+#         bz3 = QVector2D(x2, y2)
+#         bz4 = QVector2D(x3, y3)
+
+#     # https://stackoverflow.com/questions/4089443/find-the-tangent-of-a-point-on-a-cubic-bezier-curve
+#     # dP(t) / dt =  -3(1-t)^2 * P0 + 3(1-t)^2 * P1 - 6t(1-t) * P1 - 3t^2 * P2 + 6t(1-t) * P2 + 3t^2 * P3
+#     # v = -3*(1-t)**2*bz1 + 3*(1-t)**2*bz2 - 6*t*(1-t)*bz2 - 3*t**2*bz3 + 6*t*(1-t)*bz3 * 3*t**2*bz4
+
+#     # http://geom.web.fc2.com/geometry/bezier/cut-cb.html
+#     v = (1-t)**3*bz1 + 3*(1-t)**2*t*bz2 + 3*(1-t)*t**2*bz3 + t**3*bz4
+
+#     # http://junosoft.sblo.jp/article/92871518.html
+#     # v = 3*(-1*bz1 + 3*bz2 - 3*bz3 + bz4)*t**2 + 6*(bz1-2*bz2+bz3)*t + 3*(-1*bz1 + bz2)
+
+#     # https://forum.shade3d.jp/t/09-bezier-line-shade-labo/249/2
+#     # v = (-3*(1 - t)**2)*bz1 + 3*(1 - t)*(1 - 3*t)*bz2 + 3*t*(2 - 3*t)*bz3 + (3*t**2)*bz4
+
+#     v.normalize()
+
+#     return t, v
+
+
+# # 指定された3点を通る二次曲線に従い、指定されたxのyを返す
+# # https://blog.goo.ne.jp/kano08/e/9354000c0311e9a7a0ab01cca34033a3
+# def calc_quadratic_by_x(x1, y1, x2, y2, x3, y3, x):
+#     a, b, c = calc_quadratic_param(x1, y1, x2, y2, x3, y3)
+
+#     y = a * (x ** 2) + b * x + c
+
+#     return a, b, c, y
+
+# # 指定された3点を通る二次曲線に従い、指定されたyのxを返す
+# # https://oshiete.goo.ne.jp/qa/5308458.html
+# def calc_quadratic_by_y(x1, y1, x2, y2, x3, y3, y):
+#     a, b, c = calc_quadratic_param(x1, y1, x2, y2, x3, y3)
+
+#     x = int(abs((-b + sqrt((b ** 2) - ( 4 * a * ( c - y )) )) / (2 * a)))
+
+#     return a, b, c, x
+
+# # https://stackoverflow.com/questions/9600801/evenly-distributing-n-points-on-a-sphere
+# def fibonacci_sphere(samples=1,randomize=True):
+#     rnd = 1.
+#     if randomize:
+#         rnd = random.random() * samples
+
+#     points = []
+#     offset = 2./samples
+#     increment = math.pi * (3. - math.sqrt(5.))
+
+#     for i in range(samples):
+#         y = ((i * offset) - 1) + (offset / 2)
+#         r = math.sqrt(1 - pow(y,2))
+
+#         phi = ((i + rnd) % samples) * increment
+
+#         x = math.cos(phi) * r
+#         z = math.sin(phi) * r
+
+#         points.append([x,y,z])
+
+#     return points

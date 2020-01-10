@@ -9,7 +9,7 @@ from VmdWriter import VmdWriter, VmdBoneFrame
 from VmdReader import VmdReader
 from PmxModel import PmxModel, SizingException
 from PmxReader import PmxReader
-import utils
+import utils, convert_smooth
 
 logger = logging.getLogger("VmdSizing").getChild(__name__)
 
@@ -28,10 +28,25 @@ def exec(motion, trace_model, replace_model, output_vmd_path, vmd_choice_values,
         # モーフのブレンド処理
         blended_morphs = blend_morphs(motion, replace_morphs)
 
+        # モーフの滑らか化(フラグON)
+        smooth_morph(motion, blended_morphs)
+
         # モーフの登録処理
         regist_morphs(motion, blended_morphs)
 
     return True
+
+# モーフの円滑化
+def smooth_morph(motion, blended_morphs):
+    config = {"freq": 30, "mincutoff": 0.1, "beta": 0.5, "dcutoff": 0.8}
+    
+    for (mk, mv_list) in blended_morphs.items():
+        # モーフフィルタ
+        pmfilter = convert_smooth.OneEuroFilter(**config)
+
+        for mv in mv_list:
+            pm = pmfilter(mv.ratio, mv.frame)
+            mv.ratio = pm
 
 # モーフの置き換え処理を実行する
 def create_replace_morphs(motion, vmd_choice_values, rep_choice_values, rep_rate_values):

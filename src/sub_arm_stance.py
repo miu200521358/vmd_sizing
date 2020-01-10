@@ -331,7 +331,7 @@ def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org
         logger.debug("上半身 slope: %s", rep_upper_slope)
         logger.debug("上半身 cross: %s", rep_upper_slope_cross)
 
-        rep_upper_initial_slope = QQuaternion.fromDirection(rep_upper_slope, rep_upper_slope_cross)
+        rep_upper_initial_slope_qq = QQuaternion.fromDirection(rep_upper_slope, rep_upper_slope_cross)
 
         # print("up: %s" % QVector3D.crossProduct(org_target_slope, rep_target_slope))
 
@@ -344,13 +344,14 @@ def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org
             if bf.key == True:
                 calc_rotation_stance(org_motion_frames, motion, trace_model, org_upper_links, org_upper_indexes, org_head_links, org_head_indexes, org_arm_links, org_arm_indexes, \
                     replace_model, rep_upper_links, rep_upper_indexes, rep_head_links, rep_head_indexes, rep_arm_links, rep_arm_indexes, "", "上半身", "上半身", "頭", "上半身", \
-                    rep_upper_initial_slope, is_error_outputed, error_file_logger, output_vmd_path, bf, define_is_rotation_no_check_upper, \
+                    rep_upper_initial_slope_qq, is_error_outputed, error_file_logger, output_vmd_path, bf, define_is_rotation_no_check_upper, \
                     define_calc_up_from_upper, define_calc_up_to_upper, 0.9, QVector3D(0, 1, 1), True)
 
         # 子の角度調整
-        adjust_rotation_by_parent(org_motion_frames, motion, trace_model, replace_model, "首", "上半身", test_param)
-        adjust_rotation_by_parent(org_motion_frames, motion, trace_model, replace_model, "右肩", "上半身", test_param)
-        adjust_rotation_by_parent(org_motion_frames, motion, trace_model, replace_model, "右肩", "上半身", test_param)
+        # adjust_rotation_by_parent(org_motion_frames, motion, trace_model, replace_model, "首", "上半身", test_param)
+        # adjust_rotation_by_parent(org_motion_frames, motion, trace_model, replace_model, "上半身2", "上半身", test_param)
+        # adjust_rotation_by_parent(org_motion_frames, motion, trace_model, replace_model, "右肩", "上半身", test_param)
+        # adjust_rotation_by_parent(org_motion_frames, motion, trace_model, replace_model, "右肩", "上半身", test_param)
 
         print("上半身スタンス補正終了")
 
@@ -362,24 +363,112 @@ def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org
             org_head_links, org_head_indexes = trace_model.create_link_2_top_one("頭")
             rep_head_links, rep_head_indexes = replace_model.create_link_2_top_one("頭")
 
+            # 上半身2,頭,0,0,0,首,上半身2,0,1,0,首,上半身_True,False,False_ 0.00# 25.21# 0.00,-30.76# 39.62# 11.42,-14.18# 16.41#-25.48
+            # test_param = ["上半身2","頭","0","0","0","首","上半身2","0","1","0","首","上半身"]
+            # upper_direction_qq = utils.calc_upper_direction_qq(replace_model, rep_upper_links, motion.frames, bf)
+
+            # 首,上半身,右腕,左腕,0,0,1-,u1,s2,s1_False,False,False_ 3.37#-0.00# 3.61,-3.60# 0.00# 4.09, 1.63#-0.37#-0.74
             # 上半身2から頭への傾き
-            rep_upper2_slope_to = replace_model.bones[test_param[0]].position
-            rep_upper2_slope_from = replace_model.bones[test_param[1]].position
-            rep_upper2_slope = (rep_upper2_slope_to - rep_upper2_slope_from).normalized()
+            # test_param1 = [test_param[5], test_param[6]]
+            rep_upper2_initial_slope1_to = replace_model.bones[test_param[0]].position
+            rep_upper2_initial_slope1_from = replace_model.bones[test_param[1]].position
+            rep_upper2_initial_slope1 = (rep_upper2_initial_slope1_to - rep_upper2_initial_slope1_from).normalized()
 
-            rep_upper2_slope_up_to = replace_model.bones[test_param[2]].position
-            rep_upper2_slope_up_from = replace_model.bones[test_param[3]].position
-            rep_upper2_slope_up_direction = rep_upper2_slope_up_to - rep_upper2_slope_up_from
+            number_params = {"1": 1, "1-": -1, "1.75": 1.75, "1.75-": -1.75, "0": 0}
+            rep_upper2_initial_slope1_up = QVector3D(number_params[test_param[2]], number_params[test_param[3]], number_params[test_param[4]]).normalized()
 
-            test_tareget = rep_upper2_slope_up_direction
-            rot_params = {"x": test_tareget.x(), "y": test_tareget.y(), "z": test_tareget.z(), \
-                            "x-": -test_tareget.x(), "y-": -test_tareget.y(), "z-": -test_tareget.z(), \
-                            "1": 1, "1-": -1, "1.75": 1.75, "1.75-": -1.75, "0": 0}
-            rep_upper2_slope_up_up = QVector3D(rot_params[test_param[4]], rot_params[test_param[5]], rot_params[test_param[6]]).normalized()
+            rep_upper2_initial_slope2_to = replace_model.bones[test_param[5]].position
+            rep_upper2_initial_slope2_from = replace_model.bones[test_param[6]].position
+            rep_upper2_initial_slope2 = (rep_upper2_initial_slope1_to - rep_upper2_initial_slope1_from).normalized()
 
-            rep_upper2_slope_up = QVector3D.crossProduct(rep_upper2_slope_up_direction, rep_upper2_slope_up_up)
+            number_params = {"1": 1, "1-": -1, "1.75": 1.75, "1.75-": -1.75, "0": 0,
+                "x": rep_upper2_initial_slope2.x(), "x-": -rep_upper2_initial_slope2.x(), 
+                "y": rep_upper2_initial_slope2.y(), "y-": -rep_upper2_initial_slope2.y(), 
+                "z": rep_upper2_initial_slope2.z(), "z-": -rep_upper2_initial_slope2.z()}
+            rep_upper2_initial_slope2_up = QVector3D(number_params[test_param[7]], number_params[test_param[8]], number_params[test_param[9]]).normalized()
 
-            rep_upper2_initial_slope = QQuaternion.fromDirection(rep_upper2_slope, rep_upper2_slope_up)
+            direction_params = {"d1": QQuaternion.fromDirection(rep_upper2_initial_slope1, rep_upper2_initial_slope1_up), \
+                "d1i": QQuaternion.fromDirection(rep_upper2_initial_slope1, rep_upper2_initial_slope1_up).inverted(), \
+                "d2": QQuaternion.fromDirection(rep_upper2_initial_slope1, rep_upper2_initial_slope2_up), \
+                "d2i": QQuaternion.fromDirection(rep_upper2_initial_slope1, rep_upper2_initial_slope2_up).inverted(), \
+                "1": QQuaternion()}
+
+            rep_upper2_initial_slope_qq = direction_params[test_param[10]] * direction_params[test_param[11]] * direction_params[test_param[12]]
+
+            # number_params = {"1": 1, "1-": -1, "1.75": 1.75, "1.75-": -1.75, "0": 0}
+            # rep_upper2_initial_slope2_up = QVector3D(number_params[test_param[7]], number_params[test_param[8]], number_params[test_param[9]]).normalized()
+
+            # # number_params = {"1": 1, "1-": -1, "1.75": 1.75, "1.75-": -1.75, "0": 0}
+            # # test_param3 = [number_params[test_param[0]], number_params[test_param[1]], number_params[test_param[2]]]
+            # # rep_upper2_initial_slope1_up = QVector3D(test_param3[0], test_param3[1], test_param3[2]).normalized()
+
+            # # test_param2 = [test_param[2], test_param[3]]
+            # rep_upper2_initial_slope2_to = replace_model.bones["右腕"].position
+            # rep_upper2_initial_slope2_from = replace_model.bones["左腕"].position
+            # rep_upper2_initial_slope2 = (rep_upper2_initial_slope2_to - rep_upper2_initial_slope2_from).normalized()
+            # rep_upper2_initial_slope2_up = QVector3D(0, 0, -1).normalized()
+
+            # number_params = {"1": 1, "1-": -1, "1.75": 1.75, "1.75-": -1.75, "0": 0}
+            # test_param3 = [number_params[test_param[5]], number_params[test_param[6]], number_params[test_param[7]]]
+            # rep_upper2_initial_slope2_up = QVector3D(test_param3[0], test_param3[1], test_param3[2]).normalized()
+
+            # # direction_params = {"s1": rep_upper2_initial_slope1, "u1": rep_upper2_initial_slope1_up}
+            # # test_param4 = [direction_params[test_param[3]], direction_params[test_param[4]]]
+
+            # rep_upper2_initial_slope3_to = replace_model.bones[test_param[0]].position
+            # rep_upper2_initial_slope3_from = replace_model.bones[test_param[1]].position
+            # rep_upper2_initial_slope3 = (rep_upper2_initial_slope1_to - rep_upper2_initial_slope1_from).normalized()
+
+            # rep_upper2_initial_slope4_to = replace_model.bones[test_param[2]].position
+            # rep_upper2_initial_slope4_from = replace_model.bones[test_param[3]].position
+            # rep_upper2_initial_slope4 = (rep_upper2_initial_slope1_to - rep_upper2_initial_slope1_from).normalized()
+
+            # rep_upper2_initial_slope5_qq = QQuaternion.fromDirection(rep_upper2_initial_slope3, rep_upper2_initial_slope4)
+
+            # direction_params = {"n": rep_upper2_initial_slope5_qq, "i": rep_upper2_initial_slope5_qq.inverted()}  
+
+            # rep_upper2_initial_slope_qq = QQuaternion.fromDirection(QVector3D.crossProduct(rep_upper2_initial_slope2_up, rep_upper2_initial_slope2), rep_upper2_initial_slope1) * direction_params[test_param[4]]
+
+            # # rep_upper2_initial_slope2_up = QVector3D(rot_params[test_param[3]], rot_params[test_param[4]], rot_params[test_param[5]]).normalized()
+
+            # test_tareget = rep_upper2_initial_slope1
+            # rot_params = {"x": test_tareget.x(), "y": test_tareget.y(), "z": test_tareget.z(), \
+            #                 "x-": -test_tareget.x(), "y-": -test_tareget.y(), "z-": -test_tareget.z(), \
+            #                 "1": 1, "1-": -1, "1.75": 1.75, "1.75-": -1.75, "0": 0}
+            # rep_upper2_initial_slope1_up = QVector3D(rot_params[test_param[2]], rot_params[test_param[3]], rot_params[test_param[4]]).normalized()
+
+            # # rep_upper2_initial_slope1_qq = QQuaternion.fromDirection(rep_upper2_initial_slope1, rep_upper2_initial_slope1_up)
+
+            # # --------------
+
+            # # -------------------
+
+            # rot_params = {"1": rep_upper2_initial_slope1_qq, "1-": rep_upper2_initial_slope1_qq.inverted(), \
+            #     "2": rep_upper2_initial_slope2_qq, "2-": rep_upper2_initial_slope2_qq.inverted(), 
+            #     "3": rep_upper_initial_slope_qq, "3-": rep_upper_initial_slope_qq.inverted(), }
+
+            # rep_upper2_initial_slope_qq = rot_params[test_param[6]] * rot_params[test_param[7]]
+
+            # rep_upper2_slope_up_to = replace_model.bones[test_param[2]].position
+            # rep_upper2_slope_up_from = replace_model.bones[test_param[3]].position
+            # rep_upper2_slope_up_direction = rep_upper2_slope_up_to - rep_upper2_slope_up_from
+
+
+            # rep_upper2_slope_up = QVector3D.crossProduct(rep_upper2_slope_up_direction, rep_upper2_slope_up_up)
+
+            # rep_upper2_initial_slope = QQuaternion.fromDirection(rep_upper2_slope, rep_upper2_slope_up)
+
+
+            # # 上半身2から頭への傾き
+            # rep_upper2_slope_to = replace_model.bones[test_param[0]].position
+            # rep_upper2_slope_from = replace_model.bones[test_param[1]].position
+            # rep_upper2_slope = (rep_upper2_slope_to - rep_upper2_slope_from).normalized()
+
+
+
+            # rep_upper2_slope_up = QVector3D.crossProduct(rep_upper2_slope_up_direction, rep_upper2_slope_up_up)
+
+            # rep_upper2_initial_slope = QQuaternion.fromDirection(rep_upper2_slope, rep_upper2_slope_up)
 
 
             # rep_upper2_slope_up_up_to = replace_model.bones[test_param[4]].position
@@ -438,8 +527,8 @@ def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org
             for bf in motion.frames["上半身2"]:
                 if bf.key == True:
                     calc_rotation_stance(org_motion_frames, motion, trace_model, org_head_links, org_head_indexes, org_head_links, org_head_indexes, org_arm_links, org_arm_indexes, \
-                        replace_model, rep_head_links, rep_head_indexes, rep_head_links, rep_head_indexes, rep_arm_links, rep_arm_indexes, "", "上半身2", "上半身2", "頭", "上半身2", \
-                        rep_upper2_initial_slope, is_error_outputed, error_file_logger, output_vmd_path, bf, define_is_rotation_no_check_upper, \
+                        replace_model, rep_head_links, rep_head_indexes, rep_head_links, rep_head_indexes, rep_arm_links, rep_arm_indexes, "", test_param[13], "上半身2", "頭", test_param[14], \
+                        rep_upper2_initial_slope_qq, is_error_outputed, error_file_logger, output_vmd_path, bf, define_is_rotation_no_check_upper, \
                         define_calc_up_from_upper2, define_calc_up_to_upper2, 0.9, QVector3D(0, 1, 1), True)
 
             # # 子の角度調整
@@ -456,60 +545,105 @@ def define_is_rotation_no_check_upper(rep_from_slope):
 # 定義: 傾きを求める方向のFROM位置計算（上半身）
 def define_calc_up_from_upper(org_rot_motion_frames, rep_rot_motion_frames, trace_model, org_base_links, org_base_indexes, org_target_links, org_target_indexes, org_arm_links, org_arm_indexes, \
     replace_model, rep_base_links, rep_base_indexes, rep_target_links, rep_target_indexes, rep_arm_links, rep_arm_indexes, direction_name, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
-    rep_initial_slope, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param):
+    rep_initial_slope_qq, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param):
 
     return calc_up_arm(org_rot_motion_frames, rep_rot_motion_frames, trace_model, org_base_links, org_base_indexes, org_target_links, org_target_indexes, org_arm_links, org_arm_indexes, \
         replace_model, rep_base_links, rep_base_indexes, rep_target_links, rep_target_indexes, rep_arm_links, rep_arm_indexes, direction_name, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
-        rep_initial_slope, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param, "左")
+        rep_initial_slope_qq, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param, "左")
 
 # 定義: 傾きを求める方向のTO位置計算（上半身）
 def define_calc_up_to_upper(org_rot_motion_frames, rep_rot_motion_frames, trace_model, org_base_links, org_base_indexes, org_target_links, org_target_indexes, org_arm_links, org_arm_indexes, \
     replace_model, rep_base_links, rep_base_indexes, rep_target_links, rep_target_indexes, rep_arm_links, rep_arm_indexes, direction_name, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
-    rep_initial_slope, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param):
+    rep_initial_slope_qq, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param):
 
     return calc_up_arm(org_rot_motion_frames, rep_rot_motion_frames, trace_model, org_base_links, org_base_indexes, org_target_links, org_target_indexes, org_arm_links, org_arm_indexes, \
         replace_model, rep_base_links, rep_base_indexes, rep_target_links, rep_target_indexes, rep_arm_links, rep_arm_indexes, direction_name, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
-        rep_initial_slope, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param, "右")
+        rep_initial_slope_qq, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param, "右")
 
 # 腕の位置計算
 def calc_up_arm(org_rot_motion_frames, rep_rot_motion_frames, trace_model, org_base_links, org_base_indexes, org_target_links, org_target_indexes, org_arm_links, org_arm_indexes, \
     replace_model, rep_base_links, rep_base_indexes, rep_target_links, rep_target_indexes, rep_arm_links, rep_arm_indexes, direction_name, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
-    rep_initial_slope, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param, arm_direction_name):
+    rep_initial_slope_qq, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param, arm_direction_name):
 
     return recalc_to_pos(org_rot_motion_frames, rep_rot_motion_frames, trace_model, org_base_links, org_base_indexes, org_target_links, org_target_indexes, org_arm_links, org_arm_indexes, \
         replace_model, rep_base_links, rep_base_indexes, rep_target_links, rep_target_indexes, rep_arm_links, rep_arm_indexes, direction_name, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
-        rep_initial_slope, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param, \
+        rep_initial_slope_qq, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param, \
         rot_bone_name, "腕", org_rot_motion_frames, org_rot_direction_qq, org_arm_links[arm_direction_name], org_arm_indexes[arm_direction_name], rep_rot_motion_frames, rep_rot_direction_qq, rep_arm_links[arm_direction_name], rep_arm_indexes[arm_direction_name])
 
 # 定義: 傾きを求める方向のFROM位置計算（上半身2）
 def define_calc_up_from_upper2(org_rot_motion_frames, rep_rot_motion_frames, trace_model, org_base_links, org_base_indexes, org_target_links, org_target_indexes, org_arm_links, org_arm_indexes, \
     replace_model, rep_base_links, rep_base_indexes, rep_target_links, rep_target_indexes, rep_arm_links, rep_arm_indexes, direction_name, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
-    rep_initial_slope, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param):
+    rep_initial_slope_qq, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param):
 
-    return calc_up_arm(org_rot_motion_frames, rep_rot_motion_frames, trace_model, org_base_links, org_base_indexes, org_target_links, org_target_indexes, org_arm_links, org_arm_indexes, \
+    rep_up_from_arm_pos, rep_up_from_arm_initial_pos = calc_up_arm(org_rot_motion_frames, rep_rot_motion_frames, trace_model, org_base_links, org_base_indexes, org_target_links, org_target_indexes, org_arm_links, org_arm_indexes, \
         replace_model, rep_base_links, rep_base_indexes, rep_target_links, rep_target_indexes, rep_arm_links, rep_arm_indexes, direction_name, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
-        rep_initial_slope, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param, "左")
+        rep_initial_slope_qq, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param, "左")
+    
+    return rep_up_from_arm_pos, rep_up_from_arm_initial_pos 
+
+    # _, _, _, _, rep_from_global_3ds = utils.create_matrix_global(replace_model, rep_target_links, rep_rot_motion_frames, bf, None)
+    # rep_up_from_pos = rep_from_global_3ds[len(rep_from_global_3ds) - rep_base_indexes[base_bone_name] - 1]
+
+    # return rep_up_from_pos, rep_up_from_pos
+
+    # rep_up_from_arm_pos, rep_up_from_arm_initial_pos = calc_up_arm(org_rot_motion_frames, rep_rot_motion_frames, trace_model, org_base_links, org_base_indexes, org_target_links, org_target_indexes, org_arm_links, org_arm_indexes, \
+    #     replace_model, rep_base_links, rep_base_indexes, rep_target_links, rep_target_indexes, rep_arm_links, rep_arm_indexes, direction_name, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
+    #     rep_initial_slope_qq, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param, "左")
+
+    # rep_up_to_arm_pos, rep_up_to_arm_initial_pos = calc_up_arm(org_rot_motion_frames, rep_rot_motion_frames, trace_model, org_base_links, org_base_indexes, org_target_links, org_target_indexes, org_arm_links, org_arm_indexes, \
+    #     replace_model, rep_base_links, rep_base_indexes, rep_target_links, rep_target_indexes, rep_arm_links, rep_arm_indexes, direction_name, base_bone_name, to_bone_name, to_bone_name, rot_bone_name, \
+    #     rep_initial_slope_qq, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param, "右")
+
+    # return QVector3D.crossProduct(rep_up_to_arm_pos, rep_up_from_arm_pos), QVector3D.crossProduct(rep_up_to_arm_initial_pos, rep_up_from_arm_initial_pos)
 
     # # 腕の位置を取得する
     # arm_pos, arm_initial_pos = calc_up_arm(org_rot_motion_frames, rep_rot_motion_frames, trace_model, org_base_links, org_base_indexes, org_target_links, org_target_indexes, org_arm_links, org_arm_indexes, \
     #     replace_model, rep_base_links, rep_base_indexes, rep_target_links, rep_target_indexes, rep_arm_links, rep_arm_indexes, direction_name, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
-    #     rep_initial_slope, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param, "左")
+    #     rep_initial_slope_qq, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param, "左")
 
     # # 上半身の位置を取得する
     # _, _, _, _, rep_target_global_3ds = utils.create_matrix_global(replace_model, rep_target_links, rep_rot_motion_frames, bf, None)
-    # rep_upper_pos = rep_target_global_3ds[len(rep_target_global_3ds) - rep_target_indexes["上半身2"] - 1]
+    # rep_upper_pos = rep_target_global_3ds[len(rep_target_global_3ds) - rep_target_indexes[] - 1]
 
     # return QVector3D.crossProduct(arm_pos, rep_upper_pos), QVector3D.crossProduct(arm_initial_pos, rep_upper_pos)
 
 # 定義: 傾きを求める方向のTO位置計算（上半身2）
 def define_calc_up_to_upper2(org_rot_motion_frames, rep_rot_motion_frames, trace_model, org_base_links, org_base_indexes, org_target_links, org_target_indexes, org_arm_links, org_arm_indexes, \
     replace_model, rep_base_links, rep_base_indexes, rep_target_links, rep_target_indexes, rep_arm_links, rep_arm_indexes, direction_name, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
-    rep_initial_slope, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param):
+    rep_initial_slope_qq, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param):
+
+    rep_up_to_arm_pos, rep_up_to_arm_initial_pos = calc_up_arm(org_rot_motion_frames, rep_rot_motion_frames, trace_model, org_base_links, org_base_indexes, org_target_links, org_target_indexes, org_arm_links, org_arm_indexes, \
+        replace_model, rep_base_links, rep_base_indexes, rep_target_links, rep_target_indexes, rep_arm_links, rep_arm_indexes, direction_name, base_bone_name, to_bone_name, to_bone_name, rot_bone_name, \
+        rep_initial_slope_qq, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param, "右")
+
+    return rep_up_to_arm_pos, rep_up_to_arm_initial_pos
+
+    # _, _, _, _, rep_to_global_3ds = utils.create_matrix_global(replace_model, rep_target_links, rep_rot_motion_frames, bf, None)
+    # rep_up_to_pos = rep_to_global_3ds[len(rep_to_global_3ds) - rep_base_indexes[to_bone_name] - 1]
+
+    # return rep_up_to_pos, rep_up_to_pos
+
+    # rep_up_to_pos, rep_up_to_initial_pos = recalc_to_pos(org_rot_motion_frames, rep_rot_motion_frames, trace_model, org_base_links, org_base_indexes, org_target_links, org_target_indexes, org_arm_links, org_arm_indexes, \
+    #     replace_model, rep_base_links, rep_base_indexes, rep_target_links, rep_target_indexes, rep_arm_links, rep_arm_indexes, direction_name, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
+    #     rep_initial_slope_qq, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param, \
+    #     base_bone_name, to_bone_name, org_rot_motion_frames, org_rot_direction_qq, org_target_links, org_target_indexes, rep_rot_motion_frames, rep_rot_direction_qq, rep_target_links, rep_target_indexes)
+
+    # rep_up_from_pos, rep_up_from_initial_pos = recalc_to_pos(org_rot_motion_frames, rep_rot_motion_frames, trace_model, org_base_links, org_base_indexes, org_target_links, org_target_indexes, org_arm_links, org_arm_indexes, \
+    #     replace_model, rep_base_links, rep_base_indexes, rep_target_links, rep_target_indexes, rep_arm_links, rep_arm_indexes, direction_name, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
+    #     rep_initial_slope_qq, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param, \
+    #     base_bone_name, to_bone_name, org_rot_motion_frames, org_rot_direction_qq, org_target_links, org_target_indexes, rep_rot_motion_frames, rep_rot_direction_qq, rep_target_links, rep_target_indexes)
+
+    # return QVector3D.crossProduct(rep_up_to_pos, rep_up_from_pos), QVector3D.crossProduct(rep_up_to_initial_pos, rep_up_from_initial_pos)
+
+    # _, _, _, _, rep_to_global_3ds = utils.create_matrix_global(replace_model, rep_base_links, rep_rot_motion_frames, bf, None)
+    # rep_up_to_pos = rep_to_global_3ds[len(rep_to_global_3ds) - rep_base_indexes[rot_bone_name] - 1]
+
+    # return rep_up_to_pos, rep_up_to_pos
 
     # # 腕の位置を取得する
     # arm_pos, arm_initial_pos = calc_up_arm(org_rot_motion_frames, rep_rot_motion_frames, trace_model, org_base_links, org_base_indexes, org_target_links, org_target_indexes, org_arm_links, org_arm_indexes, \
     #     replace_model, rep_base_links, rep_base_indexes, rep_target_links, rep_target_indexes, rep_arm_links, rep_arm_indexes, direction_name, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
-    #     rep_initial_slope, bf, diff_fill_ratio, is_x_diff_shoulder, org_   rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param, "右")
+    #     rep_initial_slope_qq, bf, diff_fill_ratio, is_x_diff_shoulder, org_   rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param, "右")
 
     # # 上半身の位置を取得する
     # _, _, _, _, rep_target_global_3ds = utils.create_matrix_global(replace_model, rep_target_links, rep_rot_motion_frames, bf, None)
@@ -517,9 +651,9 @@ def define_calc_up_to_upper2(org_rot_motion_frames, rep_rot_motion_frames, trace
 
     # return QVector3D.crossProduct(arm_pos, rep_upper_pos), QVector3D.crossProduct(arm_initial_pos, rep_upper_pos)
 
-    return calc_up_arm(org_rot_motion_frames, rep_rot_motion_frames, trace_model, org_base_links, org_base_indexes, org_target_links, org_target_indexes, org_arm_links, org_arm_indexes, \
-        replace_model, rep_base_links, rep_base_indexes, rep_target_links, rep_target_indexes, rep_arm_links, rep_arm_indexes, direction_name, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
-        rep_initial_slope, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param, "右")
+    # return calc_up_arm(org_rot_motion_frames, rep_rot_motion_frames, trace_model, org_base_links, org_base_indexes, org_target_links, org_target_indexes, org_arm_links, org_arm_indexes, \
+    #     replace_model, rep_base_links, rep_base_indexes, rep_target_links, rep_target_indexes, rep_arm_links, rep_arm_indexes, direction_name, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
+    #     rep_initial_slope_qq, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param, "右")
 
 # ------------------------
 def adjust_shoulder_stance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger, test_param):
@@ -588,20 +722,20 @@ def adjust_shoulder_stance_direction(motion, trace_model, replace_model, output_
         # _, _, _, _, rep_arm_global_3ds = utils.create_matrix_global(replace_model, rep_arm_links[direction], {}, start_bf, None)
 
         # org_initial_slope = (trace_model.bones[arm_name].position - trace_model.bones[shoulder_name].position).normalized()
-        rep_initial_slope = (replace_model.bones[arm_name].position - replace_model.bones[shoulder_name].position).normalized()
+        rep_initial_slope_qq = (replace_model.bones[arm_name].position - replace_model.bones[shoulder_name].position).normalized()
 
         # org_initial_upper_slope = (trace_model.bones["首"].position - trace_model.bones[rot_bone_name].position).normalized()
         # rep_initial_upper_slope_direction = (replace_model.bones["首"].position - replace_model.bones[rot_bone_name].position).normalized()
 
-        # test_tareget = rep_initial_slope
+        # test_tareget = rep_initial_slope_qq
         # rot_params = {"x": test_tareget.x(), "y": test_tareget.y(), "z": test_tareget.z(), \
         #                 "x-": -test_tareget.x(), "y-": -test_tareget.y(), "z-": -test_tareget.z(), \
         #                 "1": 1, "1-": -1, "1.75": 1.75, "1.75-": -1.75, "0": 0}
-        # rep_initial_slope_cross = QVector3D(rot_params[test_param[0]], rot_params[test_param[1]], rot_params[test_param[2]]).normalized()
+        # rep_initial_slope_qq_cross = QVector3D(rot_params[test_param[0]], rot_params[test_param[1]], rot_params[test_param[2]]).normalized()
 
-        # rep_initial_slope_cross = QVector3D(-1, 0, 1) if direction == "左" else QVector3D(1, 0, -1)
-        rep_initial_slope_cross = QVector3D(-1, 0, -1)
-        # rep_initial_slope_cross = QVector3D.crossProduct(rep_initial_slope, QVector3D.crossProduct(rep_initial_upper_slope_direction, rep_initial_upper_slope_up))
+        # rep_initial_slope_qq_cross = QVector3D(-1, 0, 1) if direction == "左" else QVector3D(1, 0, -1)
+        rep_initial_slope_qq_cross = QVector3D(-1, 0, -1)
+        # rep_initial_slope_qq_cross = QVector3D.crossProduct(rep_initial_slope_qq, QVector3D.crossProduct(rep_initial_upper_slope_direction, rep_initial_upper_slope_up))
 
         for bf in motion.frames[shoulder_name]:
             if bf.key == True:
@@ -679,17 +813,17 @@ def adjust_shoulder_stance_direction(motion, trace_model, replace_model, output_
 
                 # # # logger.debug("f: %s, %s, org_rot_direction_qq: %s", bf.frame, shoulder_name, org_rot_direction_qq)
                 # # # logger.debug("f: %s, %s, rep_rot_direction_qq: %s", bf.frame, shoulder_name, rep_rot_direction_qq)
-                # # # logger.debug("f: %s, %s, target_base_slope: %s", bf.frame, shoulder_name, target_base_slope)
+
                 # # # # logger.debug("f: %s, %s, target_rot_slope: %s", bf.frame, shoulder_name, target_rot_slope)
                 # # # logger.debug("f: %s, %s, rep_rot_slope_cross: %s", bf.frame, shoulder_name, rep_rot_slope_cross)
 
                 # calc_shoulder_rotation(org_motion_frames, motion, trace_model, org_neck_links, org_neck_indexes, org_shoulder_links, org_shoulder_indexes, org_arm_links, org_arm_indexes, \
                 #     replace_model, rep_neck_links, rep_neck_indexes, rep_shoulder_links, rep_shoulder_indexes, rep_arm_links, rep_arm_indexes, direction, "首", "肩", "腕", rot_bone_name, \
-                #     rep_initial_slope, rep_initial_slope_cross, is_error_outputed, error_file_logger, output_vmd_path, bf, 0.7, test_param)
+                #     rep_initial_slope_qq, rep_initial_slope_qq_cross, is_error_outputed, error_file_logger, output_vmd_path, bf, 0.7, test_param)
 
                 calc_rotation_stance(org_motion_frames, motion, trace_model, org_neck_links, org_neck_indexes, org_shoulder_links, org_shoulder_indexes, org_arm_links, org_arm_indexes, \
                     replace_model, rep_neck_links, rep_neck_indexes, rep_shoulder_links, rep_shoulder_indexes, rep_arm_links, rep_arm_indexes, direction, "首", "肩", "腕", rot_bone_name, \
-                    rep_initial_slope, is_error_outputed, error_file_logger, output_vmd_path, bf, define_is_rotation_no_check_shoulder, define_calc_up_from_shoulder, \
+                    rep_initial_slope_qq, is_error_outputed, error_file_logger, output_vmd_path, bf, define_is_rotation_no_check_shoulder, define_calc_up_from_shoulder, \
                     define_calc_up_to_shoulder, 0.7, QVector3D(1, 1, 1), True, test_param)
 
         print("{0}スタンス補正終了".format(shoulder_name))
@@ -698,11 +832,11 @@ def adjust_shoulder_stance_direction(motion, trace_model, replace_model, output_
 # 肩スタンス補正
 def calc_shoulder_rotation(org_motion_frames, motion, trace_model, org_base_links, org_base_indexes, org_shoulder_links, org_shoulder_indexes, org_arm_links, org_arm_indexes, \
     replace_model, rep_base_links, rep_base_indexes, rep_shoulder_links, rep_shoulder_indexes, rep_arm_links, rep_arm_indexes, direction, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
-    rep_initial_slope, is_error_outputed, error_file_logger, output_vmd_path, bf, dot_limit, test_param):
+    rep_initial_slope_qq, is_error_outputed, error_file_logger, output_vmd_path, bf, dot_limit, test_param):
 
     calc_rotation_stance(org_motion_frames, motion, trace_model, org_base_links, org_base_indexes, org_shoulder_links, org_shoulder_indexes, org_arm_links, org_arm_indexes, \
         replace_model, rep_base_links, rep_base_indexes, rep_shoulder_links, rep_shoulder_indexes, rep_arm_links, rep_arm_indexes, direction, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
-        rep_initial_slope, is_error_outputed, error_file_logger, output_vmd_path, bf, define_is_rotation_no_check_shoulder, define_calc_up_from_shoulder, define_calc_up_to_shoulder, dot_limit, QVector3D(1, 1, 1), True, test_param)
+        rep_initial_slope_qq, is_error_outputed, error_file_logger, output_vmd_path, bf, define_is_rotation_no_check_shoulder, define_calc_up_from_shoulder, define_calc_up_to_shoulder, dot_limit, QVector3D(1, 1, 1), True, test_param)
 
 # 定義: 回転チェック不要条件（肩）
 def define_is_rotation_no_check_shoulder(rep_from_slope):
@@ -711,7 +845,7 @@ def define_is_rotation_no_check_shoulder(rep_from_slope):
 # 定義: 傾きを求める方向のFROM位置計算（肩）
 def define_calc_up_from_shoulder(org_rot_motion_frames, rep_rot_motion_frames, trace_model, org_base_links, org_base_indexes, org_target_links, org_target_indexes, org_arm_links, org_arm_indexes, \
     replace_model, rep_base_links, rep_base_indexes, rep_target_links, rep_target_indexes, rep_arm_links, rep_arm_indexes, direction_name, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
-    rep_initial_slope, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param):
+    rep_initial_slope_qq, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param):
 
     _, _, _, _, rep_from_global_3ds = utils.create_matrix_global(replace_model, rep_base_links, rep_rot_motion_frames, bf, None)
     rep_up_from_pos = rep_from_global_3ds[len(rep_from_global_3ds) - rep_base_indexes[base_bone_name] - 1]
@@ -720,12 +854,12 @@ def define_calc_up_from_shoulder(org_rot_motion_frames, rep_rot_motion_frames, t
 
     # return calc_up_trunk_by_shoulder(org_rot_motion_frames, rep_rot_motion_frames, trace_model, org_base_links, org_base_indexes, org_target_links, org_target_indexes, org_arm_links, org_arm_indexes, \
     #     replace_model, rep_base_links, rep_base_indexes, rep_target_links, rep_target_indexes, rep_arm_links, rep_arm_indexes, direction_name, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
-    #     rep_initial_slope, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param, base_bone_name, "上半身")
+    #     rep_initial_slope_qq, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param, base_bone_name, "上半身")
 
-# 定義: 傾きを求める方向のFROM位置計算（肩）
+# 定義: 傾きを求める方向のTO位置計算（肩）
 def define_calc_up_to_shoulder(org_rot_motion_frames, rep_rot_motion_frames, trace_model, org_base_links, org_base_indexes, org_target_links, org_target_indexes, org_arm_links, org_arm_indexes, \
     replace_model, rep_base_links, rep_base_indexes, rep_target_links, rep_target_indexes, rep_arm_links, rep_arm_indexes, direction_name, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
-    rep_initial_slope, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param):
+    rep_initial_slope_qq, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param):
 
     _, _, _, _, rep_to_global_3ds = utils.create_matrix_global(replace_model, rep_base_links, rep_rot_motion_frames, bf, None)
     rep_up_to_pos = rep_to_global_3ds[len(rep_to_global_3ds) - rep_base_indexes[rot_bone_name] - 1]
@@ -734,22 +868,22 @@ def define_calc_up_to_shoulder(org_rot_motion_frames, rep_rot_motion_frames, tra
 
     # return calc_up_trunk_by_shoulder(org_rot_motion_frames, rep_rot_motion_frames, trace_model, org_base_links, org_base_indexes, org_target_links, org_target_indexes, org_arm_links, org_arm_indexes, \
     #     replace_model, rep_base_links, rep_base_indexes, rep_target_links, rep_target_indexes, rep_arm_links, rep_arm_indexes, direction_name, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
-    #     rep_initial_slope, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param, rot_bone_name, "上半身")
+    #     rep_initial_slope_qq, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param, rot_bone_name, "上半身")
 
 # 定義: 傾きを求める方向の指定位置計算（体幹）
 def calc_up_trunk_by_shoulder(org_rot_motion_frames, rep_rot_motion_frames, trace_model, org_base_links, org_base_indexes, org_target_links, org_target_indexes, org_arm_links, org_arm_indexes, \
     replace_model, rep_base_links, rep_base_indexes, rep_target_links, rep_target_indexes, rep_arm_links, rep_arm_indexes, direction_name, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
-    rep_initial_slope, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param, trunk_from_name, trunk_to_name):
+    rep_initial_slope_qq, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param, trunk_from_name, trunk_to_name):
 
     return recalc_to_pos(org_rot_motion_frames, rep_rot_motion_frames, trace_model, org_base_links, org_base_indexes, org_target_links, org_target_indexes, org_arm_links, org_arm_indexes, \
         replace_model, rep_base_links, rep_base_indexes, rep_target_links, rep_target_indexes, rep_arm_links, rep_arm_indexes, direction_name, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
-        rep_initial_slope, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param, \
+        rep_initial_slope_qq, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param, \
         trunk_from_name, trunk_to_name, org_rot_motion_frames, org_rot_direction_qq, org_base_links, org_base_indexes, rep_rot_motion_frames, rep_rot_direction_qq, rep_base_links, rep_base_indexes)
 
 # TO位置の再計算処理
 def recalc_to_pos(org_rot_motion_frames, rep_rot_motion_frames, trace_model, org_base_links, org_base_indexes, org_target_links, org_target_indexes, org_arm_links, org_arm_indexes, \
     replace_model, rep_base_links, rep_base_indexes, rep_target_links, rep_target_indexes, rep_arm_links, rep_arm_indexes, direction_name, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
-    rep_initial_slope, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param, \
+    rep_initial_slope_qq, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param, \
     recalc_from_name, recalc_to_name, org_recalc_motion_frames, org_recalc_direction_qq, org_to_links, org_to_indexes, rep_recalc_motion_frames, rep_recalc_direction_qq, rep_to_links, rep_to_indexes):
 
     _, _, _, _, org_to_global_3ds = utils.create_matrix_global(trace_model, org_to_links, org_recalc_motion_frames, bf, None)
@@ -795,7 +929,7 @@ def recalc_to_pos(org_rot_motion_frames, rep_rot_motion_frames, trace_model, org
     return rep_to_pos, rep_to_global_3ds[len(rep_to_global_3ds) - rep_to_indexes[recalc_to_name] - 1]
 
 
-# def define_from_orientation_shoulder(rep_from_pos, rep_to_pos, rep_base_pos, rep_initial_slope, rep_left_arm_pos, rep_right_arm_pos, direction_name, rep_base_rot_pos, rep_to_rot_pos, test_param=None):
+# def define_from_orientation_shoulder(rep_from_pos, rep_to_pos, rep_base_pos, rep_initial_slope_qq, rep_left_arm_pos, rep_right_arm_pos, direction_name, rep_base_rot_pos, rep_to_rot_pos, test_param=None):
 #     direction = rep_to_pos - rep_from_pos
 #     up = QVector3D.crossProduct(direction, rep_to_pos - rep_from_pos).normalized()
 #     return QQuaternion.fromDirection(direction, up) * QQuaternion.fromDirection(rep_from_slope, rep_from_slope_cross)
@@ -823,7 +957,7 @@ def recalc_to_pos(org_rot_motion_frames, rep_rot_motion_frames, trace_model, org
 
 def calc_rotation_stance(org_motion_frames, motion, trace_model, org_base_links, org_base_indexes, org_target_links, org_target_indexes, org_arm_links, org_arm_indexes, \
     replace_model, rep_base_links, rep_base_indexes, rep_target_links, rep_target_indexes, rep_arm_links, rep_arm_indexes, direction_name, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
-    rep_initial_slope, is_error_outputed, error_file_logger, output_vmd_path, bf, define_is_rotation_no_check, define_calc_up_from, define_calc_up_to, dot_limit, diff_fill_ratio, is_x_diff_shoulder, test_param=None):
+    rep_initial_slope_qq, is_error_outputed, error_file_logger, output_vmd_path, bf, define_is_rotation_no_check, define_calc_up_from, define_calc_up_to, dot_limit, diff_fill_ratio, is_x_diff_shoulder, test_param=None):
     target_from_bone_name = "{0}{1}".format(direction_name, from_bone_name)
     target_to_bone_name = "{0}{1}".format(direction_name, to_bone_name)
     is_print = False
@@ -949,19 +1083,19 @@ def calc_rotation_stance(org_motion_frames, motion, trace_model, org_base_links,
     # UP方向のFROM位置
     rep_up_from_pos, rep_up_from_initial_pos = define_calc_up_from(org_rot_motion_frames, rep_rot_motion_frames, trace_model, org_base_links, org_base_indexes, org_target_links, org_target_indexes, org_arm_links, org_arm_indexes, \
         replace_model, rep_base_links, rep_base_indexes, rep_target_links, rep_target_indexes, rep_arm_links, rep_arm_indexes, direction_name, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
-        rep_initial_slope, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param)
+        rep_initial_slope_qq, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param)
 
     # UP方向のTO位置
     rep_up_to_pos, rep_up_to_initial_pos = define_calc_up_to(org_rot_motion_frames, rep_rot_motion_frames, trace_model, org_base_links, org_base_indexes, org_target_links, org_target_indexes, org_arm_links, org_arm_indexes, \
         replace_model, rep_base_links, rep_base_indexes, rep_target_links, rep_target_indexes, rep_arm_links, rep_arm_indexes, direction_name, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
-        rep_initial_slope, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param)
+        rep_initial_slope_qq, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param)
 
     # ---------------
     # FROMの回転量を再計算する
     direction = rep_to_pos - rep_base_pos
     up = QVector3D.crossProduct(direction, rep_up_to_pos - rep_up_from_pos).normalized()
     from_orientation = QQuaternion.fromDirection(direction, up)
-    initial = rep_initial_slope
+    initial = rep_initial_slope_qq
     from_rotation = parent_rotation.inverted() * from_orientation * initial.inverted()
     logger.debug("f: %s, parent: %s", bf.frame, parent_rotation.toEulerAngles())
     logger.debug("f: %s, initial: %s", bf.frame, initial.toEulerAngles())
@@ -973,7 +1107,7 @@ def calc_rotation_stance(org_motion_frames, motion, trace_model, org_base_links,
     utils.output_message("rep_up_from_pos: %s 元: %s" % (rep_up_from_pos, rep_up_from_initial_pos), is_print)
     utils.output_message("rep_up_to_pos: %s 元: %s" % (rep_up_to_pos, rep_up_to_initial_pos), is_print)
 
-    if define_is_rotation_no_check and define_is_rotation_no_check(rep_initial_slope):
+    if define_is_rotation_no_check and define_is_rotation_no_check(rep_initial_slope_qq):
         # チェックなし条件に合致する場合、チェックなしで適用
         bf.rotation = from_rotation
     else:
