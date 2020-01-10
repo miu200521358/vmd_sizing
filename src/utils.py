@@ -1197,26 +1197,53 @@ def calc_sphere_center(pv, wv, nv, r):
         cx, cy, r = calc_circle_center(x1, y1, x2, y2, x3, y3)
         return QVector3D(cx, cy, z1), r
     
-    tm01=x1**2-x2**2+y1**2-y2**2+z1**2-z2**2
-    tm02=x1**2-x3**2+y1**2-y3**2+z1**2-z3**2
-    tm11=-2*(x1-x2)*(z1-z3)+2*(x1-x3)*(z1-z2)
-    tm12=-2*(y1-y2)*(z1-z3)+2*(y1-y3)*(z1-z2)
-    tm13=tm01*(z1-z3)-tm02*(z1-z2)
-    tm21=-2*(x1-x2)*(y1-y3)+2*(x1-x3)*(y1-y2)
-    tm22=-2*(z1-z2)*(y1-y3)+2*(z1-z3)*(y1-y2)
-    tm23=tm01*(y1-y3)-tm02*(y1-y2)
-    tma=1+tm11**2/tm12**2+tm21**2/tm22**2
-    tmb=-2*x1+2*(y1+tm13/tm12)*tm11/tm12+2*(z1+tm23/tm22)*tm21/tm22
-    tmc=x1**2+(y1+tm13/tm12)**2+(z1+tm23/tm22)**2-r**2
-    xq1=(-tmb+sqrt(abs(tmb**2-4*tma*tmc)))/2/tma
-    xq2=(-tmb-sqrt(abs(tmb**2-4*tma*tmc)))/2/tma
-    yq1=-tm13/tm12-tm11/tm12*xq1
-    yq2=-tm13/tm12-tm11/tm12*xq2
-    zq1=-tm23/tm22-tm21/tm22*xq1
-    zq2=-tm23/tm22-tm21/tm22*xq2
+    try:
+        tm01=x1**2-x2**2+y1**2-y2**2+z1**2-z2**2
+        tm02=x1**2-x3**2+y1**2-y3**2+z1**2-z3**2
+        tm11=-2*(x1-x2)*(z1-z3)+2*(x1-x3)*(z1-z2)
+        tm12=-2*(y1-y2)*(z1-z3)+2*(y1-y3)*(z1-z2)
+        tm13=tm01*(z1-z3)-tm02*(z1-z2)
+        tm21=-2*(x1-x2)*(y1-y3)+2*(x1-x3)*(y1-y2)
+        tm22=-2*(z1-z2)*(y1-y3)+2*(z1-z3)*(y1-y2)
+        tm23=tm01*(y1-y3)-tm02*(y1-y2)
+        tma=1+tm11**2/tm12**2+tm21**2/tm22**2
+        tma=1 if tma == 0 else tma
 
-    c1 = QVector3D(xq1, yq1, zq1)
-    c2 = QVector3D(xq2, yq2, zq2)
+        tmb=-2*x1+2*(y1+tm13/tm12)*tm11/tm12+2*(z1+tm23/tm22)*tm21/tm22
+        tmb=1 if tmb == 0 else tmb
+
+        tmc=x1**2+(y1+tm13/tm12)**2+(z1+tm23/tm22)**2-r**2
+        tmc=1 if tmc == 0 else tmc
+
+        xq1=(-tmb+sqrt(abs(tmb**2-4*tma*tmc)))/2/tma
+        xq2=(-tmb-sqrt(abs(tmb**2-4*tma*tmc)))/2/tma
+        yq1=-tm13/tm12-tm11/tm12*xq1
+        yq2=-tm13/tm12-tm11/tm12*xq2
+        zq1=-tm23/tm22-tm21/tm22*xq1
+        zq2=-tm23/tm22-tm21/tm22*xq2
+
+        c1 = QVector3D(xq1, yq1, zq1)
+        c2 = QVector3D(xq2, yq2, zq2)
+    except ZeroDivisionError as e:
+        # ゼロ割エラーの場合、平面で求め直す
+        print("ゼロ割エラー: %s" % (",".join([str(x1), str(y1), str(z1), str(x2), str(y2), str(z2), str(x3), str(y3), str(z3), str(r)])))
+        try:
+            if x1 == x2 or x2 == x3 or x1 == x3:
+                # 同じ値の場合、2次元円として求める
+                cx, cy, r = calc_circle_center(y1, z1, y2, z2, y3, z3)
+                return QVector3D(x1, cx, cy), r
+            
+            if y1 == y2 or y2 == y3 or y1 == y3:
+                cx, cy, r = calc_circle_center(x1, z1, x2, z2, x3, z3)
+                return QVector3D(cx, y1, cy), r
+            
+            if z1 == z2 or z2 == z3 or z1 == z3:
+                cx, cy, r = calc_circle_center(x1, y1, x2, y2, x3, y3)
+                return QVector3D(cx, cy, z1), r
+                        
+        except ZeroDivisionError as e2:
+            # それでも駄目な場合、初期値
+            return QVector3D(), r        
 
     if c1 == c2:
         # 重解

@@ -622,14 +622,14 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_staticSmoothText162 = wx.StaticText( self.m_panelSmooth, wx.ID_ANY, u"スムージング回数", wx.DefaultPosition, wx.DefaultSize, 0 )
 		bSizerSmooth6.Add( self.m_staticSmoothText162, 0, wx.ALL, 0 )
 
-		self.m_smooth_spinMovCount = wx.SpinCtrl( self.m_panelSmooth, id=wx.ID_ANY, size=wx.Size( 100,-1 ), value="3", min=1, max=100, initial=1 )
+		self.m_smooth_spinMovCount = wx.SpinCtrl( self.m_panelSmooth, id=wx.ID_ANY, size=wx.Size( 100,-1 ), value="2", min=1, max=10, initial=1 )
 		self.m_smooth_spinMovCount.SetToolTip("スムージングを行う回数を指定して下さい。")
 		bSizerSmooth6.Add( self.m_smooth_spinMovCount, 0, wx.EXPAND |wx.ALL, 0 )
 
 		self.m_staticSmoothText161 = wx.StaticText( self.m_panelSmooth, wx.ID_ANY, u"回転スムージング回数", wx.DefaultPosition, wx.DefaultSize, 0 )
 		bSizerSmooth6.Add( self.m_staticSmoothText161, 0, wx.ALL, 0 )
 
-		self.m_smooth_spinRotCount = wx.SpinCtrl( self.m_panelSmooth, id=wx.ID_ANY, size=wx.Size( 100,-1 ), value="5", min=1, max=100, initial=1 )
+		self.m_smooth_spinRotCount = wx.SpinCtrl( self.m_panelSmooth, id=wx.ID_ANY, size=wx.Size( 100,-1 ), value="2", min=1, max=10, initial=1 )
 		self.m_smooth_spinRotCount.SetToolTip("回転可能なボーンのスムージングを行う回数を指定して下さい。")
 		bSizerSmooth6.Add( self.m_smooth_spinRotCount, 0, wx.EXPAND |wx.ALL, 0 )
 
