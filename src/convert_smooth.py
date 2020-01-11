@@ -23,12 +23,15 @@ logger = logging.getLogger(__name__)
 
 is_print = True
 
-def main(vmd_path, pos_repeat, rot_repeat):
+def main(vmd_path, pmx_path, pos_repeat, rot_repeat):
 
     try:
         # VMD読み込み
         motion = VmdReader().read_vmd_file(vmd_path)
         smoothed_frames = []
+
+        # PMX読み込み
+        model = PmxReader().read_pmx_file(pmx_path)
 
         if len(motion.frames.values()) > 0:
             smooth_vmd_fpath = re.sub(r'\.vmd$', "_bone_smooth_{0:%Y%m%d_%H%M%S}.vmd".format(datetime.now()), vmd_path)
@@ -43,6 +46,13 @@ def main(vmd_path, pos_repeat, rot_repeat):
 
                 start_frameno = motion_frames[0].frame
                 last_frameno = motion_frames[-1].frame
+
+                axis = QVector3D()
+                if bone_name in model.bones and model.bones[bone_name].parent_index >= 0:
+                    # ボーンがモデルにあり、かつ親がある場合、親ボーンの軸に沿わせる
+                    parent_pos = model.bones[model.bone_indexes[model.bones[bone_name].parent_index]].position
+                    self_pos = model.bones[bone_name].position
+                    axis = (self_pos - parent_pos).normalized()
 
                 for cnt in range(max(pos_repeat, rot_repeat)):
 
@@ -64,7 +74,7 @@ def main(vmd_path, pos_repeat, rot_repeat):
 
                         # 最初に根性打ち
                         while now_bf.frame <= last_frameno:
-                            split_bf(frames_by_bone, bone_name, prev_prev_bf, prev_bf, now_bf, next_bf)
+                            split_bf(axis, frames_by_bone, bone_name, prev_prev_bf, prev_bf, now_bf, next_bf)
 
                             prev_prev_bf = prev_bf
                             
@@ -163,7 +173,7 @@ def main(vmd_path, pos_repeat, rot_repeat):
         
         print(traceback.format_exc())
 
-def split_bf(frames_by_bone, bone_name, prev_prev_bf, prev_bf, now_bf, next_bf):
+def split_bf(axis, frames_by_bone, bone_name, prev_prev_bf, prev_bf, now_bf, next_bf):
     # 0回目の場合、根性打ち
 
     for fno in range(prev_bf.frame + 1, now_bf.frame):
@@ -173,11 +183,11 @@ def split_bf(frames_by_bone, bone_name, prev_prev_bf, prev_bf, now_bf, next_bf):
         target_bf.format_name = bone_name
 
         # 現在の補間曲線ではなく、なめらかに繋いだ場合の角度を設定する
-        target_rot, rt = get_smooth_middle_rot(prev_bf, now_bf, next_bf, target_bf)
+        target_rot, rt = get_smooth_middle_rot(axis, prev_bf, now_bf, next_bf, target_bf)
         target_bf.rotation = target_rot
         
         # 現在の補間曲線ではなく、なめらかに繋いだ場合の位置を設定する
-        target_pos, mt = get_smooth_middle_pos(prev_bf, now_bf, next_bf, target_bf)
+        target_pos, mt = get_smooth_middle_pos(axis, prev_bf, now_bf, next_bf, target_bf)
         target_bf.position = target_pos
 
         target_bf.key = True
@@ -366,7 +376,7 @@ def get_smooth_bezier_y_pos_z(before_bf, after_bf):
     return after_bf.position.z()
 
 # 滑らかにした移動
-def get_smooth_middle_pos(prev_bf, now_bf, next_bf, target_bf):
+def get_smooth_middle_pos(axis, prev_bf, now_bf, next_bf, target_bf):
     p = prev_bf.position
     w = now_bf.position
     n = next_bf.position
@@ -386,25 +396,50 @@ def get_smooth_middle_pos(prev_bf, now_bf, next_bf, target_bf):
     return out, diff
 
 # 滑らかにした回転
-def get_smooth_middle_rot(prev_bf, now_bf, next_bf, target_bf):
-    p = prev_bf.rotation.toEulerAngles()
-    w = now_bf.rotation.toEulerAngles()
-    n = next_bf.rotation.toEulerAngles()
+def get_smooth_middle_rot(axis, prev_bf, now_bf, next_bf, target_bf):
+
+    # 親子関係がある場合、軸に合わせた回転を試す
+    if axis != QVector3D():
+        degreep = math.degrees(2 * math.acos(min(1, max(-1, prev_bf.rotation.scalar()))))
+        degreew = math.degrees(2 * math.acos(min(1, max(-1, now_bf.rotation.scalar()))))
+        degreen = math.degrees(2 * math.acos(min(1, max(-1, next_bf.rotation.scalar()))))
+
+        # 軸がある場合、その方向に回す
+        p_qq = QQuaternion.fromAxisAndAngle(axis, degreep)
+        w_qq = QQuaternion.fromAxisAndAngle(axis, degreew)
+        n_qq = QQuaternion.fromAxisAndAngle(axis, degreen)
+
+        p = p_qq.toEulerAngles()
+        w = w_qq.toEulerAngles()
+        n = n_qq.toEulerAngles()
+    else:
+        # 軸がない場合、そのまま回転
+        p = prev_bf.rotation.toEulerAngles()
+        w = now_bf.rotation.toEulerAngles()
+        n = next_bf.rotation.toEulerAngles()
 
     # 変化量
     t = (target_bf.frame - prev_bf.frame) / ( now_bf.frame - prev_bf.frame)
 
     # デフォルト値
-    d = QQuaternion.slerp(prev_bf.rotation, next_bf.rotation, t).toEulerAngles()
+    d_qq = QQuaternion.slerp(p_qq, w_qq, t)
+    d = d_qq.toEulerAngles()
 
     out = get_smooth_middle_by_vec3(p, w, n, d, t, now_bf.frame)
 
     out_qq = QQuaternion.fromEulerAngles(out)
 
-    # 現在の回転と角度の中間地点との差(離れているほど値を大きくする)
-    dot_diff = 1 - abs(QQuaternion.dotProduct(out_qq, target_bf.rotation))
+    if axis != QVector3D():
+        # 回転を元に戻す
+        d2_qq = QQuaternion.slerp(prev_bf.rotation, now_bf.rotation, t)
+        result_qq = (d_qq.inverted() * out_qq * d2_qq)
+    else:
+        result_qq = out_qq
 
-    return out_qq, dot_diff
+    # 現在の回転と角度の中間地点との差(離れているほど値を大きくする)
+    dot_diff = 1 - abs(QQuaternion.dotProduct(result_qq, target_bf.rotation))
+
+    return result_qq, dot_diff
 
 # vec3での滑らかな変化
 def get_smooth_middle_by_vec3(op, ow, on, d, t, f):
@@ -743,6 +778,7 @@ if __name__=="__main__":
     # Parse arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('--vmd_path', dest='vmd_path', help='input vmd', type=str)
+    parser.add_argument('--pmx_path', dest='pmx_path', help='pmx_path vmd', type=str)
     parser.add_argument('--pos_repeat', dest='pos_repeat', help='pos_repeat', type=int)
     parser.add_argument('--rot_repeat', dest='rot_repeat', help='rot_repeat', type=int)
 
@@ -751,4 +787,7 @@ if __name__=="__main__":
     if wrapperutils.is_valid_file(args.vmd_path, "VMDファイル", ".vmd", True) == False:
         sys.exit(-1)
 
-    main(args.vmd_path, args.pos_repeat, args.rot_repeat)
+    if wrapperutils.is_valid_file(args.pmx_path, "PMXファイル", ".pmx", True) == False:
+        sys.exit(-1)
+
+    main(args.vmd_path, args.pmx_path, args.pos_repeat, args.rot_repeat)
