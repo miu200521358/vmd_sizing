@@ -21,7 +21,7 @@ import wrapperutils, sub_arm_ik, utils
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-is_print = False
+is_print = True
 
 def main(vmd_path, pos_repeat, rot_repeat):
 
@@ -47,40 +47,50 @@ def main(vmd_path, pos_repeat, rot_repeat):
                 for cnt in range(max(pos_repeat, rot_repeat)):
 
                     if cnt > 0:
-                        # 2回目の円滑化
+                        # 2回目以降はフィルタあり
                         smooth_filter(bone_name, frames_by_bone, pos_repeat > cnt, rot_repeat > cnt, {"freq": 30, "mincutoff": 0.01, "beta": 0.5, "dcutoff": 0.8})
                     
-                    prev_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, start_frameno, is_only=True, is_exist=True, is_read=True)
-                    if not prev_bf: break
-
-                    now_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, prev_bf.frame + 1, is_only=False, is_exist=True, is_read=True)
-                    if not now_bf: break
-
-                    next_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, now_bf.frame + 1, is_only=False, is_exist=True, is_read=True)
-                    if not next_bf: break
-
-                    # 最初に根性打ち
-                    while now_bf.frame <= last_frameno:
-                        split_bf(frames_by_bone, bone_name, prev_bf, now_bf, next_bf)
-                        
-                        prev_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, now_bf.frame, is_only=True, is_exist=True, is_read=True)
+                    if cnt == 0:
+                        prev_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, start_frameno, is_only=True, is_exist=True, is_read=True)
                         if not prev_bf: break
 
                         now_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, prev_bf.frame + 1, is_only=False, is_exist=True, is_read=True)
                         if not now_bf: break
 
                         next_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, now_bf.frame + 1, is_only=False, is_exist=True, is_read=True)
-                        # if not next_bf: break
+                        if not next_bf: break
 
-                        if not next_bf:
-                            # 次がない場合、一旦prevの次に伸ばす
-                            next_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, now_bf.frame + 1, is_only=False, is_exist=False)
-                            next_bf.position += QVector3D(1, 0, 0)
-                            next_bf.rotation *= 1.1
-                        else:
-                            if next_bf.frame > last_frameno:
-                                # 次以降は見なくていいので終了
-                                break
+                        prev_prev_bf = None
+
+                        # 最初に根性打ち
+                        while now_bf.frame <= last_frameno:
+                            split_bf(frames_by_bone, bone_name, prev_prev_bf, prev_bf, now_bf, next_bf)
+
+                            prev_prev_bf = prev_bf
+                            
+                            prev_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, now_bf.frame, is_only=True, is_exist=True, is_read=True)
+                            if not prev_bf: break
+
+                            now_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, prev_bf.frame + 1, is_only=False, is_exist=True, is_read=True)
+                            if not now_bf: break
+
+                            next_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, now_bf.frame + 1, is_only=False, is_exist=True, is_read=True)
+                            # if not next_bf: break
+
+                            if not next_bf:
+                                # 次がない場合、一旦prevの次に伸ばす
+                                next_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, now_bf.frame + 1, is_only=False, is_exist=False)
+                                next_bf.position += QVector3D(0.1, 0.1, 0.1)
+                                next_bf.rotation *= 1.1
+                                frames_by_bone[next_bf.frame] = next_bf
+                            else:
+                                if next_bf.frame > last_frameno:
+                                    # 次以降は見なくていいので終了
+                                    break
+
+                        # 全体をフィルタに掛ける
+                        for _ in range(3):
+                            smooth_filter(bone_name, frames_by_bone, True, True, {"freq": 30, "mincutoff": 0.01, "beta": 0.8, "dcutoff": 1})
 
                     if cnt > 0:
 
@@ -153,12 +163,12 @@ def main(vmd_path, pos_repeat, rot_repeat):
         
         print(traceback.format_exc())
 
-def split_bf(frames_by_bone, bone_name, prev_bf, now_bf, next_bf):
+def split_bf(frames_by_bone, bone_name, prev_prev_bf, prev_bf, now_bf, next_bf):
     # 0回目の場合、根性打ち
 
-    for f in range(prev_bf.frame + 1, now_bf.frame):
+    for fno in range(prev_bf.frame + 1, now_bf.frame):
         target_bf = VmdBoneFrame()
-        target_bf.frame = f
+        target_bf.frame = fno
         target_bf.name = bone_name.encode('cp932').decode('shift_jis').encode('shift_jis')
         target_bf.format_name = bone_name
 
@@ -173,6 +183,23 @@ def split_bf(frames_by_bone, bone_name, prev_bf, now_bf, next_bf):
         target_bf.key = True
         frames_by_bone[target_bf.frame] = target_bf
 
+    if prev_prev_bf:
+        beforeno = int(prev_bf.frame - (prev_bf.frame - prev_prev_bf.frame) * 0.5)
+        afterno = int(prev_bf.frame + (now_bf.frame - prev_bf.frame) * 0.5)
+
+        filter_frames_by_bone = {}
+        for fno in range(beforeno, afterno):
+            # 前々回との間を滑らかに繋ぐための配列を用意する
+            filter_frames_by_bone[fno] = copy.deepcopy(frames_by_bone[fno])
+
+        # 前々回との連結部分をフィルタに掛ける
+        config = {"freq": 30, "mincutoff": 0.01, "beta": 0.8, "dcutoff": 1}
+        for _ in range(5):
+            smooth_filter(bone_name, filter_frames_by_bone, True, True, config)
+
+        # 元に戻す
+        for f in filter_frames_by_bone.values():
+            frames_by_bone[f.frame] = f
 
 # bf同士をベジェ曲線で繋ぐ
 def smooth_bf(frames_by_bone, bone_name, prev_bf, now_bf, next_bf, offset, last_frameno):
@@ -220,13 +247,13 @@ def smooth_bf(frames_by_bone, bone_name, prev_bf, now_bf, next_bf, offset, last_
 def smooth_complement_bf(frames_by_bone, bone_name, prev_bf, now_bf, next_bf, offset):
 
     is_smooth_rot_result = smooth_bezier(frames_by_bone, prev_bf, now_bf, next_bf, get_smooth_bezier_y_rot, \
-        utils.R_x1_idxs, utils.R_y1_idxs, utils.R_x2_idxs, utils.R_y2_idxs, utils.calc_smooth_bezier_rot)
+        utils.R_x1_idxs, utils.R_y1_idxs, utils.R_x2_idxs, utils.R_y2_idxs, offset, utils.calc_smooth_bezier_rot)
     is_smooth_pos_x_result = smooth_bezier(frames_by_bone, prev_bf, now_bf, next_bf, get_smooth_bezier_y_pos_x, \
-        utils.MX_x1_idxs, utils.MX_y1_idxs, utils.MX_x2_idxs, utils.MX_y2_idxs, utils.calc_smooth_bezier_pos)
+        utils.MX_x1_idxs, utils.MX_y1_idxs, utils.MX_x2_idxs, utils.MX_y2_idxs, offset, utils.calc_smooth_bezier_pos)
     is_smooth_pos_y_result = smooth_bezier(frames_by_bone, prev_bf, now_bf, next_bf, get_smooth_bezier_y_pos_y, \
-        utils.MY_x1_idxs, utils.MY_y1_idxs, utils.MY_x2_idxs, utils.MY_y2_idxs, utils.calc_smooth_bezier_pos)
+        utils.MY_x1_idxs, utils.MY_y1_idxs, utils.MY_x2_idxs, utils.MY_y2_idxs, offset, utils.calc_smooth_bezier_pos)
     is_smooth_pos_z_result = smooth_bezier(frames_by_bone, prev_bf, now_bf, next_bf, get_smooth_bezier_y_pos_z, \
-        utils.MZ_x1_idxs, utils.MZ_y1_idxs, utils.MZ_x2_idxs, utils.MZ_y2_idxs, utils.calc_smooth_bezier_pos)
+        utils.MZ_x1_idxs, utils.MZ_y1_idxs, utils.MZ_x2_idxs, utils.MZ_y2_idxs, offset, utils.calc_smooth_bezier_pos)
 
     is_smooth = is_smooth_rot_result == is_smooth_pos_x_result == is_smooth_pos_y_result == is_smooth_pos_z_result
     
@@ -248,12 +275,10 @@ def smooth_complement_bf(frames_by_bone, bone_name, prev_bf, now_bf, next_bf, of
     return is_smooth
 
 # 滑らかに繋ぐベジェ曲線
-def smooth_bezier(frames_by_bone, prev_bf, now_bf, next_bf, get_smooth_bezier_y, x1_idxs, y1_idxs, x2_idxs, y2_idxs, calc_smooth_bezier):
+def smooth_bezier(frames_by_bone, prev_bf, now_bf, next_bf, get_smooth_bezier_y, x1_idxs, y1_idxs, x2_idxs, y2_idxs, offset, calc_smooth_bezier):
     if not (prev_bf.frame < now_bf.frame < next_bf.frame):
         # フレーム範囲外はNG
         return False
-    
-    # 前後に分けて登録する
 
     x1 = prev_bf.frame
     x2 = now_bf.frame
@@ -263,7 +288,7 @@ def smooth_bezier(frames_by_bone, prev_bf, now_bf, next_bf, get_smooth_bezier_y,
     y2 = get_smooth_bezier_y(prev_bf, now_bf)
     y3 = get_smooth_bezier_y(prev_bf, next_bf)
 
-    is_smooth, result, bz = calc_smooth_bezier(x1, y1, x2, y2, x3, y3)
+    is_smooth, result, bz = calc_smooth_bezier(x1, y1, x2, y2, x3, y3, offset)
 
     if not is_smooth:
         # ベジェ曲線計算対象外の場合、とりあえずTRUEで終了
@@ -287,47 +312,46 @@ def smooth_bezier(frames_by_bone, prev_bf, now_bf, next_bf, get_smooth_bezier_y,
     return False
 
 
-
-# 滑らかに繋ぐベジェ曲線
-def join_bezier(frames_by_bone, prev_bf, now_bf, next_bf, get_smooth_bezier_y, x1_idxs, y1_idxs, x2_idxs, y2_idxs, offset, join_smooth_bezier):
-    if not (prev_bf.frame < now_bf.frame < next_bf.frame):
-        # フレーム範囲外はNG
-        return False
+# # 滑らかに繋ぐベジェ曲線
+# def join_bezier(frames_by_bone, prev_bf, now_bf, next_bf, get_smooth_bezier_y, x1_idxs, y1_idxs, x2_idxs, y2_idxs, offset, join_smooth_bezier):
+#     if not (prev_bf.frame < now_bf.frame < next_bf.frame):
+#         # フレーム範囲外はNG
+#         return False
     
-    # 前後に分けて登録する
+#     # 前後に分けて登録する
 
-    bz1 = [
-        QVector2D(0, 0),
-        QVector2D(now_bf.complement[x1_idxs[3]], now_bf.complement[y1_idxs[3]]),
-        QVector2D(now_bf.complement[x2_idxs[3]], now_bf.complement[y2_idxs[3]]),
-        QVector2D(utils.COMPLEMENT_MMD_MAX, utils.COMPLEMENT_MMD_MAX)
-    ]
+#     bz1 = [
+#         QVector2D(0, 0),
+#         QVector2D(now_bf.complement[x1_idxs[3]], now_bf.complement[y1_idxs[3]]),
+#         QVector2D(now_bf.complement[x2_idxs[3]], now_bf.complement[y2_idxs[3]]),
+#         QVector2D(utils.COMPLEMENT_MMD_MAX, utils.COMPLEMENT_MMD_MAX)
+#     ]
 
-    bz2 = [
-        QVector2D(0, 0),
-        QVector2D(next_bf.complement[x1_idxs[3]], next_bf.complement[y1_idxs[3]]),
-        QVector2D(next_bf.complement[x2_idxs[3]], next_bf.complement[y2_idxs[3]]),
-        QVector2D(utils.COMPLEMENT_MMD_MAX, utils.COMPLEMENT_MMD_MAX)
-    ]
+#     bz2 = [
+#         QVector2D(0, 0),
+#         QVector2D(next_bf.complement[x1_idxs[3]], next_bf.complement[y1_idxs[3]]),
+#         QVector2D(next_bf.complement[x2_idxs[3]], next_bf.complement[y2_idxs[3]]),
+#         QVector2D(utils.COMPLEMENT_MMD_MAX, utils.COMPLEMENT_MMD_MAX)
+#     ]
 
-    is_join, bz = join_smooth_bezier(bz1, bz2, offset, ((now_bf.frame - prev_bf.frame) / (next_bf.frame - prev_bf.frame)))
+#     is_join, bz = join_smooth_bezier(bz1, bz2, offset, ((now_bf.frame - prev_bf.frame) / (next_bf.frame - prev_bf.frame)))
 
-    if is_join == True:
-        # 中間の始点を、中bfに設定する
-        next_bf.complement[x1_idxs[0]] = next_bf.complement[x1_idxs[1]] = \
-            next_bf.complement[x1_idxs[2]] = next_bf.complement[x1_idxs[3]] = bz[1].x()
-        next_bf.complement[y1_idxs[0]] = next_bf.complement[y1_idxs[1]] = \
-            next_bf.complement[y1_idxs[2]] = next_bf.complement[y1_idxs[3]] = bz[1].y()
+#     if is_join == True:
+#         # 中間の始点を、中bfに設定する
+#         next_bf.complement[x1_idxs[0]] = next_bf.complement[x1_idxs[1]] = \
+#             next_bf.complement[x1_idxs[2]] = next_bf.complement[x1_idxs[3]] = bz[1].x()
+#         next_bf.complement[y1_idxs[0]] = next_bf.complement[y1_idxs[1]] = \
+#             next_bf.complement[y1_idxs[2]] = next_bf.complement[y1_idxs[3]] = bz[1].y()
 
-        # 中間の終点を、中bfに設定する
-        next_bf.complement[x2_idxs[0]] = next_bf.complement[x2_idxs[1]] = \
-            next_bf.complement[x2_idxs[2]] = next_bf.complement[x2_idxs[3]] = bz[2].x()
-        next_bf.complement[y2_idxs[0]] = next_bf.complement[y2_idxs[1]] = \
-            next_bf.complement[y2_idxs[2]] = next_bf.complement[y2_idxs[3]] = bz[2].y()
+#         # 中間の終点を、中bfに設定する
+#         next_bf.complement[x2_idxs[0]] = next_bf.complement[x2_idxs[1]] = \
+#             next_bf.complement[x2_idxs[2]] = next_bf.complement[x2_idxs[3]] = bz[2].x()
+#         next_bf.complement[y2_idxs[0]] = next_bf.complement[y2_idxs[1]] = \
+#             next_bf.complement[y2_idxs[2]] = next_bf.complement[y2_idxs[3]] = bz[2].y()
 
-        return True
+#         return True
 
-    return False
+#     return False
 
 def get_smooth_bezier_y_rot(before_bf, after_bf):
     return after_bf.rotation
@@ -353,7 +377,7 @@ def get_smooth_middle_pos(prev_bf, now_bf, next_bf, target_bf):
     # デフォルト値
     d = w + (w - p)
 
-    out = get_smooth_middle_by_vec3(p, w, n, d, t)
+    out = get_smooth_middle_by_vec3(p, w, n, d, t, now_bf.frame)
 
     # 円周上の座標とデフォルト値の内積（差分）
     diff = 1 - abs(QVector3D.dotProduct(target_bf.position.normalized(), out.normalized()))
@@ -373,7 +397,7 @@ def get_smooth_middle_rot(prev_bf, now_bf, next_bf, target_bf):
     # デフォルト値
     d = QQuaternion.slerp(prev_bf.rotation, next_bf.rotation, t).toEulerAngles()
 
-    out = get_smooth_middle_by_vec3(p, w, n, d, t)
+    out = get_smooth_middle_by_vec3(p, w, n, d, t, now_bf.frame)
 
     out_qq = QQuaternion.fromEulerAngles(out)
 
@@ -383,7 +407,7 @@ def get_smooth_middle_rot(prev_bf, now_bf, next_bf, target_bf):
     return out_qq, dot_diff
 
 # vec3での滑らかな変化
-def get_smooth_middle_by_vec3(op, ow, on, d, t):
+def get_smooth_middle_by_vec3(op, ow, on, d, t, f):
     # 念のためコピー
     p = copy.deepcopy(op)
     w = copy.deepcopy(ow)
@@ -392,7 +416,7 @@ def get_smooth_middle_by_vec3(op, ow, on, d, t):
     # 半径は3点間の距離の最長の半分
     r = max(p.distanceToPoint(w), p.distanceToPoint(n),  w.distanceToPoint(n)) / 2
 
-    if r == 0:
+    if round(r, 1) == 0:
         # 半径が取れなかった場合、そもそもまったく移動がないので、線分移動
         return (p + n) * t
 
@@ -400,8 +424,16 @@ def get_smooth_middle_by_vec3(op, ow, on, d, t):
         # 半径が0の場合か、どれか同じ値の場合、線対称な値を使用する
         n = d
 
-    # 3点を通る球体の原点を求める
-    c, radius = utils.calc_sphere_center(p, w, n, r)
+    try:
+        # 3点を通る球体の原点を求める
+        c, radius = utils.calc_sphere_center(p, w, n, r)
+    except ZeroDivisionError as e:
+        utils.output_message("covert ゼロ割エラー: f: %s, p: %s, w: %s, n: %s, t: %s" % (f, p, w, n, t), is_print)
+        raise e
+
+    if round(radius, 1) == 0:
+        # 半径が取れなかった場合、そもそもまったく移動がないので、線分移動
+        return (p + n) * t
 
     # prev -> now の t分の回転量
     pn_qq = QQuaternion.rotationTo((p - c).normalized(), (c - c).normalized())
@@ -418,6 +450,9 @@ def get_smooth_middle_by_vec3(op, ow, on, d, t):
         out.setY(w.y())
     if p.z() == w.z() == n.z():
         out.setZ(w.z())
+
+    # 有効な値に変換
+    utils.set_effective_value_vec3(out)
 
     return out
 
@@ -583,17 +618,17 @@ def smooth_filter(bone_name, frames_by_bone, is_pos_filter, is_rot_filter, confi
         if not now_bf:
             break
 
-        if is_pos_filter and QVector3D.dotProduct(prev_bf.position, now_bf.position) < 0.99:
-            # XYZそれぞれにフィルターをかける
-            px = pxfilter(now_bf.position.x(), now_bf.frame)
-            py = pyfilter(now_bf.position.y(), now_bf.frame)
-            pz = pzfilter(now_bf.position.z(), now_bf.frame)
-            now_bf.position = QVector3D(px, py, pz)
-        else:
-            # 移動のフィルタ許容してない場合、スルー
-            pxfilter.skip(now_bf.position.x(), now_bf.frame)
-            pyfilter.skip(now_bf.position.y(), now_bf.frame)
-            pzfilter.skip(now_bf.position.z(), now_bf.frame)
+        # if is_pos_filter and QVector3D.dotProduct(prev_bf.position, now_bf.position) < 0.99:
+        # XYZそれぞれにフィルターをかける
+        px = pxfilter(now_bf.position.x(), now_bf.frame)
+        py = pyfilter(now_bf.position.y(), now_bf.frame)
+        pz = pzfilter(now_bf.position.z(), now_bf.frame)
+        now_bf.position = QVector3D(px, py, pz)
+        # else:
+        #     # 移動のフィルタ許容してない場合、スルー
+        #     pxfilter.skip(now_bf.position.x(), now_bf.frame)
+        #     pyfilter.skip(now_bf.position.y(), now_bf.frame)
+        #     pzfilter.skip(now_bf.position.z(), now_bf.frame)
 
         # 同じ回転を表すクォータニオンが正負2通りあるので、wの符号が正のほうに統一する
         # if rotation.scalar() < 0:
@@ -602,22 +637,22 @@ def smooth_filter(bone_name, frames_by_bone, is_pos_filter, is_rot_filter, confi
         #     rotation.setZ(rotation.z() * -1)
         #     rotation.setScalar(rotation.scalar() * -1)
         
-        if is_rot_filter and QQuaternion.dotProduct(prev_bf.rotation, now_bf.rotation) < 0.99:
-            # XYZそれぞれにフィルターをかける(オイラー角)
-            r = now_bf.rotation.toEulerAngles()
-            rx = rxfilter(r.x(), now_bf.frame)
-            ry = ryfilter(r.y(), now_bf.frame)
-            rz = rzfilter(r.z(), now_bf.frame)
-            # rw = rwfilter(rotation.scalar(), bf.frame)
+        # if is_rot_filter and QQuaternion.dotProduct(prev_bf.rotation, now_bf.rotation) < 0.99:
+        # XYZそれぞれにフィルターをかける(オイラー角)
+        r = now_bf.rotation.toEulerAngles()
+        rx = rxfilter(r.x(), now_bf.frame)
+        ry = ryfilter(r.y(), now_bf.frame)
+        rz = rzfilter(r.z(), now_bf.frame)
+        # rw = rwfilter(rotation.scalar(), bf.frame)
 
-            # クォータニオンに戻して保持
-            now_bf.rotation = QQuaternion.fromEulerAngles(rx, ry, rz)
-        else:
-            # 回転のフィルタ許容してない場合、スルー
-            rxfilter.skip(now_bf.rotation.x(), now_bf.frame)
-            ryfilter.skip(now_bf.rotation.y(), now_bf.frame)
-            rzfilter.skip(now_bf.rotation.z(), now_bf.frame)
-            # rwfilter.skip(bf.rotation.scalar(), bf.frame)
+        # クォータニオンに戻して保持
+        now_bf.rotation = QQuaternion.fromEulerAngles(rx, ry, rz)
+        # else:
+        #     # 回転のフィルタ許容してない場合、スルー
+        #     rxfilter.skip(now_bf.rotation.x(), now_bf.frame)
+        #     ryfilter.skip(now_bf.rotation.y(), now_bf.frame)
+        #     rzfilter.skip(now_bf.rotation.z(), now_bf.frame)
+        #     # rwfilter.skip(bf.rotation.scalar(), bf.frame)
 
 # OneEuroFilter
 # オリジナル：https://www.cristal.univ-lille.fr/~casiez/1euro/

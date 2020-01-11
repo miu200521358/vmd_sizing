@@ -752,11 +752,11 @@ def calc_interpolate_bezier_by_t(x1v, y1v, x2v, y2v, start, end, t):
 
 
 # 回転用ベジェ曲線 - 指定された3点を通るベジェ曲線を返す
-def calc_smooth_bezier_rot(x1, y1r, x2, y2r, x3, y3r):
+def calc_smooth_bezier_rot(x1, y1r, x2, y2r, x3, y3r, offset):
 
     if y1r == y2r == y3r:
         # 回転量が同じ場合、線形補間      
-        return True, True, [QVector2D(0, 0), QVector2D(20, 20), QVector2D(107, 107), QVector2D(COMPLEMENT_MMD_MAX, COMPLEMENT_MMD_MAX)]  
+        return False, True, [QVector2D(0, 0), QVector2D(20, 20), QVector2D(107, 107), QVector2D(COMPLEMENT_MMD_MAX, COMPLEMENT_MMD_MAX)]  
 
     t = (x2 - x1) / (x3 - x1)
 
@@ -790,12 +790,21 @@ def calc_smooth_bezier_rot(x1, y1r, x2, y2r, x3, y3r):
     # 半径は3点間の距離の最長の半分
     r = max(y1e.distanceToPoint(y2e), y1e.distanceToPoint(y3e),  y2e.distanceToPoint(y3e)) / 2
 
-    # 3点を通る球体の原点を求める
-    c, radius = calc_sphere_center(y1e, y2e, y3e, r)
+    if round(r, 1) == 0:
+        # 半径が取れなかった場合、そもそもまったく移動がないので、線分移動
+        return False, True, \
+            [QVector2D(0, 0), QVector2D(20, 20), QVector2D(107, 107), QVector2D(COMPLEMENT_MMD_MAX, COMPLEMENT_MMD_MAX)]
+
+    try:
+        # 3点を通る球体の原点を求める
+        c, radius = calc_sphere_center(y1e, y2e, y3e, r)
+    except ZeroDivisionError as e:
+        utils.output_message("utils ゼロ割エラー: f: %s, p: %s, w: %s, n: %s, t: %s" % (x2, y1e, y2e, y3e, t), True)
+        raise e
 
     if radius == 0:
-        # 半径がない場合、線形補間(補間曲線は設定する)
-        return True, True, \
+        # 半径がない場合、線形補間
+        return False, True, \
             [QVector2D(0, 0), QVector2D(20, 20), QVector2D(107, 107), QVector2D(COMPLEMENT_MMD_MAX, COMPLEMENT_MMD_MAX)]
 
     # prev -> next の t分の回転量
@@ -847,9 +856,9 @@ def calc_smooth_bezier_rot(x1, y1r, x2, y2r, x3, y3r):
     bz = calc_cubic_bezier_4point(0, y1, cx1, cy1, cx2, cy2, 1, y3, t)
 
     # オフセット許容する
-    offset = 0
     offset_bz = [QVector2D(0, 0), QVector2D(20, 20), QVector2D(107, 107), QVector2D(COMPLEMENT_MMD_MAX, COMPLEMENT_MMD_MAX)]        
 
+    offset += 5
     offset_bz[0] = fit_bezier_mmd_join(bz[0], offset)
     offset_bz[1] = fit_bezier_mmd_join(bz[1], offset)
     offset_bz[2] = fit_bezier_mmd_join(bz[2], offset)
@@ -973,7 +982,7 @@ def fit_bezier_mmd_join(b, offset):
 
 
 # 移動用ベジェ曲線 - 指定された3点を通るベジェ曲線を返す
-def calc_smooth_bezier_pos(x1, y1, x2, y2, x3, y3):
+def calc_smooth_bezier_pos(x1, y1, x2, y2, x3, y3, offset):
     t = (x2 - x1) / (x3 - x1)
 
     if (x1 >= x2 or x1 >= x3 or x2 >= x3) or t <= 0 or t >= 1:
@@ -986,8 +995,8 @@ def calc_smooth_bezier_pos(x1, y1, x2, y2, x3, y3):
     output_message("calc_smooth_bezier calc_quadratic_param finish now: %s" % datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'), is_print)
 
     if a == 0:
-        # 曲線がなく、等間隔に変化する場合、線形補間(補間曲線は設定する)
-        return True, True, \
+        # 曲線がなく、等間隔に変化する場合、線形補間
+        return False, True, \
             [QVector2D(0, 0), QVector2D(20, 20), QVector2D(107, 107), QVector2D(COMPLEMENT_MMD_MAX, COMPLEMENT_MMD_MAX)]
 
     # 開始フレームと中間フレームの交点
@@ -1016,7 +1025,16 @@ def calc_smooth_bezier_pos(x1, y1, x2, y2, x3, y3):
     # 中間フレームで繋いだ開始フレームと終端フレームの三次ベジェ曲線
     bz = calc_cubic_bezier_4point(tx1, ty1, tcx1, tcy1, tcx2, tcy2, tx3, ty3, t)
 
-    return True, is_fit_bezier_mmd(bz), bz
+    # オフセット許容する
+    offset_bz = [QVector2D(0, 0), QVector2D(20, 20), QVector2D(107, 107), QVector2D(COMPLEMENT_MMD_MAX, COMPLEMENT_MMD_MAX)]        
+
+    offset += 5
+    offset_bz[0] = fit_bezier_mmd_join(bz[0], offset)
+    offset_bz[1] = fit_bezier_mmd_join(bz[1], offset)
+    offset_bz[2] = fit_bezier_mmd_join(bz[2], offset)
+    offset_bz[3] = fit_bezier_mmd_join(bz[3], offset)
+
+    return True, is_fit_bezier_mmd(offset_bz), offset_bz
 
 
 # linear equation solver utility for ai + bj = c and di + ej = f
@@ -1190,19 +1208,6 @@ def calc_sphere_center(pv, wv, nv, r):
     y3 = nv.y()
     z3 = nv.z()
 
-    if x1 == x2 == x3:
-        # 同じ値の場合、2次元円として求める
-        cx, cy, r = calc_circle_center(y1, z1, y2, z2, y3, z3)
-        return QVector3D(x1, cx, cy), r
-    
-    if y1 == y2 == y3:
-        cx, cy, r = calc_circle_center(x1, z1, x2, z2, x3, z3)
-        return QVector3D(cx, y1, cy), r
-    
-    if z1 == z2 == z3:
-        cx, cy, r = calc_circle_center(x1, y1, x2, y2, x3, y3)
-        return QVector3D(cx, cy, z1), r
-    
     try:
         tm01=x1**2-x2**2+y1**2-y2**2+z1**2-z2**2
         tm02=x1**2-x3**2+y1**2-y3**2+z1**2-z3**2
@@ -1213,14 +1218,8 @@ def calc_sphere_center(pv, wv, nv, r):
         tm22=-2*(z1-z2)*(y1-y3)+2*(z1-z3)*(y1-y2)
         tm23=tm01*(y1-y3)-tm02*(y1-y2)
         tma=1+tm11**2/tm12**2+tm21**2/tm22**2
-        tma=1 if tma == 0 else tma
-
         tmb=-2*x1+2*(y1+tm13/tm12)*tm11/tm12+2*(z1+tm23/tm22)*tm21/tm22
-        tmb=1 if tmb == 0 else tmb
-
         tmc=x1**2+(y1+tm13/tm12)**2+(z1+tm23/tm22)**2-r**2
-        tmc=1 if tmc == 0 else tmc
-
         xq1=(-tmb+sqrt(abs(tmb**2-4*tma*tmc)))/2/tma
         xq2=(-tmb-sqrt(abs(tmb**2-4*tma*tmc)))/2/tma
         yq1=-tm13/tm12-tm11/tm12*xq1
@@ -1230,7 +1229,7 @@ def calc_sphere_center(pv, wv, nv, r):
 
         c1 = QVector3D(xq1, yq1, zq1)
         c2 = QVector3D(xq2, yq2, zq2)
-    
+
         if c1 == c2:
             # 重解
             return c1, r
@@ -1240,30 +1239,22 @@ def calc_sphere_center(pv, wv, nv, r):
             return c1, r
 
         return c2, r
-
     except ZeroDivisionError as e:
-        # ゼロ割エラーの場合、平面で求め直す
-        print("ゼロ割エラー: %s" % (",".join([str(x1), str(y1), str(z1), str(x2), str(y2), str(z2), str(x3), str(y3), str(z3), str(r)])))
-        try:
-            if x1 == x2 or x2 == x3 or x1 == x3:
-                # 同じ値の場合、2次元円として求める
-                cx, cy, r = calc_circle_center(y1, z1, y2, z2, y3, z3)
-                return QVector3D(x1, cx, cy), r
-            
-            if y1 == y2 or y2 == y3 or y1 == y3:
-                cx, cy, r = calc_circle_center(x1, z1, x2, z2, x3, z3)
-                return QVector3D(cx, y1, cy), r
-            
-            if z1 == z2 or z2 == z3 or z1 == z3:
-                cx, cy, r = calc_circle_center(x1, y1, x2, y2, x3, y3)
-                return QVector3D(cx, cy, z1), r
 
-            # どれも違っててかつエラーの場合、
-        except ZeroDivisionError as e2:
-            # それでも駄目な場合、初期値
-            return QVector3D(1, 1, 1), 1
-
-    return QVector3D(1, 1, 1), 1
+        if round(x1,1) == round(x2,1) == round(x3,1):
+            # 同じ値の場合、2次元円として求める
+            cx, cy, r = calc_circle_center(y1, z1, y2, z2, y3, z3)
+            return QVector3D(x1, cx, cy), r
+        
+        if round(y1,1) == round(y2,1) == round(y3,1):
+            cx, cy, r = calc_circle_center(x1, z1, x2, z2, x3, z3)
+            return QVector3D(cx, y1, cy), r
+        
+        if round(z1,1) == round(z2,1) == round(z3,1):
+            cx, cy, r = calc_circle_center(x1, y1, x2, y2, x3, y3)
+            return QVector3D(cx, cy, z1), r
+    
+    return QVector3D(), 0
 
 # http://www.iot-kyoto.com/satoh/2016/01/29/tangent-003/
 # http://nobutina.blog86.fc2.com/blog-entry-674.html
@@ -1271,23 +1262,26 @@ def calc_circle_center(x1, y1, x2, y2, x3, y3):
 
     G=( y2*x1-y1*x2 +y3*x2-y2*x3 +y1*x3-y3*x1 )
 
-    if G == 0:
-        if x1 == x2 == x3:
-            G = sqrt((y1 + y2 + y3) ** 2)
-        else:
-            G = sqrt((x1 + x2 + x3) ** 2)
+    try:
+        Xc= ((x1*x1+y1*y1)*(y2-y3)+(x2*x2+y2*y2)*(y3-y1)+(x3*x3+y3*y3)*(y1-y2))/(2*G)
+        Yc=-((x1*x1+y1*y1)*(x2-x3)+(x2*x2+y2*y2)*(x3-x1)+(x3*x3+y3*y3)*(x1-x2))/(2*G)
 
+        Xd=(((x1*x1+y1*y1)-(x2*x2+y2*y2))*(y2-y3)-((x2*x2+y2*y2)-(x3*x3+y3*y3))*(y1-y2))/(2*((x1-x2)*(y2-y3)-(x2-x3)*(y1-y2)))
+        Yd=(((y1*y1+x1*x1)-(y2*y2+x2*x2))*(x2-x3)-((y2*y2+x2*x2)-(y3*y3+x3*x3))*(x1-x2))/(2*((y1-y2)*(x2-x3)-(y2-y3)*(x1-x2)))
+
+        G=2 * sqrt( (x1 - Xc) * (x1 - Xc) + (y1 - Yc) * (y1 - Yc) )
+
+        return Xd, Yd, G/2
+    except ZeroDivisionError as e:
+
+        if round(x1,1) == round(x2,1) == round(x3,1):
+            G = sqrt((y1 + y2 + y3) ** 2)
+            return (x1 + x2 + x3) / 3, (y1 + y2 + y3) / 3, G
+
+        G = sqrt((x1 + x2 + x3) ** 2)
         return (x1 + x2 + x3) / 3, (y1 + y2 + y3) / 3, G
 
-    Xc= ((x1*x1+y1*y1)*(y2-y3)+(x2*x2+y2*y2)*(y3-y1)+(x3*x3+y3*y3)*(y1-y2))/(2*G)
-    Yc=-((x1*x1+y1*y1)*(x2-x3)+(x2*x2+y2*y2)*(x3-x1)+(x3*x3+y3*y3)*(x1-x2))/(2*G)
-
-    Xd=(((x1*x1+y1*y1)-(x2*x2+y2*y2))*(y2-y3)-((x2*x2+y2*y2)-(x3*x3+y3*y3))*(y1-y2))/(2*((x1-x2)*(y2-y3)-(x2-x3)*(y1-y2)))
-    Yd=(((y1*y1+x1*x1)-(y2*y2+x2*x2))*(x2-x3)-((y2*y2+x2*x2)-(y3*y3+x3*x3))*(x1-x2))/(2*((y1-y2)*(x2-x3)-(y2-y3)*(x1-x2)))
-
-    G=2 * sqrt( (x1 - Xc) * (x1 - Xc) + (y1 - Yc) * (y1 - Yc) )
-
-    return Xd, Yd, G/2
+    return 0, 0, 0
 
 
 # y = ax^2 + bx + c である場合の、xに対するyを返す
