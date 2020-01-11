@@ -47,12 +47,10 @@ def main(vmd_path, pmx_path, pos_repeat, rot_repeat):
                 start_frameno = motion_frames[0].frame
                 last_frameno = motion_frames[-1].frame
 
+                # 軸（ボーンの向き）を取得する
                 axis = QVector3D()
-                if bone_name in model.bones and model.bones[bone_name].parent_index >= 0:
-                    # ボーンがモデルにあり、かつ親がある場合、親ボーンの軸に沿わせる
-                    parent_pos = model.bones[model.bone_indexes[model.bones[bone_name].parent_index]].position
-                    self_pos = model.bones[bone_name].position
-                    axis = (self_pos - parent_pos).normalized()
+                if bone_name in model.bones:
+                    axis = calc_local_axis(model, bone_name)
 
                 for cnt in range(max(pos_repeat, rot_repeat)):
 
@@ -172,6 +170,62 @@ def main(vmd_path, pmx_path, pos_repeat, rot_repeat):
         print("■■■■■■■■■■■■■■■■■")
         
         print(traceback.format_exc())
+
+
+# 指定ボーンの最終的なローカル軸の向きを返す
+def calc_local_axis(model, bone_name):
+    # そのボーンの最終的な向き先を取得
+    links, indexes = model.create_link_2_top_all(bone_name)
+
+    # 行列生成(センター起点)
+    _, _, _, org_matrixs, org_global_3ds = utils.create_matrix_global(model, links, {}, VmdBoneFrame())
+
+    # 該当ボーンの局所座標系変換
+    mat = QMatrix4x4()
+
+    # ローカル座標軸を求める為の行列
+    for n, (v, l) in enumerate(zip(org_matrixs, reversed(links))):
+        if n == 0:
+            # 最初は行列
+            mat = copy.deepcopy(org_matrixs[0])
+        else:
+            # 2番目以降は行列をかける
+            mat *= copy.deepcopy(org_matrixs[n])
+        
+        # ローカル軸が設定されていない場合、設定        
+        if n > 0:
+            local_x_matrix = QMatrix4x4()
+            if l.local_x_vector == QVector3D():
+                local_axis = l.position - links[len(links) - n].position
+            else:
+                local_axis = l.local_x_vector
+            local_axis_qq = QQuaternion.fromDirection(local_axis.normalized(), QVector3D(0, 0, 1))
+            local_x_matrix.rotate(local_axis_qq)           
+        
+            mat *= local_x_matrix
+
+    # ワールド座標系から注目ノードの局所座標系への変換
+    inv_coord = mat.inverted()[0]
+
+    from_pos = QVector3D()
+    to_pos = QVector3D()
+
+    if bone_name in model.bones:
+        fv = model.bones[bone_name]
+        from_pos = fv.position
+        if fv.tail_position != QVector3D():
+            # 表示先が相対パスの場合、保持
+            to_pos = from_pos + fv.tail_position
+        elif fv.tail_index >= 0:
+            to_pos = model.bones[model.bone_indexes[fv.tail_index]].position
+ 
+    # とりあえず自身のボーンからの向き先を取得
+    axis = (to_pos - from_pos).normalized()
+
+    local_axis = (inv_coord * axis).normalized()
+
+    return local_axis
+
 
 def split_bf(axis, frames_by_bone, bone_name, prev_prev_bf, prev_bf, now_bf, next_bf):
     # 0回目の場合、根性打ち
@@ -413,10 +467,14 @@ def get_smooth_middle_rot(axis, prev_bf, now_bf, next_bf, target_bf):
         w = w_qq.toEulerAngles()
         n = n_qq.toEulerAngles()
     else:
+        p_qq = prev_bf.rotation
+        w_qq = now_bf.rotation
+        n_qq = next_bf.rotation
+
         # 軸がない場合、そのまま回転
-        p = prev_bf.rotation.toEulerAngles()
-        w = now_bf.rotation.toEulerAngles()
-        n = next_bf.rotation.toEulerAngles()
+        p = p_qq.toEulerAngles()
+        w = w_qq.toEulerAngles()
+        n = n_qq.toEulerAngles()
 
     # 変化量
     t = (target_bf.frame - prev_bf.frame) / ( now_bf.frame - prev_bf.frame)
