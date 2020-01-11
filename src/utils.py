@@ -836,10 +836,12 @@ def calc_smooth_bezier_rot(x1, y1r, x2, y2r, x3, y3r):
     cy2v = QVector3D.dotProduct(y1p, cy2p)
     y3v = QVector3D.dotProduct(y1p, y3p)
 
-    y1 = (y1v - y1v) / (y3v - y1v)
-    cy1 = (cy1v - y1v) / (y3v - y1v)
-    cy2 = (cy2v - y1v) / (y3v - y1v)
-    y3 = (y3v - y1v) / (y3v - y1v)
+    diffy = 1 if (y3v == y1v) else (y3v - y1v)
+
+    y1 = (y1v - y1v) / diffy
+    cy1 = (cy1v - y1v) / diffy
+    cy2 = (cy2v - y1v) / diffy
+    y3 = (y3v - y1v) / diffy
 
     # 中間フレームで繋いだ開始フレームと終端フレームの三次ベジェ曲線
     bz = calc_cubic_bezier_4point(0, y1, cx1, cy1, cx2, cy2, 1, y3, t)
@@ -996,14 +998,17 @@ def calc_smooth_bezier_pos(x1, y1, x2, y2, x3, y3):
 
     t = (x2 - x1) / (x3 - x1)
 
-    tx1 = (x1 - x1) / (x3 - x1)
-    ty1 = (y1 - y1) / (y3 - y1)
-    tcx1 = (cx1 - x1) / (x3 - x1)
-    tcy1 = (cy1 - y1) / (y3 - y1)
-    tcx2 = (cx2 - x1) / (x3 - x1)
-    tcy2 = (cy2 - y1) / (y3 - y1)
-    tx3 = (x3 - x1) / (x3 - x1)
-    ty3 = (y3 - y1) / (y3 - y1)
+    diffx = 1 if x3 == x1 else (x3 - x1)
+    diffy = 1 if y3 == y1 else (y3 - y1)
+
+    tx1 = (x1 - x1) /diffx
+    ty1 = (y1 - y1) / diffy
+    tcx1 = (cx1 - x1) / diffx
+    tcy1 = (cy1 - y1) / diffy
+    tcx2 = (cx2 - x1) / diffx
+    tcy2 = (cy2 - y1) / diffy
+    tx3 = (x3 - x1) / diffx
+    ty3 = (y3 - y1) / diffy
 
     # # 交点を制御点とする三次ベジェ曲線
     # bz = calc_quadratic_bezier_curve(x1, y1, cx1, cy1, cx2, cy2, x3, y3, t)
@@ -1096,6 +1101,7 @@ def calc_cubic_bezier_4point(x1, y1, cx1, cy1, cx2, cy2, x3, y3, alpha):
     b = d2 * d2
     c = (2 * d1 * d1) + (3 * d1 * d2) + (d2 * d2)
     d = 3 * d1 * (d1 + d2)
+    d = 1 if d == 0 else d
 
     out_tangent_1.setX((a * passthru_2.x() - b * passthru_0.x() + c * passthru_1.x()) / d)
     out_tangent_1.setY((a * passthru_2.y() - b * passthru_0.y() + c * passthru_1.y()) / d)
@@ -1224,6 +1230,17 @@ def calc_sphere_center(pv, wv, nv, r):
 
         c1 = QVector3D(xq1, yq1, zq1)
         c2 = QVector3D(xq2, yq2, zq2)
+    
+        if c1 == c2:
+            # 重解
+            return c1, r
+
+        if c1.distanceToPoint(QVector3D()) > c2.distanceToPoint(QVector3D()):
+            # 原点に近い方を返す
+            return c1, r
+
+        return c2, r
+
     except ZeroDivisionError as e:
         # ゼロ割エラーの場合、平面で求め直す
         print("ゼロ割エラー: %s" % (",".join([str(x1), str(y1), str(z1), str(x2), str(y2), str(z2), str(x3), str(y3), str(z3), str(r)])))
@@ -1240,20 +1257,13 @@ def calc_sphere_center(pv, wv, nv, r):
             if z1 == z2 or z2 == z3 or z1 == z3:
                 cx, cy, r = calc_circle_center(x1, y1, x2, y2, x3, y3)
                 return QVector3D(cx, cy, z1), r
-                        
+
+            # どれも違っててかつエラーの場合、
         except ZeroDivisionError as e2:
             # それでも駄目な場合、初期値
-            return QVector3D(), r        
+            return QVector3D(1, 1, 1), 1
 
-    if c1 == c2:
-        # 重解
-        return c1, r
-
-    if c1.distanceToPoint(QVector3D()) > c2.distanceToPoint(QVector3D()):
-        # 原点に近い方を返す
-        return c1, r
-
-    return c2, r
+    return QVector3D(1, 1, 1), 1
 
 # http://www.iot-kyoto.com/satoh/2016/01/29/tangent-003/
 # http://nobutina.blog86.fc2.com/blog-entry-674.html

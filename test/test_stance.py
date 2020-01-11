@@ -556,6 +556,43 @@ class TestSubStance(unittest.TestCase):
         self.assertGreater(len(ok_list), 0)
     
 
+    def test_upper_stance_upper2_up_22(self):
+        rep_upper2_initial_slope_test_param00 = ["頭"] # ["上半身", "上半身2", "頭", "首"]
+        rep_upper2_initial_slope_test_param01 = ["上半身2"] # ["上半身", "上半身2", "頭", "首"]
+        rep_upper2_initial_slope_test_param02 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param03 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param04 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param05 = ["上半身", "上半身2", "頭", "首"]
+        rep_upper2_initial_slope_test_param06 = ["上半身", "上半身2", "頭", "首"]
+        rep_upper2_initial_slope_test_param07 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param08 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param09 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param10 = ["d1","d1i","d2","d2i","u","ui","1"]
+        rep_upper2_initial_slope_test_param11 = ["d1","d1i","d2","d2i","u","ui","1"]
+        rep_upper2_initial_slope_test_param12 = ["d1","d1i","d2","d2i","u","ui","1"]
+        rep_upper2_initial_slope_test_param13 = ["上半身", "上半身2", "頭", "首"]
+        rep_upper2_initial_slope_test_param14 = ["上半身", "上半身2", "頭", "首"]
+
+        # 直積
+        target_test_params_base = list(itertools.product(rep_upper2_initial_slope_test_param00, rep_upper2_initial_slope_test_param01, \
+            rep_upper2_initial_slope_test_param02, rep_upper2_initial_slope_test_param03, rep_upper2_initial_slope_test_param04, \
+            rep_upper2_initial_slope_test_param05, rep_upper2_initial_slope_test_param06, \
+            rep_upper2_initial_slope_test_param07, rep_upper2_initial_slope_test_param08, rep_upper2_initial_slope_test_param09, \
+            rep_upper2_initial_slope_test_param10, rep_upper2_initial_slope_test_param11, rep_upper2_initial_slope_test_param12, \
+            rep_upper2_initial_slope_test_param13, rep_upper2_initial_slope_test_param14))
+
+        target_test_params_list = [(x00, x01, x02, x03, x04, x05, x06, x07, x08, x09, x10, x11, x12, x13, x14) \
+            for (x00, x01, x02, x03, x04, x05, x06, x07, x08, x09, x10, x11, x12, x13, x14) \
+            in target_test_params_base if x00 != x01 and x05 != x06 and x13 != x14 and \
+                ((x10 == "1" and x11[:2] != x12[:2]) or (x11 == "1" and x10[:2] != x12[:2]) or (x12 == "1" and x11[:2] != x10[:2]) or (x10[:2] != x11[:2] != x12[:2]))]
+        random.shuffle(target_test_params_list)
+
+        ok_list = self.calc_stance(target_test_params_list, 0, False, "022_01")
+
+        print("ok_list LIST: %s" % ok_list)
+        self.assertGreater(len(ok_list), 0)
+    
+
 
 
 
@@ -608,7 +645,12 @@ class TestSubStance(unittest.TestCase):
         logger.info("len: %s", len(target_test_params))
         ok_list = []
 
-        os.makedirs("{0}/{1}_OK".format(base_path, prefix), exist_ok=exist_ok)
+        os.makedirs("{0}/{1}_OK1".format(base_path, prefix), exist_ok=exist_ok)
+        os.makedirs("{0}/{1}_OK2".format(base_path, prefix), exist_ok=exist_ok)
+        os.makedirs("{0}/{1}_OK3".format(base_path, prefix), exist_ok=exist_ok)
+        os.makedirs("{0}/{1}_OK4".format(base_path, prefix), exist_ok=exist_ok)
+        os.makedirs("{0}/{1}_OK5".format(base_path, prefix), exist_ok=exist_ok)
+        os.makedirs("{0}/{1}_OK6".format(base_path, prefix), exist_ok=exist_ok)
         os.makedirs("{0}/{1}_ALLOK".format(base_path, prefix), exist_ok=exist_ok)
         os.makedirs("{0}/{1}_NG".format(base_path, prefix), exist_ok=exist_ok)
 
@@ -681,7 +723,7 @@ class TestSubStance(unittest.TestCase):
                 logger.info("result: TRUE")
             elif result_list.count(True) > 0:
                 # TRUE(一致した場合)
-                shutil.move(output_vmd_path, "{0}/{1}_OK/{2}".format(base_path, prefix, resutl_file_name))
+                shutil.move(output_vmd_path, "{0}/{1}_OK{2}/{3}".format(base_path, prefix, result_list.count(True), resutl_file_name))
                 ok_list.append(test_param)
                 logger.info("result: TRUE")
             else:
@@ -692,4 +734,4 @@ class TestSubStance(unittest.TestCase):
         return ok_list
 
 if __name__ == "__main__":
-    unittest.main(defaultTest="TestSubStance.test_upper_stance_upper2_up_21")
+    unittest.main(defaultTest="TestSubStance.test_upper_stance_upper2_up_22")

@@ -363,7 +363,11 @@ def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org
             org_head_links, org_head_indexes = trace_model.create_link_2_top_one("頭")
             rep_head_links, rep_head_indexes = replace_model.create_link_2_top_one("頭")
 
-            # 上半身2,頭,0,0,0,首,上半身2,0,1,0,首,上半身_True,False,False_ 0.00# 25.21# 0.00,-30.76# 39.62# 11.42,-14.18# 16.41#-25.48
+            # 頭,上半身2,0,0,0,首,上半身,x-,y-,z,1,d2,1,首,上半身2_True,True,False,False,False,False_ 0.89#-0.00# 0.00,-13.09# 5.63#-0.06,-4.60#-14.79#-15.53
+            # 頭,上半身2,0,0,0,首,上半身,x-,z,y,1,d2,1,首,上半身2_True,True,False,False,False,False_ 0.89#-0.00# 0.00,-13.09# 5.63#-0.06,-4.60#-14.79#-15.53
+            # 頭,上半身2,0,0,0,首,上半身,x,z-,y,d2,1,1,首,上半身2_True,True,False,False,False,False_ 0.89#-0.00# 0.00,-13.09# 5.63#-0.06,-4.60#-14.79#-15.53
+            # 頭,上半身2,0,0,0,首,上半身,z,x,y,1,d2i,1,首,上半身2_False,True,False,False,False,False_ 0.89# 0.00#-6.11,-13.09# 5.63#-6.17,-4.60#-14.79#-21.64
+            test_param = ["頭","上半身2","0","0","0","首","上半身","z","x","y","1","d2i","1","首","上半身2"]
             # test_param = ["上半身2","頭","0","0","0","首","上半身2","0","1","0","首","上半身"]
             # upper_direction_qq = utils.calc_upper_direction_qq(replace_model, rep_upper_links, motion.frames, bf)
 
@@ -391,6 +395,8 @@ def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org
                 "d1i": QQuaternion.fromDirection(rep_upper2_initial_slope1, rep_upper2_initial_slope1_up).inverted(), \
                 "d2": QQuaternion.fromDirection(rep_upper2_initial_slope1, rep_upper2_initial_slope2_up), \
                 "d2i": QQuaternion.fromDirection(rep_upper2_initial_slope1, rep_upper2_initial_slope2_up).inverted(), \
+                "u": rep_upper_initial_slope_qq, \
+                "ui": rep_upper_initial_slope_qq.inverted(), \
                 "1": QQuaternion()}
 
             rep_upper2_initial_slope_qq = direction_params[test_param[10]] * direction_params[test_param[11]] * direction_params[test_param[12]]

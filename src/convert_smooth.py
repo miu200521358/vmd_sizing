@@ -48,40 +48,28 @@ def main(vmd_path, pos_repeat, rot_repeat):
 
                     if cnt > 0:
                         # 2回目の円滑化
-                        smooth_filter(bone_name, frames_by_bone, pos_repeat > cnt, rot_repeat > cnt, {"freq": 30, "mincutoff": 0.1, "beta": 0.5, "dcutoff": 0.8})
+                        smooth_filter(bone_name, frames_by_bone, pos_repeat > cnt, rot_repeat > cnt, {"freq": 30, "mincutoff": 0.01, "beta": 0.5, "dcutoff": 0.8})
                     
-                    prev_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, start_frameno, is_only=True, is_exist=True)
+                    prev_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, start_frameno, is_only=True, is_exist=True, is_read=True)
                     if not prev_bf: break
 
-                    now_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, prev_bf.frame + 1, is_only=False, is_exist=True)
+                    now_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, prev_bf.frame + 1, is_only=False, is_exist=True, is_read=True)
                     if not now_bf: break
 
-                    next_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, now_bf.frame + 1, is_only=False, is_exist=True)
+                    next_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, now_bf.frame + 1, is_only=False, is_exist=True, is_read=True)
                     if not next_bf: break
 
+                    # 最初に根性打ち
                     while now_bf.frame <= last_frameno:
-                        if cnt == 0:
-                            # 一回目は根性打ち
-                            split_bf(frames_by_bone, bone_name, prev_bf, now_bf, next_bf)
-                        else:
-                            # 2回目以降はベジェ曲線同士を結合する
-                            next_bf = smooth_bf(frames_by_bone, bone_name, prev_bf, now_bf, next_bf, cnt, last_frameno)
+                        split_bf(frames_by_bone, bone_name, prev_bf, now_bf, next_bf)
                         
-                        if not now_bf or not next_bf: break
-
-                        if cnt == 0:
-                            # 一回目はnow～次の区間を埋める
-                            prev_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, now_bf.frame, is_only=True, is_exist=True)
-                        else:
-                            # 二回目以降はnextまで補間曲線が設定できたので次
-                            prev_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, next_bf.frame, is_only=True, is_exist=True)
-
+                        prev_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, now_bf.frame, is_only=True, is_exist=True, is_read=True)
                         if not prev_bf: break
 
-                        now_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, prev_bf.frame + 1, is_only=False, is_exist=True, is_key=(cnt > 0))
+                        now_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, prev_bf.frame + 1, is_only=False, is_exist=True, is_read=True)
                         if not now_bf: break
 
-                        next_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, now_bf.frame + 1, is_only=False, is_exist=True, is_key=(cnt > 0))
+                        next_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, now_bf.frame + 1, is_only=False, is_exist=True, is_read=True)
                         # if not next_bf: break
 
                         if not next_bf:
@@ -93,6 +81,44 @@ def main(vmd_path, pos_repeat, rot_repeat):
                             if next_bf.frame > last_frameno:
                                 # 次以降は見なくていいので終了
                                 break
+
+                    if cnt > 0:
+
+                        prev_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, start_frameno, is_only=True, is_exist=True)
+                        if not prev_bf: break
+
+                        now_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, prev_bf.frame + 1, is_only=False, is_exist=True)
+                        if not now_bf: break
+
+                        next_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, now_bf.frame + 1, is_only=False, is_exist=True)
+                        if not next_bf: break
+
+                        # 2回目以降はベジェ曲線同士を結合する
+                        while now_bf.frame <= last_frameno:
+                        
+                            next_bf = smooth_bf(frames_by_bone, bone_name, prev_bf, now_bf, next_bf, cnt, last_frameno)
+                            
+                            if not now_bf or not next_bf: break
+
+                            # 二回目以降はnextまで補間曲線が設定できたので次
+                            prev_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, next_bf.frame, is_only=True, is_exist=True)
+                            if not prev_bf: break
+
+                            now_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, prev_bf.frame + 1, is_only=False, is_exist=True)
+                            if not now_bf: break
+
+                            next_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, now_bf.frame + 1, is_only=False, is_exist=True)
+                            # if not next_bf: break
+
+                            if not next_bf:
+                                # 次がない場合、一旦prevの次に伸ばす
+                                next_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, now_bf.frame + 1, is_only=False, is_exist=False)
+                                next_bf.position += QVector3D(1, 0, 0)
+                                next_bf.rotation *= 1.1
+                            else:
+                                if next_bf.frame > last_frameno:
+                                    # 次以降は見なくていいので終了
+                                    break
 
                     print("ボーン: %s %s回目" % (bone_name, (cnt + 1)))
 
@@ -160,9 +186,8 @@ def smooth_bf(frames_by_bone, bone_name, prev_bf, now_bf, next_bf, offset, last_
         is_smooth = smooth_complement_bf(frames_by_bone, bone_name, prev_bf, now_bf, next_bf, offset)
     
         if is_smooth:
-            # 繋いだnowはキーを落とす
-            now_bf.key = False
-            frames_by_bone[now_bf.frame] = now_bf
+            for fno in range(prev_bf.frame + 1, next_bf.frame):
+                frames_by_bone[fno].key = False
 
             # 補間曲線が繋げた場合、次へ
             successed_next_bf = copy.deepcopy(next_bf)
@@ -400,7 +425,7 @@ def get_smooth_middle_by_vec3(op, ow, on, d, t):
 # 補間曲線を考慮した指定フレーム番号の位置
 # https://www55.atwiki.jp/kumiho_k/pages/15.html
 # https://harigane.at.webry.info/201103/article_1.html
-def calc_bone_by_complement_by_bone(frames_by_bone, bone_name, frameno, is_only, is_exist, is_key=False):
+def calc_bone_by_complement_by_bone(frames_by_bone, bone_name, frameno, is_only, is_exist, is_key=False, is_read=False):
     fill_bf = VmdBoneFrame()
     fill_bf.name = bone_name.encode('cp932').decode('shift_jis').encode('shift_jis')
     fill_bf.format_name = bone_name
@@ -409,19 +434,25 @@ def calc_bone_by_complement_by_bone(frames_by_bone, bone_name, frameno, is_only,
     now_framenos = [x for x in sorted(frames_by_bone.keys()) if x == frameno]
     
     if len(now_framenos) == 1:
-        # キー指定がある場合、キーが有効である場合のみ返す
-        if is_key:
-            if frames_by_bone[frameno].key == True:
+        if is_read:
+            if frames_by_bone[frameno].read == True:
                 return frames_by_bone[frameno]
             else:
                 pass
         else:
-            # 指定フレームがある場合、それを返す
-            if is_exist:
-                # 存在しているものの場合、コピーしないでそのもの
-                return frames_by_bone[frameno]
+            # キー指定がある場合、キーが有効である場合のみ返す
+            if is_key:
+                if frames_by_bone[frameno].key == True:
+                    return frames_by_bone[frameno]
+                else:
+                    pass
             else:
-                return copy.deepcopy(frames_by_bone[frameno])
+                # 指定フレームがある場合、それを返す
+                if is_exist:
+                    # 存在しているものの場合、コピーしないでそのもの
+                    return frames_by_bone[frameno]
+                else:
+                    return copy.deepcopy(frames_by_bone[frameno])
     elif is_only and is_exist:
         # 指定フレームがなく、かつそれ固定指定で、既存の場合、None
         return None
@@ -438,13 +469,17 @@ def calc_bone_by_complement_by_bone(frames_by_bone, bone_name, frameno, is_only,
             fill_bf = copy.deepcopy(frames_by_bone[last_frameno])
             return fill_bf
 
-    if is_key == True:
+    if is_read == True:
+        # キーONの場合、有効なのを返す
+        for af in after_framenos:
+            if frames_by_bone[af].read == True:
+                return frames_by_bone[af]
+    elif is_key == True:
         # キーONの場合、有効なのを返す
         for af in after_framenos:
             if frames_by_bone[af].key == True:
                 return frames_by_bone[af]
-    
-    if is_exist == True:
+    elif is_exist == True:
         # 既存指定の場合、自身のフレーム（指定フレームの直後のフレーム）
         return copy.deepcopy(frames_by_bone[after_framenos[0]])
 
@@ -534,31 +569,31 @@ def smooth_filter(bone_name, frames_by_bone, is_pos_filter, is_rot_filter, confi
     rxfilter = OneEuroFilter(**config)
     ryfilter = OneEuroFilter(**config)
     rzfilter = OneEuroFilter(**config)
-    rwfilter = OneEuroFilter(**config)
+    # rwfilter = OneEuroFilter(**config)
 
     for e, frameno in enumerate(sorted(frames_by_bone.keys())):
-        bf = frames_by_bone[frameno]
+        prev_bf = frames_by_bone[frameno]
 
         # # 間のキーは一旦落とす
         # if 0 < e < len(frames_by_bone.keys()) - 1:
         #     bf.key = False
 
-        next_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, frameno + 1, is_only=False, is_exist=True)
+        now_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, frameno + 1, is_only=False, is_exist=True)
 
-        if not next_bf:
+        if not now_bf:
             break
 
-        if is_pos_filter and QVector3D.dotProduct(bf.position, next_bf.position) < 0.99:
+        if is_pos_filter and QVector3D.dotProduct(prev_bf.position, now_bf.position) < 0.99:
             # XYZそれぞれにフィルターをかける
-            px = pxfilter(bf.position.x(), bf.frame)
-            py = pyfilter(bf.position.y(), bf.frame)
-            pz = pzfilter(bf.position.z(), bf.frame)
-            bf.position = QVector3D(px, py, pz)
+            px = pxfilter(now_bf.position.x(), now_bf.frame)
+            py = pyfilter(now_bf.position.y(), now_bf.frame)
+            pz = pzfilter(now_bf.position.z(), now_bf.frame)
+            now_bf.position = QVector3D(px, py, pz)
         else:
             # 移動のフィルタ許容してない場合、スルー
-            pxfilter.skip(bf.position.x(), bf.frame)
-            pyfilter.skip(bf.position.y(), bf.frame)
-            pzfilter.skip(bf.position.z(), bf.frame)
+            pxfilter.skip(now_bf.position.x(), now_bf.frame)
+            pyfilter.skip(now_bf.position.y(), now_bf.frame)
+            pzfilter.skip(now_bf.position.z(), now_bf.frame)
 
         # 同じ回転を表すクォータニオンが正負2通りあるので、wの符号が正のほうに統一する
         # if rotation.scalar() < 0:
@@ -567,22 +602,22 @@ def smooth_filter(bone_name, frames_by_bone, is_pos_filter, is_rot_filter, confi
         #     rotation.setZ(rotation.z() * -1)
         #     rotation.setScalar(rotation.scalar() * -1)
         
-        if is_rot_filter and QQuaternion.dotProduct(bf.rotation, next_bf.rotation) > 0.99:
+        if is_rot_filter and QQuaternion.dotProduct(prev_bf.rotation, now_bf.rotation) < 0.99:
             # XYZそれぞれにフィルターをかける(オイラー角)
-            r = bf.rotation.toEulerAngles()
-            rx = rxfilter(r.x(), bf.frame)
-            ry = ryfilter(r.y(), bf.frame)
-            rz = rzfilter(r.z(), bf.frame)
+            r = now_bf.rotation.toEulerAngles()
+            rx = rxfilter(r.x(), now_bf.frame)
+            ry = ryfilter(r.y(), now_bf.frame)
+            rz = rzfilter(r.z(), now_bf.frame)
             # rw = rwfilter(rotation.scalar(), bf.frame)
 
             # クォータニオンに戻して保持
-            bf.rotation = QQuaternion.fromEulerAngles(rx, ry, rz)
+            now_bf.rotation = QQuaternion.fromEulerAngles(rx, ry, rz)
         else:
             # 回転のフィルタ許容してない場合、スルー
-            rxfilter.skip(bf.rotation.x(), bf.frame)
-            ryfilter.skip(bf.rotation.y(), bf.frame)
-            rzfilter.skip(bf.rotation.z(), bf.frame)
-            rwfilter.skip(bf.rotation.scalar(), bf.frame)
+            rxfilter.skip(now_bf.rotation.x(), now_bf.frame)
+            ryfilter.skip(now_bf.rotation.y(), now_bf.frame)
+            rzfilter.skip(now_bf.rotation.z(), now_bf.frame)
+            # rwfilter.skip(bf.rotation.scalar(), bf.frame)
 
 # OneEuroFilter
 # オリジナル：https://www.cristal.univ-lille.fr/~casiez/1euro/
