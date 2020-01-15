@@ -592,6 +592,62 @@ class TestSubStance(unittest.TestCase):
         print("ok_list LIST: %s" % ok_list)
         self.assertGreater(len(ok_list), 0)
     
+    def test_upper_stance_upper2_up_23(self):
+        rep_upper2_initial_slope_test_param00 = ["上半身", "上半身2", "頭", "首"]
+        rep_upper2_initial_slope_test_param01 = ["上半身", "上半身2", "頭", "首"]
+        rep_upper2_initial_slope_test_param02 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param03 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param04 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param05 = ["d1","d1i","d2","d2i","u","ui","1"]
+        rep_upper2_initial_slope_test_param06 = ["d1","d1i","d2","d2i","u","ui","1"]
+        rep_upper2_initial_slope_test_param07 = ["d1","d1i","d2","d2i","u","ui","1"]
+
+        # 直積
+        target_test_params_base = list(itertools.product(rep_upper2_initial_slope_test_param00, rep_upper2_initial_slope_test_param01, \
+            rep_upper2_initial_slope_test_param02, rep_upper2_initial_slope_test_param03, rep_upper2_initial_slope_test_param04, \
+            rep_upper2_initial_slope_test_param05, rep_upper2_initial_slope_test_param06, rep_upper2_initial_slope_test_param07))
+
+        target_test_params_list = [(x00, x01, x02, x03, x04, x05, x06, x07) \
+            for (x00, x01, x02, x03, x04, x05, x06, x07) \
+            in target_test_params_base if x00 != x01 and \
+                ((x05 == "1" and x06[:2] != x07[:2]) or (x06 == "1" and x05[:2] != x07[:2]) or (x07 == "1" and x06[:2] != x05[:2]) or (x05[:2] != x06[:2] != x07[:2]))]
+        random.shuffle(target_test_params_list)
+
+        ok_list = self.calc_stance(target_test_params_list, 0, False, "023_03_UP上半身2-上半身2")
+
+        print("ok_list LIST: %s" % ok_list)
+        self.assertGreater(len(ok_list), 0)
+
+    def test_upper_stance_upper2_up_24(self):
+        rep_upper2_initial_slope_test_param00 = ["上半身2"]
+        rep_upper2_initial_slope_test_param01 = ["上半身", "首"]
+        rep_upper2_initial_slope_test_param02 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param03 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param04 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param05 = ["d1","d1i","d2","d2i","d3","d3i","du","dui","1"]
+        rep_upper2_initial_slope_test_param06 = ["d1","d1i","d2","d2i","d3","d3i","du","dui","1"]
+        rep_upper2_initial_slope_test_param07 = ["d1","d1i","d2","d2i","d3","d3i","du","dui","1"]
+        rep_upper2_initial_slope_test_param08 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param09 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param10 = ["0","1-","1"]
+
+        # 直積
+        target_test_params_list = list(itertools.product(rep_upper2_initial_slope_test_param00, rep_upper2_initial_slope_test_param01, \
+            rep_upper2_initial_slope_test_param02, rep_upper2_initial_slope_test_param03, rep_upper2_initial_slope_test_param04, \
+            rep_upper2_initial_slope_test_param05, rep_upper2_initial_slope_test_param06, rep_upper2_initial_slope_test_param07, \
+            rep_upper2_initial_slope_test_param08, rep_upper2_initial_slope_test_param09, rep_upper2_initial_slope_test_param10))
+
+        # target_test_params_list = [(x00, x01, x02, x03, x04, x05, x06, x07) \
+        #     for (x00, x01, x02, x03, x04, x05, x06, x07) \
+        #     in target_test_params_base if x00 != x01 and \
+        #         ((x05 == "1" and x06[:2] != x07[:2]) or (x06 == "1" and x05[:2] != x07[:2]) or (x07 == "1" and x06[:2] != x05[:2]) or (x05[:2] != x06[:2] != x07[:2]))]
+        random.shuffle(target_test_params_list)
+
+        ok_list = self.calc_stance(target_test_params_list, 1, False, "024_02_上半身2u")
+
+        print("ok_list LIST: %s" % ok_list)
+        self.assertGreater(len(ok_list), 0)
+        
 
 
 
@@ -734,4 +790,4 @@ class TestSubStance(unittest.TestCase):
         return ok_list
 
 if __name__ == "__main__":
-    unittest.main(defaultTest="TestSubStance.test_upper_stance_upper2_up_22")
+    unittest.main(defaultTest="TestSubStance.test_upper_stance_upper2_up_24")

@@ -16,14 +16,14 @@ from VmdWriter import VmdWriter, VmdBoneFrame
 from VmdReader import VmdReader
 from PmxModel import PmxModel, SizingException
 from PmxReader import PmxReader
-import wrapperutils, sub_arm_ik, utils
+import wrapperutils, sub_arm_ik, utils, sub_arm_stance
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 is_print = True
 
-def main(vmd_path, pmx_path, pos_repeat, rot_repeat):
+def main(vmd_path, pmx_path, pos_repeat, rot_repeat, is_smooth_circle, is_smooth_linear):
 
     try:
         # VMD読み込み
@@ -34,8 +34,13 @@ def main(vmd_path, pmx_path, pos_repeat, rot_repeat):
         model = PmxReader().read_pmx_file(pmx_path)
 
         if len(motion.frames.values()) > 0:
-            smooth_vmd_fpath = re.sub(r'\.vmd$', "_bone_smooth_{0:%Y%m%d_%H%M%S}.vmd".format(datetime.now()), vmd_path)
+            smooth_vmd_fpath = re.sub(r'\.vmd$', "_smooth_{0:%Y%m%d_%H%M%S}.vmd".format(datetime.now()), vmd_path)
             
+            # まずボーン回転の分散
+            sub_arm_stance.spread_rotation(motion, copy.deepcopy(motion.frames), model)
+
+            print("■■ スムージング -----------------")
+
             for bone_name, motion_frames in motion.frames.items():
                 if len(motion_frames) <= 1:
                     continue
@@ -50,7 +55,8 @@ def main(vmd_path, pmx_path, pos_repeat, rot_repeat):
                 # 軸（ボーンの向き）を取得する
                 axis = QVector3D()
                 if bone_name in model.bones:
-                    axis = calc_local_axis(model, bone_name)
+                    # direction = "左" if "左" in bone_name else "右" if "右" in bone_name else ""
+                    axis = utils.calc_local_axis(model, bone_name, "")
 
                 for cnt in range(max(pos_repeat, rot_repeat)):
 
@@ -59,30 +65,30 @@ def main(vmd_path, pmx_path, pos_repeat, rot_repeat):
                         smooth_filter(bone_name, frames_by_bone, pos_repeat > cnt, rot_repeat > cnt, {"freq": 30, "mincutoff": 0.01, "beta": 0.5, "dcutoff": 0.8})
                     
                     if cnt == 0:
-                        prev_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, start_frameno, is_only=True, is_exist=True, is_read=True)
+                        prev_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, start_frameno, is_only=True, is_exist=True)
                         if not prev_bf: break
 
-                        now_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, prev_bf.frame + 1, is_only=False, is_exist=True, is_read=True)
+                        now_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, prev_bf.frame + 1, is_only=False, is_exist=True)
                         if not now_bf: break
 
-                        next_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, now_bf.frame + 1, is_only=False, is_exist=True, is_read=True)
+                        next_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, now_bf.frame + 1, is_only=False, is_exist=True)
                         if not next_bf: break
 
                         prev_prev_bf = None
 
                         # 最初に根性打ち
                         while now_bf.frame <= last_frameno:
-                            split_bf(axis, frames_by_bone, bone_name, prev_prev_bf, prev_bf, now_bf, next_bf)
+                            split_bf(frames_by_bone, model, bone_name, axis, prev_prev_bf, prev_bf, now_bf, next_bf, is_smooth_circle, is_smooth_linear)
 
                             prev_prev_bf = prev_bf
                             
-                            prev_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, now_bf.frame, is_only=True, is_exist=True, is_read=True)
+                            prev_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, now_bf.frame, is_only=True, is_exist=True)
                             if not prev_bf: break
 
-                            now_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, prev_bf.frame + 1, is_only=False, is_exist=True, is_read=True)
+                            now_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, prev_bf.frame + 1, is_only=False, is_exist=True)
                             if not now_bf: break
 
-                            next_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, now_bf.frame + 1, is_only=False, is_exist=True, is_read=True)
+                            next_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, now_bf.frame + 1, is_only=False, is_exist=True)
                             # if not next_bf: break
 
                             if not next_bf:
@@ -114,7 +120,7 @@ def main(vmd_path, pmx_path, pos_repeat, rot_repeat):
                         # 2回目以降はベジェ曲線同士を結合する
                         while now_bf.frame <= last_frameno:
                         
-                            next_bf = smooth_bf(frames_by_bone, bone_name, prev_bf, now_bf, next_bf, cnt, last_frameno)
+                            next_bf = smooth_bf(frames_by_bone, bone_name, prev_bf, now_bf, next_bf, 3, last_frameno)
                             
                             if not now_bf or not next_bf: break
 
@@ -171,78 +177,44 @@ def main(vmd_path, pmx_path, pos_repeat, rot_repeat):
         
         print(traceback.format_exc())
 
-
-# 指定ボーンの最終的なローカル軸の向きを返す
-def calc_local_axis(model, bone_name):
-    # そのボーンの最終的な向き先を取得
-    links, indexes = model.create_link_2_top_all(bone_name)
-
-    # 行列生成(センター起点)
-    _, _, _, org_matrixs, org_global_3ds = utils.create_matrix_global(model, links, {}, VmdBoneFrame())
-
-    # 該当ボーンの局所座標系変換
-    mat = QMatrix4x4()
-
-    # ローカル座標軸を求める為の行列
-    for n, (v, l) in enumerate(zip(org_matrixs, reversed(links))):
-        if n == 0:
-            # 最初は行列
-            mat = copy.deepcopy(org_matrixs[0])
-        else:
-            # 2番目以降は行列をかける
-            mat *= copy.deepcopy(org_matrixs[n])
-        
-        # ローカル軸が設定されていない場合、設定        
-        if n > 0:
-            local_x_matrix = QMatrix4x4()
-            if l.local_x_vector == QVector3D():
-                local_axis = l.position - links[len(links) - n].position
-            else:
-                local_axis = l.local_x_vector
-            local_axis_qq = QQuaternion.fromDirection(local_axis.normalized(), QVector3D(0, 0, 1))
-            local_x_matrix.rotate(local_axis_qq)           
-        
-            mat *= local_x_matrix
-
-    # ワールド座標系から注目ノードの局所座標系への変換
-    inv_coord = mat.inverted()[0]
-
-    from_pos = QVector3D()
-    to_pos = QVector3D()
-
-    if bone_name in model.bones:
-        fv = model.bones[bone_name]
-        from_pos = fv.position
-        if fv.tail_position != QVector3D():
-            # 表示先が相対パスの場合、保持
-            to_pos = from_pos + fv.tail_position
-        elif fv.tail_index >= 0:
-            to_pos = model.bones[model.bone_indexes[fv.tail_index]].position
- 
-    # とりあえず自身のボーンからの向き先を取得
-    axis = (to_pos - from_pos).normalized()
-
-    local_axis = (inv_coord * axis).normalized()
-
-    return local_axis
-
-
-def split_bf(axis, frames_by_bone, bone_name, prev_prev_bf, prev_bf, now_bf, next_bf):
+def split_bf(frames_by_bone, model, bone_name, axis, prev_prev_bf, prev_bf, now_bf, next_bf, is_smooth_circle, is_smooth_linear):
     # 0回目の場合、根性打ち
 
-    for fno in range(prev_bf.frame + 1, now_bf.frame):
+    for fno in range(prev_bf.frame + 1, next_bf.frame):
+        if fno == now_bf.frame:
+            continue
+
         target_bf = VmdBoneFrame()
         target_bf.frame = fno
         target_bf.name = bone_name.encode('cp932').decode('shift_jis').encode('shift_jis')
         target_bf.format_name = bone_name
 
-        # 現在の補間曲線ではなく、なめらかに繋いだ場合の角度を設定する
-        target_rot, rt = get_smooth_middle_rot(axis, prev_bf, now_bf, next_bf, target_bf)
-        target_bf.rotation = target_rot
-        
-        # 現在の補間曲線ではなく、なめらかに繋いだ場合の位置を設定する
-        target_pos, mt = get_smooth_middle_pos(axis, prev_bf, now_bf, next_bf, target_bf)
-        target_bf.position = target_pos
+        if is_smooth_circle:
+            # 現在の補間曲線ではなく、なめらかに繋いだ場合の角度を設定する
+            target_rot, rt = get_smooth_middle_rot(axis, prev_bf, now_bf, next_bf, target_bf)
+            target_bf.rotation = target_rot
+            
+            # 現在の補間曲線ではなく、なめらかに繋いだ場合の位置を設定する
+            target_pos, mt = get_smooth_middle_pos(axis, prev_bf, now_bf, next_bf, target_bf)
+            target_bf.position = target_pos
+
+        else:
+            if target_bf.frame < now_bf.frame:
+                # 現在の補間曲線で全打ち
+                target_rot = calc_bone_by_complement_rot(prev_bf, now_bf, target_bf)
+                target_bf.rotation = target_rot
+                
+                # 現在の補間曲線で全打ち
+                target_pos = calc_bone_by_complement_pos(prev_bf, now_bf, target_bf)
+                target_bf.position = target_pos
+            else:
+                # 現在の補間曲線で全打ち
+                target_rot = calc_bone_by_complement_rot(now_bf, next_bf, target_bf)
+                target_bf.rotation = target_rot
+                
+                # 現在の補間曲線で全打ち
+                target_pos = calc_bone_by_complement_pos(now_bf, next_bf, target_bf)
+                target_bf.position = target_pos
 
         target_bf.key = True
         frames_by_bone[target_bf.frame] = target_bf
@@ -348,9 +320,9 @@ def smooth_bezier(frames_by_bone, prev_bf, now_bf, next_bf, get_smooth_bezier_y,
     x2 = now_bf.frame
     x3 = next_bf.frame
 
-    y1 = get_smooth_bezier_y(prev_bf, prev_bf)
-    y2 = get_smooth_bezier_y(prev_bf, now_bf)
-    y3 = get_smooth_bezier_y(prev_bf, next_bf)
+    y1 = get_smooth_bezier_y(prev_bf)
+    y2 = get_smooth_bezier_y(now_bf)
+    y3 = get_smooth_bezier_y(next_bf)
 
     is_smooth, result, bz = calc_smooth_bezier(x1, y1, x2, y2, x3, y3, offset)
 
@@ -417,17 +389,17 @@ def smooth_bezier(frames_by_bone, prev_bf, now_bf, next_bf, get_smooth_bezier_y,
 
 #     return False
 
-def get_smooth_bezier_y_rot(before_bf, after_bf):
-    return after_bf.rotation
+def get_smooth_bezier_y_rot(bf):
+    return bf.rotation
 
-def get_smooth_bezier_y_pos_x(before_bf, after_bf):
-    return after_bf.position.x()
+def get_smooth_bezier_y_pos_x(bf):
+    return bf.position.x()
 
-def get_smooth_bezier_y_pos_y(before_bf, after_bf):
-    return after_bf.position.y()
+def get_smooth_bezier_y_pos_y(bf):
+    return bf.position.y()
 
-def get_smooth_bezier_y_pos_z(before_bf, after_bf):
-    return after_bf.position.z()
+def get_smooth_bezier_y_pos_z(bf):
+    return bf.position.z()
 
 # 滑らかにした移動
 def get_smooth_middle_pos(axis, prev_bf, now_bf, next_bf, target_bf):
@@ -435,13 +407,24 @@ def get_smooth_middle_pos(axis, prev_bf, now_bf, next_bf, target_bf):
     w = now_bf.position
     n = next_bf.position
 
-    # 変化量
-    t = (target_bf.frame - prev_bf.frame) / ( now_bf.frame - prev_bf.frame)
+    if target_bf.frame < now_bf.frame:
+        # nowより前の場合
+        # 変化量
+        t = (target_bf.frame - prev_bf.frame) / ( now_bf.frame - prev_bf.frame)
 
-    # デフォルト値
-    d = w + (w - p)
+        # デフォルト値
+        d = w + (w - p)
 
-    out = get_smooth_middle_by_vec3(p, w, n, d, t, now_bf.frame)
+        out = get_smooth_middle_by_vec3(p, w, n, d, t, target_bf.frame)
+    else:
+        # nowより後の場合
+        # 変化量
+        t = (target_bf.frame - now_bf.frame) / ( next_bf.frame - now_bf.frame)
+
+        # デフォルト値
+        d = n + (n - w)
+
+        out = get_smooth_middle_by_vec3(w, n, p, d, t, target_bf.frame)
 
     # 円周上の座標とデフォルト値の内積（差分）
     diff = 1 - abs(QVector3D.dotProduct(target_bf.position.normalized(), out.normalized()))
@@ -476,20 +459,34 @@ def get_smooth_middle_rot(axis, prev_bf, now_bf, next_bf, target_bf):
         w = w_qq.toEulerAngles()
         n = n_qq.toEulerAngles()
 
-    # 変化量
-    t = (target_bf.frame - prev_bf.frame) / ( now_bf.frame - prev_bf.frame)
+    if target_bf.frame < now_bf.frame:
+        # 変化量
+        t = (target_bf.frame - prev_bf.frame) / ( now_bf.frame - prev_bf.frame)
 
-    # デフォルト値
-    d_qq = QQuaternion.slerp(p_qq, w_qq, t)
-    d = d_qq.toEulerAngles()
+        # デフォルト値
+        d_qq = QQuaternion.slerp(p_qq, w_qq, t)
+        d = d_qq.toEulerAngles()
 
-    out = get_smooth_middle_by_vec3(p, w, n, d, t, now_bf.frame)
+        out = get_smooth_middle_by_vec3(p, w, n, d, t, target_bf.frame)
+    else:
+        # 変化量
+        t = (target_bf.frame - now_bf.frame) / ( next_bf.frame - now_bf.frame)
+
+        # デフォルト値
+        d_qq = QQuaternion.slerp(w_qq, n_qq, t)
+        d = d_qq.toEulerAngles()
+
+        out = get_smooth_middle_by_vec3(w, n, p, d, t, target_bf.frame)
 
     out_qq = QQuaternion.fromEulerAngles(out)
 
     if axis != QVector3D():
         # 回転を元に戻す
-        d2_qq = QQuaternion.slerp(prev_bf.rotation, now_bf.rotation, t)
+        if target_bf.frame < now_bf.frame:
+            d2_qq = QQuaternion.slerp(prev_bf.rotation, now_bf.rotation, t)
+        else:
+            d2_qq = QQuaternion.slerp(now_bf.rotation, next_bf.rotation, t)
+
         result_qq = (d_qq.inverted() * out_qq * d2_qq)
     else:
         result_qq = out_qq
@@ -839,6 +836,8 @@ if __name__=="__main__":
     parser.add_argument('--pmx_path', dest='pmx_path', help='pmx_path vmd', type=str)
     parser.add_argument('--pos_repeat', dest='pos_repeat', help='pos_repeat', type=int)
     parser.add_argument('--rot_repeat', dest='rot_repeat', help='rot_repeat', type=int)
+    parser.add_argument('--is_smooth_circle', dest='is_smooth_circle', help='is_smooth_circle', type=int)
+    parser.add_argument('--is_smooth_linear', dest='is_smooth_linear', help='is_smooth_linear', type=int)
 
     args = parser.parse_args()
 
@@ -848,4 +847,32 @@ if __name__=="__main__":
     if wrapperutils.is_valid_file(args.pmx_path, "PMXファイル", ".pmx", True) == False:
         sys.exit(-1)
 
-    main(args.vmd_path, args.pmx_path, args.pos_repeat, args.rot_repeat)
+    main(args.vmd_path, args.pmx_path, args.pos_repeat, args.rot_repeat, args.is_smooth_circle == 1, args.is_smooth_linear == 1)
+
+    # # VMD読み込み
+    # motion = VmdReader().read_vmd_file(args.vmd_path)
+    # smoothed_frames = []
+
+    # # PMX読み込み
+    # model = PmxReader().read_pmx_file(args.pmx_path)
+
+    # if len(motion.frames.values()) > 0:
+    #     smooth_vmd_fpath = re.sub(r'\.vmd$', "_smooth_{0:%Y%m%d_%H%M%S}.vmd".format(datetime.now()), args.vmd_path)
+        
+    #     # まずボーン回転の分散
+    #     sub_arm_stance.spread_rotation(motion, copy.deepcopy(motion.frames), model)
+
+    #     for k, bf_list in motion.frames.items():
+    #         for bf in bf_list:
+    #             if bf.key == True:
+    #                 smoothed_frames.append(bf)
+
+    # morph_frames = []
+    # for k,v in motion.morphs.items():
+    #     for mf in v:
+    #         morph_frames.append(mf)
+
+    # writer = VmdWriter()
+    
+    # # ボーンモーション生成
+    # writer.write_vmd_file(smooth_vmd_fpath, "Smooth Vmd", smoothed_frames, morph_frames, [], [], [], motion.showiks)

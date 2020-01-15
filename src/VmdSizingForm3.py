@@ -633,6 +633,15 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_smooth_spinRotCount.SetToolTip("回転可能なボーンのスムージングを行う回数を指定して下さい。")
 		bSizerSmooth6.Add( self.m_smooth_spinRotCount, 0, wx.EXPAND |wx.ALL, 0 )
 
+		self.m_radioSmootthingLinear = wx.RadioButton( self.m_panelSmooth, wx.ID_ANY, u"線形補間", wx.DefaultPosition, wx.DefaultSize, style=wx.RB_GROUP )
+		self.m_radioSmootthingLinear.SetToolTip( u"軌道が線になるようにスムージングを行います。" )
+		self.m_radioSmootthingLinear.SetValue( True )
+		bSizerSmooth6.Add( self.m_radioSmootthingLinear, 0, wx.EXPAND |wx.ALL, 5 )
+
+		self.m_radioSmootthingCircle = wx.RadioButton( self.m_panelSmooth, wx.ID_ANY, u"円形補間", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_radioSmootthingCircle.SetToolTip( u"軌道が円になるようにスムージングを行います。" )
+		bSizerSmooth6.Add( self.m_radioSmootthingCircle, 0, wx.EXPAND |wx.ALL, 5 )
+
 		bSizerSmooth4.Add( bSizerSmooth6, 0, wx.EXPAND |wx.ALL, 2 )
 
 
@@ -3200,7 +3209,10 @@ class SmoothWorkerThread(Thread):
 		convert_smooth.main(self._notify_window.m_smooth_fileVmd.GetPath(), \
 			self._notify_window.m_smooth_filePmx.GetPath(), \
 			self._notify_window.m_smooth_spinMovCount.GetValue(), \
-			self._notify_window.m_smooth_spinRotCount.GetValue())
+			self._notify_window.m_smooth_spinRotCount.GetValue(), \
+			self._notify_window.m_radioSmootthingCircle.GetValue(), \
+			self._notify_window.m_radioSmootthingLinear.GetValue(), \
+			)
 
 		# Here's where the result would be returned (this is an
 		# example fixed result of the number 10, but it could be

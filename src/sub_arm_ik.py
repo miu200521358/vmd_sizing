@@ -372,7 +372,7 @@ def prepare(motion, arm_links, hand_distance, is_floor_hand, target_bones):
 
     print("手首位置合わせ事前調整終了")
 
-def prepare_fill_frame(motion, link_name, bf, hand_distance):
+def prepare_fill_frame(motion, link_name, bf, hand_distance=0):
     for tbf_idx, tbf in enumerate(motion.frames[link_name]):
         if tbf.frame == bf.frame:
             # とりあえず登録対象のキーが既存なので終了

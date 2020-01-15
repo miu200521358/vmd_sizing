@@ -805,7 +805,6 @@ class PmxModel():
         except RecursionError as e:
             raise SizingException("ボーンリンクの生成に失敗しました。\nモデル「%s」で以下を確認してください。\n・同じ名前のボーンが複数ないか（ボーンのINDEXがズレるため、サイジングに失敗します）\n・親ボーンに自分の名前と同じ名前のボーンが指定されていないか\n※ PMXEditorの「PMXデータの状態検証」から確認できます。" % ( self.name) )
 
-
     # 頂点構造 ----------------------------
     class Vertex():
         def __init__(self, index, position, normal, uv, extended_uvs, deform, edge_factor):

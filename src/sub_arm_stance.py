@@ -30,6 +30,124 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
 
     return True
 
+# ボーン回転の分散
+def spread_rotation(motion, org_motion_frames, replace_model):
+
+    print("■■ 回転分散 -----------------")
+
+    # 左腕の分散
+    left_arm_target_bones = ["左肩", "左腕", "左ひじ", "左手首"]
+
+    if set(left_arm_target_bones).issubset(replace_model.bones):
+        
+        for wrist_bone_name in ["左手首", "右手首"]:
+            # 手首から親までのボーンリンク
+            links, indexes = replace_model.create_link_2_top_one(wrist_bone_name)
+            # 親から子までのボーンリンクに変換
+            links.reverse()
+
+            for bone_idx, bone in enumerate(links):
+                if bone_idx < len(links) - 1:
+                    # 子の処理対象ボーン
+                    child_bone = links[bone_idx + 1]
+
+                    if (bone.name, child_bone.name) in utils.BORN_ROTATION_LIMIT and bone.name in motion.frames:
+                        # 軸（ボーンの向き）を取得する
+                        direction = "左" if "左" in bone.name else "右" if "右" in bone.name else ""
+                        parent_local_axis = utils.calc_local_axis(replace_model, bone.name, direction)
+                        child_local_axis = utils.calc_local_axis(replace_model, child_bone.name, direction)
+
+                        if bone.name in motion.frames or child_bone.name in motion.frames:
+                            # 上限が決められているボーンで、モーションにデータがあり、かつ子がいる場合
+
+                            # 現在ボーンのあるキー番号リスト
+                            self_bone_framenos = [x.frame for x in motion.frames[bone.name] if x.key == True]
+                            # 子ボーンのあるキー番号リスト（ない場合があるので、とりあえず空生成）
+                            child_bone_framenos = []
+                            if child_bone.name in motion.frames:
+                                child_bone_framenos = [x.frame for x in motion.frames[child_bone.name] if x.key == True]
+
+                            # 重複を除去したキー番号リスト
+                            bone_framenos = sorted(list(set(self_bone_framenos + child_bone_framenos)))
+
+                            for fno in bone_framenos:
+                                # まず一旦登録する
+                                fill_frame_for_spread(motion, bone.name, fno)
+                                fill_frame_for_spread(motion, child_bone.name, fno)
+
+                            for fno in bone_framenos:
+                                # 自身の回転量
+                                self_qq = utils.calc_bone_by_complement(motion.frames, bone.name, fno, False).rotation
+                                # 子の回転量
+                                child_qq = utils.calc_bone_by_complement(motion.frames, child_bone.name, fno, False).rotation
+
+                                # 回転を分散する
+                                self_result_qq, child_result_qq = utils.spread_qq(fno, self_qq, child_qq, utils.BORN_ROTATION_LIMIT[(bone.name, child_bone.name)], bone.fixed_axis, child_bone.fixed_axis, parent_local_axis, child_local_axis)
+
+                                # 自身の回転量を設定
+                                self_bf = fill_frame_for_spread(motion, bone.name, fno)
+                                self_bf.rotation = self_result_qq
+
+                                # 子は挿入
+                                child_bf = fill_frame_for_spread(motion, child_bone.name, fno)
+                                child_bf.rotation = child_result_qq
+
+                        print("分散: %s → %s" % (bone.name, child_bone.name))
+                    
+                if bone.name in motion.frames and bone_idx == len(links) - 1:
+                    # 末端ボーンは、回転分をキャンセルして、元の向きに戻す
+                    for bf in motion.frames[bone.name]:
+                        if bf.key == True:
+                            # 自身の回転量
+                            self_qq = utils.calc_bone_by_complement(motion.frames, bone.name, bf.frame, False).rotation
+                            # 元々の回転量
+                            org_self_qq = utils.calc_bone_by_complement(org_motion_frames, bone.name, bf.frame, False).rotation
+
+                            bf.rotation = self_qq.inverted() * org_self_qq * bf.rotation
+
+# 分散用のbf取得処理
+def fill_frame_for_spread(motion, link_name, fno):
+    if not link_name in motion.frames:
+        fillbf = VmdBoneFrame()
+        fillbf.frame = fno
+        fillbf.key = True
+        fillbf.name = link_name.encode('cp932').decode('shift_jis').encode('shift_jis')
+        fillbf.format_name = link_name
+        motion.frames[link_name] = [fillbf]
+
+        return fillbf
+    
+    for tbf_idx, tbf in enumerate(motion.frames[link_name]):
+        if tbf.frame == fno:
+            tbf.key = True
+            # とりあえず登録対象のキーが既存なので終了
+            logger.debug("fill 既存あり: %s, i: %s, f: %s", link_name, tbf_idx, fno)
+            return tbf
+
+        elif tbf.frame > fno:
+            # 対象のキーがなくて次に行ってしまった場合、挿入
+            
+            # 補間曲線込みでキーフレーム生成
+            fillbf = utils.calc_bone_by_complement(motion.frames, link_name, fno, True)
+            # キーを登録する
+            fillbf.key = True
+
+            motion.frames[link_name].insert(tbf_idx, fillbf)
+            logger.debug("fill insert: %s, i: %s, f: %s, key: %s: p: %s", link_name, tbf_idx, fillbf.frame, fillbf.key, fillbf.position)
+
+            return fillbf
+    
+    # 最後のフレームがなくてそのまま終了してしまった場合は、直前のキーを設定する
+    fillbf = copy.deepcopy(tbf)
+    # キーフレを現時点のに変える
+    fillbf.frame = fno
+    # 登録する
+    fillbf.key = True
+    logger.debug("fill 今回なし: %s, i: %s, f: %s", link_name, tbf_idx, fillbf.frame)
+    motion.frames[link_name].append(fillbf)
+
+    return fillbf
+
 def adjust_center_stance(motion, trace_model, replace_model, org_motion_frames):
     # -----------------------------------------------------------------
     # センター位置補正
@@ -367,7 +485,7 @@ def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org
             # 頭,上半身2,0,0,0,首,上半身,x-,z,y,1,d2,1,首,上半身2_True,True,False,False,False,False_ 0.89#-0.00# 0.00,-13.09# 5.63#-0.06,-4.60#-14.79#-15.53
             # 頭,上半身2,0,0,0,首,上半身,x,z-,y,d2,1,1,首,上半身2_True,True,False,False,False,False_ 0.89#-0.00# 0.00,-13.09# 5.63#-0.06,-4.60#-14.79#-15.53
             # 頭,上半身2,0,0,0,首,上半身,z,x,y,1,d2i,1,首,上半身2_False,True,False,False,False,False_ 0.89# 0.00#-6.11,-13.09# 5.63#-6.17,-4.60#-14.79#-21.64
-            test_param = ["頭","上半身2","0","0","0","首","上半身","z","x","y","1","d2i","1","首","上半身2"]
+            # test_param = ["頭","上半身2","0","0","0","首","上半身","z","x","y","1","d2i","1","首","上半身2"]
             # test_param = ["上半身2","頭","0","0","0","首","上半身2","0","1","0","首","上半身"]
             # upper_direction_qq = utils.calc_upper_direction_qq(replace_model, rep_upper_links, motion.frames, bf)
 
@@ -381,25 +499,30 @@ def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org
             number_params = {"1": 1, "1-": -1, "1.75": 1.75, "1.75-": -1.75, "0": 0}
             rep_upper2_initial_slope1_up = QVector3D(number_params[test_param[2]], number_params[test_param[3]], number_params[test_param[4]]).normalized()
 
-            rep_upper2_initial_slope2_to = replace_model.bones[test_param[5]].position
-            rep_upper2_initial_slope2_from = replace_model.bones[test_param[6]].position
-            rep_upper2_initial_slope2 = (rep_upper2_initial_slope1_to - rep_upper2_initial_slope1_from).normalized()
+            number_params = {"1": 1, "1-": -1, "1.75": 1.75, "1.75-": -1.75, "0": 0}
+            rep_upper1_initial_slope1_up = QVector3D(number_params[test_param[8]], number_params[test_param[9]], number_params[test_param[10]]).normalized()
 
-            number_params = {"1": 1, "1-": -1, "1.75": 1.75, "1.75-": -1.75, "0": 0,
-                "x": rep_upper2_initial_slope2.x(), "x-": -rep_upper2_initial_slope2.x(), 
-                "y": rep_upper2_initial_slope2.y(), "y-": -rep_upper2_initial_slope2.y(), 
-                "z": rep_upper2_initial_slope2.z(), "z-": -rep_upper2_initial_slope2.z()}
-            rep_upper2_initial_slope2_up = QVector3D(number_params[test_param[7]], number_params[test_param[8]], number_params[test_param[9]]).normalized()
+            # rep_upper2_initial_slope2_to = replace_model.bones[test_param[5]].position
+            # rep_upper2_initial_slope2_from = replace_model.bones[test_param[6]].position
+            # rep_upper2_initial_slope2 = (rep_upper2_initial_slope1_to - rep_upper2_initial_slope1_from).normalized()
+
+            # number_params = {"1": 1, "1-": -1, "1.75": 1.75, "1.75-": -1.75, "0": 0,
+            #     "x": rep_upper2_initial_slope2.x(), "x-": -rep_upper2_initial_slope2.x(), 
+            #     "y": rep_upper2_initial_slope2.y(), "y-": -rep_upper2_initial_slope2.y(), 
+            #     "z": rep_upper2_initial_slope2.z(), "z-": -rep_upper2_initial_slope2.z()}
+            # rep_upper2_initial_slope2_up = QVector3D(number_params[test_param[7]], number_params[test_param[8]], number_params[test_param[9]]).normalized()
 
             direction_params = {"d1": QQuaternion.fromDirection(rep_upper2_initial_slope1, rep_upper2_initial_slope1_up), \
                 "d1i": QQuaternion.fromDirection(rep_upper2_initial_slope1, rep_upper2_initial_slope1_up).inverted(), \
-                "d2": QQuaternion.fromDirection(rep_upper2_initial_slope1, rep_upper2_initial_slope2_up), \
-                "d2i": QQuaternion.fromDirection(rep_upper2_initial_slope1, rep_upper2_initial_slope2_up).inverted(), \
-                "u": rep_upper_initial_slope_qq, \
-                "ui": rep_upper_initial_slope_qq.inverted(), \
+                "d2": QQuaternion.fromDirection(rep_upper2_initial_slope1, rep_upper_slope), \
+                "d2i": QQuaternion.fromDirection(rep_upper2_initial_slope1, rep_upper_slope).inverted(), \
+                "d3": QQuaternion.fromDirection(rep_upper_slope, rep_upper1_initial_slope1_up), \
+                "d3i": QQuaternion.fromDirection(rep_upper_slope, rep_upper1_initial_slope1_up).inverted(), \
+                "du": rep_upper_initial_slope_qq, \
+                "dui": rep_upper_initial_slope_qq.inverted(), \
                 "1": QQuaternion()}
 
-            rep_upper2_initial_slope_qq = direction_params[test_param[10]] * direction_params[test_param[11]] * direction_params[test_param[12]]
+            rep_upper2_initial_slope_qq = direction_params[test_param[5]] * direction_params[test_param[6]] * direction_params[test_param[7]]
 
             # number_params = {"1": 1, "1-": -1, "1.75": 1.75, "1.75-": -1.75, "0": 0}
             # rep_upper2_initial_slope2_up = QVector3D(number_params[test_param[7]], number_params[test_param[8]], number_params[test_param[9]]).normalized()
@@ -533,7 +656,7 @@ def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org
             for bf in motion.frames["上半身2"]:
                 if bf.key == True:
                     calc_rotation_stance(org_motion_frames, motion, trace_model, org_head_links, org_head_indexes, org_head_links, org_head_indexes, org_arm_links, org_arm_indexes, \
-                        replace_model, rep_head_links, rep_head_indexes, rep_head_links, rep_head_indexes, rep_arm_links, rep_arm_indexes, "", test_param[13], "上半身2", "頭", test_param[14], \
+                        replace_model, rep_head_links, rep_head_indexes, rep_head_links, rep_head_indexes, rep_arm_links, rep_arm_indexes, "", "上半身2", "上半身2", "頭", "上半身2", \
                         rep_upper2_initial_slope_qq, is_error_outputed, error_file_logger, output_vmd_path, bf, define_is_rotation_no_check_upper, \
                         define_calc_up_from_upper2, define_calc_up_to_upper2, 0.9, QVector3D(0, 1, 1), True)
 
