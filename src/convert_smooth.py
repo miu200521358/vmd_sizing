@@ -116,7 +116,12 @@ def main(vmd_path, pmx_path, smooth_cnt, is_comp_circle, is_seam_smooth):
                             utils.output_message("cnt>0 smooth_filter開始 %s" % (bone_name), is_print1)
 
                             # 2回目以降はフィルタあり
-                            smooth_filter(all_frames_by_bone, frames_by_bone, model, bone_name, {"freq": 30, "mincutoff": (0.01 / cnt), "beta": 0.8, "dcutoff": (0.001 / cnt)})
+                            if cnt == 1:
+                                # 2回目はフィルタ弱め
+                                smooth_filter(all_frames_by_bone, frames_by_bone, model, bone_name, {"freq": 30, "mincutoff": 0.01, "beta": 0.8, "dcutoff": 0.5})
+                            else:
+                                # 3回目以降は強め
+                                smooth_filter(all_frames_by_bone, frames_by_bone, model, bone_name, {"freq": 30, "mincutoff": (0.01 / cnt), "beta": 0.8, "dcutoff": (0.01 / cnt)})
 
                             utils.output_message("cnt>0 smooth_filter完了 %s" % (bone_name), is_print1)
 
