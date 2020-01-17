@@ -23,44 +23,51 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 
 def is_valid_file(base_file_path, file_type, ext, is_print=True, is_aster=False):
     
-    file_path_list = [p for p in glob.glob(base_file_path) if os.path.isfile(p)]
+    if is_aster:
+        file_path_list = [p for p in glob.glob(base_file_path) if os.path.isfile(p)]
 
-    for file_path in file_path_list:
-        if not os.path.exists(file_path):
-            if is_print:
-                print("■■■■■■■■■■■■■■■■■")
-                print("■　**ERROR**　")
-                print("■　"+ file_type +"が見つかりませんでした。")
-                print("■　入力パス: "+ file_path )
-                print("■■■■■■■■■■■■■■■■■")
-
+        if len(file_path_list) == 0:
             return False
-        
-        if not os.path.isfile(file_path):
-            if is_print:
-                print("■■■■■■■■■■■■■■■■■")
-                print("■　**ERROR**　")
-                print("■　"+ file_type +"が正常なファイルとして見つかりませんでした。")
-                print("■　入力パス: "+ file_path )
-                print("■■■■■■■■■■■■■■■■■")
 
-            return False
-        
-        # ボーンCSVファイル名・拡張子
-        _, test_ext = os.path.splitext(os.path.basename(file_path))
-        # logger.debug("file_name: %s, test_ext: %s", file_name, test_ext)
+        file_path = file_path_list[0]
+    else:
+        file_path = base_file_path
 
-        if ext.lower() != test_ext.lower():
-            if is_print:
-                print("■■■■■■■■■■■■■■■■■")
-                print("■　**ERROR**　")
-                print("■　"+ file_type +"の拡張子が正しくありません。")
-                print("■　入力パス: "+ file_path )
-                print("■　設定可能拡張子: "+ ext )
-                print("■■■■■■■■■■■■■■■■■")
+    if not os.path.exists(file_path):
+        if is_print:
+            print("■■■■■■■■■■■■■■■■■")
+            print("■　**ERROR**　")
+            print("■　"+ file_type +"が見つかりませんでした。")
+            print("■　入力パス: "+ file_path )
+            print("■■■■■■■■■■■■■■■■■")
 
-            return False
-        
+        return False
+    
+    if not os.path.isfile(file_path):
+        if is_print:
+            print("■■■■■■■■■■■■■■■■■")
+            print("■　**ERROR**　")
+            print("■　"+ file_type +"が正常なファイルとして見つかりませんでした。")
+            print("■　入力パス: "+ file_path )
+            print("■■■■■■■■■■■■■■■■■")
+
+        return False
+    
+    # ボーンCSVファイル名・拡張子
+    _, test_ext = os.path.splitext(os.path.basename(file_path))
+    # logger.debug("file_name: %s, test_ext: %s", file_name, test_ext)
+
+    if ext.lower() != test_ext.lower():
+        if is_print:
+            print("■■■■■■■■■■■■■■■■■")
+            print("■　**ERROR**　")
+            print("■　"+ file_type +"の拡張子が正しくありません。")
+            print("■　入力パス: "+ file_path )
+            print("■　設定可能拡張子: "+ ext )
+            print("■■■■■■■■■■■■■■■■■")
+
+        return False
+    
     return True
 
 def is_all_sizing(motion, org_pmx, rep_pmx, camera_motion, output_vmd_path=None):

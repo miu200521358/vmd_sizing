@@ -1636,31 +1636,31 @@ class VmdSizingForm3 ( wx.Frame ):
 	def OnTabChange(self, event):
 		if self.worker:
 			# サイジング実行時はタブ移動不可
-			self.m_note.SetSelection(0)
+			self.m_note.ChangeSelection(0)
 			event.Skip()
 			return 
 
 		if self.smooth_worker:
 			# 円滑化時はタブ移動不可
-			self.m_note.SetSelection(4)
+			self.m_note.ChangeSelection(4)
 			event.Skip()
 			return 
 
 		if self.blend_worker:
 			# ブレンドモーフ生成時はタブ移動不可
-			self.m_note.SetSelection(5)
+			self.m_note.ChangeSelection(5)
 			event.Skip()
 			return 
 		
 		if self.csv_worker:
 			# CSVコンバート時はタブ移動不可
-			self.m_note.SetSelection(6)
+			self.m_note.ChangeSelection(6)
 			event.Skip()
 			return 
 
 		if self.vmd_worker:
 			# VMDコンバート時はタブ移動不可
-			self.m_note.SetSelection(7)
+			self.m_note.ChangeSelection(7)
 			event.Skip()
 			return 
 
@@ -1677,6 +1677,7 @@ class VmdSizingForm3 ( wx.Frame ):
 			# 元に戻す
 			sys.stdout = self.m_txtConsole
 
+		# モーフタブ選択時
 		if self.m_note.GetSelection() == 1:
 
 			if not self.vmd_data or not self.org_pmx_data or not self.rep_pmx_data \
@@ -1684,7 +1685,6 @@ class VmdSizingForm3 ( wx.Frame ):
 				or (self.org_pmx_data and self.org_pmx_data.path != self.m_fileOrgPmx.GetPath()) \
 				or (self.rep_pmx_data and self.rep_pmx_data.path != self.m_fileRepPmx.GetPath()):
 				print("モーフタブ表示準備中…少々お待ちください")
-				# 一旦メインに戻す
 				self.m_note.SetSelection(0)
 				# 全件読み込み
 				self.LoadFiles(True)
@@ -1706,7 +1706,7 @@ class VmdSizingForm3 ( wx.Frame ):
 				print("■　「■読み込み成功」のログが出てから、「モーフ」タブを開いてください。")
 				print("■■■■■■■■■■■■■■■■■")
 				
-				self.m_note.SetSelection(0)
+				self.m_note.ChangeSelection(0)
 			else:
 				# モーフタブ新規の場合、モーフプルダウン生成
 				if not self.vmd_morphs or not self.rep_morphs:
@@ -1746,7 +1746,9 @@ class VmdSizingForm3 ( wx.Frame ):
 					logger.debug("vmd_morphs: %s", self.vmd_morphs)
 					logger.debug("rep_morphs: %s", self.rep_morphs)
 
-				self.m_note.SetSelection(1)
+				self.m_note.ChangeSelection(1)
+
+			self.EnableInput()
 
 		# # パス再設定
 		# self.OnCreateOutputVmd(event)
