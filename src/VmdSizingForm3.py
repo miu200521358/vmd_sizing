@@ -17,6 +17,7 @@ import re
 import csv
 import json
 import copy
+import glob
 from pathlib import Path
 from threading import Thread, Event
 import traceback
@@ -37,11 +38,6 @@ class VmdSizingForm3 ( wx.Frame ):
 		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver4.05_β14", pos = wx.DefaultPosition, size = wx.Size( 600,650 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
-		# モーフ置換配列
-		self.vmd_choice_values = []
-		self.rep_choice_values = []
-		self.rep_rate_values = []
-
 		# 分割配列
 		self.slice_frame_values = []
 
@@ -52,6 +48,8 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.camera_vmd_data = None
 		self.camera_pmx_data = None
 		self.blend_pmx_data = None
+
+		self.vmd_data_list = []
 
 		# モーフプルダウン
 		self.vmd_morphs = None
@@ -1918,9 +1916,6 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.vmd_choices = None
 		self.rep_choices = None
 		self.rep_rates = None
-		self.vmd_choice_values = []
-		self.rep_choice_values = []
-		self.rep_rate_values = []
 
 		logger.debug("ClearMorph: size: %s", self.gridMorphSizer.GetItemCount())
 		
@@ -1957,7 +1952,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 	
 	def LoadFiles(self, is_print=True):
-		is_pre_vmd = self.PreLoadOneFile(self.m_fileVmd, self.m_staticText9, ".vmd", is_print)
+		is_pre_vmd = self.PreLoadOneFile(self.m_fileVmd, self.m_staticText9, ".vmd", is_print, is_astr=True)
 		is_pre_org_pmx = self.PreLoadOneFile(self.m_fileOrgPmx, self.m_staticText10, ".pmx", is_print)
 		is_pre_rep_pmx = self.PreLoadOneFile(self.m_fileRepPmx, self.m_staticText11, ".pmx", is_print)
 		# カメラは初期値OKとする
@@ -1972,6 +1967,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		if is_pre_vmd and is_pre_org_pmx and is_pre_rep_pmx and is_pre_camera_vmd and is_pre_camera_pmx:
 			is_vmd = self.LoadOneFile(self.m_fileVmd, self.m_staticText9, ".vmd", is_print)
+
 			is_org_pmx = self.LoadOneFile(self.m_fileOrgPmx, self.m_staticText10, ".pmx", is_print)
 			is_rep_pmx = self.LoadOneFile(self.m_fileRepPmx, self.m_staticText11, ".pmx", is_print)
 
@@ -1986,8 +1982,8 @@ class VmdSizingForm3 ( wx.Frame ):
 			# 全ファイル一括チェック
 			return is_vmd and is_org_pmx and is_rep_pmx and is_camera_vmd and is_camera_pmx \
 				and self.checkOutputVmdPath(self.m_fileOutputVmd, self.m_staticText12) \
-				and ((not self.m_camera_fileOutputVmd) or \
-					(self.m_camera_fileOutputVmd and self.checkOutputVmdPath(self.m_camera_fileOutputVmd, self.m_camera_staticText12)))
+				and ((not self.m_camera_fileOutputVmd.GetPath()) or \
+					(self.m_camera_fileOutputVmd.GetPath() and self.checkOutputVmdPath(self.m_camera_fileOutputVmd, self.m_camera_staticText12)))
 		
 		return False
 	
@@ -2009,7 +2005,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		logger.debug("文字超制限OK")
 		
 		# 親ディレクトリ取得
-		dir_path = wrapperutils.get_dir_path(target_ctrl.GetPath())
+		dir_path = os.path.dirname(target_ctrl.GetPath())
 
 		logger.debug("ディレクトリパス生成")
 
@@ -2017,7 +2013,7 @@ class VmdSizingForm3 ( wx.Frame ):
 			print("■■■■■■■■■■■■■■■■■")
 			print("■　**ERROR**　")
 			print("■　"+ label_text +"パスのフォルダ構成が正しくないため、処理を中断します。")
-			print("■　"+ label_text +"パス: "+ target_ctrl.GetPath() )
+			print("■　"+ label_text +"パス: "+ dir_path )
 			print("■■■■■■■■■■■■■■■■■")
 			return False
 
@@ -2025,7 +2021,7 @@ class VmdSizingForm3 ( wx.Frame ):
 			print("■■■■■■■■■■■■■■■■■")
 			print("■　**ERROR**　")
 			print("■　"+ label_text +"パスの親フォルダに書き込み権限がありません。")
-			print("■　"+ label_text +"パス: "+ target_ctrl.GetPath() )
+			print("■　"+ label_text +"パス: "+ dir_path )
 			print("■■■■■■■■■■■■■■■■■")
 			return False
 
@@ -2039,7 +2035,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		return True
 
-	def PreLoadOneFile(self, target_ctrl, label_ctrl, ext, is_print=True):
+	def PreLoadOneFile(self, target_ctrl, label_ctrl, ext, is_print=True, is_astr=False):
 		# 先頭と末尾の改行は除去
 		target_path = target_ctrl.GetPath().strip()
 		logger.debug("target_ctrl.GetPath(): %s", target_ctrl.GetPath())
@@ -2053,7 +2049,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		# メインスレッドで読み込む
 		if target_ctrl == self.m_fileVmd:
-			if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, is_print):
+			if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, is_print, is_astr):
 				logger.debug("vmd_data クリア: %s", target_ctrl.GetPath())
 				# 読み込めるファイルではない場合、オブジェクトをクリアして終了
 				self.vmd_data = None
@@ -2144,7 +2140,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		# メインスレッドで読み込む
 		if target_ctrl == self.m_fileVmd:
-			if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, is_print):
+			if not wrapperutils.is_valid_file(target_ctrl.GetPath(), label_ctrl.GetLabel(), ext, is_print, is_aster=True):
 				logger.debug("vmd_data クリア: %s", target_ctrl.GetPath())
 				# 読み込めるファイルではない場合、オブジェクトをクリアして終了
 				self.vmd_data = None
@@ -2156,8 +2152,17 @@ class VmdSizingForm3 ( wx.Frame ):
 				return False
 			else:
 				logger.debug("vmd_data 読み込み: %s", target_ctrl.GetPath())
+
+				file_path_list = [p for p in glob.glob(target_ctrl.GetPath()) if os.path.isfile(p)]
+
+				if len(file_path_list) == 0:
+					if is_print:
+						print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(), target_ctrl.GetPath() ))
+
+					return False					
+
 				# VMD読み込む
-				new_vmd_data = wrapperutils.read_vmd(target_ctrl.GetPath(), label_ctrl.GetLabel(), is_print)
+				new_vmd_data = wrapperutils.read_vmd(file_path_list[0], label_ctrl.GetLabel(), is_print)
 
 				if not self.vmd_data or not new_vmd_data or (self.vmd_data and new_vmd_data and self.vmd_data.digest != new_vmd_data.digest):
 					# ハッシュが違う場合、データが違うとみなして更新
@@ -2169,9 +2174,9 @@ class VmdSizingForm3 ( wx.Frame ):
 
 				if is_print:
 					if new_vmd_data:
-						print("%s 読み込み成功: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+						print("%s 読み込み成功: %s" % ( label_ctrl.GetLabel(), file_path_list[0] ))
 					else:
-						print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(),target_ctrl.GetPath() ))
+						print("%s 読み込み失敗: %s" % ( label_ctrl.GetLabel(), file_path_list[0] ))
 						return False
 
 				return True
@@ -2402,6 +2407,8 @@ class VmdSizingForm3 ( wx.Frame ):
 		# 全件読み込み	
 		if not self.LoadFiles(True):
 			self.m_Gauge.SetValue(0)
+			self.EnableInput()		
+
 			return False
 
 		# 読み込み処理が終わったらサイジングできるかチェック
@@ -2583,9 +2590,24 @@ class VmdSizingForm3 ( wx.Frame ):
 
 			self.DisableInput()
 
-			# 全件読み込み		
+			file_path_list = [p for p in glob.glob(self.m_fileVmd.GetPath()) if os.path.isfile(p)]
+
+			if len(file_path_list) == 0:
+				print("■■■■■■■■■■■■■■■■■")
+				print("■　**ERROR**　")
+				print("■　処理可能なVMDファイルがないため、処理を中断します。")
+				print("■　ファイルパス: "+ self.m_fileVmd.GetPath() )
+				print("■■■■■■■■■■■■■■■■■")
+
+				self.EnableInput()
+				# プログレス非表示
+				self.m_Gauge.SetValue(0)
+
+				return False
+
+			# とりあえず先頭1件で全読み込み
 			try:
-				if not self.LoadFiles(True):
+				if not self.LoadFiles(is_print=True):
 					self.EnableInput()
 					# プログレス非表示
 					self.m_Gauge.SetValue(0)
@@ -2597,71 +2619,57 @@ class VmdSizingForm3 ( wx.Frame ):
 
 				return False
 
-			if self.vmd_data and self.org_pmx_data and self.rep_pmx_data:
-				# 一旦初期化
-				self.vmd_choice_values = []
-				self.rep_choice_values = []
-				self.rep_rate_values = []
+			# 最初の一件で履歴保持 --------------
 
-				# モーフデータ生成				
-				self.vmd_choice_values, self.rep_choice_values, self.rep_rate_values = self.create_morph_data()
+			# 履歴保持
+			if self.m_fileVmd.GetPath() in self.file_hitories["vmd"]:
+				# 既に登録されている場合、一旦削除
+				self.file_hitories["vmd"].remove(self.m_fileVmd.GetPath())
+			# 改めて先頭に登録
+			if self.m_fileVmd.GetPath():
+				self.file_hitories["vmd"].insert(0, self.m_fileVmd.GetPath())
+			
+			# 履歴保持
+			if self.m_fileOrgPmx.GetPath() in self.file_hitories["org_pmx"]:
+				self.file_hitories["org_pmx"].remove(self.m_fileOrgPmx.GetPath())
+			if self.m_fileOrgPmx.GetPath():
+				self.file_hitories["org_pmx"].insert(0, self.m_fileOrgPmx.GetPath())
+			
+			# 履歴保持
+			if self.m_fileRepPmx.GetPath() in self.file_hitories["rep_pmx"]:
+				self.file_hitories["rep_pmx"].remove(self.m_fileRepPmx.GetPath())
+			if self.m_fileRepPmx.GetPath():
+				self.file_hitories["rep_pmx"].insert(0, self.m_fileRepPmx.GetPath())
 
-				# パス再設定
-				self.OnCreateOutputVmd(event)
-				self.OnCreateOutputCameraVmd(event)
+			# 履歴保持
+			if self.m_camera_fileVmd.GetPath() in self.file_hitories["camera_vmd"]:
+				self.file_hitories["camera_vmd"].remove(self.m_camera_fileVmd.GetPath())
+			if self.m_camera_fileVmd.GetPath():
+				self.file_hitories["camera_vmd"].insert(0, self.m_camera_fileVmd.GetPath())
 
-				# 履歴保持
-				if self.m_fileVmd.GetPath() in self.file_hitories["vmd"]:
-					# 既に登録されている場合、一旦削除
-					self.file_hitories["vmd"].remove(self.m_fileVmd.GetPath())
-				# 改めて先頭に登録
-				if self.m_fileVmd.GetPath():
-					self.file_hitories["vmd"].insert(0, self.m_fileVmd.GetPath())
-				
-				# 履歴保持
-				if self.m_fileOrgPmx.GetPath() in self.file_hitories["org_pmx"]:
-					self.file_hitories["org_pmx"].remove(self.m_fileOrgPmx.GetPath())
-				if self.m_fileOrgPmx.GetPath():
-					self.file_hitories["org_pmx"].insert(0, self.m_fileOrgPmx.GetPath())
-				
-				# 履歴保持
-				if self.m_fileRepPmx.GetPath() in self.file_hitories["rep_pmx"]:
-					self.file_hitories["rep_pmx"].remove(self.m_fileRepPmx.GetPath())
-				if self.m_fileRepPmx.GetPath():
-					self.file_hitories["rep_pmx"].insert(0, self.m_fileRepPmx.GetPath())
+			# 履歴保持
+			if self.m_camera_fileOrgPmx.GetPath() in self.file_hitories["camera_pmx"]:
+				self.file_hitories["camera_pmx"].remove(self.m_camera_fileOrgPmx.GetPath())
+			if self.m_camera_fileOrgPmx.GetPath():
+				self.file_hitories["camera_pmx"].insert(0, self.m_camera_fileOrgPmx.GetPath())
 
-				# 履歴保持
-				if self.m_camera_fileVmd.GetPath() in self.file_hitories["camera_vmd"]:
-					self.file_hitories["camera_vmd"].remove(self.m_camera_fileVmd.GetPath())
-				if self.m_camera_fileVmd.GetPath():
-					self.file_hitories["camera_vmd"].insert(0, self.m_camera_fileVmd.GetPath())
+			# 入力履歴を保存		
+			try:
+				with open(wrapperutils.get_mypath('history.json'), 'w') as f:
+					json.dump(self.file_hitories, f, ensure_ascii=False)
+			except Exception:
+				print("history.json保存失敗")
+				print(traceback.format_exc())
 
-				# 履歴保持
-				if self.m_camera_fileOrgPmx.GetPath() in self.file_hitories["camera_pmx"]:
-					self.file_hitories["camera_pmx"].remove(self.m_camera_fileOrgPmx.GetPath())
-				if self.m_camera_fileOrgPmx.GetPath():
-					self.file_hitories["camera_pmx"].insert(0, self.m_camera_fileOrgPmx.GetPath())
+			# カメラVMDは一件だけなので、ここで生成
+			self.OnCreateOutputCameraVmd(event)
 
-				# 入力履歴を保存		
-				try:
-					with open(wrapperutils.get_mypath('history.json'), 'w') as f:
-						json.dump(self.file_hitories, f, ensure_ascii=False)
-				except Exception:
-					print("history.json保存失敗")
-					print(traceback.format_exc())
+			self.vmd_data_list = file_path_list
 
-					# msg = wrapperutils.get_mypath('history.json')
-					# msg += "\n"
-					# msg += traceback.format_exc()
-					# msg += "\n"
-					# dialog = wx.MessageDialog(self, msg, style=wx.OK)
-					# dialog.ShowModal()
-					# dialog.Destroy()
-
-				# スレッド実行
-				self.worker = ExecWorkerThread(self)
-				self.worker.start()
-				self.worker.stop_event.set()
+			# スレッド実行
+			self.worker = ExecWorkerThread(self)
+			self.worker.start()
+			self.worker.stop_event.set()
 		else:
 			print("まだ処理が実行中です。終了してから再度実行してください。")
 
@@ -2676,10 +2684,6 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.EnableInput()
 		# プログレス非表示
 		self.m_Gauge.SetValue(0)
-		# モーフ置換配列クリア
-		self.vmd_choice_values = []
-		self.rep_choice_values = []
-		self.rep_rate_values = []
 
 	# スレッド実行結果
 	def OnCsvResult(self, event):
@@ -3076,36 +3080,59 @@ class ExecWorkerThread(Thread):
 		# need to structure your processing so that you periodically
 		# peek at the abort variable
 
-		# 処理実行
-		wrapperutils.exec(
-			self._notify_window.vmd_data
-			, self._notify_window.org_pmx_data
-			, self._notify_window.rep_pmx_data
-			, self._notify_window.m_fileVmd.GetPath()
-			, self._notify_window.m_fileOrgPmx.GetPath()
-			, self._notify_window.m_fileRepPmx.GetPath()
-			, self._notify_window.m_fileOutputVmd.GetPath()
-			, self._notify_window.m_radioAvoidance.GetValue()
-			, self._notify_window.m_radioAvoidanceFinger.GetValue()
-			, self._notify_window.m_radioArmIK.GetValue()
-			, self._notify_window.m_sliderHandDistance.GetValue()
-			, self._notify_window.m_checkFloorArmDistance.GetValue()
-			, True
-			, True
-			, self._notify_window.m_sliderHandFloorDistance.GetValue()
-			, self._notify_window.m_sliderLegFloorDistance.GetValue()
-			, self._notify_window.m_checkFingerDistance.GetValue()
-			, self._notify_window.m_sliderFingerDistance.GetValue()
-			, self._notify_window.vmd_choice_values
-			, self._notify_window.rep_choice_values			
-			, self._notify_window.rep_rate_values
-			, self._notify_window.camera_vmd_data
-			, self._notify_window.m_camera_fileVmd.GetPath()
-			, self._notify_window.camera_pmx_data
-			, self._notify_window.m_camera_fileOrgPmx.GetPath()
-			, self._notify_window.m_camera_fileOutputVmd.GetPath()
-			, self._notify_window.m_camera_spinYoffset.GetValue()
-		)
+		for vmd_idx, vmd_path in enumerate(self._notify_window.vmd_data_list):
+			self._notify_window.m_fileVmd.SetPath(vmd_path)
+
+			if vmd_idx > 0:
+				# 1件目以降は再読み込み
+				is_vmd = self._notify_window.LoadOneFile(self._notify_window.m_fileVmd, self._notify_window.m_staticText9, ".vmd", False)
+
+				if not is_vmd:
+					continue
+
+				# パスクリア
+				self._notify_window.m_fileOutputVmd.SetPath("")
+
+			# 一旦初期化
+			vmd_choice_values = []
+			rep_choice_values = []
+			rep_rate_values = []
+			
+			# モーフ生成 --------------
+			if self._notify_window.vmd_data and self._notify_window.org_pmx_data and self._notify_window.rep_pmx_data:
+				# モーフデータ生成				
+				vmd_choice_values, rep_choice_values, rep_rate_values = self._notify_window.create_morph_data()
+
+			# 処理実行
+			wrapperutils.exec(
+				self._notify_window.vmd_data
+				, self._notify_window.org_pmx_data
+				, self._notify_window.rep_pmx_data
+				, self._notify_window.m_fileVmd.GetPath()
+				, self._notify_window.m_fileOrgPmx.GetPath()
+				, self._notify_window.m_fileRepPmx.GetPath()
+				, self._notify_window.m_fileOutputVmd.GetPath()
+				, self._notify_window.m_radioAvoidance.GetValue()
+				, self._notify_window.m_radioAvoidanceFinger.GetValue()
+				, self._notify_window.m_radioArmIK.GetValue()
+				, self._notify_window.m_sliderHandDistance.GetValue()
+				, self._notify_window.m_checkFloorArmDistance.GetValue()
+				, True
+				, True
+				, self._notify_window.m_sliderHandFloorDistance.GetValue()
+				, self._notify_window.m_sliderLegFloorDistance.GetValue()
+				, self._notify_window.m_checkFingerDistance.GetValue()
+				, self._notify_window.m_sliderFingerDistance.GetValue()
+				, vmd_choice_values
+				, rep_choice_values			
+				, rep_rate_values
+				, self._notify_window.camera_vmd_data
+				, self._notify_window.m_camera_fileVmd.GetPath()
+				, self._notify_window.camera_pmx_data
+				, self._notify_window.m_camera_fileOrgPmx.GetPath()
+				, self._notify_window.m_camera_fileOutputVmd.GetPath()
+				, self._notify_window.m_camera_spinYoffset.GetValue()
+			)
 
 		# Here's where the result would be returned (this is an
 		# example fixed result of the number 10, but it could be
