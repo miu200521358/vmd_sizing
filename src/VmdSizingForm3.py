@@ -588,7 +588,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		bSizerSmooth4 = wx.BoxSizer( wx.VERTICAL )
 
-		self.m_smooth_staticText7 = wx.StaticText( self.m_panelSmooth, wx.ID_ANY, u"指定されたVMDファイルを、キーの間を滑らかな補間曲線で繋いで、再出力します。\n上半身等、体幹が回転するタイプのボーンは捻れる確率が高いため、避けて下さい。", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_smooth_staticText7 = wx.StaticText( self.m_panelSmooth, wx.ID_ANY, u"指定されたVMDファイルに対して、キーを分割し、滑らかな補間曲線で繋いで、再出力します。\nスムージング回数1回で、全打ちとなり、2回目以降はフィルタリングした後に補間曲線で繋ぎます。\n回数が増えると、変化が遅く、弱くなります。捩りボーンへの分散処理も同時に行います。", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_smooth_staticText7.Wrap( -1 )
 
 		bSizerSmooth4.Add( self.m_smooth_staticText7, 0, wx.ALL, 5 )
@@ -1685,7 +1685,7 @@ class VmdSizingForm3 ( wx.Frame ):
 				or (self.org_pmx_data and self.org_pmx_data.path != self.m_fileOrgPmx.GetPath()) \
 				or (self.rep_pmx_data and self.rep_pmx_data.path != self.m_fileRepPmx.GetPath()):
 				print("モーフタブ表示準備中…少々お待ちください")
-				self.m_note.SetSelection(0)
+				self.m_note.SetSelection(0)	# 画面が崩れるので、set限定
 				# 全件読み込み
 				self.LoadFiles(True)
 
