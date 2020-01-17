@@ -27,7 +27,7 @@ def sign(x):
 
 def output_message(text, is_print=False):
     if is_print == True:
-        print(text)
+        print("{0} <{1}>".format(text, datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')))
     else:
         pass
 
@@ -218,73 +218,55 @@ def create_matrix(model, links, frames, bf, scales=None):
     return trans_vs, add_qs, scale_l, matrixs
 
 # 回転を分散させる
-def spread_qq(fno, parent_qq, child_qq, parent_params, parent_fixed_axis, child_fixed_axis, parent_local_axis, child_local_axis):
+def spread_qq(fno, parent_qq, child_qq, parent_params, child_fixed_axis):
     # 親の回転から上限下限を抜き出した回転量を抽出
-    parent_axis_qq = copy.deepcopy(parent_qq)
-    child_axis_qq = copy.deepcopy(child_qq)
-
     parent_result_qq = copy.deepcopy(parent_qq)
     child_result_qq = copy.deepcopy(child_qq)
-
-    # parent_euler = parent_qq.toEulerAngles()
-
-    # if len(parent_params["rotate"]) > 0:
-    #     # まず、回転軸のねじれを親自身のローカル軸に統合させる
-
-    #     # ローカル軸以外の回転2軸の平均値を取得する
-    #     rotate_mean_euler = parent_euler * parent_params["rotate_sign"]
-    #     rotate_mean_degree = rotate_mean_euler.length() * rotate_mean_euler.normalized().z() * -1
-    #     parent_extra_axis_mean_qq = QQuaternion.fromEulerAngles(rotate_mean_euler)
-
-    #     # 回転軸につけた角度分を反映
-    #     rotate_axis_degree = -rotate_mean_degree
-    #     parent_extra_axis_rotate_qq = QQuaternion.fromAxisAndAngle(parent_params["rotate_axis"], rotate_axis_degree)
-
-    #     axis_rotate_degree = rotate_mean_degree * 0.5
-    #     parent_extra_axis_add_qq = QQuaternion.fromAxisAndAngle(parent_local_axis, axis_rotate_degree)
-
-    #     parent_axis_qq = parent_qq * parent_extra_axis_mean_qq.inverted() * parent_extra_axis_rotate_qq * parent_extra_axis_add_qq
-
-    # parent_result_qq = parent_axis_qq
-
-    # 回転量の上限に応じて子に回転量を引き継ぐ
-    target_list = [ \
-            ("x",  parent_params["limit"][0],  parent_params["limit"][1]), \
-            ("y",  parent_params["limit"][2],  parent_params["limit"][3]), \
-            ("z",  parent_params["limit"][4],  parent_params["limit"][5]), \
-        ]
-
-    parent_euler = parent_axis_qq.toEulerAngles()
-    parent_euler_dic = {"x": parent_euler.x(), "y": parent_euler.y(), "z": parent_euler.z()}
-
-    axis_euler = {"x": 0, "y": 0, "z": 0}
-
-    for (axis, min_limit, max_limit) in target_list:    
-        if parent_euler_dic[axis] < min_limit:
-            # 下限の回転量
-            axis_euler[axis] = 360 - abs(parent_euler_dic[axis] - min_limit)
-        elif parent_euler_dic[axis] > max_limit:
-            # 上限の回転量
-            axis_euler[axis] = parent_euler_dic[axis] - max_limit
     
-    # 軸ごとに分けた値を再取得
-    extra_vec = QVector3D(axis_euler["x"], axis_euler["y"], axis_euler["z"])
+    # 親自身のねじれを分散させる
+    parent_spread_qq = copy.deepcopy(parent_qq)
+    child_spread_qq = copy.deepcopy(child_qq)
 
-    if extra_vec != QVector3D():
-        base_extra_qq = QQuaternion.fromEulerAngles(extra_vec)
-        degree = degrees(2 * acos(min(1, max(-1, base_extra_qq.scalar()))))
+    # 親のねじれを子に分散させる
+    if child_fixed_axis == QVector3D():
+        # 子が普通の場合
+        parent_result_qq = parent_spread_qq
+    else:
+        # 子が捩りの場合 --------------------            
+        # 捩り軸に統合させた角度を取得する
+        parent_spread_xeuler = parent_spread_qq.toEulerAngles()
+        extra_xvec = QVector3D()
 
-        if child_fixed_axis != QVector3D():
-            # 子が軸制限ある場合、軸にあった回転量にする
-            parent_extra_qq = QQuaternion.fromAxisAndAngle(child_fixed_axis, degree)
+        if child_fixed_axis.x() > 0:
+            # 左腕
+            if parent_spread_xeuler.x() <= parent_params["limit"][0]:
+                # 下限の回転量
+                extra_xvec.setX(360 - (parent_spread_xeuler.x() - parent_params["limit"][0]))
+            elif parent_spread_xeuler.x() >= parent_params["limit"][1]:
+                # 上限の回転量
+                extra_xvec.setX(parent_spread_xeuler.x() - parent_params["limit"][1])
         else:
-            # 軸制限がない場合、ローカル軸に合わせる
-            parent_extra_qq = QQuaternion.fromAxisAndAngle(child_local_axis, degree)
+            # 右腕
+            if parent_spread_xeuler.x() <= parent_params["limit"][0]:
+                # 下限の回転量
+                extra_xvec.setX(parent_spread_xeuler.x() - parent_params["limit"][0])
+            elif parent_spread_xeuler.x() >= parent_params["limit"][1]:
+                # 上限の回転量
+                extra_xvec.setX(360 - (parent_spread_xeuler.x() - parent_params["limit"][1]))
 
-        child_result_qq = parent_extra_qq * child_qq
+        if extra_xvec != QVector3D():
+            base_extra_qq = parent_qq * QQuaternion.fromEulerAngles(extra_xvec)
+            degree = degrees(2 * acos(min(1, max(-1, base_extra_qq.scalar()))))
 
-        # 残りを親に戻す
-        parent_result_qq = parent_axis_qq * base_extra_qq.inverted()
+            # 子が軸制限ある場合、軸にあった回転量にする
+            child_extra_qq = QQuaternion.fromAxisAndAngle(child_fixed_axis, degree)
+            child_result_qq = child_extra_qq
+
+            # 残りを親に戻す
+            parent_result_qq = parent_qq * child_extra_qq.inverted()
+            logger.debug(parent_result_qq)
+        else:
+            parent_result_qq = parent_spread_qq
 
     return parent_result_qq, child_result_qq
 
@@ -297,17 +279,25 @@ BORN_ROTATION_LIMIT = {
     # , "下半身": [-15, 125, -180, 180, -40, 40]
     # , "首": [-60, 50, -50, 50, -40, 40]
     # , "頭": [-30, 20, -30, 30, -30, 30]
-    ("左肩","左腕"): {"limit": [-20, 20, -180, 180, -180, 180], "limit_axis": QVector3D(1, 0, 0), "rotate": ["y", "z"], "rotate_sign": QVector3D(0, 1, 1), "axis": QVector3D(1, 0, 0), "rotate_axis": QVector3D(0, 0, 1)}
-    , ("左腕","左ひじ"): {"limit": [-20, 20, -180, 180,-180, 180], "limit_axis": QVector3D(1, 0, 0), "rotate": ["y", "z"], "rotate_sign": QVector3D(0, 1, 1), "axis": QVector3D(1, 0, 0), "rotate_axis": QVector3D(0, 0, 1)}
-    , ("左ひじ","左手首"): {"limit": [-45, 45, -180, 180,-180, 180], "limit_axis": QVector3D(1, 0, 0), "rotate": [], "rotate_sign": QVector3D(0, 0, 0), "axis": QVector3D(0, 0, 0), "rotate_axis": QVector3D(0, 0, 0)}
-    , ("左腕","左腕捩"): {"limit": [-45, 45, -180, 180,-180, 180], "limit_axis": QVector3D(1, 0, 0), "rotate": ["y", "z"], "rotate_sign": QVector3D(0, 1, 1), "axis": QVector3D(1, 0, 0), "rotate_axis": QVector3D(0, 0, 1)}
-    , ("左ひじ","左手捩"): {"limit": [-45, 45, -180, 180,-180, 180],  "limit_axis": QVector3D(1, 0, 0), "rotate": [], "rotate_sign": QVector3D(0, 0, 0), "axis": QVector3D(0, 0, 0), "rotate_axis": QVector3D(0, 0, 0)}
-    , ("右肩","右腕"): {"limit": [-20, 20, -180, 180,-180, 180], "limit_axis": QVector3D(1, 0, 0), "rotate": ["y", "z"], "rotate_sign": QVector3D(0, 1, 1), "axis": QVector3D(1, 0, 0), "rotate_axis": QVector3D(0, 0, 1)}
-    , ("右腕","右ひじ"): {"limit": [-20, 20, -180, 180,-180, 180], "limit_axis": QVector3D(1, 0, 0), "rotate": ["y", "z"], "rotate_sign": QVector3D(0, 1, 1), "axis": QVector3D(1, 0, 0), "rotate_axis": QVector3D(0, 0, 1)}
-    , ("右ひじ","右手首"): {"limit": [-45, 45, -180, 180,-180, 180], "limit_axis": QVector3D(1, 0, 0), "rotate": [], "rotate_sign": QVector3D(0, 0, 0), "axis": QVector3D(0, 0, 0), "rotate_axis": QVector3D(0, 0, 0)}
-    , ("右腕","右腕捩"): {"limit": [-45, 45, -180, 180,-180, 180], "limit_axis": QVector3D(1, 0, 0), "rotate": ["y", "z"], "rotate_sign": QVector3D(0, 1, 1), "axis": QVector3D(1, 0, 0), "rotate_axis": QVector3D(0, 0, 1)}
-    , ("右ひじ","右手捩"): {"limit": [-45, 45, -180, 180,-180, 180], "limit_axis": QVector3D(1, 0, 0), "rotate": [], "rotate_sign": QVector3D(0, 0, 0), "axis": QVector3D(0, 0, 0), "rotate_axis": QVector3D(0, 0, 0)}
+    ("左肩","左腕"): {"limit": [-20, 20]}
+    , ("左腕","左ひじ"): {"limit": [-45, 45]}
+    , ("左ひじ","左手首"): {"limit": [-45, 45]}
+    , ("左腕","左腕捩"): {"limit": [-45, 45]}
+    , ("左ひじ","左手捩"): {"limit": [-45, 45]}
+    , ("右肩","右腕"): {"limit": [-20, 20]}
+    , ("右腕","右ひじ"): {"limit": [-20, 20]}
+    , ("右ひじ","右手首"): {"limit": [-45, 45]}
+    , ("右腕","右腕捩"): {"limit": [-45, 45]}
+    , ("右ひじ","右手捩"): {"limit": [-45, 45]}
 }
+
+    # parent_euler = parent_qq.toEulerAngles()
+
+
+    # parent_result_qq = parent_axis_qq
+    # parent_xaxis_qq = QQuaternion.fromAxisAndAngle(QVector3D(1, 0, 0), xdegree)
+
+    # extra_xvec = QVector3D()
 
     # twist_target_list = [ \
     #         ("y",  parent_params["limit"][2],  parent_params["limit"][3]), \
@@ -442,7 +432,7 @@ BORN_ROTATION_LIMIT = {
     #         child_result_qq = child_qq
 
 # 指定ボーンの最終的なローカル軸の向きを返す
-def calc_local_axis(model, bone_name, direction):
+def calc_local_axis(model, bone_name):
     # そのボーンの最終的な向き先を取得
     links, indexes = model.create_link_2_top_all(bone_name)
 
@@ -469,12 +459,14 @@ def calc_local_axis(model, bone_name, direction):
             if l.local_x_vector == QVector3D():
                 local_axis = l.position - links[len(links) - n].position
 
-                if direction in ["左", "右"]:
-                    direction_x = 1 if direction == "左" else -1
-                    local_axis_qq = QQuaternion.rotationTo(QVector3D(direction_x, 0, 0), local_axis)
-                    # local_axis_qq = QQuaternion.fromDirection(local_axis.normalized(), QVector3D(0, 0, -1))
-                else:
-                    local_axis_qq = QQuaternion.fromDirection(local_axis.normalized(), QVector3D(0, 0, 1))
+                # if direction in ["左", "右"]:
+                #     direction_x = 1 if direction == "左" else -1
+                #     local_axis_qq = QQuaternion.rotationTo(QVector3D(direction_x, 0, 0), local_axis)
+                #     # local_axis_qq = QQuaternion.fromDirection(QVector3D(direction_x, 0, 0), local_axis.normalized())
+                # else:
+                local_axis_qq = QQuaternion.fromDirection(local_axis.normalized(), QVector3D(0, 0, 1))
+            else:
+                local_axis_qq = QQuaternion.fromDirection(l.local_x_vector.normalized(), QVector3D(0, 0, 1))
 
             local_x_matrix.rotate(local_axis_qq)           
         
@@ -483,6 +475,14 @@ def calc_local_axis(model, bone_name, direction):
     # ワールド座標系から注目ノードの局所座標系への変換
     inv_coord = mat.inverted()[0]
 
+    # とりあえず自身のボーンからの向き先を取得
+    axis = calc_local_axis_pos(model, bone_name)
+
+    local_axis = (inv_coord * axis).normalized()
+
+    return local_axis
+
+def calc_local_axis_pos(model, bone_name):
     from_pos = QVector3D()
     to_pos = QVector3D()
 
@@ -498,9 +498,7 @@ def calc_local_axis(model, bone_name, direction):
     # とりあえず自身のボーンからの向き先を取得
     axis = (to_pos - from_pos).normalized()
 
-    local_axis = (inv_coord * axis).normalized()
-
-    return local_axis
+    return axis
 
 
 # グローバル座標リスト生成
@@ -1018,8 +1016,11 @@ def calc_smooth_bezier_rot(x1, y1r, x2, y2r, x3, y3r, offset):
             [QVector2D(0, 0), QVector2D(20, 20), QVector2D(107, 107), QVector2D(COMPLEMENT_MMD_MAX, COMPLEMENT_MMD_MAX)]
 
     y1e = y1r.toEulerAngles()
+    y1e = QVector3D(round(y1e.x(), 3), round(y1e.y(), 3), round(y1e.z(), 3))
     y2e = y2r.toEulerAngles()
+    y2e = QVector3D(round(y2e.x(), 3), round(y2e.y(), 3), round(y2e.z(), 3))
     y3e = y3r.toEulerAngles()
+    y3e = QVector3D(round(y3e.x(), 3), round(y3e.y(), 3), round(y3e.z(), 3))
 
     # 各回転の補間曲線
     xresult, is_xfit, xbz = calc_smooth_bezier_pos(x1, y1e.x(), x2, y2e.x(), x3, y3e.x(), offset)
@@ -1034,21 +1035,17 @@ def calc_smooth_bezier_rot(x1, y1r, x2, y2r, x3, y3r, offset):
         # 半径は3点間の距離の最長の半分
         r = max(y1e.distanceToPoint(y2e), y1e.distanceToPoint(y3e),  y2e.distanceToPoint(y3e)) / 2
 
-        if round(r, 1) == 0:
+        if round(r, 3) == 0:
             # 半径が取れなかった場合、そもそもまったく移動がないので、線分移動
-            return False, True, \
+            return True, True, \
                 [QVector2D(0, 0), QVector2D(20, 20), QVector2D(107, 107), QVector2D(COMPLEMENT_MMD_MAX, COMPLEMENT_MMD_MAX)]
 
-        try:
-            # 3点を通る球体の原点を求める
-            c, radius = calc_sphere_center(y1e, y2e, y3e, r)
-        except ZeroDivisionError as e:
-            utils.output_message("utils ゼロ割エラー: f: %s, p: %s, w: %s, n: %s, t: %s" % (x2, y1e, y2e, y3e, t), True)
-            raise e
+        # 3点を通る球体の原点を求める
+        c, radius = calc_sphere_center(y1e, y2e, y3e, r)
 
-        if radius == 0:
+        if round(radius, 3) == 0:
             # 半径がない場合、線形補間
-            return False, True, \
+            return True, True, \
                 [QVector2D(0, 0), QVector2D(20, 20), QVector2D(107, 107), QVector2D(COMPLEMENT_MMD_MAX, COMPLEMENT_MMD_MAX)]
 
         # prev -> next の t分の回転量
@@ -1239,9 +1236,9 @@ def calc_smooth_bezier_pos(x1, y1, x2, y2, x3, y3, offset):
     a, b, c = calc_quadratic_param(x1, y1, x2, y2, x3, y3)
     output_message("calc_smooth_bezier calc_quadratic_param finish now: %s" % datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'), is_print)
 
-    if a == 0:
+    if round(a, 3) == 0:
         # 曲線がなく、等間隔に変化する場合、線形補間
-        return False, True, \
+        return True, True, \
             [QVector2D(0, 0), QVector2D(20, 20), QVector2D(107, 107), QVector2D(COMPLEMENT_MMD_MAX, COMPLEMENT_MMD_MAX)]
 
     # 開始フレームと中間フレームの交点

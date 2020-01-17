@@ -76,20 +76,20 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.smooth_worker = None
 
 		# ファイル履歴
-		self.file_hitories = {"vmd":[],"org_pmx":[],"rep_pmx":[],"camera_vmd":[],"camera_pmx":[],"max":20}
+		self.file_hitories = {"vmd":[],"org_pmx":[],"rep_pmx":[],"camera_vmd":[],"camera_pmx":[],"smooth_vmd":[],"smooth_pmx":[],"max":20}
 		# 履歴JSONファイルがあれば読み込み
 		try:
 			with open(wrapperutils.get_mypath('history.json'), 'r') as f:
 				self.file_hitories = json.load(f)
 				# キーが揃っているかチェック
-				for key in ["vmd", "org_pmx", "rep_pmx", "camera_vmd", "camera_pmx"]:
+				for key in ["vmd", "org_pmx", "rep_pmx", "camera_vmd", "camera_pmx", "smooth_vmd", "smooth_pmx"]:
 					if key not in self.file_hitories:
 						self.file_hitories[key] = []
 				# 最大件数が揃っているかチェック
 				if "max" not in self.file_hitories:
 					self.file_hitories["max"] = 20
 		except Exception:
-			self.file_hitories = {"vmd":[],"org_pmx":[],"rep_pmx":[],"camera_vmd":[],"camera_pmx": [],"max":20}
+			self.file_hitories = {"vmd":[],"org_pmx":[],"rep_pmx":[],"camera_vmd":[],"camera_pmx": [],"smooth_vmd":[],"smooth_pmx":[],"max":20}
 
 			# msg = wrapperutils.get_mypath('history.json')
 			# msg += "\n"
@@ -603,44 +603,77 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		bSizerSmooth4.Add( self.m_smooth_staticText1, 0, wx.ALL, 5 )
 
+		bSizerSmoothVmd = wx.BoxSizer( wx.HORIZONTAL )
+
 		self.m_smooth_fileVmd = wx.FilePickerCtrl( self.m_panelSmooth, wx.ID_ANY, wx.EmptyString, u"VMDファイルを選択してください", u"VMDファイル (*.vmd)|*.vmd|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.Size( -1,-1 ), wx.FLP_DEFAULT_STYLE )
 		self.m_smooth_fileVmd.GetPickerCtrl().SetLabel("開く")
-		bSizerSmooth4.Add( self.m_smooth_fileVmd, 0, wx.ALL|wx.EXPAND, 5 )
+		bSizerSmoothVmd.Add( self.m_smooth_fileVmd, 1, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_smooth_btnHistoryVmd = wx.Button( self.m_panelSmooth, wx.ID_ANY, u"履歴", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_smooth_btnHistoryVmd.SetToolTip( u"これまで指定されたスムージング対象VMDパスが再指定できます。" )
+		bSizerSmoothVmd.Add( self.m_smooth_btnHistoryVmd, 0, wx.ALL, 5 )
+
+		bSizerSmooth4.Add( bSizerSmoothVmd, 0, wx.EXPAND, 5 )
 
 		self.m_smooth_staticText2 = wx.StaticText( self.m_panelSmooth, wx.ID_ANY, u"PMXファイル", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_smooth_staticText2.Wrap( -1 )
 
 		bSizerSmooth4.Add( self.m_smooth_staticText2, 0, wx.ALL, 5 )
 
+		bSizerSmoothPmx = wx.BoxSizer( wx.HORIZONTAL )
+
 		self.m_smooth_filePmx = wx.FilePickerCtrl( self.m_panelSmooth, wx.ID_ANY, wx.EmptyString, u"PMXファイルを選択してください", u"PMXファイル (*.pmx)|*.pmx|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.Size( -1,-1 ), wx.FLP_DEFAULT_STYLE )
 		self.m_smooth_filePmx.GetPickerCtrl().SetLabel("開く")
-		bSizerSmooth4.Add( self.m_smooth_filePmx, 0, wx.ALL|wx.EXPAND, 5 )
+		bSizerSmoothPmx.Add( self.m_smooth_filePmx, 1, wx.ALL|wx.EXPAND, 5 )
 
+		self.m_smooth_btnHistoryPmx = wx.Button( self.m_panelSmooth, wx.ID_ANY, u"履歴", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_smooth_btnHistoryPmx.SetToolTip( u"これまで指定されたスムージング対象PMXパスが再指定できます。" )
+		bSizerSmoothPmx.Add( self.m_smooth_btnHistoryPmx, 0, wx.ALL, 5 )
+
+		bSizerSmooth4.Add( bSizerSmoothPmx, 0, wx.EXPAND, 5 )
 
 		bSizerSmooth6 = wx.BoxSizer( wx.HORIZONTAL )
 
 		self.m_staticSmoothText162 = wx.StaticText( self.m_panelSmooth, wx.ID_ANY, u"スムージング回数", wx.DefaultPosition, wx.DefaultSize, 0 )
 		bSizerSmooth6.Add( self.m_staticSmoothText162, 0, wx.ALL, 0 )
 
-		self.m_smooth_spinMovCount = wx.SpinCtrl( self.m_panelSmooth, id=wx.ID_ANY, size=wx.Size( 100,-1 ), value="2", min=1, max=100, initial=1 )
-		self.m_smooth_spinMovCount.SetToolTip("スムージングを行う回数を指定して下さい。")
-		bSizerSmooth6.Add( self.m_smooth_spinMovCount, 0, wx.EXPAND |wx.ALL, 0 )
+		self.m_smooth_spinSmoothCount = wx.SpinCtrl( self.m_panelSmooth, id=wx.ID_ANY, size=wx.Size( 80,-1 ), value="2", min=1, max=100, initial=1 )
+		self.m_smooth_spinSmoothCount.SetToolTip("スムージングを行う回数を指定して下さい。\n「1回」だと、全打ちキーになります。\n「2回」以降は、フィルターをかけ、滑らかにした上で間引きます。")
+		bSizerSmooth6.Add( self.m_smooth_spinSmoothCount, 0, wx.ALL, 0 )
 
-		self.m_staticSmoothText161 = wx.StaticText( self.m_panelSmooth, wx.ID_ANY, u"回転スムージング回数", wx.DefaultPosition, wx.DefaultSize, 0 )
-		bSizerSmooth6.Add( self.m_staticSmoothText161, 0, wx.ALL, 0 )
+		# self.m_staticSmoothText161 = wx.StaticText( self.m_panelSmooth, wx.ID_ANY, u"回転スムージング回数", wx.DefaultPosition, wx.DefaultSize, 0 )
+		# bSizerSmooth6.Add( self.m_staticSmoothText161, 0, wx.ALL, 0 )
 
-		self.m_smooth_spinRotCount = wx.SpinCtrl( self.m_panelSmooth, id=wx.ID_ANY, size=wx.Size( 100,-1 ), value="2", min=1, max=100, initial=1 )
-		self.m_smooth_spinRotCount.SetToolTip("回転可能なボーンのスムージングを行う回数を指定して下さい。")
-		bSizerSmooth6.Add( self.m_smooth_spinRotCount, 0, wx.EXPAND |wx.ALL, 0 )
+		# self.m_smooth_spinRotCount = wx.SpinCtrl( self.m_panelSmooth, id=wx.ID_ANY, size=wx.Size( 80,-1 ), value="2", min=1, max=100, initial=1 )
+		# self.m_smooth_spinRotCount.SetToolTip("回転可能なボーンのスムージングを行う回数を指定して下さい。")
+		# bSizerSmooth6.Add( self.m_smooth_spinRotCount, 0, wx.ALL, 0 )
 
-		self.m_radioSmootthingLinear = wx.RadioButton( self.m_panelSmooth, wx.ID_ANY, u"線形補間", wx.DefaultPosition, wx.DefaultSize, style=wx.RB_GROUP )
-		self.m_radioSmootthingLinear.SetToolTip( u"軌道が線になるようにスムージングを行います。" )
-		self.m_radioSmootthingLinear.SetValue( True )
-		bSizerSmooth6.Add( self.m_radioSmootthingLinear, 0, wx.EXPAND |wx.ALL, 5 )
+		self.m_staticSmoothText163 = wx.StaticText( self.m_panelSmooth, wx.ID_ANY, u"　軌道", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticSmoothText163.SetToolTip("キーとキーの間の軌道をどのように補間するかを指定してください。\n全打ちモーションの場合、線形補間を選択してください。")
+		bSizerSmooth6.Add( self.m_staticSmoothText163, 0, wx.ALL, 0 )
 
-		self.m_radioSmootthingCircle = wx.RadioButton( self.m_panelSmooth, wx.ID_ANY, u"円形補間", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_radioSmootthingCircle.SetToolTip( u"軌道が円になるようにスムージングを行います。" )
-		bSizerSmooth6.Add( self.m_radioSmootthingCircle, 0, wx.EXPAND |wx.ALL, 5 )
+		self.m_choiceSmoothingComp = wx.Choice( self.m_panelSmooth, id=wx.ID_ANY, choices=["線形補間", "円形補間"] )
+		self.m_choiceSmoothingComp.SetSelection(0)
+		self.m_choiceSmoothingComp.SetToolTip("「線形補間」は。MMD上で見えているのと同じように線形で保管します。\n「円形補間」は、3つのキーを円周上に置いた円になるように補間します。")
+		bSizerSmooth6.Add( self.m_choiceSmoothingComp, 0, wx.ALL, 5 )
+
+		# self.m_radioSmootthingLinear = wx.( self.m_panelSmooth, wx.ID_ANY, u"線形補間", wx.DefaultPosition, wx.DefaultSize, style=wx.RB_GROUP )
+		# self.m_radioSmootthingLinear.SetToolTip( u"軌道が線になるようにスムージングを行います。" )
+		# self.m_radioSmootthingLinear.SetValue( True )
+		# bSizerSmooth6.Add( self.m_radioSmootthingLinear, 0, wx.EXPAND |wx.ALL, 5 )
+
+		# self.m_radioSmootthingCircle = wx.RadioButton( self.m_panelSmooth, wx.ID_ANY, u"円形補間", wx.DefaultPosition, wx.DefaultSize, 0 )
+		# self.m_radioSmootthingCircle.SetToolTip( u"軌道が円になるようにスムージングを行います。" )
+		# bSizerSmooth6.Add( self.m_radioSmootthingCircle, 0, wx.EXPAND |wx.ALL, 5 )
+
+		self.m_staticSmoothText163 = wx.StaticText( self.m_panelSmooth, wx.ID_ANY, u"　キーの繋ぎ目", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticSmoothText163.SetToolTip("キーを打った前後の軌跡をどのように補間するかを指定してください。\n全打ちモーションの場合、そのままを選択してください。")
+		bSizerSmooth6.Add( self.m_staticSmoothText163, 0, wx.ALL, 0 )
+
+		self.m_choiceSmoothingSeam = wx.Choice( self.m_panelSmooth, id=wx.ID_ANY, choices=["そのまま", "滑らかに"] )
+		self.m_choiceSmoothingSeam.SetSelection(0)
+		self.m_choiceSmoothingSeam.SetToolTip("「そのまま」は、繋ぎ目の軌道を変えません。\n「滑らかに」は、繋ぎ目にフィルターをかけて滑らかに繋ぎます。")
+		bSizerSmooth6.Add( self.m_choiceSmoothingSeam, 0, wx.ALL, 5 )
 
 		bSizerSmooth4.Add( bSizerSmooth6, 0, wx.EXPAND |wx.ALL, 2 )
 
@@ -1235,6 +1268,8 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_btnHistoryRepPmx.Bind(wx.EVT_BUTTON, lambda event: self.OnShowHistory(event, self.file_hitories["rep_pmx"], self.file_hitories["max"]+1, self.m_fileRepPmx, self.m_staticText11, ".pmx"))
 		self.m_camera_btnHistoryVmd.Bind(wx.EVT_BUTTON, lambda event: self.OnShowHistory(event, self.file_hitories["camera_vmd"], self.file_hitories["max"]+1, self.m_camera_fileVmd, self.m_camera_staticText9, ".vmd"))
 		self.m_camera_btnHistoryOrgPmx.Bind(wx.EVT_BUTTON, lambda event: self.OnShowHistory(event, self.file_hitories["camera_pmx"], self.file_hitories["max"]+1, self.m_camera_fileOrgPmx, self.m_camera_staticText10, ".pmx"))
+		self.m_smooth_btnHistoryVmd.Bind(wx.EVT_BUTTON, lambda event: self.OnShowHistory(event, self.file_hitories["smooth_vmd"], self.file_hitories["max"]+1, self.m_smooth_fileVmd, self.m_smooth_staticText1, ".vmd"))
+		self.m_smooth_btnHistoryPmx.Bind(wx.EVT_BUTTON, lambda event: self.OnShowHistory(event, self.file_hitories["smooth_pmx"], self.file_hitories["max"]+1, self.m_smooth_filePmx, self.m_smooth_staticText2, ".pmx"))
 
 		# ファイル入力欄で全選択イベント
 		self.m_fileVmd.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_fileVmd.GetTextCtrl()))
@@ -1248,9 +1283,15 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_vmd_fileCsvMorph.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_vmd_fileCsvMorph.GetTextCtrl()))
 		self.m_vmd_fileCsvCamera.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_vmd_fileCsvCamera.GetTextCtrl()))
 		self.m_blend_filePmx.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_blend_filePmx.GetTextCtrl()))
+		self.m_smooth_filePmx.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_smooth_filePmx.GetTextCtrl()))
+		self.m_smooth_fileVmd.GetTextCtrl().Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_smooth_fileVmd.GetTextCtrl()))
 
 		# Ctrl+Aの全選択処理
 		self.m_txtConsole.Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_txtConsole))
+		self.m_smooth_txtConsole.Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_smooth_txtConsole))
+		self.m_blend_txtConsole.Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_blend_txtConsole))
+		self.m_csv_txtConsole.Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_csv_txtConsole))
+		self.m_vmd_txtConsole.Bind(wx.EVT_CHAR, lambda event: self.OnFileSelectAll(event, self.m_vmd_txtConsole))
 		self.m_blend_listEye.Bind(wx.EVT_CHAR, lambda event: self.OnListSelectAll(event, self.m_blend_listEye))
 		self.m_blend_listEyebrow.Bind(wx.EVT_CHAR, lambda event: self.OnListSelectAll(event, self.m_blend_listEyebrow))
 		self.m_blend_listLip.Bind(wx.EVT_CHAR, lambda event: self.OnListSelectAll(event, self.m_blend_listLip))
@@ -1337,9 +1378,6 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_csv_txtConsole.Clear()
 		wx.GetApp().Yield()
 
-		# CSVコンソールに切り替え
-		sys.stdout = self.m_csv_txtConsole
-
 		self.DisableInput()
 
 		if wrapperutils.is_valid_file(self.m_csv_fileVmd.GetPath(), "VMDファイル", ".vmd", True) == False:
@@ -1347,9 +1385,6 @@ class VmdSizingForm3 ( wx.Frame ):
 			self.EnableInput()
 			# プログレス非表示
 			self.m_csv_Gauge.SetValue(0)
-
-			# 元に戻す
-			sys.stdout = self.m_txtConsole
 
 			event.Skip()
 			return
@@ -1362,18 +1397,11 @@ class VmdSizingForm3 ( wx.Frame ):
 		else:
 			print("まだ処理が実行中です。終了してから再度実行してください。")
 
-			# 元に戻す
-			sys.stdout = self.m_txtConsole
-
-
 	def OnSmoothExec( self, event ):
 		self.DisableInput()
 
 		self.m_smooth_txtConsole.Clear()
 		wx.GetApp().Yield()
-
-		# SMOOTHコンソールに切り替え
-		sys.stdout = self.m_smooth_txtConsole
 
 		self.DisableInput()
 
@@ -1382,9 +1410,6 @@ class VmdSizingForm3 ( wx.Frame ):
 			self.EnableInput()
 			# プログレス非表示
 			self.m_smooth_Gauge.SetValue(0)
-
-			# 元に戻す
-			sys.stdout = self.m_txtConsole
 
 			event.Skip()
 			return
@@ -1395,13 +1420,32 @@ class VmdSizingForm3 ( wx.Frame ):
 			# プログレス非表示
 			self.m_smooth_Gauge.SetValue(0)
 
-			# 元に戻す
-			sys.stdout = self.m_txtConsole
-
 			event.Skip()
 			return
 
 		if not self.smooth_worker:
+
+			# 履歴保持
+			if self.m_smooth_fileVmd.GetPath() in self.file_hitories["smooth_vmd"]:
+				self.file_hitories["smooth_vmd"].remove(self.m_smooth_fileVmd.GetPath())
+			if self.m_smooth_fileVmd.GetPath():
+				self.file_hitories["smooth_vmd"].insert(0, self.m_smooth_fileVmd.GetPath())
+
+			# 履歴保持
+			if self.m_smooth_filePmx.GetPath() in self.file_hitories["smooth_pmx"]:
+				self.file_hitories["smooth_pmx"].remove(self.m_smooth_filePmx.GetPath())
+			if self.m_smooth_filePmx.GetPath():
+				self.file_hitories["smooth_pmx"].insert(0, self.m_smooth_filePmx.GetPath())
+
+			# 入力履歴を保存		
+			try:
+				with open(wrapperutils.get_mypath('history.json'), 'w') as f:
+					json.dump(self.file_hitories, f, ensure_ascii=False)
+			except Exception:
+				print("history.json保存失敗")
+				print(traceback.format_exc())
+
+
 			# スレッド実行
 			self.smooth_worker = SmoothWorkerThread(self)
 			self.smooth_worker.start()
@@ -1409,17 +1453,11 @@ class VmdSizingForm3 ( wx.Frame ):
 		else:
 			print("まだ処理が実行中です。終了してから再度実行してください。")
 
-			# 元に戻す
-			sys.stdout = self.m_txtConsole
-
 	def OnVmdExec( self, event ):
 		self.DisableInput()
 
 		self.m_vmd_txtConsole.Clear()
 		wx.GetApp().Yield()
-
-		# VMDコンソールに切り替え
-		sys.stdout = self.m_vmd_txtConsole
 
 		self.DisableInput()
 
@@ -1436,9 +1474,6 @@ class VmdSizingForm3 ( wx.Frame ):
 			# プログレス非表示
 			self.m_vmd_Gauge.SetValue(0)
 
-			# 元に戻す
-			sys.stdout = self.m_txtConsole
-
 			event.Skip()
 			return
 
@@ -1453,9 +1488,6 @@ class VmdSizingForm3 ( wx.Frame ):
 			# プログレス非表示
 			self.m_vmd_Gauge.SetValue(0)
 
-			# 元に戻す
-			sys.stdout = self.m_txtConsole
-
 			event.Skip()
 			return
 
@@ -1466,9 +1498,6 @@ class VmdSizingForm3 ( wx.Frame ):
 			self.vmd_worker.stop_event.set()
 		else:
 			print("まだ処理が実行中です。終了してから再度実行してください。")
-
-			# 元に戻す
-			sys.stdout = self.m_txtConsole
 
 
 	def OnShowHistory(self, event, hitories, maxc, target_ctrl, label_ctrl, ext):
@@ -1637,9 +1666,15 @@ class VmdSizingForm3 ( wx.Frame ):
 			event.Skip()
 			return 
 
-		if self.m_note.GetSelection() == 8:
-			# ブレンドはPMX読み込みがあるので、コンソール委譲
+		# コンソール委譲
+		if self.m_note.GetSelection() == 4:
+			sys.stdout = self.m_smooth_txtConsole
+		elif self.m_note.GetSelection() == 5:
 			sys.stdout = self.m_blend_txtConsole
+		elif self.m_note.GetSelection() == 6:
+			sys.stdout = self.m_csv_txtConsole
+		elif self.m_note.GetSelection() == 7:
+			sys.stdout = self.m_vmd_txtConsole
 		else:
 			# 元に戻す
 			sys.stdout = self.m_txtConsole
@@ -2359,6 +2394,8 @@ class VmdSizingForm3 ( wx.Frame ):
 
 	# チェックボタン押下
 	def OnCheck(self, event):
+		self.DisableInput()
+
 		self.m_txtConsole.Clear()
 		wx.GetApp().Yield()
 		
@@ -2372,6 +2409,8 @@ class VmdSizingForm3 ( wx.Frame ):
 		wrapperutils.is_all_sizing(self.vmd_data, self.org_pmx_data, self.rep_pmx_data, self.camera_vmd_data)
 
 		self.m_Gauge.SetValue(0)
+
+		self.EnableInput()
 
 		return True
 	
@@ -2476,8 +2515,9 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_smooth_btnExec.Disable()
 		self.m_smooth_filePmx.Disable()
 		self.m_smooth_fileVmd.Disable()
-		self.m_smooth_spinMovCount.Disable()
-		self.m_smooth_spinRotCount.Disable()
+		self.m_smooth_spinSmoothCount.Disable()
+		self.m_choiceSmoothingComp.Disable()
+		self.m_choiceSmoothingSeam.Disable()
 	
 	def EnableInput(self):
 		# ファイル入力可
@@ -2529,8 +2569,9 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_smooth_btnExec.Enable()
 		self.m_smooth_filePmx.Enable()
 		self.m_smooth_fileVmd.Enable()
-		self.m_smooth_spinMovCount.Enable()
-		self.m_smooth_spinRotCount.Enable()
+		self.m_smooth_spinSmoothCount.Enable()
+		self.m_choiceSmoothingComp.Enable()
+		self.m_choiceSmoothingSeam.Enable()
 
 	# 実行ボタン押下
 	def OnExec(self, event):
@@ -2649,9 +2690,6 @@ class VmdSizingForm3 ( wx.Frame ):
 		# プログレス非表示
 		self.m_csv_Gauge.SetValue(0)
 
-		# コンソールを元に戻す
-		sys.stdout = self.m_txtConsole		
-
 	# スレッド実行結果
 	def OnSmoothResult(self, event):
 		# 終了音を鳴らす
@@ -2664,9 +2702,6 @@ class VmdSizingForm3 ( wx.Frame ):
 		# プログレス非表示
 		self.m_smooth_Gauge.SetValue(0)
 
-		# コンソールを元に戻す
-		sys.stdout = self.m_txtConsole		
-
 	# スレッド実行結果
 	def OnVmdResult(self, event):
 		# スレッド削除
@@ -2675,23 +2710,6 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.EnableInput()
 		# プログレス非表示
 		self.m_vmd_Gauge.SetValue(0)
-
-		# コンソールを元に戻す
-		sys.stdout = self.m_txtConsole		
-
-	# スレッド実行結果
-	def OnSliceResult(self, event):
-		# スレッド削除
-		self.slice_worker = None
-		# 入力有効化
-		self.EnableInput()
-		# プログレス非表示
-		self.m_slice_Gauge.SetValue(0)
-		# 分割配列初期化
-		self.slice_frame_values = []
-
-		# コンソールを元に戻す
-		sys.stdout = self.m_txtConsole		
 
 	def OnBlendExec( self, event ):
 		self.DisableInput()
@@ -2706,9 +2724,6 @@ class VmdSizingForm3 ( wx.Frame ):
 			self.EnableInput()
 			# プログレス非表示
 			self.m_blend_Gauge.SetValue(0)
-
-			# 元に戻す
-			sys.stdout = self.m_txtConsole
 
 			event.Skip()
 			return
@@ -2750,9 +2765,6 @@ class VmdSizingForm3 ( wx.Frame ):
 			self.blend_worker.stop_event.set()
 		else:
 			print("まだ処理が実行中です。終了してから再度実行してください。")
-
-			# 元に戻す
-			sys.stdout = self.m_txtConsole
 
 	# スレッド実行結果
 	def OnBlendResult(self, event):
@@ -3208,10 +3220,9 @@ class SmoothWorkerThread(Thread):
 
 		convert_smooth.main(self._notify_window.m_smooth_fileVmd.GetPath(), \
 			self._notify_window.m_smooth_filePmx.GetPath(), \
-			self._notify_window.m_smooth_spinMovCount.GetValue(), \
-			self._notify_window.m_smooth_spinRotCount.GetValue(), \
-			self._notify_window.m_radioSmootthingCircle.GetValue(), \
-			self._notify_window.m_radioSmootthingLinear.GetValue(), \
+			self._notify_window.m_smooth_spinSmoothCount.GetValue(), \
+			self._notify_window.m_choiceSmoothingComp.GetSelection() == 1, \
+			self._notify_window.m_choiceSmoothingSeam.GetSelection() == 1, \
 			)
 
 		# Here's where the result would be returned (this is an
