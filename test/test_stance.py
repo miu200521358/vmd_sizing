@@ -659,10 +659,10 @@ class TestSubStance(unittest.TestCase):
         rep_upper2_initial_slope_test_param07_1 = ["0","1-","1"]
         rep_upper2_initial_slope_test_param08_1 = ["0","1-","1"]
         rep_upper2_initial_slope_test_param09_1 = ["0","1-","1"]
-        rep_upper2_initial_slope_test_param10 = ["d1","d1i","d2","d2i","d3","d3i","d4","d4i","d5","d5i","00","01","02"]
-        rep_upper2_initial_slope_test_param11 = ["d1","d1i","d2","d2i","d3","d3i","d4","d4i","d5","d5i","00","01","02"]
-        rep_upper2_initial_slope_test_param12 = ["d1","d1i","d2","d2i","d3","d3i","d4","d4i","d5","d5i","00","01","02"]
-        rep_upper2_initial_slope_test_param13 = ["d1","d1i","d2","d2i","d3","d3i","d4","d4i","d5","d5i","00","01","02"]
+        rep_upper2_initial_slope_test_param10 = ["d1","d1i","d2","d2i","d6","d6i","d7","d7i","d5","d5i","00","01","02"]
+        rep_upper2_initial_slope_test_param11 = ["d1","d1i","d2","d2i","d6","d6i","d7","d7i","d5","d5i","00","01","02"]
+        rep_upper2_initial_slope_test_param12 = ["d1","d1i","d2","d2i","d6","d6i","d7","d7i","d5","d5i","00","01","02"]
+        rep_upper2_initial_slope_test_param13 = ["d1","d1i","d2","d2i","d6","d6i","d7","d7i","d5","d5i","00","01","02"]
 
         # 直積
         target_test_params_base = list(itertools.product(rep_upper2_initial_slope_test_param00, rep_upper2_initial_slope_test_param01, \
@@ -673,11 +673,11 @@ class TestSubStance(unittest.TestCase):
 
         target_test_params_list = [(x00, x01, x02, x03, x04, x05, x06, x07, x08, x09, x10, x11, x12, x13) \
             for (x00, x01, x02, x03, x04, x05, x06, x07, x08, x09, x10, x11, x12, x13) \
-            in target_test_params_base if x00 != x01 and x05 != x06 != x07 and x10 != x11 != x12 != x13]
+            in target_test_params_base if x00 != x01 and x05 != x06 != x07 and x10[:2] != x11[:2] != x12[:2] != x13[:2]]
 
         random.shuffle(target_test_params_list)
 
-        ok_list = self.calc_stance(target_test_params_list, 1, False, "025_03")
+        ok_list = self.calc_stance(target_test_params_list, 1, False, "025_05")
 
         print("ok_list LIST: %s" % ok_list)
         self.assertGreater(len(ok_list), 0)

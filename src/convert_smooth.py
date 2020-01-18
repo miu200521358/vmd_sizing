@@ -16,19 +16,22 @@ from VmdWriter import VmdWriter, VmdBoneFrame
 from VmdReader import VmdReader
 from PmxModel import PmxModel, SizingException
 from PmxReader import PmxReader
-import wrapperutils, sub_arm_ik, utils, sub_arm_stance
+import wrapperutils, sub_arm_ik, utils
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 is_print1 = False
+is_print2 = False
+is_print3 = False
+is_print4 = False
 
 def main(vmd_path, pmx_path, smooth_cnt, is_comp_circle, is_seam_smooth):
 
     try:
         # VMD読み込み
         motion = VmdReader().read_vmd_file(vmd_path)
-        smoothed_frames = []
+        smooth_motion = copy.deepcopy(motion)
 
         # PMX読み込み
         model = PmxReader().read_pmx_file(pmx_path)
@@ -36,9 +39,6 @@ def main(vmd_path, pmx_path, smooth_cnt, is_comp_circle, is_seam_smooth):
         if len(motion.frames.values()) > 0:
             smooth_vmd_fpath = re.sub(r'\.vmd$', "_smooth_{0:%Y%m%d_%H%M%S}.vmd".format(datetime.now()), vmd_path)
             
-            # まずボーン回転の分散
-            sub_arm_stance.spread_rotation(motion, copy.deepcopy(motion.frames), model)
-
             print("■■ スムージング -----------------")
 
             all_frames_by_bone = {}
@@ -52,10 +52,8 @@ def main(vmd_path, pmx_path, smooth_cnt, is_comp_circle, is_seam_smooth):
                 # 捩りとかの順番を担保するためモデルのINDEX順にそってスムージング
 
                 if bone_name in all_frames_by_bone and len(all_frames_by_bone[bone_name]) > 2:
-                    frames_by_bone = all_frames_by_bone[bone_name]
-
-                    start_frameno = min(frames_by_bone.keys())
-                    last_frameno = max(frames_by_bone.keys())
+                    start_frameno = min(all_frames_by_bone[bone_name].keys())
+                    last_frameno = max(all_frames_by_bone[bone_name].keys())
 
                     # 軸（ボーンの向き）を取得する
                     axis = QVector3D()
@@ -66,109 +64,80 @@ def main(vmd_path, pmx_path, smooth_cnt, is_comp_circle, is_seam_smooth):
                         if cnt == 0:
                             utils.output_message("cnt==0 split_bf開始 %s" % (bone_name), is_print1)
 
-                            prev_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, start_frameno, is_only=True, is_exist=True, is_key=True)
+                            prev_bf = calc_bone_by_complement_by_bone(all_frames_by_bone, bone_name, start_frameno, is_only=True, is_exist=True, is_key=True)
                             if not prev_bf: break
 
-                            now_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, prev_bf.frame + 1, is_only=False, is_exist=True, is_key=True)
+                            now_bf = calc_bone_by_complement_by_bone(all_frames_by_bone, bone_name, prev_bf.frame + 1, is_only=False, is_exist=True, is_key=True)
                             if not now_bf: break
 
-                            next_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, now_bf.frame + 1, is_only=False, is_exist=True, is_key=True)
+                            next_bf = calc_bone_by_complement_by_bone(all_frames_by_bone, bone_name, now_bf.frame + 1, is_only=False, is_exist=True, is_key=True)
                             if not next_bf: break
 
                             prev_prev_bf = None
 
                             # 最初に根性打ち
                             while now_bf.frame <= last_frameno:
-                                split_bf(all_frames_by_bone, frames_by_bone, model, bone_name, axis, prev_prev_bf, prev_bf, now_bf, next_bf, is_comp_circle, is_seam_smooth)
+                                split_bf(all_frames_by_bone, model, bone_name, axis, prev_prev_bf, prev_bf, now_bf, next_bf, is_comp_circle, is_seam_smooth)
                                 utils.output_message("cnt==0 split_bf %s %s" % (bone_name, now_bf.frame) , is_print1)
 
                                 prev_prev_bf = prev_bf
                                 
-                                prev_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, now_bf.frame, is_only=True, is_exist=True, is_key=True)
+                                prev_bf = calc_bone_by_complement_by_bone(all_frames_by_bone, bone_name, now_bf.frame, is_only=True, is_exist=True, is_key=True)
                                 if not prev_bf: break
 
-                                now_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, prev_bf.frame + 1, is_only=False, is_exist=True, is_key=True)
+                                now_bf = calc_bone_by_complement_by_bone(all_frames_by_bone, bone_name, prev_bf.frame + 1, is_only=False, is_exist=True, is_key=True)
                                 if not now_bf: break
 
-                                next_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, now_bf.frame + 1, is_only=False, is_exist=True, is_key=True)
+                                next_bf = calc_bone_by_complement_by_bone(all_frames_by_bone, bone_name, now_bf.frame + 1, is_only=False, is_exist=True, is_key=True)
 
                                 if not next_bf:
                                     # 次がない場合、一旦prevの次に伸ばす
-                                    next_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, now_bf.frame + 1, is_only=False, is_exist=False)
+                                    next_bf = calc_bone_by_complement_by_bone(all_frames_by_bone, bone_name, now_bf.frame + 1, is_only=False, is_exist=False)
                                     next_bf.position += QVector3D(0.1, 0.1, 0.1)
                                     next_bf.rotation *= 1.1
-                                    frames_by_bone[next_bf.frame] = next_bf
+                                    all_frames_by_bone[bone_name][next_bf.frame] = next_bf
                                 else:
                                     if next_bf.frame > last_frameno:
                                         # 次以降は見なくていいので終了
                                         break
 
-                            utils.output_message("cnt==0 split_bf終了 %s" % (bone_name), is_print1)
+                            utils.output_message("cnt==0 split_bf終了 %s len: %s" % (bone_name, len(all_frames_by_bone[bone_name])), is_print1)
 
                             # 円形補間の場合、全体をフィルタに掛ける
                             if is_comp_circle:
-                                for _ in range(2):
-                                    smooth_filter(all_frames_by_bone, frames_by_bone, model, bone_name, {"freq": 30, "mincutoff": 0.01, "beta": 0.8, "dcutoff": 0.5})
+                                smooth_filter(all_frames_by_bone, model, bone_name, is_comp_circle, {"freq": 30, "mincutoff": 0.01, "beta": 0.8, "dcutoff": 0.5})
 
                             utils.output_message("cnt==0 smooth_filter終了 %s" % (bone_name), is_print1)
 
                         if cnt > 0:
-                            utils.output_message("cnt>0 smooth_filter開始 %s" % (bone_name), is_print1)
+                            utils.output_message("cnt>0 smooth_filter開始 %s" % (bone_name), is_print2)
 
                             # 2回目以降はフィルタあり
-                            if cnt == 1:
-                                # 2回目はフィルタ弱め
-                                smooth_filter(all_frames_by_bone, frames_by_bone, model, bone_name, {"freq": 30, "mincutoff": 0.01, "beta": 0.8, "dcutoff": 0.5})
-                            else:
-                                # 3回目以降は強め
-                                smooth_filter(all_frames_by_bone, frames_by_bone, model, bone_name, {"freq": 30, "mincutoff": (0.01 / cnt), "beta": 0.8, "dcutoff": (0.01 / cnt)})
+                            smooth_filter(all_frames_by_bone, model, bone_name, is_comp_circle, {"freq": 30, "mincutoff": 0.5, "beta": 0.5, "dcutoff": 1})
 
-                            utils.output_message("cnt>0 smooth_filter完了 %s" % (bone_name), is_print1)
+                            utils.output_message("cnt>0 smooth_filter完了 %s" % (bone_name), is_print2)
 
-                            prev_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, start_frameno, is_only=True, is_exist=True)
-                            if not prev_bf: break
+                            # 全bfを滑らかに繋ぐ
+                            smooth_all_bf(all_frames_by_bone, model, bone_name, start_frameno, last_frameno, (cnt + 2), is_comp_circle)
 
-                            now_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, prev_bf.frame + 1, is_only=False, is_exist=True)
-                            if not now_bf: break
-
-                            next_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, now_bf.frame + 1, is_only=False, is_exist=True)
-                            if not next_bf: break
-
-                            # 2回目以降はベジェ曲線同士を結合する
-                            while now_bf.frame <= last_frameno:
-                            
-                                next_bf = smooth_bf(all_frames_by_bone, frames_by_bone, model, bone_name, prev_bf, now_bf, next_bf, (cnt + 2), last_frameno)
-                                # utils.output_message("cnt>0 smooth_bf %s %s" % (bone_name, now_bf.frame), False)
-                                
-                                if not now_bf or not next_bf: break
-
-                                # 二回目以降はnextまで補間曲線が設定できたので次
-                                prev_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, next_bf.frame, is_only=True, is_exist=True)
-                                if not prev_bf: break
-
-                                now_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, prev_bf.frame + 1, is_only=False, is_exist=True)
-                                if not now_bf: break
-
-                                next_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, now_bf.frame + 1, is_only=False, is_exist=True)
-                                # if not next_bf: break
-
-                                if not next_bf:
-                                    # 次がない場合、一旦prevの次に伸ばす
-                                    next_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, now_bf.frame + 1, is_only=False, is_exist=False)
-                                    next_bf.position += QVector3D(1, 0, 0)
-                                    next_bf.rotation *= 1.1
-                                else:
-                                    if next_bf.frame > last_frameno:
-                                        # 次以降は見なくていいので終了
-                                        break
-
-                            utils.output_message("cnt>0 smooth_filter完了 %s" % (bone_name), is_print1)
+                            utils.output_message("cnt>0 smooth_all_bf完了 %s" % (bone_name), is_print2)
 
                         print("ボーン: %s %s回目" % (bone_name, (cnt + 1)))
 
-                    for bf in frames_by_bone.values():
-                        if bf.key == True:
-                            smoothed_frames.append(bf)
+            for bone_name in all_frames_by_bone.keys():
+                smooth_motion.frames[bone_name] = []
+                for fno in sorted(all_frames_by_bone[bone_name].keys()):
+                    bf = all_frames_by_bone[bone_name][fno]                    
+                    smooth_motion.frames[bone_name].append(bf)
+
+            # ボーン回転の分散
+            spread_rotation(smooth_motion, model, (smooth_cnt > 1))
+
+            bone_frames = []
+            for k,v in smooth_motion.frames.items():
+                for bf in v:
+                    if bf.key == True:
+                        bone_frames.append(bf)
 
             morph_frames = []
             for k,v in motion.morphs.items():
@@ -178,7 +147,7 @@ def main(vmd_path, pmx_path, smooth_cnt, is_comp_circle, is_seam_smooth):
             writer = VmdWriter()
             
             # ボーンモーション生成
-            writer.write_vmd_file(smooth_vmd_fpath, "Smooth Vmd", smoothed_frames, morph_frames, [], [], [], motion.showiks)
+            writer.write_vmd_file(smooth_vmd_fpath, model.name, bone_frames, morph_frames, [], [], [], motion.showiks)
 
             print("スムージングVMD出力成功: %s" % smooth_vmd_fpath)
         else:
@@ -199,21 +168,182 @@ def main(vmd_path, pmx_path, smooth_cnt, is_comp_circle, is_seam_smooth):
 
         raise e
 
-def split_bf(all_frames_by_bone, frames_by_bone, model, bone_name, axis, prev_prev_bf, prev_bf, now_bf, next_bf, is_comp_circle, is_seam_smooth):
+def smooth_all_bf(all_frames_by_bone, model, bone_name, start_frameno, last_frameno, offset, is_comp_circle):
+
+    prev_bf = calc_bone_by_complement_by_bone(all_frames_by_bone, bone_name, start_frameno, is_only=True, is_exist=True)
+    if not prev_bf: return
+
+    now_bf = calc_bone_by_complement_by_bone(all_frames_by_bone, bone_name, prev_bf.frame + 1, is_only=False, is_exist=True)
+    if not now_bf: return
+
+    next_bf = calc_bone_by_complement_by_bone(all_frames_by_bone, bone_name, now_bf.frame + 1, is_only=False, is_exist=True)
+    if not next_bf: return
+
+    # 2回目以降はベジェ曲線同士を結合する
+    while now_bf.frame <= last_frameno:
+    
+        next_bf = smooth_bf(all_frames_by_bone, model, bone_name, prev_bf, now_bf, next_bf, offset, last_frameno, is_comp_circle)
+        
+        utils.output_message("cnt>0 smooth_bf %s %s" % (bone_name, now_bf.frame), is_print4)
+        
+        if not now_bf or not next_bf: break
+
+        # 二回目以降はnextまで補間曲線が設定できたので次
+        prev_bf = calc_bone_by_complement_by_bone(all_frames_by_bone, bone_name, next_bf.frame, is_only=True, is_exist=True)
+        if not prev_bf: break
+
+        now_bf = calc_bone_by_complement_by_bone(all_frames_by_bone, bone_name, prev_bf.frame + 1, is_only=False, is_exist=True)
+        if not now_bf: break
+
+        next_bf = calc_bone_by_complement_by_bone(all_frames_by_bone, bone_name, now_bf.frame + 1, is_only=False, is_exist=True)
+        # if not next_bf: break
+
+        if not next_bf:
+            # 次がない場合、一旦prevの次に伸ばす
+            next_bf = calc_bone_by_complement_by_bone(all_frames_by_bone, bone_name, now_bf.frame + 1, is_only=False, is_exist=False)
+            next_bf.position += QVector3D(1, 0, 0)
+            next_bf.rotation *= 1.1
+        else:
+            if next_bf.frame > last_frameno:
+                # 次以降は見なくていいので終了
+                break
+
+# ボーン回転の分散
+def spread_rotation(motion, model, is_thinning):
+
+    print("■■ 回転分散 -----------------")
+
+    # 全ボーンのdict
+    all_frames_by_bone = {}
+    for bname in motion.frames.keys():
+        frames_by_bone = {}
+        for e, bf in enumerate(motion.frames[bname]):
+            frames_by_bone[bf.frame] = bf
+        all_frames_by_bone[bname] = frames_by_bone
+
+    # 腕の分散
+    for target_bones, end_bone_name in [(["左肩", "左腕", "左ひじ", "左手首"], "左手首"), (["右肩", "右腕", "右ひじ", "右手首"], "右手首")]:
+
+        if set(target_bones).issubset(model.bones):
+
+            is_target = False
+            for bone_name in all_frames_by_bone.keys():
+                if bone_name in target_bones:
+                    is_target = True
+                    break
+            
+            if not is_target:
+                continue
+
+            # 手首から親までのボーンリンク
+            links, indexes = model.create_link_2_top_one(end_bone_name)
+            arm_links = []
+
+            # 肩Pまで（上半身2より前）のボーンを処理対象とする
+            for l in links:
+                if "上半身" in l.name:
+                    break
+
+                arm_links.append(l)
+            
+            for b in arm_links:
+                if b.name not in all_frames_by_bone:
+                    all_frames_by_bone[b.name] = {}
+
+                for fno in range(motion.last_motion_frame+1):
+                    # まず一旦登録する
+                    bf = calc_bone_by_complement_by_bone(all_frames_by_bone, b.name, fno, is_only=False, is_exist=False)
+                    all_frames_by_bone[b.name][fno] = bf
+
+    # ボーンの回転を分散する
+    target_bone_name_list = []
+
+    for bone_name in all_frames_by_bone.keys():
+        if bone_name in model.bones.keys():
+            child_bone = model.bones[bone_name]
+            
+            # 親ボーン
+            parent_bone = model.bones[model.bone_indexes[child_bone.parent_index]]
+
+            if (parent_bone.name, child_bone.name) in utils.BORN_ROTATION_LIMIT:
+                # 上限が決められているボーンの組合せの場合
+                if child_bone.name not in target_bone_name_list:
+                    target_bone_name_list.append(child_bone.name)
+                if parent_bone.name not in target_bone_name_list:
+                    target_bone_name_list.append(parent_bone.name)
+
+                for fno in range(motion.last_motion_frame+1):
+                    child_bf = all_frames_by_bone[child_bone.name][fno]
+                    parent_bf = all_frames_by_bone[parent_bone.name][fno]
+
+                    # 回転を分散する
+                    parent_result_qq, child_result_qq = utils.spread_qq(fno, parent_bf.rotation, child_bf.rotation, utils.BORN_ROTATION_LIMIT[(parent_bone.name, child_bone.name)], child_bone.fixed_axis)
+
+                    # 自身の回転量を再設定
+                    parent_bf.rotation = parent_result_qq
+                    child_bf.rotation = child_result_qq
+
+                    if parent_bf.key == True:
+                        child_bf.key = True
+
+                    all_frames_by_bone[parent_bone.name][fno] = parent_bf
+                    all_frames_by_bone[child_bone.name][fno] = child_bf
+
+                print("捩り分散: %s → %s" % (parent_bone.name, child_bone.name))
+
+    # ベジェ曲線で繋いで、有効なのだけ設定する
+    for bone_name in all_frames_by_bone.keys():
+        if bone_name in model.bones.keys() and len(all_frames_by_bone[bone_name]) > 2:
+            bone = model.bones[bone_name]
+
+            # if is_thinning:
+            #     if bone.name in target_bone_name_list:
+            #         # 間引きする場合
+            #         smooth_all_bf(all_frames_by_bone, model, bone.name, min(all_frames_by_bone[bone.name].keys()), max(all_frames_by_bone[bone.name].keys()), offset=0, is_comp_circle=False)
+            #     else:
+            #         # 間引き対象でかつ処理対象ボーンリストに含まれていない場合、処理スキップ
+            #         pass
+            # else:
+            #     # 間引きしない場合
+            #     for fno in all_frames_by_bone[bone.name].keys():
+            #         all_frames_by_bone[bone.name][fno].key = True
+
+            bone_frames = []
+            for fno in sorted(all_frames_by_bone[bone.name].keys()):
+                bf = all_frames_by_bone[bone.name][fno]
+                if fno == motion.last_motion_frame:
+                    bf.key = True
+                    bone_frames.append(bf)
+                elif fno < motion.last_motion_frame and bf.key == True:
+                    bone_frames.append(bf)
+            
+            if len(bone_frames) > 1:
+                motion.frames[bone.name] = bone_frames
+
+            print("再登録: %s" % (bone_name))
+
+
+def split_bf(all_frames_by_bone, model, bone_name, axis, prev_prev_bf, prev_bf, now_bf, next_bf, is_comp_circle, is_seam_smooth):
     # 0回目の場合、根性打ち
 
+    utils.output_message("** split_bf %s p: %s, n: %s" % (bone_name, prev_bf.frame, next_bf.frame) , is_print3)
+    
     for fno in range(prev_bf.frame + 1, next_bf.frame):
         if fno == now_bf.frame:
             continue
 
-        utils.output_message("** split_bf %s fno: %s" % (bone_name, fno) , is_print1)
+        utils.output_message("** split_bf %s fno: %s" % (bone_name, fno) , is_print3)
     
         target_bf = VmdBoneFrame()
         target_bf.frame = fno
         target_bf.name = bone_name.encode('cp932').decode('shift_jis').encode('shift_jis')
         target_bf.format_name = bone_name
         target_bf.key = True
-        frames_by_bone[target_bf.frame] = target_bf
+
+        if bone_name not in all_frames_by_bone:
+            all_frames_by_bone[bone_name] = {}
+
+        all_frames_by_bone[bone_name][target_bf.frame] = target_bf
 
         if is_comp_circle:
             # 現在の補間曲線ではなく、円形補間した場合の角度を設定する
@@ -248,26 +378,26 @@ def split_bf(all_frames_by_bone, frames_by_bone, model, bone_name, axis, prev_pr
         afterno = int(next_bf.frame - (next_bf.frame - now_bf.frame) * 0.5)
 
         for (bno, ano) in [(beforeno, middleno), (middleno, afterno)]:       
-            filter_frames_by_bone = {}
+            filter_frames_by_bone = { bone_name: {} }
             for fno in range(bno, ano):
                 # 前々回との間を滑らかに繋ぐための配列を用意する
-                filter_frames_by_bone[fno] = copy.deepcopy(frames_by_bone[fno])
+                filter_frames_by_bone[bone_name][fno] = all_frames_by_bone[bone_name][fno]
 
-            utils.output_message("** split_bf copy %s fno: %s" % (bone_name, fno) , is_print1)
+            utils.output_message("** split_bf copy %s fno: %s" % (bone_name, fno) , is_print3)
 
             # 前々回との連結部分をフィルタに掛ける
-            smooth_filter(all_frames_by_bone, filter_frames_by_bone, model, bone_name, {"freq": 30, "mincutoff": 0.001, "beta": 0.05, "dcutoff": 1})
+            smooth_filter(filter_frames_by_bone, model, bone_name, is_comp_circle, {"freq": 30, "mincutoff": 0.001, "beta": 0.05, "dcutoff": 1})
 
-            utils.output_message("** split_bf filter %s fno: %s" % (bone_name, fno) , is_print1)
+            utils.output_message("** split_bf filter %s fno: %s" % (bone_name, fno) , is_print3)
 
             # 元に戻す
-            for f in filter_frames_by_bone.values():
-                frames_by_bone[f.frame] = f
+            for f in filter_frames_by_bone[bone_name].values():
+                all_frames_by_bone[bone_name][f.frame] = f
 
-        utils.output_message("** split_bf return %s fno: %s" % (bone_name, fno) , is_print1)
+        utils.output_message("** split_bf return %s fno: %s" % (bone_name, fno) , is_print3)
 
 # bf同士をベジェ曲線で繋ぐ
-def smooth_bf(all_frames_by_bone, frames_by_bone, model, bone_name, prev_bf, now_bf, next_bf, offset, last_frameno):
+def smooth_bf(all_frames_by_bone, model, bone_name, prev_bf, now_bf, next_bf, offset, last_frameno, is_comp_circle):
 
     is_smooth = True
     successed_next_bf = None
@@ -275,73 +405,63 @@ def smooth_bf(all_frames_by_bone, frames_by_bone, model, bone_name, prev_bf, now
     while is_smooth:
     
         # ひとまず補間曲線で繋ぐ
-        is_smooth = smooth_complement_bf(all_frames_by_bone, frames_by_bone, model, bone_name, prev_bf, now_bf, next_bf, offset)
+        is_smooth = smooth_complement_bf(all_frames_by_bone, model, bone_name, prev_bf, now_bf, next_bf, offset, is_comp_circle)
     
         if is_smooth:
             for fno in range(prev_bf.frame + 1, next_bf.frame):
-                frames_by_bone[fno].key = False
-
+                all_frames_by_bone[bone_name][fno].key = False
+            
             # 補間曲線が繋げた場合、次へ
             successed_next_bf = copy.deepcopy(next_bf)
 
-            next_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, next_bf.frame + 1, is_only=False, is_exist=True)
+            next_bf = calc_bone_by_complement_by_bone(all_frames_by_bone, bone_name, next_bf.frame + 1, is_only=False, is_exist=True)
             if not next_bf:
                 # 次が見つからなければ、最後のnextを登録して終了
                 if successed_next_bf:
                     successed_next_bf.key = True
-                    frames_by_bone[successed_next_bf.frame] = successed_next_bf
+                    all_frames_by_bone[bone_name][successed_next_bf.frame] = successed_next_bf
                 break
             
-            now_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, int(prev_bf.frame + ((next_bf.frame - prev_bf.frame) / 2)), is_only=False, is_exist=True)
-            # now_bf = calc_bone_by_complement_by_bone(frames_by_bone, bone_name, next_bf.frame - 1, is_only=False, is_exist=True)
+            now_bf = calc_bone_by_complement_by_bone(all_frames_by_bone, bone_name, int(prev_bf.frame + ((next_bf.frame - prev_bf.frame) / 2)), is_only=False, is_exist=True)
+            # now_bf = calc_bone_by_complement_by_bone(all_frames_by_bone, bone_name, next_bf.frame - 1, is_only=False, is_exist=True)
             if not now_bf or (now_bf and now_bf.frame == last_frameno): break
         else:
             # 補間曲線が繋げなかった場合、終了
             if successed_next_bf:
                 successed_next_bf.key = True
-                frames_by_bone[successed_next_bf.frame] = successed_next_bf
+                all_frames_by_bone[bone_name][successed_next_bf.frame] = successed_next_bf
             else:
+                for fno in range(prev_bf.frame + 1, next_bf.frame):
+                    all_frames_by_bone[bone_name][fno].key = False
+
                 # 一回も補間曲線が登録出来なかった場合、とりあえずnowを登録して次にいく
-                now_bf.key = True
-                frames_by_bone[now_bf.frame] = now_bf
-                successed_next_bf = now_bf
+                # now_bf.key = True
+                # all_frames_by_bone[bone_name][now_bf.frame] = now_bf
+                successed_next_bf = next_bf
             break
 
     return successed_next_bf
 
 
-def smooth_complement_bf(all_frames_by_bone, frames_by_bone, model, bone_name, prev_bf, now_bf, next_bf, offset):
+def smooth_complement_bf(all_frames_by_bone, model, bone_name, prev_bf, now_bf, next_bf, offset, is_comp_circle):
 
-    is_smooth_rot_result = smooth_bezier(all_frames_by_bone, frames_by_bone, model, bone_name, prev_bf, now_bf, next_bf, get_smooth_bezier_y_rot, get_smooth_bezier_now_bf_rot, \
-        utils.R_x1_idxs, utils.R_y1_idxs, utils.R_x2_idxs, utils.R_y2_idxs, offset, utils.calc_smooth_bezier_rot)
-    is_smooth_pos_x_result = smooth_bezier(all_frames_by_bone, frames_by_bone, model, bone_name, prev_bf, now_bf, next_bf, get_smooth_bezier_y_pos_x, get_smooth_bezier_now_bf_pos_x, \
-        utils.MX_x1_idxs, utils.MX_y1_idxs, utils.MX_x2_idxs, utils.MX_y2_idxs, offset, utils.calc_smooth_bezier_pos)
-    is_smooth_pos_y_result = smooth_bezier(all_frames_by_bone, frames_by_bone, model, bone_name, prev_bf, now_bf, next_bf, get_smooth_bezier_y_pos_y, get_smooth_bezier_now_bf_pos_y, \
-        utils.MY_x1_idxs, utils.MY_y1_idxs, utils.MY_x2_idxs, utils.MY_y2_idxs, offset, utils.calc_smooth_bezier_pos)
-    is_smooth_pos_z_result = smooth_bezier(all_frames_by_bone, frames_by_bone, model, bone_name, prev_bf, now_bf, next_bf, get_smooth_bezier_y_pos_z, get_smooth_bezier_now_bf_pos_z, \
-        utils.MZ_x1_idxs, utils.MZ_y1_idxs, utils.MZ_x2_idxs, utils.MZ_y2_idxs, offset, utils.calc_smooth_bezier_pos)
+    is_smooth_rot_result = smooth_bezier(all_frames_by_bone, model, bone_name, prev_bf, now_bf, next_bf, \
+        utils.R_x1_idxs, utils.R_y1_idxs, utils.R_x2_idxs, utils.R_y2_idxs, offset, is_comp_circle, get_smooth_bezier_y_rot, get_smooth_bezier_now_bf_rot, utils.calc_smooth_bezier_rot)
+    is_smooth_pos_x_result = smooth_bezier(all_frames_by_bone, model, bone_name, prev_bf, now_bf, next_bf, \
+        utils.MX_x1_idxs, utils.MX_y1_idxs, utils.MX_x2_idxs, utils.MX_y2_idxs, offset, is_comp_circle, get_smooth_bezier_y_pos_x, get_smooth_bezier_now_bf_pos_x, utils.calc_smooth_bezier_pos)
+    is_smooth_pos_y_result = smooth_bezier(all_frames_by_bone, model, bone_name, prev_bf, now_bf, next_bf, \
+        utils.MY_x1_idxs, utils.MY_y1_idxs, utils.MY_x2_idxs, utils.MY_y2_idxs, offset, is_comp_circle, get_smooth_bezier_y_pos_y, get_smooth_bezier_now_bf_pos_y, utils.calc_smooth_bezier_pos)
+    is_smooth_pos_z_result = smooth_bezier(all_frames_by_bone, model, bone_name, prev_bf, now_bf, next_bf, \
+        utils.MZ_x1_idxs, utils.MZ_y1_idxs, utils.MZ_x2_idxs, utils.MZ_y2_idxs, offset, is_comp_circle, get_smooth_bezier_y_pos_z, get_smooth_bezier_now_bf_pos_z, utils.calc_smooth_bezier_pos)
 
     is_smooth = is_smooth_rot_result == is_smooth_pos_x_result == is_smooth_pos_y_result == is_smooth_pos_z_result
     
-    # is_join = False
-
-    # if is_smooth:
-    #     # 補間曲線同士を結合する
-    #     is_join_rot_result = join_bezier(frames_by_bone, prev_bf, now_bf, next_bf, get_smooth_bezier_y_rot, \
-    #         utils.R_x1_idxs, utils.R_y1_idxs, utils.R_x2_idxs, utils.R_y2_idxs, offset, utils.join_smooth_bezier)
-    #     is_join_pos_x_result = join_bezier(frames_by_bone, prev_bf, now_bf, next_bf, get_smooth_bezier_y_pos_x, \
-    #         utils.MX_x1_idxs, utils.MX_y1_idxs, utils.MX_x2_idxs, utils.MX_y2_idxs, offset, utils.join_smooth_bezier)
-    #     is_join_pos_y_result = join_bezier(frames_by_bone, prev_bf, now_bf, next_bf, get_smooth_bezier_y_pos_y, \
-    #         utils.MY_x1_idxs, utils.MY_y1_idxs, utils.MY_x2_idxs, utils.MY_y2_idxs, offset, utils.join_smooth_bezier)
-    #     is_join_pos_z_result = join_bezier(frames_by_bone, prev_bf, now_bf, next_bf, get_smooth_bezier_y_pos_z, \
-    #         utils.MZ_x1_idxs, utils.MZ_y1_idxs, utils.MZ_x2_idxs, utils.MZ_y2_idxs, offset, utils.join_smooth_bezier)
-
-    #     is_join = is_join_rot_result == is_join_pos_x_result == is_join_pos_y_result == is_join_pos_z_result
-
     return is_smooth
 
 # 滑らかに繋ぐベジェ曲線
-def smooth_bezier(all_frames_by_bone, frames_by_bone, model, bone_name, prev_bf, now_bf, next_bf, get_smooth_bezier_y, get_smooth_bezier_now_bf, x1_idxs, y1_idxs, x2_idxs, y2_idxs, offset, calc_smooth_bezier):
+def smooth_bezier(all_frames_by_bone, model, bone_name, prev_bf, now_bf, next_bf, x1_idxs, y1_idxs, x2_idxs, y2_idxs, offset, is_comp_circle, \
+    get_smooth_bezier_y, get_smooth_bezier_now_bf, calc_smooth_bezier):
+    
     if not (prev_bf.frame < now_bf.frame < next_bf.frame):
         # フレーム範囲外はNG
         return False
@@ -357,7 +477,7 @@ def smooth_bezier(all_frames_by_bone, frames_by_bone, model, bone_name, prev_bf,
     y2 = get_smooth_bezier_y(all_frames_by_bone, model, bone_name, now_bf)
     y3 = get_smooth_bezier_y(all_frames_by_bone, model, bone_name, next_bf)
 
-    is_smooth, result, bz = calc_smooth_bezier(x1, y1, x2, y2, x3, y3, offset)
+    is_smooth, result, bz = calc_smooth_bezier(x1, y1, x2, y2, x3, y3, offset, is_comp_circle)
 
     if not is_smooth:
         # ベジェ曲線計算対象外の場合、とりあえずTRUEで終了
@@ -610,39 +730,43 @@ def get_smooth_middle_by_vec3(op, ow, on, d, t, f):
 # 補間曲線を考慮した指定フレーム番号の位置
 # https://www55.atwiki.jp/kumiho_k/pages/15.html
 # https://harigane.at.webry.info/201103/article_1.html
-def calc_bone_by_complement_by_bone(frames_by_bone, bone_name, frameno, is_only, is_exist, is_key=False, is_read=False):
+def calc_bone_by_complement_by_bone(all_frames_by_bone, bone_name, frameno, is_only, is_exist, is_key=False, is_read=False):
     fill_bf = VmdBoneFrame()
     fill_bf.name = bone_name.encode('cp932').decode('shift_jis').encode('shift_jis')
     fill_bf.format_name = bone_name
     fill_bf.frame = frameno
 
-    now_framenos = [x for x in sorted(frames_by_bone.keys()) if x == frameno]
+    if bone_name not in all_frames_by_bone:
+        all_frames_by_bone[bone_name] = {}
+        all_frames_by_bone[bone_name][frameno] = fill_bf
+
+    now_framenos = [x for x in sorted(all_frames_by_bone[bone_name].keys()) if x == frameno]
     
     if len(now_framenos) == 1:
         if is_read:
-            if frames_by_bone[frameno].read == True:
-                return frames_by_bone[frameno]
+            if all_frames_by_bone[bone_name][frameno].read == True:
+                return all_frames_by_bone[bone_name][frameno]
             else:
                 pass
         else:
             # キー指定がある場合、キーが有効である場合のみ返す
             if is_key:
-                if frames_by_bone[frameno].key == True:
-                    return frames_by_bone[frameno]
+                if all_frames_by_bone[bone_name][frameno].key == True:
+                    return all_frames_by_bone[bone_name][frameno]
                 else:
                     pass
             else:
                 # 指定フレームがある場合、それを返す
                 if is_exist:
                     # 存在しているものの場合、コピーしないでそのもの
-                    return frames_by_bone[frameno]
+                    return all_frames_by_bone[bone_name][frameno]
                 else:
-                    return copy.deepcopy(frames_by_bone[frameno])
+                    return copy.deepcopy(all_frames_by_bone[bone_name][frameno])
     elif is_only and is_exist:
         # 指定フレームがなく、かつそれ固定指定で、既存の場合、None
         return None
 
-    after_framenos = [x for x in sorted(frames_by_bone.keys()) if x > frameno]
+    after_framenos = [x for x in sorted(all_frames_by_bone[bone_name].keys()) if x > frameno]
     
     if len(after_framenos) == 0:
         if is_exist == True:
@@ -650,32 +774,32 @@ def calc_bone_by_complement_by_bone(frames_by_bone, bone_name, frameno, is_only,
             return None
         elif is_only == True:
             # 最後まで行っても見つからなければ、最終項目を該当フレーム用に設定して返す
-            last_frameno = [x for x in sorted(frames_by_bone.keys())][-1]
-            fill_bf = copy.deepcopy(frames_by_bone[last_frameno])
+            last_frameno = [x for x in sorted(all_frames_by_bone[bone_name].keys())][-1]
+            fill_bf = copy.deepcopy(all_frames_by_bone[bone_name][last_frameno])
             return fill_bf
 
     if is_read == True:
         # キーONの場合、有効なのを返す
         for af in after_framenos:
-            if frames_by_bone[af].read == True:
-                return frames_by_bone[af]
+            if all_frames_by_bone[bone_name][af].read == True:
+                return all_frames_by_bone[bone_name][af]
     elif is_key == True:
         # キーONの場合、有効なのを返す
         for af in after_framenos:
-            if frames_by_bone[af].key == True:
-                return frames_by_bone[af]
+            if all_frames_by_bone[bone_name][af].key == True:
+                return all_frames_by_bone[bone_name][af]
     elif is_exist == True:
         # 既存指定の場合、自身のフレーム（指定フレームの直後のフレーム）
-        return copy.deepcopy(frames_by_bone[after_framenos[0]])
+        return copy.deepcopy(all_frames_by_bone[bone_name][after_framenos[0]])
 
     # 前フレーム
-    prev_framenos = [x for x in sorted(frames_by_bone.keys()) if x < fill_bf.frame]
+    prev_framenos = [x for x in sorted(all_frames_by_bone[bone_name].keys()) if x < fill_bf.frame]
     prev_bf = None
 
     # 指定されたフレーム直前の有効キー(数が多いのからチェック)
     for p in reversed(prev_framenos):
-        if frames_by_bone[p].key == True:
-            prev_bf = frames_by_bone[p]
+        if all_frames_by_bone[bone_name][p].key == True:
+            prev_bf = all_frames_by_bone[bone_name][p]
             break
     if not prev_bf:
         # 有効な前キーが取れない場合、暫定的に現在フレームの値を保持する
@@ -685,12 +809,12 @@ def calc_bone_by_complement_by_bone(frames_by_bone, bone_name, frameno, is_only,
     calc_bf = None
 
     # 次フレーム
-    next_next_framenos = [x for x in sorted(frames_by_bone.keys()) if x > fill_bf.frame]
+    next_next_framenos = [x for x in sorted(all_frames_by_bone[bone_name].keys()) if x > fill_bf.frame]
     next_bf = None
 
     # 指定されたフレーム直後のキー
     for p in next_next_framenos:
-        next_bf = frames_by_bone[p]
+        next_bf = all_frames_by_bone[bone_name][p]
         break
     
     if next_bf:
@@ -699,7 +823,7 @@ def calc_bone_by_complement_by_bone(frames_by_bone, bone_name, frameno, is_only,
     else:
         if len(now_framenos) > 0:
             # 現在がある場合、現在キー
-            calc_bf = copy.deepcopy(frames_by_bone[now_framenos[0]])
+            calc_bf = copy.deepcopy(all_frames_by_bone[bone_name][now_framenos[0]])
         else:
             # 現在も次もない場合、過去を計算対象とする
             calc_bf = copy.deepcopy(prev_bf)
@@ -744,70 +868,67 @@ def calc_bone_by_complement_pos(prev_bf, calc_bf, fill_bf):
      
 # -----------------------------
 
-def smooth_filter(all_frames_by_bone, frames_by_bone, model, bone_name, config):
-    if model.bones[bone_name].fixed_axis != QVector3D():
-        # 軸制限ありの場合、フィルタをかけない
-        return
+def smooth_filter(all_frames_by_bone, model, bone_name, is_comp_circle, config):
+    smooth_fno_pair = []
 
-    # 移動用フィルタ
-    pxfilter = OneEuroFilter(**config)
-    pyfilter = OneEuroFilter(**config)
-    pzfilter = OneEuroFilter(**config)
+    keyed_fnos = [f for f in sorted(all_frames_by_bone[bone_name].keys()) if all_frames_by_bone[bone_name][f].key == True]
 
-    # 回転用フィルタ
-    rxfilter = OneEuroFilter(**config)
-    ryfilter = OneEuroFilter(**config)
-    rzfilter = OneEuroFilter(**config)
+    for beforeno, afterno in zip(keyed_fnos[:-1], keyed_fnos[1:]):
+        smooth_fno_pair.append((beforeno, afterno))
+    
+    # smooth_fno_pair.append((min(all_frames_by_bone[bone_name].keys()), max(all_frames_by_bone[bone_name].keys())))
 
-    # 変化量の辞書
-    filterd_rot_frames_by_bone = {}
+    for fno_pair in smooth_fno_pair:
+        # 移動用フィルタ
+        pxfilter = OneEuroFilter(**config)
+        pyfilter = OneEuroFilter(**config)
+        pzfilter = OneEuroFilter(**config)
 
-    for e, fno in enumerate(sorted(frames_by_bone.keys())):
-        now_bf = frames_by_bone[fno]
-        if not now_bf: break
+        # 回転用フィルタ
+        rxfilter = OneEuroFilter(**config)
+        ryfilter = OneEuroFilter(**config)
+        rzfilter = OneEuroFilter(**config)
 
-        # 移動XYZそれぞれにフィルターをかける
-        px = pxfilter(now_bf.position.x(), now_bf.frame)
-        py = pyfilter(now_bf.position.y(), now_bf.frame)
-        pz = pzfilter(now_bf.position.z(), now_bf.frame)
-        now_bf.position = QVector3D(px, py, pz)
+        # 変化量の辞書
+        filterd_rot_frames_by_bone = {}
 
-        # 回転XYZそれぞれにフィルターをかける(オイラー角)
-        now_qq = now_bf.rotation
+        for fno in range(fno_pair[0], fno_pair[1]):
+            if fno not in all_frames_by_bone[bone_name]:
+                continue
 
-        r = now_qq.toEulerAngles()
-        rx = rxfilter(r.x(), now_bf.frame)
-        ry = ryfilter(r.y(), now_bf.frame)
-        rz = rzfilter(r.z(), now_bf.frame)
+            now_bf = all_frames_by_bone[bone_name][fno]
 
-        # クォータニオンに戻して保持
-        new_qq = QQuaternion.fromEulerAngles(rx, ry, rz)
+            # 移動XYZそれぞれにフィルターをかける
+            px = pxfilter(now_bf.position.x(), now_bf.frame)
+            py = pyfilter(now_bf.position.y(), now_bf.frame)
+            pz = pzfilter(now_bf.position.z(), now_bf.frame)
+            now_bf.position = QVector3D(px, py, pz)
 
-        now_bf.rotation = new_qq
+            # 回転XYZそれぞれにフィルターをかける(オイラー角)
+            now_qq = now_bf.rotation
 
-        # 変化量を保持
-        filterd_rot_frames_by_bone[fno] = now_qq.inverted() * new_qq
+            r = now_qq.toEulerAngles()
+            rx = rxfilter(r.x(), now_bf.frame)
+            ry = ryfilter(r.y(), now_bf.frame)
+            rz = rzfilter(r.z(), now_bf.frame)
 
-    for cbone in model.bones.values():
-        if cbone.parent_index == model.bones[bone_name].index:
-            if cbone.fixed_axis != QVector3D():
-                # # 処理対象ボーンを親にもつ子が捩りである場合、捩り再分配
-                # for (e, (fno, filter_rot)) in enumerate(filterd_rot_frames_by_bone.items()):
-                #     if cbone.name in all_frames_by_bone and fno in all_frames_by_bone[cbone.name]:
-                #         # 該当フレームのbfが登録されている場合
-                #         # 回転を分散する
-                #         parent_result_qq, child_result_qq = utils.spread_qq(fno, frames_by_bone[fno].rotation, \
-                #              all_frames_by_bone[cbone.name][fno].rotation, utils.BORN_ROTATION_LIMIT[(bone_name, cbone.name)], cbone.fixed_axis)
+            # クォータニオンに戻して保持
+            new_qq = QQuaternion.fromEulerAngles(rx, ry, rz)
 
-                #         frames_by_bone[fno].rotation = parent_result_qq
-                #         all_frames_by_bone[cbone.name][fno].rotation = child_result_qq
-                pass
-            else:
-                # 親の変化量を子でキャンセルする
-                for (e, (fno, filter_rot)) in enumerate(filterd_rot_frames_by_bone.items()):
-                    if cbone.name in all_frames_by_bone and fno in all_frames_by_bone[cbone.name]:
-                        # 該当フレームのbfが登録されている場合
-                        all_frames_by_bone[cbone.name][fno].rotation = filter_rot.inverted() * all_frames_by_bone[cbone.name][fno].rotation
+            now_bf.rotation = new_qq
+
+            all_frames_by_bone[bone_name][fno] = now_bf
+
+            # # 変化量を保持
+            # filterd_rot_frames_by_bone[fno] = now_qq.inverted() * new_qq
+
+        # for cbone in model.bones.values():
+        #     if cbone.parent_index == model.bones[bone_name].index and cbone.fixed_axis == QVector3D():
+        #         # 親の変化量を子でキャンセルする
+        #         for (e, (fno, filter_rot)) in enumerate(filterd_rot_frames_by_bone.items()):
+        #             if cbone.name in all_frames_by_bone and fno in all_frames_by_bone[cbone.name]:
+        #                 # 該当フレームのbfが登録されている場合
+        #                 all_frames_by_bone[cbone.name][fno].rotation = filter_rot.inverted() * all_frames_by_bone[cbone.name][fno].rotation
 
 
 # OneEuroFilter
@@ -925,7 +1046,7 @@ if __name__=="__main__":
     #     smooth_vmd_fpath = re.sub(r'\.vmd$', "_smooth_{0:%Y%m%d_%H%M%S}.vmd".format(datetime.now()), args.vmd_path)
         
     #     # まずボーン回転の分散
-    #     sub_arm_stance.spread_rotation(motion, copy.deepcopy(motion.frames), model)
+    #     spread_rotation(motion, model)
 
     #     for k, bf_list in motion.frames.items():
     #         for bf in bf_list:

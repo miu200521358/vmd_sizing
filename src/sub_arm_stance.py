@@ -32,121 +32,6 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
 
     return True
 
-# ボーン回転の分散
-def spread_rotation(motion, org_motion_frames, replace_model):
-
-    print("■■ 回転分散 -----------------")
-
-    # 左腕の分散
-    for target_bones, end_bone_name in [(["左肩", "左腕", "左ひじ", "左手首"], "左手首"), (["右肩", "右腕", "右ひじ", "右手首"], "右手首")]:
-
-        if set(target_bones).issubset(replace_model.bones):
-        
-            # 手首から親までのボーンリンク
-            links, indexes = replace_model.create_link_2_top_one(end_bone_name)
-            arm_links = links[:indexes["肩"]+1]
-
-            bone_framenos = []
-
-            # 末端から肩までの有効なキーをすべて対象とする
-            for b in arm_links:
-                if b.name in motion.frames:
-                    for x in motion.frames[b.name]:
-                        if x.key == True and x.frame not in bone_framenos:
-                            bone_framenos.append(x.frame)
-
-            if len(bone_framenos) == 0:
-                continue
-
-            bone_framenos.sort()
-
-            for b in arm_links:
-                for fno in bone_framenos:
-                    # まず一旦登録する
-                    fill_frame_for_spread(motion, b.name, fno)
-            
-            for b in arm_links:
-                for bf_idx, bf in enumerate(motion.frames[b.name]):
-                    # 補間曲線を分割する
-                    sub_arm_ik.reset_complement_frame(motion, b.name, bf_idx, utils.R_x1_idxs, utils.R_y1_idxs, utils.R_x2_idxs, utils.R_y2_idxs)
-
-            # 親から子までのボーンリンクに変換
-            arm_links.reverse()
-
-            for bone_idx, bone in enumerate(arm_links):
-                if bone.fixed_axis != QVector3D():
-                    # 親ボーン
-                    parent_bone = replace_model.bones[replace_model.bone_indexes[bone.parent_index]]
-
-                    if (parent_bone.name, bone.name) in utils.BORN_ROTATION_LIMIT:
-                        # 上限が決められているボーンの組合せの場合
-
-                        for bf in motion.frames[bone.name]:
-                            parent_bf = fill_frame_for_spread(motion, parent_bone.name, bf.frame)
-
-                            # 回転を分散する
-                            parent_result_qq, child_result_qq = utils.spread_qq(bf.frame, parent_bf.rotation, bf.rotation, utils.BORN_ROTATION_LIMIT[(parent_bone.name, bone.name)], bone.fixed_axis)
-
-                            # 自身の回転量を再設定
-                            parent_bf.rotation = parent_result_qq
-                            bf.rotation = child_result_qq
-
-                        print("分散: %s → %s" % (parent_bone.name, bone.name))
-                    
-                # if bone.name in motion.frames and bone_idx == len(arm_links) - 1:
-                #     # 末端ボーンは、回転分をキャンセルして、元の向きに戻す
-                #     for bf in motion.frames[bone.name]:
-                #         if bf.key == True:
-                #             # 自身の回転量
-                #             self_qq = utils.calc_bone_by_complement(motion.frames, bone.name, bf.frame, False).rotation
-                #             # 元々の回転量
-                #             org_self_qq = utils.calc_bone_by_complement(org_motion_frames, bone.name, bf.frame, False).rotation
-
-                #             bf.rotation = self_qq.inverted() * org_self_qq * bf.rotation
-
-# 分散用のbf取得処理
-def fill_frame_for_spread(motion, link_name, fno):
-    if not link_name in motion.frames:
-        fillbf = VmdBoneFrame()
-        fillbf.frame = fno
-        fillbf.key = True
-        fillbf.name = link_name.encode('cp932').decode('shift_jis').encode('shift_jis')
-        fillbf.format_name = link_name
-        motion.frames[link_name] = [fillbf]
-
-        return fillbf
-    
-    for tbf_idx, tbf in enumerate(motion.frames[link_name]):
-        if tbf.frame == fno:
-            tbf.key = True
-            # とりあえず登録対象のキーが既存なので終了
-            logger.debug("fill 既存あり: %s, i: %s, f: %s", link_name, tbf_idx, fno)
-            return tbf
-
-        elif tbf.frame > fno:
-            # 対象のキーがなくて次に行ってしまった場合、挿入
-            
-            # 補間曲線込みでキーフレーム生成
-            fillbf = utils.calc_bone_by_complement(motion.frames, link_name, fno, is_calc_complement=True)
-            # キーを登録する
-            fillbf.key = True
-
-            motion.frames[link_name].insert(tbf_idx, fillbf)
-            logger.debug("fill insert: %s, i: %s, f: %s, key: %s: p: %s", link_name, tbf_idx, fillbf.frame, fillbf.key, fillbf.position)
-
-            return fillbf
-    
-    # 最後のフレームがなくてそのまま終了してしまった場合は、直前のキーを設定する
-    fillbf = copy.deepcopy(tbf)
-    # キーフレを現時点のに変える
-    fillbf.frame = fno
-    # 登録する
-    fillbf.key = True
-    logger.debug("fill 今回なし: %s, i: %s, f: %s", link_name, tbf_idx, fillbf.frame)
-    motion.frames[link_name].append(fillbf)
-
-    return fillbf
-
 def adjust_center_stance(motion, trace_model, replace_model, org_motion_frames):
     # -----------------------------------------------------------------
     # センター位置補正
@@ -648,12 +533,16 @@ def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org
                 "d1i": QQuaternion.fromDirection(rep_upper2_initial_slope1, rep_upper1_initial_slope1_up).inverted(), \
                 "d2": QQuaternion.fromDirection(rep_upper2_initial_slope3, rep_upper2_initial_slope3_up), \
                 "d2i": QQuaternion.fromDirection(rep_upper2_initial_slope3, rep_upper2_initial_slope3_up).inverted(), \
-                "d3": QQuaternion.fromDirection(rep_upper2_initial_slope1, rep_upper_slope), \
-                "d3i": QQuaternion.fromDirection(rep_upper2_initial_slope1, rep_upper_slope).inverted(), \
-                "d4": QQuaternion.fromDirection(rep_upper2_initial_slope3, rep_upper_slope), \
-                "d4i": QQuaternion.fromDirection(rep_upper2_initial_slope3, rep_upper_slope).inverted(), \
+                # "d3": QQuaternion.fromDirection(rep_upper2_initial_slope1, rep_upper_slope), \
+                # "d3i": QQuaternion.fromDirection(rep_upper2_initial_slope1, rep_upper_slope).inverted(), \
+                # "d4": QQuaternion.fromDirection(rep_upper2_initial_slope3, rep_upper_slope), \
+                # "d4i": QQuaternion.fromDirection(rep_upper2_initial_slope3, rep_upper_slope).inverted(), \
                 "d5": rep_upper_initial_slope_qq, \
                 "d5i": rep_upper_initial_slope_qq.inverted(), \
+                "d6": QQuaternion.rotationTo(rep_upper2_initial_slope1, rep_upper_slope), \
+                "d6i": QQuaternion.rotationTo(rep_upper2_initial_slope1, rep_upper_slope).inverted(), \
+                "d7": QQuaternion.rotationTo(rep_upper2_initial_slope3, rep_upper_slope), \
+                "d7i": QQuaternion.rotationTo(rep_upper2_initial_slope3, rep_upper_slope).inverted(), \
                 "00": QQuaternion(), "01": QQuaternion(), "02": QQuaternion()}
 
             rep_upper2_initial_slope_qq = direction_params[test_param[10]] * direction_params[test_param[11]] * direction_params[test_param[12]] * direction_params[test_param[13]]

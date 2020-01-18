@@ -223,18 +223,14 @@ def spread_qq(fno, parent_qq, child_qq, parent_params, child_fixed_axis):
     parent_result_qq = copy.deepcopy(parent_qq)
     child_result_qq = copy.deepcopy(child_qq)
     
-    # 親自身のねじれを分散させる
-    parent_spread_qq = copy.deepcopy(parent_qq)
-    child_spread_qq = copy.deepcopy(child_qq)
-
     # 親のねじれを子に分散させる
     if child_fixed_axis == QVector3D():
         # 子が普通の場合
-        parent_result_qq = parent_spread_qq
+        parent_result_qq = parent_qq
     else:
         # 子が捩りの場合 --------------------            
         # 捩り軸に統合させた角度を取得する
-        parent_spread_xeuler = parent_spread_qq.toEulerAngles()
+        parent_spread_xeuler = parent_qq.toEulerAngles()
         extra_xvec = QVector3D()
 
         if child_fixed_axis.x() > 0:
@@ -260,13 +256,13 @@ def spread_qq(fno, parent_qq, child_qq, parent_params, child_fixed_axis):
 
             # 子が軸制限ある場合、軸にあった回転量にする
             child_extra_qq = QQuaternion.fromAxisAndAngle(child_fixed_axis, degree)
-            child_result_qq = child_extra_qq
+            child_result_qq = child_extra_qq * child_qq
 
             # 残りを親に戻す
             parent_result_qq = parent_qq * child_extra_qq.inverted()
             logger.debug(parent_result_qq)
         else:
-            parent_result_qq = parent_spread_qq
+            parent_result_qq = parent_qq
 
     return parent_result_qq, child_result_qq
 
@@ -274,162 +270,11 @@ def spread_qq(fno, parent_qq, child_qq, parent_params, child_fixed_axis):
 # ボーン回転の上限
 # 参考: http://www.japanpt.or.jp/upload/jspt/obj/files/publiccomment/4_rom_20140612.pdf
 BORN_ROTATION_LIMIT = {
-    # "上半身": [-30, 45, -180, 180, -60, 60]
-    # , "上半身2": [-20, 40, -180, 180, -50, 50]
-    # , "下半身": [-15, 125, -180, 180, -40, 40]
-    # , "首": [-60, 50, -50, 50, -40, 40]
-    # , "頭": [-30, 20, -30, 30, -30, 30]
-    ("左肩","左腕"): {"limit": [-20, 20]}
-    , ("左腕","左ひじ"): {"limit": [-45, 45]}
-    , ("左ひじ","左手首"): {"limit": [-45, 45]}
-    , ("左腕","左腕捩"): {"limit": [-45, 45]}
+    ("左腕","左腕捩"): {"limit": [-45, 45]}
     , ("左ひじ","左手捩"): {"limit": [-45, 45]}
-    , ("右肩","右腕"): {"limit": [-20, 20]}
-    , ("右腕","右ひじ"): {"limit": [-20, 20]}
-    , ("右ひじ","右手首"): {"limit": [-45, 45]}
     , ("右腕","右腕捩"): {"limit": [-45, 45]}
     , ("右ひじ","右手捩"): {"limit": [-45, 45]}
 }
-
-    # parent_euler = parent_qq.toEulerAngles()
-
-
-    # parent_result_qq = parent_axis_qq
-    # parent_xaxis_qq = QQuaternion.fromAxisAndAngle(QVector3D(1, 0, 0), xdegree)
-
-    # extra_xvec = QVector3D()
-
-    # twist_target_list = [ \
-    #         ("y",  parent_params["limit"][2],  parent_params["limit"][3]), \
-    #         ("z",  parent_params["limit"][4],  parent_params["limit"][5]), \
-    #     ]
-
-    # is_out_range = True
-    # cnt = 0
-
-    # while is_out_range and cnt < 3:
-    #     parent_euler = parent_axis_qq.toEulerAngles()
-    #     parent_euler_dic = {"x": parent_euler.x(), "y": parent_euler.y(), "z": parent_euler.z()}
-
-    #     if  parent_params["limit"][2] <= parent_euler.y() <=  parent_params["limit"][3] \
-    #         and  parent_params["limit"][4] <= parent_euler.z() <=  parent_params["limit"][5] :
-    #         is_out_range = False
-    #         break
-
-    #     axis_euler = {"x": 0, "y": 0, "z": 0}
-
-    #     for (axis, min_limit, max_limit) in twist_target_list:
-    #         if parent_euler_dic[axis] < min_limit:
-    #             # 下限の回転量
-    #             axis_euler[axis] = parent_euler_dic[axis] - min_limit
-    #         elif parent_euler_dic[axis] > max_limit:
-    #             # 上限の回転量
-    #             axis_euler[axis] = parent_euler_dic[axis] - max_limit
-
-    #     # 軸ごとに分けた値を再取得
-    #     extra_vec = QVector3D(0, axis_euler["y"], axis_euler["z"])
-
-    #     if extra_vec != QVector3D():
-    #         # ローカル回転軸外の回転量
-    #         parent_extra_rotate_qq = QQuaternion.fromEulerAngles(extra_vec)
-
-    #         # 親のローカル軸にあった角度に変換する
-    #         degree = degrees(2 * acos(min(1, max(-1, parent_extra_rotate_qq.scalar()))))        
-    #         parent_extra_axis_qq = QQuaternion.fromAxisAndAngle(parent_local_axis, degree)
-
-    #         parent_axis_qq = parent_axis_qq * parent_extra_rotate_qq.inverted()
-
-    #     cnt += 1
-
-    # axis_rate_dic = {"x": QVector3D(1, 0, 0), "y": QVector3D(0, 1, 0), "z": QVector3D(0, 0, 1)}
-
-    # target_list = [ \
-    #         ("x",  parent_params["limit"][0],  parent_params["limit"][1]), \
-    #         ("y",  parent_params["limit"][2],  parent_params["limit"][3]), \
-    #         ("z",  parent_params["limit"][4],  parent_params["limit"][5]), \
-    #     ]
-
-    # for (axis, min_limit, max_limit) in target_list:
-    #     axis_euler = {"x": 0, "y": 0, "z": 0}
-    
-    #     if parent_euler_dic[axis] < min_limit:
-    #         # 下限の回転量
-    #         axis_euler[axis] = 360 - abs(parent_euler_dic[axis] - min_limit)
-    #     elif parent_euler_dic[axis] > max_limit:
-    #         # 上限の回転量
-    #         axis_euler[axis] = parent_euler_dic[axis] - max_limit
-        
-    #     if child_fixed_axis != QVector3D():
-    #         extra_vec = QVector3D(axis_euler[axis], 0, 0)
-    #     else:
-    #         # 軸ごとに分けた値を再取得
-    #         extra_vec = QVector3D(axis_euler["x"], axis_euler["y"], axis_euler["z"]) * axis_rate_dic[axis]
-
-    #     if extra_vec != QVector3D():
-    #         extra_add_qq = QQuaternion.fromEulerAngles(extra_vec)
-
-    #         # if child_fixed_axis != QVector3D():
-    #         #     # 子が軸制限ある場合、そのまま設定
-    #         #     extra_qq = extra_add_qq
-    #         # else:
-    #         # 子が軸制限ない場合、親のローカル軸に合わせる
-    #         degree = degrees(2 * acos(min(1, max(-1, extra_add_qq.scalar()))))
-    #         parent_extra_qq = QQuaternion.fromAxisAndAngle(parent_local_axis, degree)
-
-    #         parent_axis_qq = parent_axis_qq * parent_extra_qq.inverted()
-
-    #         if child_fixed_axis != QVector3D():
-    #         # 子が軸制限ある場合、軸にあった回転量にする
-    #             degree = degrees(2 * acos(min(1, max(-1, parent_extra_qq.scalar()))))
-    #             child_extra_qq = QQuaternion.fromAxisAndAngle(child_fixed_axis, degree)
-
-    #         child_axis_qq = child_extra_qq * child_axis_qq
-
-
-        # for (axis, min_limit, max_limit) in target_list:
-        #     parent_euler = parent_axis_qq.toEulerAngles()
-        #     parent_euler_dic = {"x": parent_euler.x(), "y": parent_euler.y(), "z": parent_euler.z()}
-
-        #     if  parent_params[0] < parent_euler.x() <  parent_params[1] \
-        #         and  parent_params[2] < parent_euler.y() <  parent_params[3] \
-        #         and  parent_params[4] < parent_euler.z() <  parent_params[5] :
-        #         is_out_range = True
-        #         break
-
-        #     extra_angle = 0
-        #     if parent_euler_dic[axis] < min_limit:
-        #         # 下限の回転量
-        #         parent_euler_dic[axis] - min_limit
-        #         # if child_fixed_axis != QVector3D():        
-        #         #     extra_angle = 360 - abs(parent_euler_dic[axis] - min_limit)
-        #         # else:
-        #         #     extra_angle = 360 - abs(parent_euler_dic[axis] - min_limit)
-        #     elif parent_euler_dic[axis] > max_limit:
-        #         # 上限の回転量
-        #         extra_angle = parent_euler_dic[axis] + max_limit
-
-    # if child_fixed_axis == QVector3D():
-    #     # 子どもが軸制限在りの捩りじゃない場合、ローカル軸に合わせて回転
-    # else:
-    #     # 軸制限ありの捩りの場合
-    #     if parent_euler.x() < parent_params[0]:
-    #         # X軸下限の回転量
-    #         extra_x_angle = 360 - abs(parent_euler.x() - parent_params[0])
-    #     elif parent_euler.x() > parent_params[1]:
-    #         # X軸上限の回転量
-    #         extra_x_angle = parent_euler.x() - parent_params[1]
-
-    #     if extra_x_angle != 0:
-    #         extra_add_qq = QQuaternion.fromEulerAngles(extra_x_angle, 0, 0)
-    #         parent_result_qq = parent_qq * extra_add_qq.inverted()
-
-    #         # 軸固定の場合、軸に沿って回す
-    #         degree = degrees(2 * acos(min(1, max(-1, extra_add_qq.scalar()))))
-    #         extra_qq = QQuaternion.fromAxisAndAngle(child_fixed_axis, degree)
-    #         child_result_qq = extra_qq * child_qq
-    #     else:
-    #         parent_result_qq = parent_qq
-    #         child_result_qq = child_qq
 
 # 指定ボーンの最終的なローカル軸の向きを返す
 def calc_local_axis(model, bone_name):
@@ -1002,7 +847,7 @@ def calc_interpolate_bezier_by_t(x1v, y1v, x2v, y2v, start, end, t):
 
 
 # 回転用ベジェ曲線 - 指定された3点を通るベジェ曲線を返す
-def calc_smooth_bezier_rot(x1, y1r, x2, y2r, x3, y3r, offset):
+def calc_smooth_bezier_rot(x1, y1r, x2, y2r, x3, y3r, offset, is_comp_circle):
 
     if y1r == y2r == y3r:
         # 回転量が同じ場合、線形補間      
@@ -1016,16 +861,16 @@ def calc_smooth_bezier_rot(x1, y1r, x2, y2r, x3, y3r, offset):
             [QVector2D(0, 0), QVector2D(20, 20), QVector2D(107, 107), QVector2D(COMPLEMENT_MMD_MAX, COMPLEMENT_MMD_MAX)]
 
     y1e = y1r.toEulerAngles()
-    y1e = QVector3D(round(y1e.x(), 3), round(y1e.y(), 3), round(y1e.z(), 3))
+    y1e = QVector3D(round(y1e.x(), 1), round(y1e.y(), 1), round(y1e.z(), 1))
     y2e = y2r.toEulerAngles()
-    y2e = QVector3D(round(y2e.x(), 3), round(y2e.y(), 3), round(y2e.z(), 3))
+    y2e = QVector3D(round(y2e.x(), 1), round(y2e.y(), 1), round(y2e.z(), 1))
     y3e = y3r.toEulerAngles()
-    y3e = QVector3D(round(y3e.x(), 3), round(y3e.y(), 3), round(y3e.z(), 3))
+    y3e = QVector3D(round(y3e.x(), 1), round(y3e.y(), 1), round(y3e.z(), 1))
 
     # 各回転の補間曲線
-    xresult, is_xfit, xbz = calc_smooth_bezier_pos(x1, y1e.x(), x2, y2e.x(), x3, y3e.x(), offset)
-    yresult, is_yfit, ybz = calc_smooth_bezier_pos(x1, y1e.y(), x2, y2e.y(), x3, y3e.y(), offset)
-    zresult, is_zfit, zbz = calc_smooth_bezier_pos(x1, y1e.z(), x2, y2e.z(), x3, y3e.z(), offset)
+    xresult, is_xfit, xbz = calc_smooth_bezier_pos(x1, y1e.x(), x2, y2e.x(), x3, y3e.x(), offset, is_comp_circle)
+    yresult, is_yfit, ybz = calc_smooth_bezier_pos(x1, y1e.y(), x2, y2e.y(), x3, y3e.y(), offset, is_comp_circle)
+    zresult, is_zfit, zbz = calc_smooth_bezier_pos(x1, y1e.z(), x2, y2e.z(), x3, y3e.z(), offset, is_comp_circle)
 
     offset_bz = [QVector2D(0, 0), QVector2D(20, 20), QVector2D(107, 107), QVector2D(COMPLEMENT_MMD_MAX, COMPLEMENT_MMD_MAX)]        
 
@@ -1083,6 +928,7 @@ def calc_smooth_bezier_rot(x1, y1r, x2, y2r, x3, y3r, offset):
 
         y1v = 1 - QVector3D.dotProduct(y1p.normalized(), y1p.normalized())
         cy1v = 1 - QVector3D.dotProduct(y1p.normalized(), cy1p.normalized())
+        y2v = 1 - QVector3D.dotProduct(y1p.normalized(), y2p.normalized())
         cy2v = 1 - QVector3D.dotProduct(y1p.normalized(), cy2p.normalized())
         y3v = 1 - QVector3D.dotProduct(y1p.normalized(), y3p.normalized())
 
@@ -1093,17 +939,21 @@ def calc_smooth_bezier_rot(x1, y1r, x2, y2r, x3, y3r, offset):
         cy2 = (cy2v - y1v) #/ diffy
         y3 = (y3v - y1v) #/ diffy
 
+        # 円形補間の場合、円周上の座標で繋ぐ
+
         # 中間フレームで繋いだ開始フレームと終端フレームの三次ベジェ曲線
         bz = calc_cubic_bezier_4point(0, y1v, cx1, cy1v, cx2, cy2v, 1, y3v, t)
 
         # オフセット許容する
-        offset += 0
         offset_bz[0] = fit_bezier_mmd_join(bz[0], offset)
         offset_bz[1] = fit_bezier_mmd_join(bz[1], offset)
         offset_bz[2] = fit_bezier_mmd_join(bz[2], offset)
         offset_bz[3] = fit_bezier_mmd_join(bz[3], offset)
 
-        return True, is_fit_bezier_mmd(offset_bz), offset_bz
+        return True, is_fit_bezier_mmd(bz), bz
+
+        # # 線形補間
+        # return calc_smooth_bezier_pos(x1, y1v, x2, y2v, x3, y3v, offset, is_comp_circle)
 
     # ③軸のどれかがズレている場合、登録対象外
     return True, False, offset_bz
@@ -1155,61 +1005,6 @@ def calc_line_cross(x1, y1, x2, y2, x3, y3):
     
     return a, b
 
-# # http://arduinoprocessing.blog.jp/archives/9989558.html
-# def calc_line_2point(x1, y1, x2, y2):
-#     a = (y1-y2)
-#     b = -(x1-x2)
-#     c = a*(-x1)-y1*b
-
-#     return a, b, c
-
-
-    # y1e = y1r * QVector3D(1, 1, 1)
-    # y2e = y2r * QVector3D(1, 1, 1)
-    # y3e = y3r * QVector3D(1, 1, 1)
-
-    # # 各回転の補間曲線
-    # xresult, is_xfit, xbz = calc_smooth_bezier_pos(x1, y1e.x(), x2, y2e.x(), x3, y3e.x())
-    # yresult, is_yfit, ybz = calc_smooth_bezier_pos(x1, y1e.y(), x2, y2e.y(), x3, y3e.y())
-    # zresult, is_zfit, zbz = calc_smooth_bezier_pos(x1, y1e.z(), x2, y2e.z(), x3, y3e.z())
-
-    # bz = [QVector2D(0, 0), QVector2D(20, 20), QVector2D(107, 107), QVector2D(COMPLEMENT_MMD_MAX, COMPLEMENT_MMD_MAX)]        
-
-    # # 線形からの離れ具合
-    # xbz1_dot = QVector2D.dotProduct(bz[1].normalized(), xbz[1].normalized())
-    # ybz1_dot = QVector2D.dotProduct(bz[1].normalized(), ybz[1].normalized())
-    # zbz1_dot = QVector2D.dotProduct(bz[1].normalized(), zbz[1].normalized())
-
-    # if min(abs(xbz1_dot), abs(ybz1_dot), abs(zbz1_dot)) == abs(xbz1_dot):
-    #     bz[1] = xbz[1]
-    # elif min(abs(xbz1_dot), abs(ybz1_dot), abs(zbz1_dot)) == abs(ybz1_dot):
-    #     bz[1] = ybz[1]
-    # elif min(abs(xbz1_dot), abs(ybz1_dot), abs(zbz1_dot)) == abs(zbz1_dot):
-    #     bz[1] = zbz[1]
-
-    # # 線形からの離れ具合
-    # xbz2_dot = QVector2D.dotProduct(bz[2].normalized(), xbz[2].normalized())
-    # ybz2_dot = QVector2D.dotProduct(bz[2].normalized(), ybz[2].normalized())
-    # zbz2_dot = QVector2D.dotProduct(bz[2].normalized(), zbz[2].normalized())
-
-    # if min(abs(xbz2_dot), abs(ybz2_dot), abs(zbz2_dot)) == abs(xbz2_dot):
-    #     bz[2] = xbz[2]
-    # elif min(abs(xbz2_dot), abs(ybz2_dot), abs(zbz2_dot)) == abs(ybz2_dot):
-    #     bz[2] = ybz[2]
-    # elif min(abs(xbz2_dot), abs(ybz2_dot), abs(zbz2_dot)) == abs(zbz2_dot):
-    #     bz[2] = zbz[2]
-
-    # # オフセット許容する
-    # offset = 5
-    # offset_bz = [QVector2D(0, 0), QVector2D(20, 20), QVector2D(107, 107), QVector2D(COMPLEMENT_MMD_MAX, COMPLEMENT_MMD_MAX)]        
-
-    # offset_bz[0] = fit_bezier_mmd_join(bz[0], offset)
-    # offset_bz[1] = fit_bezier_mmd_join(bz[1], offset)
-    # offset_bz[2] = fit_bezier_mmd_join(bz[2], offset)
-    # offset_bz[3] = fit_bezier_mmd_join(bz[3], offset)
-
-    # return (xresult or yresult or zresult), is_fit_bezier_mmd(offset_bz), offset_bz
-
 def fit_bezier_mmd_join(b, offset):
     x = b.x()
     y = b.y()
@@ -1224,13 +1019,17 @@ def fit_bezier_mmd_join(b, offset):
 
 
 # 移動用ベジェ曲線 - 指定された3点を通るベジェ曲線を返す
-def calc_smooth_bezier_pos(x1, y1, x2, y2, x3, y3, offset):
+def calc_smooth_bezier_pos(x1, y1v, x2, y2v, x3, y3v, offset, is_comp_circle):
     t = (x2 - x1) / (x3 - x1)
 
     if (x1 >= x2 or x1 >= x3 or x2 >= x3) or t <= 0 or t >= 1:
         # 正常に計算できない場合、計算対象外
         return False, False, \
             [QVector2D(0, 0), QVector2D(20, 20), QVector2D(107, 107), QVector2D(COMPLEMENT_MMD_MAX, COMPLEMENT_MMD_MAX)]
+    
+    y1 = round(y1v, 2)
+    y2 = round(y2v, 2)
+    y3 = round(y3v, 2)
 
     # 3点を通る二次曲線
     a, b, c = calc_quadratic_param(x1, y1, x2, y2, x3, y3)
@@ -1238,7 +1037,7 @@ def calc_smooth_bezier_pos(x1, y1, x2, y2, x3, y3, offset):
 
     if round(a, 3) == 0:
         # 曲線がなく、等間隔に変化する場合、線形補間
-        return True, True, \
+        return False, True, \
             [QVector2D(0, 0), QVector2D(20, 20), QVector2D(107, 107), QVector2D(COMPLEMENT_MMD_MAX, COMPLEMENT_MMD_MAX)]
 
     # 開始フレームと中間フレームの交点
@@ -1270,7 +1069,6 @@ def calc_smooth_bezier_pos(x1, y1, x2, y2, x3, y3, offset):
     # オフセット許容する
     offset_bz = [QVector2D(0, 0), QVector2D(20, 20), QVector2D(107, 107), QVector2D(COMPLEMENT_MMD_MAX, COMPLEMENT_MMD_MAX)]        
 
-    offset += 5
     offset_bz[0] = fit_bezier_mmd_join(bz[0], offset)
     offset_bz[1] = fit_bezier_mmd_join(bz[1], offset)
     offset_bz[2] = fit_bezier_mmd_join(bz[2], offset)

@@ -650,10 +650,10 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_staticSmoothText163.SetToolTip("キーとキーの間の軌道をどのように補間するかを指定してください。\n全打ちモーションの場合、線形補間を選択してください。")
 		bSizerSmooth6.Add( self.m_staticSmoothText163, 0, wx.ALL, 0 )
 
-		self.m_choiceSmoothingComp = wx.Choice( self.m_panelSmooth, id=wx.ID_ANY, choices=["線形補間", "円形補間"] )
-		self.m_choiceSmoothingComp.SetSelection(0)
-		self.m_choiceSmoothingComp.SetToolTip("「線形補間」は。MMD上で見えているのと同じように線形で保管します。\n「円形補間」は、3つのキーを円周上に置いた円になるように補間します。")
-		bSizerSmooth6.Add( self.m_choiceSmoothingComp, 0, wx.ALL, 5 )
+		self.m_smooth_choiceSmoothingComp = wx.Choice( self.m_panelSmooth, id=wx.ID_ANY, choices=["線形補間", "円形補間"] )
+		self.m_smooth_choiceSmoothingComp.SetSelection(0)
+		self.m_smooth_choiceSmoothingComp.SetToolTip("「線形補間」は。MMD上で見えているのと同じように線形で保管します。\n「円形補間」は、3つのキーを円周上に置いた円になるように補間します。")
+		bSizerSmooth6.Add( self.m_smooth_choiceSmoothingComp, 0, wx.ALL, 5 )
 
 		# self.m_radioSmootthingLinear = wx.( self.m_panelSmooth, wx.ID_ANY, u"線形補間", wx.DefaultPosition, wx.DefaultSize, style=wx.RB_GROUP )
 		# self.m_radioSmootthingLinear.SetToolTip( u"軌道が線になるようにスムージングを行います。" )
@@ -668,10 +668,10 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_staticSmoothText163.SetToolTip("キーを打った前後の軌跡をどのように補間するかを指定してください。\n全打ちモーションの場合、そのままを選択してください。")
 		bSizerSmooth6.Add( self.m_staticSmoothText163, 0, wx.ALL, 0 )
 
-		self.m_choiceSmoothingSeam = wx.Choice( self.m_panelSmooth, id=wx.ID_ANY, choices=["そのまま", "滑らかに"] )
-		self.m_choiceSmoothingSeam.SetSelection(0)
-		self.m_choiceSmoothingSeam.SetToolTip("「そのまま」は、繋ぎ目の軌道を変えません。\n「滑らかに」は、繋ぎ目にフィルターをかけて滑らかに繋ぎます。")
-		bSizerSmooth6.Add( self.m_choiceSmoothingSeam, 0, wx.ALL, 5 )
+		self.m_smooth_choiceSmoothingSeam = wx.Choice( self.m_panelSmooth, id=wx.ID_ANY, choices=["そのまま", "滑らかに"] )
+		self.m_smooth_choiceSmoothingSeam.SetSelection(0)
+		self.m_smooth_choiceSmoothingSeam.SetToolTip("「そのまま」は、繋ぎ目の軌道を変えません。\n「滑らかに」は、繋ぎ目にフィルターをかけて滑らかに繋ぎます。")
+		bSizerSmooth6.Add( self.m_smooth_choiceSmoothingSeam, 0, wx.ALL, 5 )
 
 		bSizerSmooth4.Add( bSizerSmooth6, 0, wx.EXPAND |wx.ALL, 2 )
 
@@ -1323,6 +1323,9 @@ class VmdSizingForm3 ( wx.Frame ):
 		# スライダーの変更時
 		self.m_sliderFingerDistance.Bind(wx.EVT_SCROLL_CHANGED, self.OnChangeArmIKFingerDistance)
 
+		# 指位置合わせのチェックボックス切り替え
+		self.m_smooth_choiceSmoothingComp.Bind(wx.EVT_CHOICE, self.OnChangeSmoothComp)
+
 		# 補間曲線パネルの描画(オリジナル)
 		self.m_panelOriginalBezier.Bind(wx.EVT_PAINT, lambda event: self.OnPaintBezier(event, self.m_panelOriginalBezier, self.m_spinOriginalBezierStartX1, self.m_spinOriginalBezierStartY1, self.m_spinOriginalBezierStartX2, self.m_spinOriginalBezierStartY2))
 		self.m_panelOriginalBezier.Bind(wx.EVT_LEFT_DOWN, lambda event: self.OnPaintBezierMouseLeftDown(event, self.m_panelOriginalBezier))
@@ -1604,6 +1607,11 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		# パス再設定
 		self.OnCreateOutputVmd(event)
+
+	def OnChangeSmoothComp(self, event):
+		# 円形補間を選んだ場合、繋ぎ目は滑らかに
+		if self.m_smooth_choiceSmoothingComp.GetSelection() == 1:
+			self.m_smooth_choiceSmoothingSeam.SetSelection(1)
 
 	# 腕IKで床にチェックを入れたら、親の選択有効
 	def OnChangeFloorArmDistance(self, event):
@@ -2525,8 +2533,8 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_smooth_filePmx.Disable()
 		self.m_smooth_fileVmd.Disable()
 		self.m_smooth_spinSmoothCount.Disable()
-		self.m_choiceSmoothingComp.Disable()
-		self.m_choiceSmoothingSeam.Disable()
+		self.m_smooth_choiceSmoothingComp.Disable()
+		self.m_smooth_choiceSmoothingSeam.Disable()
 	
 	def EnableInput(self):
 		# ファイル入力可
@@ -2579,8 +2587,8 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_smooth_filePmx.Enable()
 		self.m_smooth_fileVmd.Enable()
 		self.m_smooth_spinSmoothCount.Enable()
-		self.m_choiceSmoothingComp.Enable()
-		self.m_choiceSmoothingSeam.Enable()
+		self.m_smooth_choiceSmoothingComp.Enable()
+		self.m_smooth_choiceSmoothingSeam.Enable()
 
 	# 実行ボタン押下
 	def OnExec(self, event):
@@ -3250,8 +3258,8 @@ class SmoothWorkerThread(Thread):
 		convert_smooth.main(self._notify_window.m_smooth_fileVmd.GetPath(), \
 			self._notify_window.m_smooth_filePmx.GetPath(), \
 			self._notify_window.m_smooth_spinSmoothCount.GetValue(), \
-			self._notify_window.m_choiceSmoothingComp.GetSelection() == 1, \
-			self._notify_window.m_choiceSmoothingSeam.GetSelection() == 1, \
+			self._notify_window.m_smooth_choiceSmoothingComp.GetSelection() == 1, \
+			self._notify_window.m_smooth_choiceSmoothingSeam.GetSelection() == 1, \
 			)
 
 		# Here's where the result would be returned (this is an
