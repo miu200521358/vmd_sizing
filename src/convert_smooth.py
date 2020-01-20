@@ -235,6 +235,10 @@ def spread_rotation(motion, model, is_thinning):
             if not is_target:
                 continue
 
+            for bone_name in all_frames_by_bone.keys():                
+                # 準備（細分化）
+                prepare_spread_rotation_4_arm(motion, bone_name)
+
             # 手首から親までのボーンリンク
             links, indexes = model.create_link_2_top_one(end_bone_name)
             arm_links = []
@@ -245,82 +249,204 @@ def spread_rotation(motion, model, is_thinning):
                     break
 
                 arm_links.append(l)
-            
+
+            bone_framenos = []
+
+            # 末端から肩までの有効なキーをすべて対象とする
+            for b in arm_links:
+                if b.name in motion.frames:
+                    for x in motion.frames[b.name]:
+                        if x.key == True and x.frame not in bone_framenos:
+                            bone_framenos.append(x.frame)
+
+            bone_framenos.sort()
+
             for b in arm_links:
                 if b.name not in all_frames_by_bone:
                     all_frames_by_bone[b.name] = {}
 
-                for fno in range(motion.last_motion_frame+1):
+                if b.display == False:
+                    continue
+
+                for fno in bone_framenos:
                     # まず一旦登録する
                     bf = calc_bone_by_complement_by_bone(all_frames_by_bone, b.name, fno, is_only=False, is_exist=False)
                     all_frames_by_bone[b.name][fno] = bf
 
-    # ボーンの回転を分散する
-    target_bone_name_list = []
+                print("分散準備: %s" % (b.name))
 
-    for bone_name in all_frames_by_bone.keys():
-        if bone_name in model.bones.keys():
-            child_bone = model.bones[bone_name]
-            
-            # 親ボーン
-            parent_bone = model.bones[model.bone_indexes[child_bone.parent_index]]
+            for delegate_dic in utils.DELEGATE_BORN_LIST[end_bone_name]:
+                if delegate_dic["target"] not in model.bones or delegate_dic["delegate"] not in model.bones:
+                    # 処理対象ボーンか委譲対象ボーンが取れなかった場合、処理スルー
+                    continue
+                
+                target_bone = model.bones[delegate_dic["target"]]
+                delegate_bone = model.bones[delegate_dic["delegate"]]
 
-            if (parent_bone.name, child_bone.name) in utils.BORN_ROTATION_LIMIT:
-                # 上限が決められているボーンの組合せの場合
-                if child_bone.name not in target_bone_name_list:
-                    target_bone_name_list.append(child_bone.name)
-                if parent_bone.name not in target_bone_name_list:
-                    target_bone_name_list.append(parent_bone.name)
+                if target_bone.parent_index not in model.bone_indexes or delegate_bone.parent_index not in model.bone_indexes:
+                    # 処理対象ボーンか委譲対象ボーンの親が取れなかった場合、処理スルー
+                    continue
 
-                for fno in range(motion.last_motion_frame+1):
-                    child_bf = all_frames_by_bone[child_bone.name][fno]
-                    parent_bf = all_frames_by_bone[parent_bone.name][fno]
+                # 処理対象ボーンのローカル軸
+                parent_bone = model.bones[model.bone_indexes[target_bone.parent_index]]
+                target_local_axis, target_local_z_axis = utils.get_local_axis(target_bone, parent_bone)
+
+                # 委譲元ボーンのローカル軸
+                delegate_parent_bone = model.bones[model.bone_indexes[delegate_bone.parent_index]]
+                delegate_local_axis, delegate_local_z_axis = utils.get_local_axis(delegate_bone, delegate_parent_bone)
+    
+                for fno in sorted(all_frames_by_bone[target_bone.name].keys()):
+                    target_bf = all_frames_by_bone[target_bone.name][fno]
+                    delegate_bf = all_frames_by_bone[delegate_bone.name][fno]
 
                     # 回転を分散する
-                    parent_result_qq, child_result_qq = utils.spread_qq(fno, parent_bf.rotation, child_bf.rotation, utils.BORN_ROTATION_LIMIT[(parent_bone.name, child_bone.name)], child_bone.fixed_axis)
+                    target_result_qq, delegate_result_qq = utils.delegate_qq(delegate_dic, target_bf.rotation, delegate_bf.rotation, \
+                        target_local_axis, target_local_z_axis, delegate_local_axis, delegate_local_z_axis, fno)
 
-                    # 自身の回転量を再設定
-                    parent_bf.rotation = parent_result_qq
-                    child_bf.rotation = child_result_qq
+                    # 回転量を再設定
+                    target_bf.rotation = target_result_qq
+                    delegate_bf.rotation = delegate_result_qq
 
-                    if parent_bf.key == True:
-                        child_bf.key = True
+                    # どれかが有効なキーであれば、全部有効
+                    target_bf.key = delegate_bf.key = (target_bf.key or delegate_bf.key)
 
-                    all_frames_by_bone[parent_bone.name][fno] = parent_bf
-                    all_frames_by_bone[child_bone.name][fno] = child_bf
+                    all_frames_by_bone[target_bone.name][fno] = target_bf
+                    all_frames_by_bone[delegate_bone.name][fno] = delegate_bf
 
-                print("捩り分散: %s → %s" % (parent_bone.name, child_bone.name))
+                print("分散完了: %s → %s" % (delegate_bone.name, target_bone.name))
 
-    # ベジェ曲線で繋いで、有効なのだけ設定する
+    # 有効なのだけ設定する
     for bone_name in all_frames_by_bone.keys():
-        if bone_name in model.bones.keys() and len(all_frames_by_bone[bone_name]) > 2:
-            bone = model.bones[bone_name]
-
-            # if is_thinning:
-            #     if bone.name in target_bone_name_list:
-            #         # 間引きする場合
-            #         smooth_all_bf(all_frames_by_bone, model, bone.name, min(all_frames_by_bone[bone.name].keys()), max(all_frames_by_bone[bone.name].keys()), offset=0, is_comp_circle=False)
-            #     else:
-            #         # 間引き対象でかつ処理対象ボーンリストに含まれていない場合、処理スキップ
-            #         pass
-            # else:
-            #     # 間引きしない場合
-            #     for fno in all_frames_by_bone[bone.name].keys():
-            #         all_frames_by_bone[bone.name][fno].key = True
-
+        if bone_name in model.bones.keys() and len(all_frames_by_bone[bone_name]) > 0:
+            
             bone_frames = []
-            for fno in sorted(all_frames_by_bone[bone.name].keys()):
-                bf = all_frames_by_bone[bone.name][fno]
+            for fno in sorted(all_frames_by_bone[bone_name].keys()):
+                bf = all_frames_by_bone[bone_name][fno]
                 if fno == motion.last_motion_frame:
                     bf.key = True
                     bone_frames.append(bf)
                 elif fno < motion.last_motion_frame and bf.key == True:
                     bone_frames.append(bf)
             
-            if len(bone_frames) > 1:
-                motion.frames[bone.name] = bone_frames
+            if len(bone_frames) > 0:
+                motion.frames[bone_name] = bone_frames
 
-            print("再登録: %s" % (bone_name))
+
+def prepare_spread_rotation_4_arm(motion, bone_name):
+    if bone_name not in motion.frames:
+        return
+
+    for bf_idx in range(len(motion.frames[bone_name])):
+        if bf_idx == 0:
+            continue
+
+        prev_bf = motion.frames[bone_name][bf_idx - 1]
+        bf = motion.frames[bone_name][bf_idx]
+
+        rot_diff_euler = (prev_bf.rotation * bf.rotation.inverted()).toEulerAngles()
+        if abs(rot_diff_euler.x()) > 45 or abs(rot_diff_euler.y()) > 45 or abs(rot_diff_euler.z()) > 45:
+            # 回転量が半分近い場合、半分に分割しておく
+            spread_rotation_4_arm(motion, bone_name, prev_bf, bf, bf_idx)         
+
+# 補間曲線分割処理
+def spread_rotation_4_arm(motion, bone_name, prev_bf, bf, bf_idx):
+    frame_no = prev_bf.frame + round((bf.frame - prev_bf.frame) / 2)
+
+    if bf.frame != frame_no and prev_bf.frame != frame_no:
+        # キーが追加できる状態であれば、追加
+        # 補間曲線込みでキーフレーム生成
+        fillbf = utils.calc_bone_by_complement(motion.frames, bone_name, frame_no, True)
+        fillbf.key = True
+
+        motion.frames[bone_name].insert(bf_idx, fillbf)
+
+        # 前後がある場合、補間曲線を分割する
+        x1_idxs = utils.R_x1_idxs
+        y1_idxs = utils.R_y1_idxs
+        x2_idxs = utils.R_x2_idxs
+        y2_idxs = utils.R_y2_idxs
+        next_x1v = bf.complement[x1_idxs[3]]
+        next_y1v = bf.complement[y1_idxs[3]]
+        next_x2v = bf.complement[x2_idxs[3]]
+        next_y2v = bf.complement[y2_idxs[3]]
+        
+        sub_arm_ik.split_complement(motion, next_x1v, next_y1v, next_x2v, next_y2v, prev_bf, bf, fillbf, x1_idxs, y1_idxs, x2_idxs, y2_idxs, bone_name, ",")
+
+    # for bone_name in all_frames_by_bone.keys():
+    #     if bone_name in model.bones.keys():
+    #         child_bone = model.bones[bone_name]
+
+    #         if child_bone.parent_index < 0:
+    #             continue
+            
+    #         # 親ボーン
+    #         parent_bone = model.bones[model.bone_indexes[child_bone.parent_index]]
+            
+    #         if (parent_bone.name, child_bone.name) in utils.TWIST_BORN_ROTATION_LIMIT:
+    #             limit_dic = utils.TWIST_BORN_ROTATION_LIMIT[(parent_bone.name, child_bone.name)]
+
+    #             # ローカル軸の方向に回転させる場合
+    #             if parent_bone.local_x_vector == QVector3D():
+    #                 # ローカル軸の指定が無い場合、子ボーンの方向
+    #                 parent_local_x_axis = parent_bone.position - child_bone.position
+    #             else:
+    #                 # ローカル軸の指定がある場合、その方向
+    #                 parent_local_x_axis = parent_bone.local_x_vector
+            
+    #             for fno in sorted(all_frames_by_bone[child_bone.name].keys()):
+    #                 child_bf = all_frames_by_bone[child_bone.name][fno]
+    #                 parent_bf = all_frames_by_bone[parent_bone.name][fno]
+    #                 if root_bone:
+    #                     root_bf = all_frames_by_bone[root_bone.name][fno]
+    #                 else:
+    #                     root_bf = VmdBoneFrame()
+                    
+    #                 # 回転を分散する
+    #                 root_result_qq, parent_result_qq, child_result_qq = utils.spread_qq(fno, root_bf.rotation, parent_bf.rotation, child_bf.rotation, limit_dic, root_local_axis, parent_local_axis, child_bone.fixed_axis, root_distance, parent_distance)
+
+    #                 # 自身の回転量を再設定
+    #                 root_bf.rotation = root_result_qq
+    #                 parent_bf.rotation = parent_result_qq
+    #                 child_bf.rotation = child_result_qq
+
+    #                 # どれかが有効なキーであれば、全部有効
+    #                 root_bf.key = parent_bf.key = child_bf.key = (root_bf.key or parent_bf.key or child_bf.key)
+
+    #                 all_frames_by_bone[parent_bone.name][fno] = parent_bf
+    #                 all_frames_by_bone[child_bone.name][fno] = child_bf
+
+    #             print("回転分散完了: %s → %s" % (parent_bone.name, child_bone.name))
+
+    # # ベジェ曲線で繋いで、有効なのだけ設定する
+    # for bone_name in all_frames_by_bone.keys():
+    #     if bone_name in model.bones.keys() and len(all_frames_by_bone[bone_name]) > 2:
+    #         bone = model.bones[bone_name]
+
+    #         # if is_thinning:
+    #         #     if bone.name in target_bone_name_list:
+    #         #         # 間引きする場合
+    #         #         smooth_all_bf(all_frames_by_bone, model, bone.name, min(all_frames_by_bone[bone.name].keys()), max(all_frames_by_bone[bone.name].keys()), offset=0, is_comp_circle=False)
+    #         #     else:
+    #         #         # 間引き対象でかつ処理対象ボーンリストに含まれていない場合、処理スキップ
+    #         #         pass
+    #         # else:
+    #         #     # 間引きしない場合
+    #         #     for fno in all_frames_by_bone[bone.name].keys():
+    #         #         all_frames_by_bone[bone.name][fno].key = True
+
+    #         bone_frames = []
+    #         for fno in sorted(all_frames_by_bone[bone.name].keys()):
+    #             bf = all_frames_by_bone[bone.name][fno]
+    #             if fno == motion.last_motion_frame:
+    #                 bf.key = True
+    #                 bone_frames.append(bf)
+    #             elif fno < motion.last_motion_frame and bf.key == True:
+    #                 bone_frames.append(bf)
+            
+    #         if len(bone_frames) > 1:
+    #             motion.frames[bone.name] = bone_frames
+
+    #         # print("再登録: %s" % (bone_name))
 
 
 def split_bf(all_frames_by_bone, model, bone_name, axis, prev_prev_bf, prev_bf, now_bf, next_bf, is_comp_circle, is_seam_smooth):

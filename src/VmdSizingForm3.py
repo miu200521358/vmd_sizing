@@ -144,10 +144,23 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		bSizer4.Add( bSizer6, 0, wx.EXPAND, 5 )
 
+		bSizer48 = wx.BoxSizer( wx.HORIZONTAL )
+
 		self.m_staticText10 = wx.StaticText( self.m_panelFile, wx.ID_ANY, u"モーション作成元モデルPMXファイル", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText10.Wrap( -1 )
 
-		bSizer4.Add( self.m_staticText10, 0, wx.ALL, 5 )
+		bSizer48.Add( self.m_staticText10, 0, wx.ALL, 5 )
+
+		self.m_staticText101 = wx.StaticText( self.m_panelFile, wx.ID_ANY, u"　　", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText101.Wrap( -1 )
+		bSizer48.Add( self.m_staticText101, 0, wx.ALL, 5 )
+
+		# 代替モデル（スタンス補正無効）
+		self.m_checkAlternativeModel = wx.CheckBox( self.m_panelFile, wx.ID_ANY, u"代替モデル", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_checkAlternativeModel.SetToolTip( u"チェックを入れると、センターや上半身などの細かいスタンス補正をスキップできます。" )
+		bSizer48.Add( self.m_checkAlternativeModel, 0, wx.ALL, 5 )
+
+		bSizer4.Add( bSizer48, 0, wx.ALL, 0 )
 
 		bSizer7 = wx.BoxSizer( wx.HORIZONTAL )
 
@@ -163,10 +176,23 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		bSizer4.Add( bSizer7, 0, wx.EXPAND, 5 )
 
+		bSizer481 = wx.BoxSizer( wx.HORIZONTAL )
+
 		self.m_staticText11 = wx.StaticText( self.m_panelFile, wx.ID_ANY, u"モーション変換先モデルPMXファイル", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText11.Wrap( -1 )
 
-		bSizer4.Add( self.m_staticText11, 0, wx.ALL, 5 )
+		bSizer481.Add( self.m_staticText11, 0, wx.ALL, 5 )
+
+		self.m_staticText102 = wx.StaticText( self.m_panelFile, wx.ID_ANY, u"　　", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText102.Wrap( -1 )
+		bSizer481.Add( self.m_staticText102, 0, wx.ALL, 5 )
+
+		# 代替モデル（スタンス補正無効）
+		self.m_checkNoDelegate = wx.CheckBox( self.m_panelFile, wx.ID_ANY, u"捩り分散不要", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_checkNoDelegate.SetToolTip( u"チェックを入れると、腕捻り等への分散処理をスキップできます。" )
+		bSizer481.Add( self.m_checkNoDelegate, 0, wx.ALL, 5 )
+
+		bSizer4.Add( bSizer481, 0, wx.ALL, 0 )
 
 		bSizer8 = wx.BoxSizer( wx.HORIZONTAL )
 
@@ -2488,6 +2514,8 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_fileOrgPmx.Disable()
 		self.m_fileRepPmx.Disable()
 		self.m_fileOutputVmd.Disable()
+		self.m_checkAlternativeModel.Disable()
+		self.m_checkNoDelegate.Disable()
 		# 履歴ボタン押下不可
 		self.m_btnHistoryVmd.Disable()
 		self.m_btnHistoryOrgPmx.Disable()
@@ -2542,6 +2570,8 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_fileOrgPmx.Enable()
 		self.m_fileRepPmx.Enable()
 		self.m_fileOutputVmd.Enable()
+		self.m_checkAlternativeModel.Enable()
+		self.m_checkNoDelegate.Enable()
 		# 履歴ボタン押下可
 		self.m_btnHistoryVmd.Enable()
 		self.m_btnHistoryOrgPmx.Enable()
@@ -3142,6 +3172,8 @@ class ExecWorkerThread(Thread):
 				, self._notify_window.m_camera_fileOrgPmx.GetPath()
 				, self._notify_window.m_camera_fileOutputVmd.GetPath()
 				, self._notify_window.m_camera_spinYoffset.GetValue()
+				, self._notify_window.m_checkAlternativeModel.GetValue()
+				, self._notify_window.m_checkNoDelegate.GetValue()
 			)
 
 		# Here's where the result would be returned (this is an

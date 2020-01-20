@@ -682,6 +682,39 @@ class TestSubStance(unittest.TestCase):
         print("ok_list LIST: %s" % ok_list)
         self.assertGreater(len(ok_list), 0)
         
+    def test_upper_stance_upper2_up_26(self):
+        rep_upper2_initial_slope_test_param00 = ["上半身", "上半身2", "頭", "首"]
+        rep_upper2_initial_slope_test_param01 = ["上半身", "上半身2", "頭", "首"]
+        rep_upper2_initial_slope_test_param02 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param03 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param04 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param05 = ["上半身", "上半身2", "頭", "首"]
+        rep_upper2_initial_slope_test_param06 = ["上半身", "上半身2", "頭", "首"]
+        rep_upper2_initial_slope_test_param07 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param08 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param09 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param10 = ["d1","d1i","d2","d2i","d3","d3i","00"]
+        rep_upper2_initial_slope_test_param11 = ["d1","d1i","d2","d2i","d3","d3i","00"]
+        rep_upper2_initial_slope_test_param12 = ["d1","d1i","d2","d2i","d3","d3i","00"]
+
+        # 直積
+        target_test_params_base = list(itertools.product(rep_upper2_initial_slope_test_param00, rep_upper2_initial_slope_test_param01, \
+            rep_upper2_initial_slope_test_param02, rep_upper2_initial_slope_test_param03, rep_upper2_initial_slope_test_param04, \
+            rep_upper2_initial_slope_test_param05, rep_upper2_initial_slope_test_param06, rep_upper2_initial_slope_test_param07, \
+            rep_upper2_initial_slope_test_param08, rep_upper2_initial_slope_test_param09, rep_upper2_initial_slope_test_param10, \
+            rep_upper2_initial_slope_test_param11, rep_upper2_initial_slope_test_param12))
+
+        target_test_params_list = [(x00, x01, x02, x03, x04, x05, x06, x07, x08, x09, x10, x11, x12) \
+            for (x00, x01, x02, x03, x04, x05, x06, x07, x08, x09, x10, x11, x12) \
+            in target_test_params_base if x00 != x01 and x05 != x06 and x10[:2] != x11[:2] != x12[:2]]
+
+        random.shuffle(target_test_params_list)
+
+        ok_list = self.calc_stance(target_test_params_list, 1, False, "026_05")
+
+        print("ok_list LIST: %s" % ok_list)
+        self.assertGreater(len(ok_list), 0)
+        
 
 
 
@@ -730,6 +763,7 @@ class TestSubStance(unittest.TestCase):
         camera_pmx = None
         output_camera_vmd_path = None
         camera_y_offset = 0
+        is_alternative_model = False
         base_path = "E:/MMD/vmd_sizing/vmd/input_upper2_up"
 
         logger.info("len: %s", len(target_test_params))
@@ -756,7 +790,7 @@ class TestSubStance(unittest.TestCase):
             try:
                 main.main(copy_motion, trace_model, replace_model, output_vmd_path, \
                     is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, vmd_choice_values, rep_choice_values, rep_rate_values, \
-                    camera_motion, camera_vmd_path, camera_pmx, output_camera_vmd_path, camera_y_offset, test_param)
+                    camera_motion, camera_vmd_path, camera_pmx, output_camera_vmd_path, camera_y_offset, is_alternative_model, test_param)
             except Exception as e:
                 print(traceback.format_exc())
                 continue
@@ -824,4 +858,4 @@ class TestSubStance(unittest.TestCase):
         return ok_list
 
 if __name__ == "__main__":
-    unittest.main(defaultTest="TestSubStance.test_upper_stance_upper2_up_25")
+    unittest.main(defaultTest="TestSubStance.test_upper_stance_upper2_up_26")

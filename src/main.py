@@ -6,6 +6,7 @@ import logging
 import traceback
 import re
 import copy
+import winsound
 from datetime import datetime
 from pathlib import Path
 from PyQt5.QtGui import QQuaternion, QVector3D, QVector2D, QMatrix4x4, QVector4D
@@ -26,7 +27,7 @@ level = {0:logging.ERROR,
 
 def main(motion, trace_model, replace_model, output_vmd_path, \
     is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, vmd_choice_values, rep_choice_values, rep_rate_values, \
-    camera_motion, camera_vmd_path, camera_pmx, output_camera_vmd_path, camera_y_offset, test_param):   
+    camera_motion, camera_vmd_path, camera_pmx, output_camera_vmd_path, camera_y_offset, is_alternative_model, is_no_delegate, test_param):   
     # print("モーション: %s" % motion.path)
     # if camera_motion:
     #     print("カメラモーション: %s" % camera_motion.path)
@@ -44,7 +45,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, \
     is_success = sub_move.exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames) and is_success
 
     # スタンス補正処理
-    is_success = sub_arm_stance.exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger, test_param) and is_success
+    is_success = sub_arm_stance.exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, is_alternative_model, is_no_delegate, error_file_logger, test_param) and is_success
 
     # 腕IK処理
     is_success = sub_arm_ik.exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, org_motion_frames, error_file_logger) and is_success
@@ -129,6 +130,8 @@ if __name__=="__main__":
     parser.add_argument('--camera_pmx_path', dest='camera_pmx_path', help='camera_pmx_path', type=str)
     parser.add_argument('--camera_y_offset', dest='camera_y_offset', help='camera_y_offset', type=float)
     parser.add_argument('--output_path', dest='output_path', help='output_path', default="", type=str)
+    parser.add_argument('--alternative_model', dest='alternative_model', help='alternative_model', default="", type=int)
+    parser.add_argument('--no_delegate', dest='no_delegate', help='no_delegate', default="", type=int)
     parser.add_argument('--test_param', dest='test_param', help='test_param', default="", type=str)
     parser.add_argument('--verbose', dest='verbose', help='verbose', type=int)
     args = parser.parse_args()
@@ -167,6 +170,9 @@ if __name__=="__main__":
         is_floor_hand_down = True if args.floor_hand_down == 1 else False
         is_finger_ik = True if args.finger_ik == 1 else False
 
+        is_alternative_model = True if args.alternative_model == 1 else False
+        is_no_delegate = True if args.no_delegate == 1 else False
+
         camera_motion = None
         output_camera_vmd_path = None
         if args.camera_vmd_path:
@@ -182,7 +188,10 @@ if __name__=="__main__":
         main(motion, trace_model, replace_model, output_vmd_path, \
             is_avoidance, is_avoidance_finger, is_hand_ik, args.hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, args.hand_floor_distance, args.leg_floor_distance, \
             is_finger_ik, args.finger_distance, args.vmd_choice_values.split(","), args.rep_choice_values.split(","), args.rep_rate_values.split(","), \
-            camera_motion, args.camera_vmd_path, camera_pmx, output_camera_vmd_path, args.camera_y_offset, args.test_param.split(","))
+            camera_motion, args.camera_vmd_path, camera_pmx, output_camera_vmd_path, args.camera_y_offset, is_alternative_model, is_no_delegate, args.test_param.split(","))
+
+        # 終了音を鳴らす
+        winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
 
     except SizingException as e:
         print("■■■■■■■■■■■■■■■■■")
@@ -192,6 +201,9 @@ if __name__=="__main__":
         print("")
         print(e.message)
 
+        # 終了音を鳴らす
+        winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
+
     except Exception as e:
         print("■■■■■■■■■■■■■■■■■")
         print("■　**ERROR**　")
@@ -200,3 +212,5 @@ if __name__=="__main__":
 
         print(traceback.format_exc())
 
+        # 終了音を鳴らす
+        winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)

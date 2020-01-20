@@ -217,67 +217,97 @@ def create_matrix(model, links, frames, bf, scales=None):
     
     return trans_vs, add_qs, scale_l, matrixs
 
-# 回転を分散させる
-def spread_qq(fno, parent_qq, child_qq, parent_params, child_fixed_axis):
-    # 親の回転から上限下限を抜き出した回転量を抽出
-    parent_result_qq = copy.deepcopy(parent_qq)
-    child_result_qq = copy.deepcopy(child_qq)
-    
-    # 親のねじれを子に分散させる
-    if child_fixed_axis == QVector3D():
-        # 子が普通の場合
-        parent_result_qq = parent_qq
+# 子の回転を親に分散させる
+def delegate_qq(delegate_dic, target_qq, delegate_qq, target_local_axis, target_local_z_axis, delegate_local_axis, delegate_local_z_axis, fno):
+    target_result_qq = copy.deepcopy(target_qq)
+    delegate_result_qq = copy.deepcopy(delegate_qq)
+
+    # 委譲元の処理対象角度
+    delegate_axis_euler = delegate_qq.toEulerAngles() * delegate_dic["axis"]
+    # if delegate_axis_euler.x() <= 0:
+    #     delegate_axis_euler.setX( 360 - delegate_axis_euler.x() )
+    # if delegate_axis_euler.y() <= 0:
+    #     delegate_axis_euler.setY( 360 - delegate_axis_euler.y() )
+    # if delegate_axis_euler.z() <= 0:
+    #     delegate_axis_euler.setZ( 360 - delegate_axis_euler.z() )
+    delegate_axis_qq = QQuaternion.fromEulerAngles(delegate_axis_euler)
+
+    if delegate_dic["is_parent"] == True:
+        # 親の場合は子に回転を加算する
+        delegate_work_qq = delegate_axis_qq * target_qq
     else:
-        # 子が捩りの場合 --------------------            
-        # 捩り軸に統合させた角度を取得する
-        parent_spread_xeuler = parent_qq.toEulerAngles()
-        extra_xvec = QVector3D()
+        # 子の場合は減算する
+        delegate_work_qq = delegate_axis_qq
 
-        if child_fixed_axis.x() > 0:
-            # 左腕
-            if parent_spread_xeuler.x() <= parent_params["limit"][0]:
-                # 下限の回転量
-                extra_xvec.setX(360 - (parent_spread_xeuler.x() - parent_params["limit"][0]))
-            elif parent_spread_xeuler.x() >= parent_params["limit"][1]:
-                # 上限の回転量
-                extra_xvec.setX(parent_spread_xeuler.x() - parent_params["limit"][1])
-        else:
-            # 右腕
-            if parent_spread_xeuler.x() <= parent_params["limit"][0]:
-                # 下限の回転量
-                extra_xvec.setX(parent_spread_xeuler.x() - parent_params["limit"][0])
-            elif parent_spread_xeuler.x() >= parent_params["limit"][1]:
-                # 上限の回転量
-                extra_xvec.setX(360 - (parent_spread_xeuler.x() - parent_params["limit"][1]))
+    # 委譲元の角度
+    delegate_extra_degree = degrees(2 * (acos(min(1, max(-1, delegate_work_qq.scalar())))))
+    if "左" in delegate_dic["target"]:
+        delegate_extra_degree = -delegate_extra_degree
 
-        if extra_xvec != QVector3D():
-            base_extra_qq = parent_qq * QQuaternion.fromEulerAngles(extra_xvec)
-            degree = degrees(2 * acos(min(1, max(-1, base_extra_qq.scalar()))))
+    # 委譲先用の回転量
+    if delegate_dic["is_parent"] == True:
+        target_extra_qq = QQuaternion.fromAxisAndAngle(target_local_axis, delegate_extra_degree) * target_qq.inverted()
 
-            # 子が軸制限ある場合、軸にあった回転量にする
-            child_extra_qq = QQuaternion.fromAxisAndAngle(child_fixed_axis, degree)
-            child_result_qq = child_extra_qq * child_qq
+        # 委譲先に、余分な角度を加算する
+        target_result_qq = target_extra_qq * target_qq
 
-            # 残りを親に戻す
-            parent_result_qq = parent_qq * child_extra_qq.inverted()
-            logger.debug(parent_result_qq)
-        else:
-            parent_result_qq = parent_qq
+        # 委譲元は、余分な角度を除く
+        delegate_result_qq = delegate_qq * target_extra_qq.inverted()
+    else:
+        target_extra_qq = QQuaternion.fromAxisAndAngle(target_local_axis, delegate_extra_degree)
 
-    return parent_result_qq, child_result_qq
+        # 委譲先に、余分な角度を加算する
+        target_result_qq = target_qq * target_extra_qq
 
+        # 委譲元は、余分な角度を除く
+        delegate_result_qq = target_extra_qq.inverted() * delegate_qq
 
-# ボーン回転の上限
-# 参考: http://www.japanpt.or.jp/upload/jspt/obj/files/publiccomment/4_rom_20140612.pdf
-BORN_ROTATION_LIMIT = {
-    ("左腕","左腕捩"): {"limit": [-45, 45]}
-    , ("左ひじ","左手捩"): {"limit": [-45, 45]}
-    , ("右腕","右腕捩"): {"limit": [-45, 45]}
-    , ("右ひじ","右手捩"): {"limit": [-45, 45]}
+    logger.debug(delegate_result_qq)
+
+    return target_result_qq, delegate_result_qq
+
+# # キー：集約先のボーン名、値：集約元のボーン（ボーン名と制限角度）
+DELEGATE_BORN_LIST = {
+    "左手首": [
+        {"target":"左手捩", "delegate": "左手首", "is_parent": False, "axis": QVector3D(1, 0, 0)}
+        , {"target":"左腕捩", "delegate": "左ひじ", "is_parent": False, "axis": QVector3D(1, 0, 0)}
+        , {"target":"左手捩", "delegate": "左ひじ", "is_parent": True, "axis": QVector3D(1, 1, 1)}
+        , {"target":"左腕捩", "delegate": "左腕", "is_parent": True, "axis": QVector3D(1, 1, 1)}
+    ], 
+    "右手首": [
+        {"target":"右手捩", "delegate": "右手首", "is_parent": False, "axis": QVector3D(1, 0, 0)}
+        , {"target":"右腕捩", "delegate": "右ひじ", "is_parent": False, "axis": QVector3D(1, 0, 0)}
+        , {"target":"右手捩", "delegate": "右ひじ", "is_parent": True, "axis": QVector3D(1, 1, 1)}
+        , {"target":"右腕捩", "delegate": "右腕", "is_parent": True, "axis": QVector3D(1, 1, 1)}
+    ]
 }
+#     "左手捩": [{"左手首": {"is_parent": False, "axis": QVector3D(1, 0, 0)}}, {"左ひじ": {"is_parent": True, "axis": QVector3D(1, 1, 1)}}]
+#     , "左腕捩": [{"左ひじ": {"is_parent": False, "axis": QVector3D(1, 1, 1)}}, {"左腕": {"is_parent": True, "axis": QVector3D(1, 1, 1)}}]
+#     # , "左肩": [{"左腕": {"is_parent": False, "axis": QVector3D(0, 1, 1)}}]
+#     , "右手捩": [{"右手首": {"is_parent": False, "axis": QVector3D(1, 0, 0)}}, {"右ひじ": {"is_parent": True, "axis": QVector3D(1, 1, 1)}}]
+#     , "右腕捩": [{"右ひじ": {"is_parent": False, "axis": QVector3D(1, 1, 1)}}, {"右腕": {"is_parent": True, "axis": QVector3D(1, 1, 1)}}]
+#     # , "右肩": [{"右腕": {"is_parent": False, "axis": QVector3D(0, 1, 1)}}]
+
+def get_local_axis(bone, parent_bone):
+    if bone.fixed_axis != QVector3D():
+        # 軸制限がある場合、それを優先させる
+        x_axis = bone.fixed_axis
+    elif bone.local_x_vector != QVector3D():
+        # ローカル軸の指定がある場合、その方向
+        x_axis = bone.local_x_vector
+    else:
+        # ローカル軸の指定が無い場合、子ボーンの方向
+        x_axis = parent_bone.position - bone.position
+
+    if bone.local_z_vector != QVector3D():
+        z_axis = bone.local_z_vector
+    else:
+        z_axis = QVector3D(0, 0, 1)
+
+    return x_axis, z_axis
 
 # 指定ボーンの最終的なローカル軸の向きを返す
-def calc_local_axis(model, bone_name):
+def calc_local_axis(model, bone_name, is_rotation=False):
     # そのボーンの最終的な向き先を取得
     links, indexes = model.create_link_2_top_all(bone_name)
 

@@ -9,26 +9,36 @@ from VmdWriter import VmdWriter, VmdBoneFrame
 from VmdReader import VmdReader
 from PmxModel import PmxModel, SizingException
 from PmxReader import PmxReader
-import utils, sub_arm_ik, sub_move
+import utils, sub_arm_ik, sub_move, convert_smooth
 
 logger = logging.getLogger("VmdSizing").getChild(__name__)
 
 is_print1 = True
 
-def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger, test_param):
+def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger, is_alternative_model, is_no_delegate, test_param):
     if motion.motion_cnt > 0:
-        # センタースタンス補正
-        adjust_center_stance(motion, trace_model, replace_model, org_motion_frames)
+        
+        if not is_alternative_model:
+            # センタースタンス補正
+            adjust_center_stance(motion, trace_model, replace_model, org_motion_frames)
 
-        if trace_model.can_upper_sizing and replace_model.can_upper_sizing:
-            # 上半身補正
-            adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger, test_param)
+        # if trace_model.can_upper_sizing and replace_model.can_upper_sizing and not is_alternative_model:
+        #     # 上半身補正
+        #     adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger, test_param)
 
-        # if trace_model.can_arm_sizing and replace_model.can_arm_sizing:
-        #     # 肩補正
-        #     adjust_shoulder_stance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger, test_param)
-        #     # 腕補正
-        #     adjust_arm_stance(motion, trace_model, replace_model, org_motion_frames, test_param)
+        if trace_model.can_arm_sizing and replace_model.can_arm_sizing:
+            if not is_alternative_model:
+                # # 肩補正
+                # adjust_shoulder_stance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger, test_param)
+                # 腕補正
+                adjust_arm_stance(motion, trace_model, replace_model, org_motion_frames, test_param)
+            else:
+                # 腕補正
+                adjust_arm_stance(motion, trace_model, replace_model, org_motion_frames, test_param)
+        
+        if not is_no_delegate:
+            # 捩り分散
+            convert_smooth.spread_rotation(motion, replace_model, True)
 
     return True
 
@@ -313,23 +323,9 @@ def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org
         # 上半身から上半身2への傾き
         org_upper_slope = (trace_model.bones["頭"].position - trace_model.bones["上半身"].position).normalized()
         rep_upper_slope = (replace_model.bones["頭"].position - replace_model.bones["上半身"].position).normalized()
-
-        # test_tareget = rep_upper_slope
-        # rot_params = {"x": test_tareget.x(), "y": test_tareget.y(), "z": test_tareget.z(), \
-        #                 "x-": -test_tareget.x(), "y-": -test_tareget.y(), "z-": -test_tareget.z(), \
-        #                 "1": 1, "1-": -1, "1.75": 1.75, "1.75-": -1.75, "0": 0}
-        # rep_upper_slope_up = QVector3D(rot_params[test_param[0]], rot_params[test_param[1]], rot_params[test_param[2]]).normalized()
-
         rep_upper_slope_up = QVector3D(-1, 0, 0)
-
-        # 四つん這いモデル
-        # rep_target_slope_up = QVector3D.crossProduct(org_target_slope, rep_target_slope)
-        # if rep_target_slope_up == QVector3D():
-        #     # 元モデルと先モデルが同じ場合、初期値に戻る
-        #     rep_target_slope_up = QVector3D(-1, 0, 0)
-        # rep_target_slope_cross = QVector3D.crossProduct(rep_target_slope, rep_target_slope_up).normalized()
-
         rep_upper_slope_cross = QVector3D.crossProduct(rep_upper_slope, rep_upper_slope_up).normalized()
+        
         logger.debug("上半身 slope: %s", rep_upper_slope)
         logger.debug("上半身 cross: %s", rep_upper_slope_cross)
 
@@ -351,7 +347,6 @@ def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org
 
         # 子の角度調整
         # adjust_rotation_by_parent(org_motion_frames, motion, trace_model, replace_model, "首", "上半身", test_param)
-        # adjust_rotation_by_parent(org_motion_frames, motion, trace_model, replace_model, "上半身2", "上半身", test_param)
         # adjust_rotation_by_parent(org_motion_frames, motion, trace_model, replace_model, "右肩", "上半身", test_param)
         # adjust_rotation_by_parent(org_motion_frames, motion, trace_model, replace_model, "右肩", "上半身", test_param)
 
@@ -365,152 +360,6 @@ def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org
             org_head_links, org_head_indexes = trace_model.create_link_2_top_one("頭")
             rep_head_links, rep_head_indexes = replace_model.create_link_2_top_one("頭")
 
-            # 頭,上半身2,0,0,0,首,上半身,x-,y-,z,1,d2,1,首,上半身2_True,True,False,False,False,False_ 0.89#-0.00# 0.00,-13.09# 5.63#-0.06,-4.60#-14.79#-15.53
-            # 頭,上半身2,0,0,0,首,上半身,x-,z,y,1,d2,1,首,上半身2_True,True,False,False,False,False_ 0.89#-0.00# 0.00,-13.09# 5.63#-0.06,-4.60#-14.79#-15.53
-            # 頭,上半身2,0,0,0,首,上半身,x,z-,y,d2,1,1,首,上半身2_True,True,False,False,False,False_ 0.89#-0.00# 0.00,-13.09# 5.63#-0.06,-4.60#-14.79#-15.53
-            # 頭,上半身2,0,0,0,首,上半身,z,x,y,1,d2i,1,首,上半身2_False,True,False,False,False,False_ 0.89# 0.00#-6.11,-13.09# 5.63#-6.17,-4.60#-14.79#-21.64
-            # 上半身2,首,1-,0,1,d3i,d3i,d2,0,1,1-_False,False,False,False,True,False_ 1.26# 0.13# 3.60,-5.71# 0.15# 4.08,-0.44# 0.07#-0.77
-            # test_param = ["頭","上半身2","0","0","0","首","上半身","z","x","y","1","d2i","1","首","上半身2"]
-            # test_param = ["上半身2","頭","0","0","0","首","上半身2","0","1","0","首","上半身"]
-            # upper_direction_qq = utils.calc_upper_direction_qq(replace_model, rep_upper_links, motion.frames, bf)
-            # test_param = ["上半身2","首","1-","0","1","d3i","d3i","d2","0","1","1-"]
-
-            # rep_upper2_initial_slope2_to = replace_model.bones[test_param[5]].position
-            # rep_upper2_initial_slope2_from = replace_model.bones[test_param[6]].position
-            # rep_upper2_initial_slope2 = (rep_upper2_initial_slope1_to - rep_upper2_initial_slope1_from).normalized()
-
-            # number_params = {"1": 1, "1-": -1, "1.75": 1.75, "1.75-": -1.75, "0": 0,
-            #     "x": rep_upper2_initial_slope2.x(), "x-": -rep_upper2_initial_slope2.x(), 
-            #     "y": rep_upper2_initial_slope2.y(), "y-": -rep_upper2_initial_slope2.y(), 
-            #     "z": rep_upper2_initial_slope2.z(), "z-": -rep_upper2_initial_slope2.z()}
-            # rep_upper2_initial_slope2_up = QVector3D(number_params[test_param[7]], number_params[test_param[8]], number_params[test_param[9]]).normalized()
-            # test_param1 = [test_param[5], test_param[6]]
-
-            # number_params = {"1": 1, "1-": -1, "1.75": 1.75, "1.75-": -1.75, "0": 0}
-            # rep_upper2_initial_slope2_up = QVector3D(number_params[test_param[7]], number_params[test_param[8]], number_params[test_param[9]]).normalized()
-
-            # # number_params = {"1": 1, "1-": -1, "1.75": 1.75, "1.75-": -1.75, "0": 0}
-            # # test_param3 = [number_params[test_param[0]], number_params[test_param[1]], number_params[test_param[2]]]
-            # # rep_upper2_initial_slope1_up = QVector3D(test_param3[0], test_param3[1], test_param3[2]).normalized()
-
-            # # test_param2 = [test_param[2], test_param[3]]
-            # rep_upper2_initial_slope2_to = replace_model.bones["右腕"].position
-            # rep_upper2_initial_slope2_from = replace_model.bones["左腕"].position
-            # rep_upper2_initial_slope2 = (rep_upper2_initial_slope2_to - rep_upper2_initial_slope2_from).normalized()
-            # rep_upper2_initial_slope2_up = QVector3D(0, 0, -1).normalized()
-
-            # number_params = {"1": 1, "1-": -1, "1.75": 1.75, "1.75-": -1.75, "0": 0}
-            # test_param3 = [number_params[test_param[5]], number_params[test_param[6]], number_params[test_param[7]]]
-            # rep_upper2_initial_slope2_up = QVector3D(test_param3[0], test_param3[1], test_param3[2]).normalized()
-
-            # # direction_params = {"s1": rep_upper2_initial_slope1, "u1": rep_upper2_initial_slope1_up}
-            # # test_param4 = [direction_params[test_param[3]], direction_params[test_param[4]]]
-
-            # rep_upper2_initial_slope3_to = replace_model.bones[test_param[0]].position
-            # rep_upper2_initial_slope3_from = replace_model.bones[test_param[1]].position
-            # rep_upper2_initial_slope3 = (rep_upper2_initial_slope1_to - rep_upper2_initial_slope1_from).normalized()
-
-            # rep_upper2_initial_slope4_to = replace_model.bones[test_param[2]].position
-            # rep_upper2_initial_slope4_from = replace_model.bones[test_param[3]].position
-            # rep_upper2_initial_slope4 = (rep_upper2_initial_slope1_to - rep_upper2_initial_slope1_from).normalized()
-
-            # rep_upper2_initial_slope5_qq = QQuaternion.fromDirection(rep_upper2_initial_slope3, rep_upper2_initial_slope4)
-
-            # direction_params = {"n": rep_upper2_initial_slope5_qq, "i": rep_upper2_initial_slope5_qq.inverted()}  
-
-            # rep_upper2_initial_slope_qq = QQuaternion.fromDirection(QVector3D.crossProduct(rep_upper2_initial_slope2_up, rep_upper2_initial_slope2), rep_upper2_initial_slope1) * direction_params[test_param[4]]
-
-            # # rep_upper2_initial_slope2_up = QVector3D(rot_params[test_param[3]], rot_params[test_param[4]], rot_params[test_param[5]]).normalized()
-
-            # test_tareget = rep_upper2_initial_slope1
-            # rot_params = {"x": test_tareget.x(), "y": test_tareget.y(), "z": test_tareget.z(), \
-            #                 "x-": -test_tareget.x(), "y-": -test_tareget.y(), "z-": -test_tareget.z(), \
-            #                 "1": 1, "1-": -1, "1.75": 1.75, "1.75-": -1.75, "0": 0}
-            # rep_upper2_initial_slope1_up = QVector3D(rot_params[test_param[2]], rot_params[test_param[3]], rot_params[test_param[4]]).normalized()
-
-            # # rep_upper2_initial_slope1_qq = QQuaternion.fromDirection(rep_upper2_initial_slope1, rep_upper2_initial_slope1_up)
-
-            # # --------------
-
-            # # -------------------
-
-            # rot_params = {"1": rep_upper2_initial_slope1_qq, "1-": rep_upper2_initial_slope1_qq.inverted(), \
-            #     "2": rep_upper2_initial_slope2_qq, "2-": rep_upper2_initial_slope2_qq.inverted(), 
-            #     "3": rep_upper_initial_slope_qq, "3-": rep_upper_initial_slope_qq.inverted(), }
-
-            # rep_upper2_initial_slope_qq = rot_params[test_param[6]] * rot_params[test_param[7]]
-
-            # rep_upper2_slope_up_to = replace_model.bones[test_param[2]].position
-            # rep_upper2_slope_up_from = replace_model.bones[test_param[3]].position
-            # rep_upper2_slope_up_direction = rep_upper2_slope_up_to - rep_upper2_slope_up_from
-
-
-            # rep_upper2_slope_up = QVector3D.crossProduct(rep_upper2_slope_up_direction, rep_upper2_slope_up_up)
-
-            # rep_upper2_initial_slope = QQuaternion.fromDirection(rep_upper2_slope, rep_upper2_slope_up)
-
-
-            # # 上半身2から頭への傾き
-            # rep_upper2_slope_to = replace_model.bones[test_param[0]].position
-            # rep_upper2_slope_from = replace_model.bones[test_param[1]].position
-            # rep_upper2_slope = (rep_upper2_slope_to - rep_upper2_slope_from).normalized()
-
-
-
-            # rep_upper2_slope_up = QVector3D.crossProduct(rep_upper2_slope_up_direction, rep_upper2_slope_up_up)
-
-            # rep_upper2_initial_slope = QQuaternion.fromDirection(rep_upper2_slope, rep_upper2_slope_up)
-
-
-            # rep_upper2_slope_up_up_to = replace_model.bones[test_param[4]].position
-            # rep_upper2_slope_up_up_from = replace_model.bones[test_param[5]].position
-            # rep_upper2_slope_up_up_direction = rep_upper2_slope_up_up_to - rep_upper2_slope_up_up_from
-
-
-
-
-
-            # rep_upper2_slope_up_direction = (replace_model.bones["頭"].position - replace_model.bones["首"].position).normalized()
-            # rep_upper2_slope_up_direction = (replace_model.bones["左腕"].position - replace_model.bones["右腕"].position).normalized()
-
-
-            # # rep_upper2_slope_up_up = QVector3D(0, -1, -1)
-            # # rep_upper2_slope_up = QVector3D.crossProduct(rep_upper2_slope_up_direction, rep_upper2_slope_up_up)
-            # # rep_upper2_slope_up = QVector3D(-1, 0, 0)
-
-            # rep_upper2_slope_up_direction_to = replace_model.bones[test_param[0]].position
-            # rep_upper2_slope_up_direction_from = replace_model.bones[test_param[1]].position
-            # rep_upper2_slope_up_direction_direction = rep_upper2_slope_up_direction_to - rep_upper2_slope_up_direction_from
-
-            # test_tareget = rep_upper2_slope
-            # rot_params = {"x": test_tareget.x(), "y": test_tareget.y(), "z": test_tareget.z(), \
-            #                 "x-": -test_tareget.x(), "y-": -test_tareget.y(), "z-": -test_tareget.z(), \
-            #                 "1": 1, "1-": -1, "1.75": 1.75, "1.75-": -1.75, "0": 0}
-            # rep_upper2_slope_up_direction_up = QVector3D(rot_params[test_param[2]], rot_params[test_param[3]], rot_params[test_param[4]]).normalized()
-            # rep_upper2_slope_up_direction = QVector3D.crossProduct(rep_upper2_slope_up_direction_direction, rep_upper2_slope_up_direction_up)
-
-            # rep_upper2_slope_up_up_to = replace_model.bones[test_param[5]].position
-            # rep_upper2_slope_up_up_from = replace_model.bones[test_param[6]].position
-            # rep_upper2_slope_up_up_direction = rep_upper2_slope_up_up_to - rep_upper2_slope_up_up_from
-
-            # test_tareget = rep_upper2_slope
-            # rot_params = {"x": test_tareget.x(), "y": test_tareget.y(), "z": test_tareget.z(), \
-            #                 "x-": -test_tareget.x(), "y-": -test_tareget.y(), "z-": -test_tareget.z(), \
-            #                 "1": 1, "1-": -1, "1.75": 1.75, "1.75-": -1.75, "0": 0}
-            # rep_upper2_slope_up_up_up = QVector3D(rot_params[test_param[7]], rot_params[test_param[8]], rot_params[test_param[9]]).normalized()
-            # rep_upper2_slope_up_up = QVector3D.crossProduct(rep_upper2_slope_up_up_direction, rep_upper2_slope_up_up_up)
-
-            # rep_upper2_slope_up = QVector3D.crossProduct(rep_upper2_slope_up_direction, rep_upper2_slope_up_up)
-
-            # rep_upper2_slope_cross = QVector3D.crossProduct(rep_upper2_slope, rep_upper2_slope_up)
-
-            # logger.debug("上半身2 slope: %s", rep_upper2_slope)
-            # logger.debug("上半身2 cross: %s", rep_upper2_slope_cross)
-
-            
-
-
-            # 首,上半身,右腕,左腕,0,0,1-,u1,s2,s1_False,False,False_ 3.37#-0.00# 3.61,-3.60# 0.00# 4.09, 1.63#-0.37#-0.74
             # 上半身2から頭への傾き
             rep_upper2_initial_slope1_to = replace_model.bones[test_param[0]].position
             rep_upper2_initial_slope1_from = replace_model.bones[test_param[1]].position
@@ -520,32 +369,26 @@ def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org
                 "x": rep_upper_slope.x(), "x-": -rep_upper_slope.x(), 
                 "y": rep_upper_slope.y(), "y-": -rep_upper_slope.y(), 
                 "z": rep_upper_slope.z(), "z-": -rep_upper_slope.z()}
-            rep_upper1_initial_slope1_up = QVector3D(number_params[test_param[2]], number_params[test_param[3]], number_params[test_param[4]]).normalized()
+            rep_upper2_initial_slope1_up = QVector3D(number_params[test_param[2]], number_params[test_param[3]], number_params[test_param[4]]).normalized()
+            rep_upper2_initial_slope1_cross = QVector3D.crossProduct(rep_upper2_initial_slope1, rep_upper2_initial_slope1_up).normalized()
 
-            rep_upper2_initial_slope1_to = replace_model.bones[test_param[5]].position
-            rep_upper2_initial_slope1_from = replace_model.bones[test_param[6]].position
-            rep_upper2_initial_slope3 = (rep_upper2_initial_slope1_to - rep_upper2_initial_slope1_from).normalized()
+            rep_upper2_initial_slope2_to = replace_model.bones[test_param[5]].position
+            rep_upper2_initial_slope2_from = replace_model.bones[test_param[6]].position
+            rep_upper2_initial_slope2 = (rep_upper2_initial_slope2_to - rep_upper2_initial_slope2_from).normalized()
 
-            rep_upper2_initial_slope3_up = QVector3D(number_params[test_param[7]], number_params[test_param[8]], number_params[test_param[9]]).normalized()
+            rep_upper2_initial_slope2_up = QVector3D(number_params[test_param[7]], number_params[test_param[8]], number_params[test_param[9]]).normalized()
+            rep_upper2_initial_slope2_cross = QVector3D.crossProduct(rep_upper2_initial_slope2, rep_upper2_initial_slope2_up).normalized()
 
             direction_params = { \
-                "d1": QQuaternion.fromDirection(rep_upper2_initial_slope1, rep_upper1_initial_slope1_up), \
-                "d1i": QQuaternion.fromDirection(rep_upper2_initial_slope1, rep_upper1_initial_slope1_up).inverted(), \
-                "d2": QQuaternion.fromDirection(rep_upper2_initial_slope3, rep_upper2_initial_slope3_up), \
-                "d2i": QQuaternion.fromDirection(rep_upper2_initial_slope3, rep_upper2_initial_slope3_up).inverted(), \
-                # "d3": QQuaternion.fromDirection(rep_upper2_initial_slope1, rep_upper_slope), \
-                # "d3i": QQuaternion.fromDirection(rep_upper2_initial_slope1, rep_upper_slope).inverted(), \
-                # "d4": QQuaternion.fromDirection(rep_upper2_initial_slope3, rep_upper_slope), \
-                # "d4i": QQuaternion.fromDirection(rep_upper2_initial_slope3, rep_upper_slope).inverted(), \
-                "d5": rep_upper_initial_slope_qq, \
-                "d5i": rep_upper_initial_slope_qq.inverted(), \
-                "d6": QQuaternion.rotationTo(rep_upper2_initial_slope1, rep_upper_slope), \
-                "d6i": QQuaternion.rotationTo(rep_upper2_initial_slope1, rep_upper_slope).inverted(), \
-                "d7": QQuaternion.rotationTo(rep_upper2_initial_slope3, rep_upper_slope), \
-                "d7i": QQuaternion.rotationTo(rep_upper2_initial_slope3, rep_upper_slope).inverted(), \
+                "d1": QQuaternion.fromDirection(rep_upper2_initial_slope1, rep_upper2_initial_slope1_cross), \
+                "d1i": QQuaternion.fromDirection(rep_upper2_initial_slope1, rep_upper2_initial_slope1_cross).inverted(), \
+                "d2": QQuaternion.fromDirection(rep_upper2_initial_slope2, rep_upper2_initial_slope2_cross), \
+                "d2i": QQuaternion.fromDirection(rep_upper2_initial_slope2, rep_upper2_initial_slope2_cross).inverted(), \
+                "d3": rep_upper_initial_slope_qq, \
+                "d3i": rep_upper_initial_slope_qq.inverted(), \
                 "00": QQuaternion(), "01": QQuaternion(), "02": QQuaternion()}
 
-            rep_upper2_initial_slope_qq = direction_params[test_param[10]] * direction_params[test_param[11]] * direction_params[test_param[12]] * direction_params[test_param[13]]
+            rep_upper2_initial_slope_qq = direction_params[test_param[10]] * direction_params[test_param[11]] * direction_params[test_param[12]]
 
             # 準備
             prepare_split_stance(motion, "上半身2")
