@@ -274,7 +274,7 @@ def spread_rotation(motion, model, is_thinning):
                     all_frames_by_bone[b.name][fno] = bf
 
                 print("分散準備: %s" % (b.name))
-
+            
             for delegate_dic in utils.DELEGATE_BORN_LIST[end_bone_name]:
                 if delegate_dic["target"] not in model.bones or delegate_dic["delegate"] not in model.bones:
                     # 処理対象ボーンか委譲対象ボーンが取れなかった場合、処理スルー

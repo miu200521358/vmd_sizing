@@ -223,13 +223,12 @@ def delegate_qq(delegate_dic, target_qq, delegate_qq, target_local_axis, target_
     delegate_result_qq = copy.deepcopy(delegate_qq)
 
     # 委譲元の処理対象角度
-    delegate_axis_euler = delegate_qq.toEulerAngles() * delegate_dic["axis"]
-    # if delegate_axis_euler.x() <= 0:
-    #     delegate_axis_euler.setX( 360 - delegate_axis_euler.x() )
-    # if delegate_axis_euler.y() <= 0:
-    #     delegate_axis_euler.setY( 360 - delegate_axis_euler.y() )
-    # if delegate_axis_euler.z() <= 0:
-    #     delegate_axis_euler.setZ( 360 - delegate_axis_euler.z() )
+    delegate_degree = degrees(2 * acos(min(1, max(-1, delegate_qq.scalar()))))
+    delegate_cross = QVector3D.crossProduct(delegate_local_axis, delegate_local_z_axis).normalized()
+    delegate_local_qq = QQuaternion.fromAxisAndAngle(delegate_local_axis, delegate_degree)
+
+    # 処理対象角度のみを取得
+    delegate_axis_euler = delegate_local_qq.toEulerAngles() * delegate_dic["degree_axis"]
     delegate_axis_qq = QQuaternion.fromEulerAngles(delegate_axis_euler)
 
     if delegate_dic["is_parent"] == True:
@@ -240,11 +239,17 @@ def delegate_qq(delegate_dic, target_qq, delegate_qq, target_local_axis, target_
         delegate_work_qq = delegate_axis_qq
 
     # 委譲元の角度
-    delegate_extra_degree = degrees(2 * (acos(min(1, max(-1, delegate_work_qq.scalar()))))) * delegate_dic["degree"]
+    delegate_extra_degree = degrees(2 * acos(min(1, max(-1, delegate_work_qq.scalar()))))
+    if delegate_extra_degree >= 180:
+        delegate_extra_degree = delegate_extra_degree - 360
+    delegate_extra_degree = delegate_extra_degree * delegate_dic["degree"]
+
+    # 委譲元の余計な回転量
+    delegate_extra_qq = QQuaternion.fromAxisAndAngle(target_local_axis, delegate_extra_degree)
 
     # 委譲先用の回転量
     if delegate_dic["is_parent"] == True:
-        target_extra_qq = QQuaternion.fromAxisAndAngle(target_local_axis, delegate_extra_degree) * target_qq.inverted()
+        target_extra_qq = delegate_extra_qq * target_qq.inverted()
 
         # 委譲先に、余分な角度を加算する
         target_result_qq = target_extra_qq * target_qq
@@ -252,7 +257,7 @@ def delegate_qq(delegate_dic, target_qq, delegate_qq, target_local_axis, target_
         # 委譲元は、余分な角度を除く
         delegate_result_qq = delegate_qq * target_extra_qq.inverted()
     else:
-        target_extra_qq = QQuaternion.fromAxisAndAngle(target_local_axis, delegate_extra_degree)
+        target_extra_qq = delegate_extra_qq
 
         # 委譲先に、余分な角度を加算する
         target_result_qq = target_qq * target_extra_qq
@@ -264,21 +269,21 @@ def delegate_qq(delegate_dic, target_qq, delegate_qq, target_local_axis, target_
 
     return target_result_qq, delegate_result_qq
 
-# # キー：集約先のボーン名、値：集約元のボーン（ボーン名と制限角度）
+# 委譲リスト
 DELEGATE_BORN_LIST = {
     "左手首": [
-        {"target":"左手捩", "delegate": "左手首", "is_parent": False, "axis": QVector3D(1, 0, 0), "degree": -1}
-        , {"target":"左手捩", "delegate": "左ひじ", "is_parent": True, "axis": QVector3D(1, 0, 0), "degree": -1}
-        , {"target":"左腕捩", "delegate": "左ひじ", "is_parent": False, "axis": QVector3D(1, 0, 0), "degree": 1}
-        , {"target":"左腕捩", "delegate": "左腕", "is_parent": True, "axis": QVector3D(1, 0, 0), "degree": 1}
-        # , {"target":"左肩", "delegate": "左腕", "is_parent": False, "axis": QVector3D(1, 0, 0), "degree": -1}
+        {"target":"左ひじ", "delegate": "左手首", "is_parent": False, "degree_axis": QVector3D(1, 0, 0), "degree": -1}
+        , {"target":"左腕", "delegate": "左ひじ", "is_parent": False, "degree_axis": QVector3D(1, 0, 0), "degree": -1}
+        , {"target":"左肩", "delegate": "左腕", "is_parent": False, "degree_axis": QVector3D(1, 0, 0), "degree": -1}
+        , {"target":"左手捩", "delegate": "左ひじ", "is_parent": True, "degree_axis": QVector3D(1, 0, 0), "degree": -1}
+        , {"target":"左腕捩", "delegate": "左腕", "is_parent": True, "degree_axis": QVector3D(1, 0, 0), "degree": -1}
     ], 
     "右手首": [
-        {"target":"右手捩", "delegate": "右手首", "is_parent": False, "axis": QVector3D(1, 0, 0), "degree": 1}
-        , {"target":"右手捩", "delegate": "右ひじ", "is_parent": True, "axis": QVector3D(1, 0, 0), "degree": 1}
-        , {"target":"右腕捩", "delegate": "右ひじ", "is_parent": False, "axis": QVector3D(1, 0, 0), "degree": -1}
-        , {"target":"右腕捩", "delegate": "右腕", "is_parent": True, "axis": QVector3D(1, 0, 0), "degree": -1}
-        # , {"target":"右肩", "delegate": "右腕", "is_parent": False, "axis": QVector3D(1, 0, 0), "degree": 1}
+        {"target":"右ひじ", "delegate": "右手首", "is_parent": False, "degree_axis": QVector3D(1, 0, 0), "degree": 1}
+        , {"target":"右腕", "delegate": "右ひじ", "is_parent": False, "degree_axis": QVector3D(1, 0, 0), "degree": 1}
+        , {"target":"右肩", "delegate": "右腕", "is_parent": False, "degree_axis": QVector3D(1, 0, 0), "degree": 1}
+        , {"target":"右手捩", "delegate": "右ひじ", "is_parent": True, "degree_axis": QVector3D(1, 0, 0), "degree": 1}
+        , {"target":"右腕捩", "delegate": "右腕", "is_parent": True, "degree_axis": QVector3D(1, 0, 0), "degree": 1}
     ]
 }
 

@@ -35,10 +35,10 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
             else:
                 # 腕補正
                 adjust_arm_stance(motion, trace_model, replace_model, org_motion_frames, test_param)
-        
-        if not is_no_delegate:
-            # 捩り分散
-            convert_smooth.spread_rotation(motion, replace_model, True)
+            
+            if not is_no_delegate:
+                # 捩り分散
+                convert_smooth.spread_rotation(motion, replace_model, True)
 
     return True
 
