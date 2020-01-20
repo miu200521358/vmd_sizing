@@ -240,9 +240,7 @@ def delegate_qq(delegate_dic, target_qq, delegate_qq, target_local_axis, target_
         delegate_work_qq = delegate_axis_qq
 
     # 委譲元の角度
-    delegate_extra_degree = degrees(2 * (acos(min(1, max(-1, delegate_work_qq.scalar())))))
-    if "左" in delegate_dic["target"]:
-        delegate_extra_degree = -delegate_extra_degree
+    delegate_extra_degree = degrees(2 * (acos(min(1, max(-1, delegate_work_qq.scalar()))))) * delegate_dic["degree"]
 
     # 委譲先用の回転量
     if delegate_dic["is_parent"] == True:
@@ -269,24 +267,20 @@ def delegate_qq(delegate_dic, target_qq, delegate_qq, target_local_axis, target_
 # # キー：集約先のボーン名、値：集約元のボーン（ボーン名と制限角度）
 DELEGATE_BORN_LIST = {
     "左手首": [
-        {"target":"左手捩", "delegate": "左手首", "is_parent": False, "axis": QVector3D(1, 0, 0)}
-        , {"target":"左腕捩", "delegate": "左ひじ", "is_parent": False, "axis": QVector3D(1, 0, 0)}
-        , {"target":"左手捩", "delegate": "左ひじ", "is_parent": True, "axis": QVector3D(1, 1, 1)}
-        , {"target":"左腕捩", "delegate": "左腕", "is_parent": True, "axis": QVector3D(1, 1, 1)}
+        {"target":"左手捩", "delegate": "左手首", "is_parent": False, "axis": QVector3D(1, 0, 0), "degree": -1}
+        , {"target":"左手捩", "delegate": "左ひじ", "is_parent": True, "axis": QVector3D(1, 0, 0), "degree": -1}
+        , {"target":"左腕捩", "delegate": "左ひじ", "is_parent": False, "axis": QVector3D(1, 0, 0), "degree": 1}
+        , {"target":"左腕捩", "delegate": "左腕", "is_parent": True, "axis": QVector3D(1, 0, 0), "degree": 1}
+        # , {"target":"左肩", "delegate": "左腕", "is_parent": False, "axis": QVector3D(1, 0, 0), "degree": -1}
     ], 
     "右手首": [
-        {"target":"右手捩", "delegate": "右手首", "is_parent": False, "axis": QVector3D(1, 0, 0)}
-        , {"target":"右腕捩", "delegate": "右ひじ", "is_parent": False, "axis": QVector3D(1, 0, 0)}
-        , {"target":"右手捩", "delegate": "右ひじ", "is_parent": True, "axis": QVector3D(1, 1, 1)}
-        , {"target":"右腕捩", "delegate": "右腕", "is_parent": True, "axis": QVector3D(1, 1, 1)}
+        {"target":"右手捩", "delegate": "右手首", "is_parent": False, "axis": QVector3D(1, 0, 0), "degree": 1}
+        , {"target":"右手捩", "delegate": "右ひじ", "is_parent": True, "axis": QVector3D(1, 0, 0), "degree": 1}
+        , {"target":"右腕捩", "delegate": "右ひじ", "is_parent": False, "axis": QVector3D(1, 0, 0), "degree": -1}
+        , {"target":"右腕捩", "delegate": "右腕", "is_parent": True, "axis": QVector3D(1, 0, 0), "degree": -1}
+        # , {"target":"右肩", "delegate": "右腕", "is_parent": False, "axis": QVector3D(1, 0, 0), "degree": 1}
     ]
 }
-#     "左手捩": [{"左手首": {"is_parent": False, "axis": QVector3D(1, 0, 0)}}, {"左ひじ": {"is_parent": True, "axis": QVector3D(1, 1, 1)}}]
-#     , "左腕捩": [{"左ひじ": {"is_parent": False, "axis": QVector3D(1, 1, 1)}}, {"左腕": {"is_parent": True, "axis": QVector3D(1, 1, 1)}}]
-#     # , "左肩": [{"左腕": {"is_parent": False, "axis": QVector3D(0, 1, 1)}}]
-#     , "右手捩": [{"右手首": {"is_parent": False, "axis": QVector3D(1, 0, 0)}}, {"右ひじ": {"is_parent": True, "axis": QVector3D(1, 1, 1)}}]
-#     , "右腕捩": [{"右ひじ": {"is_parent": False, "axis": QVector3D(1, 1, 1)}}, {"右腕": {"is_parent": True, "axis": QVector3D(1, 1, 1)}}]
-#     # , "右肩": [{"右腕": {"is_parent": False, "axis": QVector3D(0, 1, 1)}}]
 
 def get_local_axis(bone, parent_bone):
     if bone.fixed_axis != QVector3D():
