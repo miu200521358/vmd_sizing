@@ -288,12 +288,10 @@ def spread_rotation(motion, model, is_thinning):
                     continue
 
                 # 処理対象ボーンのローカル軸
-                parent_bone = model.bones[model.bone_indexes[target_bone.parent_index]]
-                target_local_axis, target_local_z_axis = utils.get_local_axis(target_bone, parent_bone)
+                target_local_axis, target_local_z_axis = utils.get_local_axis(model, target_bone)
 
                 # 委譲元ボーンのローカル軸
-                delegate_parent_bone = model.bones[model.bone_indexes[delegate_bone.parent_index]]
-                delegate_local_axis, delegate_local_z_axis = utils.get_local_axis(delegate_bone, delegate_parent_bone)
+                delegate_local_axis, delegate_local_z_axis = utils.get_local_axis(model, delegate_bone)
     
                 for fno in sorted(all_frames_by_bone[target_bone.name].keys()):
                     target_bf = all_frames_by_bone[target_bone.name][fno]
