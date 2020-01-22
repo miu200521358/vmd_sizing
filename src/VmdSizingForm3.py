@@ -2715,8 +2715,9 @@ class VmdSizingForm3 ( wx.Frame ):
 
 	# スレッド実行結果
 	def OnResult(self, event):
-		# 終了音を鳴らす
-		winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
+		if os.name == "nt":
+			# Windows
+			winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
 
 		# スレッド削除
 		self.worker = None
@@ -2737,7 +2738,9 @@ class VmdSizingForm3 ( wx.Frame ):
 	# スレッド実行結果
 	def OnSmoothResult(self, event):
 		# 終了音を鳴らす
-		winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
+		if os.name == "nt":
+			# Windows
+			winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
 
 		# スレッド削除
 		self.smooth_worker = None

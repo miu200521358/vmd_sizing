@@ -190,8 +190,9 @@ if __name__=="__main__":
             is_finger_ik, args.finger_distance, args.vmd_choice_values.split(","), args.rep_choice_values.split(","), args.rep_rate_values.split(","), \
             camera_motion, args.camera_vmd_path, camera_pmx, output_camera_vmd_path, args.camera_y_offset, is_alternative_model, is_no_delegate, args.test_param.split(","))
 
-        # 終了音を鳴らす
-        winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
+        if os.name == "nt":
+            # Windows
+            winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
 
     except SizingException as e:
         print("■■■■■■■■■■■■■■■■■")
