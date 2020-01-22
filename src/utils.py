@@ -236,16 +236,20 @@ def delegate_qq(delegate_dic, target_qq, delegate_qq, target_local_axis, target_
     if delegate_dic["is_parent"] == True:
         # 親の場合は子に回転を加算する
         delegate_work_qq = delegate_work_qq * target_qq
+    else:
+        # 子の場合、親の回転を付与する
+        target_degree = degrees(2 * acos(min(1, max(-1, target_qq.scalar()))))
+        target_local_qq = QQuaternion.fromAxisAndAngle(delegate_local_axis, target_degree)
+        # ローカルX軸回転（捩り）だけ抽出
+        target_local_x_qq = QQuaternion.fromAxisAndAngle(delegate_local_axis, target_local_qq.toEulerAngles().x())
+        delegate_work_qq = target_local_x_qq * delegate_work_qq
 
-    # 委譲元の角度
+    # 余計な回転量
     delegate_extra_degree = degrees(2 * acos(min(1, max(-1, delegate_work_qq.scalar()))))
-    # if delegate_extra_degree >= 180:
-    #     delegate_extra_degree = delegate_extra_degree - 360
     delegate_extra_degree = delegate_extra_degree * delegate_dic["degree"]
 
-    # 余計な回転量を委譲元と委譲先のローカル軸に合わせた回転量
+    # 余計な回転量を委譲先のローカル軸に合わせた回転量
     target_local_extra_qq = QQuaternion.fromAxisAndAngle(target_local_axis, delegate_extra_degree)
-    delegate_local_extra_qq = QQuaternion.fromAxisAndAngle(target_local_axis, delegate_extra_degree)
 
     if delegate_dic["is_parent"] == True:
         # 委譲元が親である場合
@@ -255,18 +259,18 @@ def delegate_qq(delegate_dic, target_qq, delegate_qq, target_local_axis, target_
         target_result_qq = target_extra_qq * target_qq
 
         # 委譲元は、余分な角度を除く
-        delegate_result_qq = delegate_qq * delegate_local_extra_qq.inverted()
+        delegate_result_qq = delegate_qq * target_local_extra_qq.inverted()
     else:
         # 委譲元が親でない場合
-        target_extra_qq = target_local_extra_qq
+        target_extra_qq = target_local_x_qq.inverted() * target_local_extra_qq
 
         # 委譲先に、余分な角度を加算する
         target_result_qq = target_qq * target_extra_qq
 
         # 委譲元は、余分な角度を除く
-        delegate_result_qq = delegate_local_extra_qq.inverted() * delegate_qq
+        delegate_result_qq = target_extra_qq.inverted() * delegate_qq
 
-    logger.debug(delegate_result_qq)
+        logger.debug(delegate_result_qq)
 
     return target_result_qq, delegate_result_qq
 
@@ -274,15 +278,15 @@ def delegate_qq(delegate_dic, target_qq, delegate_qq, target_local_axis, target_
 DELEGATE_BORN_LIST = {
     "左手首": [
         {"target":"左ひじ", "delegate": "左手首", "is_parent": False, "degree_axis": QVector3D(1, 0, 0), "degree": 1}
-        , {"target":"左腕", "delegate": "左ひじ", "is_parent": False, "degree_axis": QVector3D(1, 0, 1), "degree": 1}
+        , {"target":"左腕", "delegate": "左ひじ", "is_parent": False, "degree_axis": QVector3D(0.5, 0, 0.5), "degree": 1}
         , {"target":"左肩", "delegate": "左腕", "is_parent": False, "degree_axis": QVector3D(0.1, 0.1, 0.1), "degree": 1}
         # , {"target":"左手捩", "delegate": "左ひじ", "is_parent": True, "degree_axis": QVector3D(1, 0, 0), "degree": -1}
         # , {"target":"左腕捩", "delegate": "左腕", "is_parent": True, "degree_axis": QVector3D(1, 0, 0), "degree": -1}
     ], 
     "右手首": [
-        {"target":"右ひじ", "delegate": "右手首", "is_parent": False, "degree_axis": QVector3D(1, 0, 0), "degree": 1}
-        , {"target":"右腕", "delegate": "右ひじ", "is_parent": False, "degree_axis": QVector3D(1, 0, 1), "degree": 1}
-        , {"target":"右肩", "delegate": "右腕", "is_parent": False, "degree_axis": QVector3D(0.1, 0.1, 0.1), "degree": 1}
+        {"target":"右ひじ", "delegate": "右手首", "is_parent": False, "degree_axis": QVector3D(1, 0, 0), "degree": -1}
+        , {"target":"右腕", "delegate": "右ひじ", "is_parent": False, "degree_axis": QVector3D(0.5, 0, 0.5), "degree": -1}
+        , {"target":"右肩", "delegate": "右腕", "is_parent": False, "degree_axis": QVector3D(0.1, 0.1, 0.1), "degree": -1}
         # , {"target":"右手捩", "delegate": "右ひじ", "is_parent": True, "degree_axis": QVector3D(1, 0, 0), "degree": 1}
         # , {"target":"右腕捩", "delegate": "右腕", "is_parent": True, "degree_axis": QVector3D(1, 0, 0), "degree": 1}
     ]
@@ -298,11 +302,18 @@ def get_local_axis(model, bone):
         if bone.tail_position != QVector3D():
             # 表示先が相対パスの場合、保持
             to_pos = from_pos + bone.tail_position
-        elif bone.tail_index >= 0:
+        elif bone.tail_index >= 0 and bone.tail_index in model.bone_indexes and model.bones[model.bone_indexes[bone.tail_index]].position != bone.position:
+            # 表示先が指定されているの場合、保持
             to_pos = model.bones[model.bone_indexes[bone.tail_index]].position
+        else:
+            # 表示先がない場合、とりあえず子ボーンのどれかを選択
+            for b in model.bones:
+                if b.parent_index == bone.index and model.bones[b.index].position != bone.position:
+                    to_pos = model.bones[b.index].position
+                    break
 
         # ローカル軸の指定が無い場合、子の方向
-        x_axis = (from_pos - to_pos).normalized()        
+        x_axis = (to_pos - from_pos).normalized()        
         z_axis = QVector3D(0, 0, 1)
 
     return x_axis, z_axis
