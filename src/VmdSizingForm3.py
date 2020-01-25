@@ -134,7 +134,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		self.m_fileVmd = wx.FilePickerCtrl( self.m_panelFile, wx.ID_ANY, wx.EmptyString, u"調整対象モーションVMDファイルを開く", u"VMDファイル (*.vmd)|*.vmd|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.DefaultSize, wx.FLP_DEFAULT_STYLE )
 		self.m_fileVmd.GetPickerCtrl().SetLabel("開く")
-		self.m_fileVmd.SetToolTip( u"調整したいモーションのVMDパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。" )
+		self.m_fileVmd.SetToolTip( u"調整したいモーションのVMDパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。\nファイル名にアスタリスク（*）を使用すると複数件のモーションを一度に調整できます。" )
 
 		bSizer6.Add( self.m_fileVmd, 1, wx.ALL|wx.EXPAND, 5 )
 
@@ -1278,6 +1278,15 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_smooth_fileVmd.SetDropTarget(MyFileDropTarget(self, self.m_smooth_fileVmd, self.m_smooth_staticText1, ".vmd"))
 		self.m_smooth_filePmx.SetDropTarget(MyFileDropTarget(self, self.m_smooth_filePmx, self.m_smooth_staticText2, ".pmx"))
 
+		# 開くボタン押下時の処理
+		self.m_fileVmd.GetPickerCtrl().Bind(wx.EVT_BUTTON, lambda event: self.OnPickFile(event, self.file_hitories["vmd"], self.m_fileVmd, self.m_staticText9, ".vmd"))
+		self.m_fileOrgPmx.GetPickerCtrl().Bind(wx.EVT_BUTTON, lambda event: self.OnPickFile(event, self.file_hitories["org_pmx"], self.m_fileOrgPmx, self.m_staticText10, ".pmx"))
+		self.m_fileRepPmx.GetPickerCtrl().Bind(wx.EVT_BUTTON, lambda event: self.OnPickFile(event, self.file_hitories["rep_pmx"], self.m_fileRepPmx, self.m_staticText11, ".pmx"))
+		self.m_camera_fileVmd.GetPickerCtrl().Bind(wx.EVT_BUTTON, lambda event: self.OnPickFile(event, self.file_hitories["camera_vmd"], self.m_camera_fileVmd, self.m_camera_staticText9, ".vmd"))
+		self.m_camera_fileOrgPmx.GetPickerCtrl().Bind(wx.EVT_BUTTON, lambda event: self.OnPickFile(event, self.file_hitories["camera_pmx"], self.m_camera_fileOrgPmx, self.m_camera_staticText10, ".pmx"))
+		self.m_smooth_fileVmd.GetPickerCtrl().Bind(wx.EVT_BUTTON, lambda event: self.OnPickFile(event, self.file_hitories["smooth_vmd"], self.m_smooth_fileVmd, self.m_smooth_staticText1, ".vmd"))
+		self.m_smooth_filePmx.GetPickerCtrl().Bind(wx.EVT_BUTTON, lambda event: self.OnPickFile(event, self.file_hitories["smooth_pmx"], self.m_smooth_filePmx, self.m_smooth_staticText2, ".pmx"))
+
 		# ファイルパス変更時の処理
 		self.m_fileVmd.Bind( wx.EVT_FILEPICKER_CHANGED, lambda event: self.OnChangeFile(event, self.m_fileVmd, self.m_staticText9, ".vmd"))
 		self.m_fileOrgPmx.Bind( wx.EVT_FILEPICKER_CHANGED, lambda event: self.OnChangeFile(event, self.m_fileOrgPmx, self.m_staticText10, ".pmx"))
@@ -1526,6 +1535,13 @@ class VmdSizingForm3 ( wx.Frame ):
 		else:
 			print("まだ処理が実行中です。終了してから再度実行してください。")
 
+	# 履歴ボタンのあるファイルコントロールは直近のパスを開く
+	def OnPickFile(self, event, hitories, target_ctrl, label_ctrl, ext):
+		if len(target_ctrl.GetPath()) == 0 and len(hitories) > 0:
+			# パスが未指定である場合、直近のパスを設定してひらく
+			target_ctrl.SetPath(hitories[0])
+		
+		event.Skip()
 
 	def OnShowHistory(self, event, hitories, maxc, target_ctrl, label_ctrl, ext):
 		# 入力行を伸ばす
