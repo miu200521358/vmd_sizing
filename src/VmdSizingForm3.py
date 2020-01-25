@@ -255,7 +255,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_panelMorphHeader = wx.Panel( self.m_panelMorph, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		bSizer10 = wx.BoxSizer( wx.VERTICAL )
 
-		self.m_staticText132 = wx.StaticText( self.m_panelMorphHeader, wx.ID_ANY, u"モーションに使用されているモーフを、\n変換先モデルにある任意のモーフに置き換える事ができます。\nモーションモーフプルダウンの先頭記号は以下の通りです。\n○　…　モーション・生成元モデル・変換先モデルすべてにあるモーフ\n●　…　モーション・変換先モデルにあり、生成元モデルにないモーフ\n▲　…　モーション・生成元モデルにあり、変換先モデルにないモーフ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText132 = wx.StaticText( self.m_panelMorphHeader, wx.ID_ANY, u"モーションに使用されているモーフを、変換先モデルにある任意のモーフに置き換える事ができます。\nモーションモーフプルダウンの先頭記号は以下の通りです。\n○　…　モーション・生成元モデル・変換先モデルの全てにあるモーフ\n●　…　モーション・変換先モデルにあり、生成元モデルにないモーフ\n▲　…　モーション・生成元モデルにあり、変換先モデルにないモーフ", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText132.Wrap( -1 )
 		bSizer10.Add( self.m_staticText132, 0, wx.ALL, 5 )
 
@@ -391,7 +391,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		bSizer13.Add( self.m_staticText911, 0, wx.ALL, 5 )
 
-		self.m_staticText93 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"両手を合わせるなどのモーションを、変換先モデルの手首位置に合わせて調整します。\nそれぞれの距離を調整することで、位置合わせの適用範囲を調整することができます。\nモーションの中で、手首や足がどの辺の位置にいるかは、メッセージ欄に出力されます。", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText93 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"両手を合わせたり、床に手をついたりするモーションを、変換先モデルの手首位置に合わせて調整します。\nそれぞれの距離を調整することで、位置合わせの適用範囲を調整することができます。", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText93.Wrap( -1 )
 
 		bSizer13.Add( self.m_staticText93, 0, wx.ALL, 5 )
@@ -404,14 +404,10 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_checkFingerDistance.SetToolTip( u"フィンガータットモーション等、指間の距離を基準に手首位置を調整したい場合にチェックを入れて下さい。" )
 		bSizer17.Add( self.m_checkFingerDistance, 0, wx.ALL, 5 )
 
-		bSizer13.Add( bSizer17, 0, wx.ALL, 5 )
-
-		bSizer16 = wx.BoxSizer( wx.HORIZONTAL )
-
 		# 床位置合わせ
 		self.m_checkFloorArmDistance = wx.CheckBox( self.m_panelArm, wx.ID_ANY, u"床との位置合わせも一緒に行う", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_checkFloorArmDistance.SetToolTip( u"手首が床に沈み込んだり浮いてたりする場合、元モデルに合わせて手首の位置を調整します。\nセンター位置も一緒に調整します。" )
-		bSizer16.Add( self.m_checkFloorArmDistance, 0, wx.ALL, 5 )
+		bSizer17.Add( self.m_checkFloorArmDistance, 0, wx.ALL, 5 )
 
 		# self.m_staticText94 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"（", wx.DefaultPosition, wx.DefaultSize, 0 )
 		# bSizer16.Add( self.m_staticText94, 0, wx.ALL, 5 )
@@ -429,7 +425,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		# self.m_staticText95 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"）", wx.DefaultPosition, wx.DefaultSize, 0 )
 		# bSizer16.Add( self.m_staticText95, 0, wx.ALL, 5 )
 
-		bSizer13.Add( bSizer16, 0, wx.ALL, 5 )
+		bSizer13.Add( bSizer17, 0, wx.ALL, 5 )
 
 		bSizer15 = wx.BoxSizer( wx.HORIZONTAL )
 
@@ -631,6 +627,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		self.m_smooth_fileVmd = wx.FilePickerCtrl( self.m_panelSmooth, wx.ID_ANY, wx.EmptyString, u"VMDファイルを選択してください", u"VMDファイル (*.vmd)|*.vmd|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.Size( -1,-1 ), wx.FLP_DEFAULT_STYLE )
 		self.m_smooth_fileVmd.GetPickerCtrl().SetLabel("開く")
+		self.m_smooth_fileVmd.SetToolTip( u"調整したいモーションのVMDパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。" )
 		bSizerSmoothVmd.Add( self.m_smooth_fileVmd, 1, wx.ALL|wx.EXPAND, 5 )
 
 		self.m_smooth_btnHistoryVmd = wx.Button( self.m_panelSmooth, wx.ID_ANY, u"履歴", wx.DefaultPosition, wx.DefaultSize, 0 )
@@ -647,6 +644,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		bSizerSmoothPmx = wx.BoxSizer( wx.HORIZONTAL )
 
 		self.m_smooth_filePmx = wx.FilePickerCtrl( self.m_panelSmooth, wx.ID_ANY, wx.EmptyString, u"PMXファイルを選択してください", u"PMXファイル (*.pmx)|*.pmx|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.Size( -1,-1 ), wx.FLP_DEFAULT_STYLE )
+		self.m_smooth_filePmx.SetToolTip( u"実際にモーションを読み込ませたいモデルのPMXパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。" )
 		self.m_smooth_filePmx.GetPickerCtrl().SetLabel("開く")
 		bSizerSmoothPmx.Add( self.m_smooth_filePmx, 1, wx.ALL|wx.EXPAND, 5 )
 
@@ -729,7 +727,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		bSizerBlend4 = wx.BoxSizer( wx.VERTICAL )
 
-		self.m_blend_staticText7 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"指定されたPMXファイルのモーフをランダムに変化させた結果を、VMDファイルとして出力します。\nモーフは合計で最大100個まで選択できます。\nモーフの組み合わせが多くなると破綻する確率が非常に高くなりますので、その状態での公開は避けてください。", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_blend_staticText7 = wx.StaticText( self.m_panelBlend, wx.ID_ANY, u"指定されたPMXファイルのモーフをランダムに変化させた結果を、VMDファイルとして出力します。\nモーフは合計で最大100個まで選択できます。\nモーフの組み合わせが多くなると破綻する確率が高くなりますので、その状態での一般公開は避けてください。", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_blend_staticText7.Wrap( -1 )
 
 		bSizerBlend4.Add( self.m_blend_staticText7, 0, wx.ALL, 5 )
@@ -743,6 +741,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		bSizerBlend4.Add( self.m_blend_staticText1, 0, wx.ALL, 5 )
 
 		self.m_blend_filePmx = wx.FilePickerCtrl( self.m_panelBlend, wx.ID_ANY, wx.EmptyString, u"PMXファイルを選択してください", u"PMXファイル (*.pmx)|*.pmx|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.Size( -1,-1 ), wx.FLP_DEFAULT_STYLE )
+		self.m_blend_filePmx.SetToolTip( u"モーフをブレンドさせたいPMXのパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。\nパスを指定すると下部欄にモーフリストが表示されます。" )
 		self.m_blend_filePmx.GetPickerCtrl().SetLabel("開く")
 		bSizerBlend4.Add( self.m_blend_filePmx, 0, wx.ALL|wx.EXPAND, 5 )
 
@@ -757,6 +756,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		bSizerBlend15.Add( self.m_blend_staticText11, 0, wx.ALL, 5 )
 
 		self.m_blend_listEye = wx.ListBox( self.m_panelBlend, id=wx.ID_ANY, pos=wx.DefaultPosition, size=(100, 100), choices=[], style=wx.LB_MULTIPLE|wx.LB_ALWAYS_SB )
+		self.m_blend_listEye.SetToolTip( u"ブレンド対象となるモーフを選択して下さい。" )
 		bSizerBlend15.Add( self.m_blend_listEye, 0, wx.ALL, 5 )
 
 		# 眉の処理対象
@@ -766,6 +766,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		bSizerBlend15.Add( self.m_blend_staticText11, 0, wx.ALL, 5 )
 
 		self.m_blend_listEyebrow = wx.ListBox( self.m_panelBlend, id=wx.ID_ANY, pos=wx.DefaultPosition, size=(100, 100), choices=[], style=wx.LB_MULTIPLE|wx.LB_ALWAYS_SB )
+		self.m_blend_listEyebrow.SetToolTip( u"ブレンド対象となるモーフを選択して下さい。" )
 		bSizerBlend15.Add( self.m_blend_listEyebrow, 0, wx.ALL, 5 )
 
 		# 口の処理対象
@@ -775,6 +776,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		bSizerBlend15.Add( self.m_blend_staticText11, 0, wx.ALL, 5 )
 
 		self.m_blend_listLip = wx.ListBox( self.m_panelBlend, id=wx.ID_ANY, pos=wx.DefaultPosition, size=(100, 100), choices=[], style=wx.LB_MULTIPLE|wx.LB_ALWAYS_SB )
+		self.m_blend_listLip.SetToolTip( u"ブレンド対象となるモーフを選択して下さい。" )
 		bSizerBlend15.Add( self.m_blend_listLip, 0, wx.ALL, 5 )
 
 		# 他の処理対象
@@ -784,6 +786,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		bSizerBlend15.Add( self.m_blend_staticText11, 0, wx.ALL, 5 )
 
 		self.m_blend_listOther = wx.ListBox( self.m_panelBlend, id=wx.ID_ANY, pos=wx.DefaultPosition, size=(100, 100), choices=[], style=wx.LB_MULTIPLE|wx.LB_ALWAYS_SB )
+		self.m_blend_listOther.SetToolTip( u"ブレンド対象となるモーフを選択して下さい。" )
 		bSizerBlend15.Add( self.m_blend_listOther, 0, wx.ALL, 5 )
 
 
@@ -801,6 +804,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		bSizerBlend5.Add( self.m_blend_staticText8, 0, wx.ALL, 5 )
 
 		self.m_blend_spinMin = wx.SpinCtrlDouble( self.m_panelBlend, id=wx.ID_ANY, size=wx.Size( 80,-1 ), min=-10, max=10, initial=0.0, inc=0.1 )
+		self.m_blend_spinMin.SetToolTip( u"モーフ増減の最小値です。-10から10の間で設定できます。（小数点可）" )
 		bSizerBlend5.Add( self.m_blend_spinMin, 0, wx.ALL, 5 )
 
 		# モーフ最大値
@@ -810,6 +814,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		bSizerBlend5.Add( self.m_blend_staticText9, 0, wx.ALL, 5 )
 
 		self.m_blend_spinMax = wx.SpinCtrlDouble( self.m_panelBlend, id=wx.ID_ANY, size=wx.Size( 80,-1 ), min=-10, max=10, initial=1.0, inc=0.1 )
+		self.m_blend_spinMax.SetToolTip( u"モーフ増減の最大値です。-10から10の間で設定できます。（小数点可）" )
 		bSizerBlend5.Add( self.m_blend_spinMax, 0, wx.ALL, 5 )
 
 		# モーフ増加量
@@ -819,6 +824,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		bSizerBlend5.Add( self.m_blend_staticText10, 0, wx.ALL, 5 )
 
 		self.m_blend_spinInc = wx.SpinCtrlDouble( self.m_panelBlend, id=wx.ID_ANY, size=wx.Size( 80,-1 ), min=0, max=1, initial=0.1, inc=0.1 )
+		self.m_blend_spinInc.SetToolTip( u"モーフ増減の増加量です。この増加量分ごとにモーフ組み合わせを生成していきます。0から1の間で設定できます。（小数点可）" )
 		bSizerBlend5.Add( self.m_blend_spinInc, 0, wx.ALL, 5 )
 
 		bSizerBlend4.Add( bSizerBlend5, 0, wx.ALL, 5 )
