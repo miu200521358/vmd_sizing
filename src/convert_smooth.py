@@ -209,9 +209,9 @@ def smooth_all_bf(all_frames_by_bone, model, bone_name, start_frameno, last_fram
                 break
 
 # ボーン回転の分散
-def spread_rotation(motion, model, is_thinning):
+def spread_rotation(motion, model, is_thinning, test_param):
 
-    print("■■ 回転分散 -----------------")
+    print("■■ 捩り分散 -----------------")
 
     # 全ボーンのdict
     all_frames_by_bone = {}
@@ -222,7 +222,7 @@ def spread_rotation(motion, model, is_thinning):
         all_frames_by_bone[bname] = frames_by_bone
 
     # 腕の分散
-    for target_bones, end_bone_name in [(["左肩", "左腕", "左ひじ", "左手首"], "左手首"), (["右肩", "右腕", "右ひじ", "右手首"], "右手首")]:
+    for target_bones, end_bone_name in [(["左肩", "左腕", "左腕捩", "左ひじ", "左手捩", "左手首"], "左手首"), (["右肩", "右腕", "右腕捩", "右ひじ", "右手捩", "右手首"], "右手首")]:
 
         if set(target_bones).issubset(model.bones):
 
@@ -288,18 +288,18 @@ def spread_rotation(motion, model, is_thinning):
                     continue
 
                 # 処理対象ボーンのローカル軸
-                target_local_axis, target_local_z_axis = utils.get_local_axis(model, target_bone)
+                target_local_axis, target_local_z_axis = utils.get_local_axis_4delegate_qq(model, target_bone)
 
                 # 委譲元ボーンのローカル軸
-                delegate_local_axis, delegate_local_z_axis = utils.get_local_axis(model, delegate_bone)
+                delegate_local_axis, delegate_local_z_axis = utils.get_local_axis_4delegate_qq(model, delegate_bone)
     
                 for fno in sorted(all_frames_by_bone[target_bone.name].keys()):
                     target_bf = all_frames_by_bone[target_bone.name][fno]
                     delegate_bf = all_frames_by_bone[delegate_bone.name][fno]
 
                     # 回転を分散する
-                    target_result_qq, delegate_result_qq = utils.delegate_qq(delegate_dic, target_bf.rotation, delegate_bf.rotation, \
-                        target_local_axis, target_local_z_axis, delegate_local_axis, delegate_local_z_axis, fno)
+                    target_result_qq, delegate_result_qq, v_qq_dic = utils.delegate_qq(delegate_dic, target_bf.rotation, delegate_bf.rotation, \
+                        target_local_axis, target_local_z_axis, delegate_local_axis, delegate_local_z_axis, fno, test_param)
 
                     # 回転量を再設定
                     target_bf.rotation = target_result_qq
@@ -311,12 +311,17 @@ def spread_rotation(motion, model, is_thinning):
                     all_frames_by_bone[target_bone.name][fno] = target_bf
                     all_frames_by_bone[delegate_bone.name][fno] = delegate_bf
 
+                    for k, v in v_qq_dic.items():
+                        v_bf = calc_bone_by_complement_by_bone(all_frames_by_bone, k, fno, is_only=False, is_exist=False)    
+                        v_bf.rotation = v
+                        v_bf.key = True
+                        all_frames_by_bone[k][fno] = v_bf
+
                 print("分散完了: %s → %s" % (delegate_bone.name, target_bone.name))
 
     # 有効なのだけ設定する
     for bone_name in all_frames_by_bone.keys():
-        if bone_name in model.bones.keys() and len(all_frames_by_bone[bone_name]) > 0:
-            
+        if bone_name in all_frames_by_bone and len(all_frames_by_bone[bone_name]) > 0:
             bone_frames = []
             for fno in sorted(all_frames_by_bone[bone_name].keys()):
                 bf = all_frames_by_bone[bone_name][fno]

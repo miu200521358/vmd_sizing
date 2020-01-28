@@ -83,10 +83,10 @@ def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_h
 # 必要なキーだけ残す
 def leave_valid_key_frames(motion, arm_links, is_floor_hand):
     # 有効なキーのみのリストを再設定
-    if "センター" in motion.frames:
+    if "センター" in motion.frames and is_floor_hand:
         motion.frames["センター"] = [x for x in motion.frames["センター"] if x.key == True]
     
-    if "上半身" in motion.frames:
+    if "上半身" in motion.frames and is_floor_hand:
         motion.frames["上半身"] = [x for x in motion.frames["上半身"] if x.key == True]
 
     for direction in ["左", "右"]:
@@ -118,26 +118,27 @@ def reset_complement(motion, arm_links, is_floor_hand):
     # 補間曲線を有効なキーだけに揃える
     
     # センター移動補間曲線
-    if "センター" in motion.frames:
+    if "センター" in motion.frames and is_floor_hand:
         for bf_idx, bf in enumerate(motion.frames["センター"]):
             reset_complement_frame(motion, "センター", bf_idx, utils.MX_x1_idxs, utils.MX_y1_idxs, utils.MX_x2_idxs, utils.MX_y2_idxs)
             reset_complement_frame(motion, "センター", bf_idx, utils.MY_x1_idxs, utils.MY_y1_idxs, utils.MY_x2_idxs, utils.MY_y2_idxs)
             reset_complement_frame(motion, "センター", bf_idx, utils.MZ_x1_idxs, utils.MZ_y1_idxs, utils.MZ_x2_idxs, utils.MZ_y2_idxs)
 
     # センターと上半身の回転補間曲線
-    for link_name in ["センター", "上半身"]:
-        if link_name in motion.frames:
-            for bf_idx, bf in enumerate(motion.frames[link_name]):
-                reset_complement_frame(motion, link_name, bf_idx, utils.R_x1_idxs, utils.R_y1_idxs, utils.R_x2_idxs, utils.R_y2_idxs)
+    if is_floor_hand:
+        for link_name in ["センター", "上半身"]:
+            if link_name in motion.frames:
+                for bf_idx, bf in enumerate(motion.frames[link_name]):
+                    reset_complement_frame(motion, link_name, bf_idx, utils.R_x1_idxs, utils.R_y1_idxs, utils.R_x2_idxs, utils.R_y2_idxs)
 
-        print("手首位置合わせ事後調整 b: %s" % link_name)
+            print("事後調整 b: %s" % link_name)
     
     for direction in ["左", "右"]:
         for al in arm_links[direction]:
             for bf_idx, bf in enumerate(motion.frames[al.name]):
                 reset_complement_frame(motion, al.name, bf_idx, utils.R_x1_idxs, utils.R_y1_idxs, utils.R_x2_idxs, utils.R_y2_idxs)
 
-            print("手首位置合わせ事後調整 b: %s" % al.name)
+            print("事後調整 b: %s" % al.name)
 
 
 def reset_complement_frame(motion, link_name, bf_idx, x1_idxs, y1_idxs, x2_idxs, y2_idxs):
@@ -367,10 +368,10 @@ def prepare(motion, arm_links, hand_distance, is_floor_hand, target_bones):
                 break
             
         if f // 500 > prev_log_cnt:
-            print("手首位置合わせ事前調整 f: %s" % f)
+            print("事前調整 f: %s" % f)
             prev_log_cnt = f // 500
 
-    print("手首位置合わせ事前調整終了")
+    print("事前調整終了")
 
 def prepare_fill_frame(motion, link_name, bf, hand_distance=0):
     for tbf_idx, tbf in enumerate(motion.frames[link_name]):

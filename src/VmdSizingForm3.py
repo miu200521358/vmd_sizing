@@ -336,9 +336,9 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_radioArmNone = wx.RadioButton( self.m_panelArm, wx.ID_ANY, u"腕関係の処理を行わない", wx.DefaultPosition, wx.DefaultSize, style=wx.RB_GROUP )
 		self.m_radioArmNone.SetValue( True )
 
-		self.m_radioAvoidance = wx.RadioButton( self.m_panelArm, wx.ID_ANY, u"頭に腕が貫通しないよう、腕接触回避を行う", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_radioAvoidance = wx.RadioButton( self.m_panelArm, wx.ID_ANY, u"", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_radioAvoidance.SetToolTip( u"頭部に腕が貫通しないよう、腕の角度を小さくして、接触を回避する処理を行います。" )
-		self.m_radioArmIK = wx.RadioButton( self.m_panelArm, wx.ID_ANY, u"変換先モデルの体型に合わせて、手首位置を調整する", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_radioArmIK = wx.RadioButton( self.m_panelArm, wx.ID_ANY, u"", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_radioArmIK.SetToolTip( u"変換先モデルの手首を、作成元モデルの手首とほぼ同じ位置に揃えるよう、手首位置を調整します。" )
 
 		bSizer13.Add( self.m_radioArmNone, 0, wx.ALL, 5 )
@@ -346,57 +346,68 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_staticlineNone = wx.StaticLine( self.m_panelArm, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
 		bSizer13.Add( self.m_staticlineNone, 0, wx.EXPAND |wx.ALL, 5 )
 
-		self.m_staticText91 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"腕接触回避", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizerArm7 = wx.BoxSizer( wx.HORIZONTAL )
+
+		bSizerArm7.Add( self.m_radioAvoidance, 0, wx.ALL, 5 )
+		self.m_staticText91 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"剛体接触回避", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText91.SetToolTip( u"指定されたボーン追従剛体との接触を回避する処理を行います。" )
 		self.m_staticText91.Wrap( -1 )
-
 		self.m_staticText91.SetFont( wx.Font( wx.NORMAL_FONT.GetPointSize(), wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, False, wx.EmptyString ) )
-		bSizer13.Add( self.m_staticText91, 0, wx.ALL, 5 )
+		bSizerArm7.Add( self.m_staticText91, 0, wx.ALL, 5 )
 
-		self.m_staticText92 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"ねんどろ風など、頭身が大幅に異なる場合に、頭部に腕が貫通してしまうのを軽減できます。", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer13.Add( bSizerArm7, 0, wx.ALL, 0 )
+
+		self.m_staticText92 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"指定されたボーンと、指定されたボーン追従剛体との接触を避けるよう、調整します。", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText92.Wrap( -1 )
 
 		bSizer13.Add( self.m_staticText92, 0, wx.ALL, 5 )
 
-
-		bSizer13.Add( self.m_radioAvoidance, 0, wx.ALL, 5 )
-
 		bSizer7 = wx.BoxSizer( wx.HORIZONTAL )
 
-		self.m_staticText13 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"腕接触回避判定先", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText13.Wrap( -1 )
+		# 剛体指定欄
 
-		self.m_staticText13.SetToolTip( u"貫通しないよう腕接触回避を行うターゲットを選べます。\n指定が人差し指で腕が離れすぎてしまう場合に、手首に切り替えてみてください。" )
+		bSizerAvoidance7 = wx.BoxSizer( wx.HORIZONTAL )
 
-		bSizer7.Add( self.m_staticText13, 0, wx.ALL, 5 )
+		self.m_staticTextRigidBody13 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"接触判定\nボーン", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticTextRigidBody13.Wrap( -1 )
+		self.m_staticTextRigidBody13.SetToolTip( u"接触判定を行いたいボーンを指定してください。\n複数指定可能です。" )
+		bSizerAvoidance7.Add( self.m_staticTextRigidBody13, 0, wx.ALL, 5 )
 
-		self.m_radioAvoidanceFinger = wx.RadioButton( self.m_panelArm, wx.ID_ANY, u"人差し指", wx.DefaultPosition, wx.DefaultSize, style=wx.RB_GROUP )
-		self.m_radioAvoidanceFinger.SetToolTip( u"人差し指が頭部と接触しないよう、接触回避を行います。" )
-		self.m_radioAvoidanceFinger.SetValue( True )
-		bSizer7.Add( self.m_radioAvoidanceFinger, 0, wx.ALL, 5 )
+		self.m_arm_listAvoidance = wx.ListBox( self.m_panelArm, id=wx.ID_ANY, pos=wx.DefaultPosition, size=(200, 100), choices=[], style=wx.LB_MULTIPLE|wx.LB_ALWAYS_SB )
+		self.m_arm_listAvoidance.SetToolTip( u"接触判定を行いたいボーンを指定してください。\n複数指定可能です。" )
+		bSizerAvoidance7.Add( self.m_arm_listAvoidance, 0, wx.ALL, 5 )
 
-		self.m_radioAvoidanceWrist = wx.RadioButton( self.m_panelArm, wx.ID_ANY, u"手首", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_radioAvoidanceWrist.SetToolTip( u"手首が頭部と接触しないよう、接触回避を行います。\n人差し指の指定より、頭部との距離が近くなります。" )
-		bSizer7.Add( self.m_radioAvoidanceWrist, 0, wx.ALL, 5 )
+		self.m_staticTextRigidBody13 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"回避対象\nボーン追従剛体", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticTextRigidBody13.Wrap( -1 )
+		self.m_staticTextRigidBody13.SetToolTip( u"接触を避けたいボーン追従剛体を選択してください。\n複数指定可能です。" )
+		bSizerAvoidance7.Add( self.m_staticTextRigidBody13, 0, wx.ALL, 5 )
 
+		self.m_arm_listRigidBody = wx.ListBox( self.m_panelArm, id=wx.ID_ANY, pos=wx.DefaultPosition, size=(200, 100), choices=[], style=wx.LB_MULTIPLE|wx.LB_ALWAYS_SB )
+		self.m_arm_listRigidBody.SetToolTip( u"腕と接触を避けたいボーン追従剛体を選択してください。\n複数指定可能です。" )
+		bSizerAvoidance7.Add( self.m_arm_listRigidBody, 0, wx.ALL, 5 )
 
-		bSizer13.Add( bSizer7, 0, wx.EXPAND, 5 )
+		bSizer13.Add( bSizerAvoidance7, 0, wx.ALL, 0 )
 
 		self.m_staticline2 = wx.StaticLine( self.m_panelArm, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
 		bSizer13.Add( self.m_staticline2, 0, wx.EXPAND |wx.ALL, 5 )
 
+		bSizerArm17 = wx.BoxSizer( wx.HORIZONTAL )
+		bSizerArm17.Add( self.m_radioArmIK, 0, wx.ALL, 5 )
+
 		self.m_staticText911 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"手首位置合わせ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText911.SetToolTip( u"変換先モデルの手首を、作成元モデルの手首とほぼ同じ位置に揃えるよう、手首位置を調整します。" )
 		self.m_staticText911.Wrap( -1 )
 
 		self.m_staticText911.SetFont( wx.Font( wx.NORMAL_FONT.GetPointSize(), wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, False, wx.EmptyString ) )
+		bSizerArm17.Add( self.m_staticText911, 0, wx.ALL, 5 )
 
-		bSizer13.Add( self.m_staticText911, 0, wx.ALL, 5 )
+		bSizer13.Add( bSizerArm17, 0, wx.ALL, 0 )
 
 		self.m_staticText93 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"両手を合わせたり、床に手をついたりするモーションを、変換先モデルの手首位置に合わせて調整します。\nそれぞれの距離を調整することで、位置合わせの適用範囲を調整することができます。", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText93.Wrap( -1 )
 
 		bSizer13.Add( self.m_staticText93, 0, wx.ALL, 5 )
 
-		bSizer13.Add( self.m_radioArmIK, 0, wx.ALL, 5 )
 
 		bSizer17 = wx.BoxSizer( wx.HORIZONTAL )
 		# 指位置合わせ
@@ -430,7 +441,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		bSizer15 = wx.BoxSizer( wx.HORIZONTAL )
 
 		self.m_staticText39 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"手首間の距離　  ", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText39.SetToolTip( u"どのくらい手首が近付いた場合に、手首位置合わせを実行するか指定してください。\n値が小さいほど、手首が近付いた時だけ手首位置合わせを行います。\nサイジング実行時、手首間の距離がメッセージ欄に出てますので、参考にしてください。\nスライダーを最大に設定すると、常に手首位置合わせを行います。（両手剣等に便利です）" )
+		self.m_staticText39.SetToolTip( u"どのくらい手首が近付いた場合に、手首位置合わせを実行するか指定してください。\n値が小さいほど、手首が近付いた時だけ手首位置合わせを行います。\n距離の単位は、元モデルの手のひらの大きさです。\nサイジング実行時、手首間の距離がメッセージ欄に出てますので、参考にしてください。\nスライダーを最大に設定すると、常に手首位置合わせを行います。（両手剣等に便利です）" )
 		self.m_staticText39.Wrap( -1 )
 
 		bSizer15.Add( self.m_staticText39, 0, wx.ALL, 5 )
@@ -452,7 +463,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		bSizerFinger15 = wx.BoxSizer( wx.HORIZONTAL )
 
 		self.m_staticText40 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"指間の距離　　  ", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText40.SetToolTip( u"どのくらい指が近付いた場合に、指位置合わせを実行するか指定してください。\n値が小さいほど、指が近付いた時だけ手首位置合わせを行います。" )
+		self.m_staticText40.SetToolTip( u"どのくらい指が近付いた場合に、指位置合わせを実行するか指定してください。\n値が小さいほど、指が近付いた時だけ手首位置合わせを行います。\n距離の単位は、元モデルの手のひらの大きさです。\nサイジング実行時、指間の距離がメッセージ欄に出てますので、参考にしてください。" )
 		self.m_staticText40.Wrap( -1 )
 
 		bSizerFinger15.Add( self.m_staticText40, 0, wx.ALL, 5 )
@@ -1350,9 +1361,9 @@ class VmdSizingForm3 ( wx.Frame ):
 		# 指位置合わせのチェックボックス切り替え
 		self.m_checkFingerDistance.Bind(wx.EVT_CHECKBOX, self.OnChangeFingerDistance)
 
-		# 接触回避のラジオボタンの切り替え
-		self.m_radioAvoidanceFinger.Bind(wx.EVT_RADIOBUTTON, self.OnChangeAvoidanceTarget)
-		self.m_radioAvoidanceWrist.Bind(wx.EVT_RADIOBUTTON, self.OnChangeAvoidanceTarget)
+		# # 接触回避のラジオボタンの切り替え
+		# self.m_radioAvoidanceFinger.Bind(wx.EVT_RADIOBUTTON, self.OnChangeAvoidanceTarget)
+		# self.m_radioAvoidanceWrist.Bind(wx.EVT_RADIOBUTTON, self.OnChangeAvoidanceTarget)
 
 		# スライダーの変更時
 		self.m_sliderHandDistance.Bind(wx.EVT_SCROLL_CHANGED, self.OnChangeArmIKHandDistance)
@@ -1803,6 +1814,68 @@ class VmdSizingForm3 ( wx.Frame ):
 					logger.debug("rep_morphs: %s", self.rep_morphs)
 
 				self.m_note.ChangeSelection(1)
+
+			self.EnableInput()
+
+		# # パス再設定
+		# self.OnCreateOutputVmd(event)
+		# self.OnCreateOutputCameraVmd(event)
+
+		# 腕タブ選択時
+		elif self.m_note.GetSelection() == 2:
+
+			if not self.rep_pmx_data or (self.rep_pmx_data and self.rep_pmx_data.path != self.m_fileRepPmx.GetPath()):
+				print("腕タブ表示準備中…少々お待ちください")
+				self.m_note.SetSelection(0)	# 画面が崩れるので、set限定
+				# PMXだけ読み込み
+				self.LoadOneFile(self.m_fileRepPmx, self.m_staticText11, ".pmx", True)
+
+			if not self.rep_pmx_data:
+				dialog = wx.MessageDialog(self, "ファイルの指定が不足しているため、「腕」タブはまだ開けません\n詳しくはメッセージ欄をご確認ください。", 'ファイル指定が不足しています', style=wx.OK)
+				dialog.ShowModal()
+				dialog.Destroy()
+
+				print("■■■■■■■■■■■■■■■■■")
+				print("■　**ERROR**　")
+				print("■　「ファイル」タブで以下のファイルパスが指定されていないため、「腕」タブが開けません。")
+				print("■　・モーション変換先モデルPMXファイル")
+				print("■　既に指定済みの場合、現在読み込み中の可能性があります。")
+				print("■　調整に必要なファイルを指定して、")
+				print("■　「■読み込み成功」のログが出てから、「腕」タブを開いてください。")
+				print("■■■■■■■■■■■■■■■■■")
+				
+				self.m_note.ChangeSelection(0)
+			else:
+				if len(self.m_arm_listAvoidance.GetItems()) == 0:
+					# 腕タブ新規の場合、腕ボーンリスト生成
+					bone_names = []
+
+					# 人差し指までのリンク
+					finger_links, finger_indexes = self.rep_pmx_data.create_link_2_top_lr("人指先")
+
+					for direction in ["左", "右"]:
+						is_target = False
+						for l in reversed(finger_links[direction]):
+							if "腕" in l.name:
+								# 肩（自身含む）より上は見ない
+								is_target = True
+							
+							if is_target and l.display == True and l.fixed_axis == QVector3D():
+								bone_names.append(l.name)
+
+					self.m_arm_listAvoidance.SetItems(bone_names)
+
+				if len(self.m_arm_listRigidBody.GetItems()) == 0:
+					# 腕タブ新規の場合、ボーン追従剛体リスト生成
+					rigidbody_names = []
+
+					for rk, rv in self.rep_pmx_data.rigidbodies.items():
+						if rv.mode == 0:
+							rigidbody_names.append(rk)
+
+					self.m_arm_listRigidBody.SetItems(rigidbody_names)
+				
+				self.m_note.ChangeSelection(2)
 
 			self.EnableInput()
 
@@ -2290,6 +2363,9 @@ class VmdSizingForm3 ( wx.Frame ):
 
 					# 出力ファイル以外はモーフも変わるので初期化
 					self.ClearMorph()
+					# 剛体リストも変わるので初期化
+					self.m_arm_listRigidBody.SetItems([])
+					self.m_arm_listAvoidance.SetItems([])
 
 				if is_print:
 					if new_rep_pmx_data:
@@ -3168,6 +3244,14 @@ class ExecWorkerThread(Thread):
 				# モーフデータ生成				
 				vmd_choice_values, rep_choice_values, rep_rate_values = self._notify_window.create_morph_data()
 
+			target_avoidance_rigids = []
+			for idx in self._notify_window.m_arm_listRigidBody.GetSelections():
+				target_avoidance_rigids.append(self._notify_window.m_arm_listRigidBody.GetString(idx))
+
+			target_avoidance_bones = []
+			for idx in self._notify_window.m_arm_listAvoidance.GetSelections():
+				target_avoidance_bones.append(self._notify_window.m_arm_listAvoidance.GetString(idx))
+
 			# 処理実行
 			wrapperutils.exec(
 				self._notify_window.vmd_data
@@ -3178,7 +3262,7 @@ class ExecWorkerThread(Thread):
 				, self._notify_window.m_fileRepPmx.GetPath()
 				, self._notify_window.m_fileOutputVmd.GetPath()
 				, self._notify_window.m_radioAvoidance.GetValue()
-				, self._notify_window.m_radioAvoidanceFinger.GetValue()
+				, False
 				, self._notify_window.m_radioArmIK.GetValue()
 				, self._notify_window.m_sliderHandDistance.GetValue()
 				, self._notify_window.m_checkFloorArmDistance.GetValue()
@@ -3199,6 +3283,8 @@ class ExecWorkerThread(Thread):
 				, self._notify_window.m_camera_spinYoffset.GetValue()
 				, self._notify_window.m_checkAlternativeModel.GetValue()
 				, self._notify_window.m_checkNoDelegate.GetValue()
+				, target_avoidance_rigids
+				, target_avoidance_bones
 			)
 
 		# Here's where the result would be returned (this is an

@@ -5,6 +5,8 @@ import logging
 import copy
 from collections import OrderedDict
 from PyQt5.QtGui import QQuaternion, QVector3D, QVector2D, QColor, QMatrix4x4
+from abc import ABCMeta, abstractmethod
+import math
 
 logger = logging.getLogger("VmdSizing").getChild(__name__)
 handler = logging.StreamHandler()
@@ -37,6 +39,8 @@ class PmxModel():
         self.display_slots = {}
         # 剛体データ
         self.rigidbodies = {}
+        # 剛体INDEXデータ
+        self.rigidbody_indexes = {}
         # ジョイントデータ
         self.joints = {}
         # ハッシュ値
@@ -1260,6 +1264,7 @@ class PmxModel():
                     linear_damping, angular_damping,
                     restitution, friction)
             self.mode=mode
+            self.index=-1
 
             self.SHAPE_SPHERE=0
             self.SHAPE_BOX=1
@@ -1273,6 +1278,205 @@ class PmxModel():
                         self.shape_type, self.shape_size, self.shape_position, self.shape_rotation, self.param,
                         self.mode
                     )
+        
+        def get_obb(self, bone_pos, trans_vs, add_qs):
+
+            # 剛体の形状別の衝突判定用
+            if self.shape_type == self.SHAPE_SPHERE:
+                return PmxModel.RigidBody.Sphere(self.shape_size, self.shape_position, self.shape_rotation, bone_pos, trans_vs, add_qs)
+            elif self.shape_type == self.SHAPE_BOX:
+                return PmxModel.RigidBody.Box(self.shape_size, self.shape_position, self.shape_rotation, bone_pos, trans_vs, add_qs)
+            else:
+                return PmxModel.RigidBody.Capsule(self.shape_size, self.shape_position, self.shape_rotation, bone_pos, trans_vs, add_qs)
+
+        # OBB（有向境界ボックス：Oriented Bounding Box）
+        class OBB(metaclass=ABCMeta):
+            def __init__(self, shape_size, shape_position, shape_rotation, bone_pos, trans_vs, add_qs):
+                self.shape_size=shape_size
+                self.shape_position=shape_position
+                self.shape_rotation=shape_rotation
+                self.shape_rotation_qq = QQuaternion.fromEulerAngles(-shape_rotation.x(),shape_rotation.y(),shape_rotation.z())
+                self.bone_pos=bone_pos
+                self.trans_vs=trans_vs
+                self.add_qs=add_qs
+
+                self.matrix = QMatrix4x4()
+
+                # 実際の原点位置
+                for v, q in zip(trans_vs, add_qs):
+                    # 移動
+                    self.matrix.translate(v)
+                    # 回転
+                    self.matrix.rotate(q)
+
+                # 剛体自体の位置
+                self.matrix.translate(self.shape_position - bone_pos)
+                # 剛体自体の回転
+                self.matrix.rotate(self.shape_rotation_qq)
+
+                # 剛体自体の原点
+                self.origin = self.matrix * QVector3D(0, 0, 0)
+
+                self.origin_xyz = {"x": self.origin.x(), "y": self.origin.y(), "z": self.origin.z()}
+                self.shape_size_xyz = {"x": self.shape_size.x(), "y": self.shape_size.y(), "z": self.shape_size.z()}
+
+            # 指定軸番号の方向ベクトルを取得
+            def get_direct(self, axis):
+                if axis == "x":
+                    return self.matrix.mapVector(QVector3D(1, 0, 0))
+                if axis == "y":
+                    return self.matrix.mapVector(QVector3D(0, 1, 0))
+                if axis == "z":
+                    return self.matrix.mapVector(QVector3D(0, 0, 1))
+            
+            # 誤差を丸める
+            def epsilon(self, v):
+                if round(v, 3) == 0:
+                    return 0
+                else:
+                    return v
+
+            # http://marupeke296.com/COL_3D_No12_OBBvsPoint.html
+            # http://marupeke296.com/COL_3D_No14_OBBvsPlane.html
+            # 3次元OBBと点の最短距離算出関数
+            def get_distance_vec(self, point):
+                # 最終的に長さを求めるベクトル
+                distance_vec = QVector3D()
+                
+                # 各軸についてはみ出た部分のベクトルを算出
+                for axis in ["x", "y", "z"]:
+                    l = self.get_length(axis)
+                    if l <= 0:
+                        continue
+
+                    # pointの位置の場合分け
+                    s = QVector3D.dotProduct( (point - self.origin ), self.get_direct(axis) ) / l
+                    # sの誤差を丸めた絶対値
+                    fs = abs(self.epsilon(s))
+                    # はみ出した部分のベクトル算出
+                    if fs > 1:
+                        distance_vec += (1 - fs) * l * self.get_direct(axis)
+                    
+                return distance_vec
+            
+            # 指定軸方向の長さ
+            @abstractmethod
+            def get_length(self, axis):
+                pass
+            
+            # 衝突判定
+            def judge_collision(self, point):
+                distance_vec = self.get_distance_vec(point)
+
+                # 衝突判定
+                collision = self.get_collistion(distance_vec, point)
+
+                # めり込んだ位置から平面の法線方向に戻し距離だけオフセット
+                return_pos = self.get_return_pos(distance_vec, point)
+
+                return collision, return_pos
+            
+            # # OBBとの衝突判定
+            # def get_return_distance(self, distance_vec, distance_proximity):
+            #     return_distance = 0
+            #     if distance > 0:
+            #         return_distance = r - self.epsilon(distance)
+            #     else:
+            #         return_distance = r + self.epsilon(distance)
+            #     return return_distance
+
+            # OBBとの衝突判定
+            @abstractmethod
+            def get_collistion(self, distance_vec, point):
+                pass
+            
+            # OBBとの衝突判定
+            def get_return_pos(self, distance_vec, point):
+                # 戻し距離
+                return QVector3D.crossProduct(point, self.origin).normalized() * distance_vec
+
+        # 球剛体
+        class Sphere(OBB):
+            def __init__(self, shape_size, shape_position, shape_rotation, pos, trans_vs, add_qs):
+                super().__init__(shape_size, shape_position, shape_rotation, pos, trans_vs, add_qs)
+
+            # 指定軸方向の長さ
+            def get_length(self, axis):
+                # 半径そのもの
+                return self.shape_size.x()
+
+            # 衝突しているか
+            def get_collistion(self, distance_vec, point):
+                # 半径未満なら衝突
+                return 0 < abs(self.epsilon(distance_vec.length())) < self.shape_size.x()
+
+        # 箱剛体
+        class Box(OBB):
+            def __init__(self, shape_size, shape_position, shape_rotation, pos, trans_vs, add_qs):
+                super().__init__(shape_size, shape_position, shape_rotation, pos, trans_vs, add_qs)
+
+            # 指定軸方向の長さ
+            def get_length(self, axis):
+                # 各軸の長さ
+                return self.shape_size_xyz[axis] / 2
+
+            # 衝突しているか（内外判定）
+            # https://stackoverflow.com/questions/21037241/how-to-determine-a-point-is-inside-or-outside-a-cube
+            def get_collistion(self, distance_vec, point):
+                # 立方体の中にある場合、衝突
+                # 下辺
+                b1 = self.matrix * QVector3D( self.get_length("x"), -self.get_length("y"), -self.get_length("z") )
+                b2 = self.matrix * QVector3D( self.get_length("x"), -self.get_length("y"), self.get_length("z") )
+                b3 = self.matrix * QVector3D( -self.get_length("x"), -self.get_length("y"), self.get_length("z") )
+                b4 = self.matrix * QVector3D( -self.get_length("x"), -self.get_length("y"), -self.get_length("z") )
+                # 上辺
+                t1 = self.matrix * QVector3D( self.get_length("x"), self.get_length("y"), -self.get_length("z") )
+                t2 = self.matrix * QVector3D( self.get_length("x"), self.get_length("y"), self.get_length("z") )
+                t3 = self.matrix * QVector3D( -self.get_length("x"), self.get_length("y"), self.get_length("z") )
+                t4 = self.matrix * QVector3D( -self.get_length("x"), self.get_length("y"), -self.get_length("z") )
+
+                d1 = (t1-b1)
+                size1 = d1.lengthSquared()
+                dir1 = d1 / size1
+                set_effective_value_vec3(dir1)
+
+                d2 = (b2-b1)
+                size2 = d2.lengthSquared()
+                dir2 = d2 / size2
+                set_effective_value_vec3(dir2)
+
+                d3 = (b4-b1)
+                size3 = d3.lengthSquared()
+                dir3 = d3 / size3
+                set_effective_value_vec3(dir3)
+
+                dir_vec = point - self.origin
+                set_effective_value_vec3(dir_vec)
+
+                res1 = abs(QVector3D.dotProduct(dir_vec, dir1) * 2) < size1
+                res2 = abs(QVector3D.dotProduct(dir_vec, dir2) * 2) < size2
+                res3 = abs(QVector3D.dotProduct(dir_vec, dir3) * 2) < size3
+
+                return res1 == res2 == res3 == True
+
+        # カプセル剛体
+        class Capsule(OBB):
+            def __init__(self, shape_size, shape_position, shape_rotation, pos, trans_vs, add_qs):
+                super().__init__(shape_size, shape_position, shape_rotation, pos, trans_vs, add_qs)
+                                
+            # 指定軸方向の長さ
+            def get_length(self, axis):
+                if axis in ["x", "z"]:
+                    # カプセルの横は線分
+                    return self.shape_size.y() / 2
+                else:
+                    # Yは半径を追加する
+                    return self.shape_size.y() / 2 + self.shape_size.x()
+
+            # 衝突しているか
+            def get_collistion(self, distance_vec, point):
+                # 半径未満なら衝突
+                return 0 < abs(self.epsilon(distance_vec.length())) < self.shape_size.x()
 
     class RigidBodyParam():
         def __init__(self, mass, linear_damping, angular_damping, restitution, friction):
@@ -1335,3 +1539,17 @@ class ParseException(Exception):
 class SizingException(Exception):
     def __init__(self, message):
         self.message=message
+
+def get_effective_value(v):
+    if math.isnan(v):
+        return 0
+    
+    if math.isinf(v):
+        return 0
+    
+    return v
+
+def set_effective_value_vec3(vec3):
+    vec3.setX(get_effective_value(vec3.x()))
+    vec3.setY(get_effective_value(vec3.y()))
+    vec3.setZ(get_effective_value(vec3.z()))

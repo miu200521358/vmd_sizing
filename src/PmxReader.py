@@ -386,7 +386,12 @@ class PmxReader():
                 mode=self.read_int(1)
             )
 
+            # ボーンのINDEX
+            rigidbody.index = len(pmx.rigidbodies.keys())
+        
             pmx.rigidbodies[rigidbody.name] = rigidbody
+            # インデックス逆引きも登録
+            pmx.rigidbody_indexes[rigidbody.index] = rigidbody.name
 
         logger.debug("len(rigidbodies): %s", len(pmx.rigidbodies))
 

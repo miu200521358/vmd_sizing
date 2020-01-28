@@ -1203,7 +1203,7 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
     #     QVector3D.dotProduct(org_cf.position.normalized(), org_top_global_pos.normalized()),QVector3D.dotProduct(cf.position.normalized(), rep_top_global_pos.normalized()), \
     #     vertical_type)
 
-    print("%sフレーム目 縮尺比率: %s, 注視点: %s, 上辺: %s, 下辺: %s, 調整(%s): x=%s, y=%s, z=%s, l=%s" % (cf.frame, ratio, org_nearest_bone_name, org_top_bone_name, org_bottom_bone_name, vertical_type, offset.x(), offset.y(), offset.z(), length_offset))
+    print("{0}フレーム目 縮尺比率: {1:02.3f}, 注視点: {2}, 上辺: {3}, 下辺: {4}, 調整({5}): x={6:02.3f}, y={7:02.3f}, z={8:02.3f}, l={9:02.3f}".format(cf.frame, ratio, org_nearest_bone_name, org_top_bone_name, org_bottom_bone_name, vertical_type, offset.x(), offset.y(), offset.z(), length_offset))
 
     return ratio, vertical_type
 

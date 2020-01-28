@@ -10,6 +10,7 @@ import pathlib
 import itertools
 import shutil
 import traceback
+import glob
 # このソースのあるディレクトリの絶対パスを取得
 current_dir = pathlib.Path(__file__).resolve().parent
 # モジュールのあるパスを追加
@@ -715,11 +716,274 @@ class TestSubStance(unittest.TestCase):
         print("ok_list LIST: %s" % ok_list)
         self.assertGreater(len(ok_list), 0)
         
+    def test_upper_stance_upper2_up_27(self):
+        rep_upper2_initial_slope_test_param00 = ["上半身"]
+        rep_upper2_initial_slope_test_param01 = ["上半身2"]
+        rep_upper2_initial_slope_test_param02 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param03 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param04 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param05 = ["上半身2"]
+        rep_upper2_initial_slope_test_param06 = ["頭"]
+        rep_upper2_initial_slope_test_param07 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param08 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param09 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param10 = ["d1i"]
+        rep_upper2_initial_slope_test_param11 = ["d2i"]
+        rep_upper2_initial_slope_test_param12 = ["d1"]
+
+        # 直積
+        target_test_params_base = list(itertools.product(rep_upper2_initial_slope_test_param00, rep_upper2_initial_slope_test_param01, \
+            rep_upper2_initial_slope_test_param02, rep_upper2_initial_slope_test_param03, rep_upper2_initial_slope_test_param04, \
+            rep_upper2_initial_slope_test_param05, rep_upper2_initial_slope_test_param06, rep_upper2_initial_slope_test_param07, \
+            rep_upper2_initial_slope_test_param08, rep_upper2_initial_slope_test_param09, rep_upper2_initial_slope_test_param10, \
+            rep_upper2_initial_slope_test_param11, rep_upper2_initial_slope_test_param12))
+
+        target_test_params_list = [(x00, x01, x02, x03, x04, x05, x06, x07, x08, x09, x10, x11, x12) \
+            for (x00, x01, x02, x03, x04, x05, x06, x07, x08, x09, x10, x11, x12) \
+            in target_test_params_base if x00 != x01 and x05 != x06 and x10[:2] != x11[:2] != x12[:2]]
+
+        random.shuffle(target_test_params_list)
+
+        ok_list = self.calc_stance(target_test_params_list, 1, False, "027_04")
+
+        print("ok_list LIST: %s" % ok_list)
+        self.assertGreater(len(ok_list), 0)
+
+    def test_upper_stance_upper2_up_28(self):
+        rep_upper2_initial_slope_test_param00 = ["上半身"]
+        rep_upper2_initial_slope_test_param01 = ["上半身2"]
+        rep_upper2_initial_slope_test_param02 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param03 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param04 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param05 = ["上半身", "上半身2", "頭", "首"]
+        rep_upper2_initial_slope_test_param06 = ["上半身", "上半身2", "頭", "首"]
+        rep_upper2_initial_slope_test_param07 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param08 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param09 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param10 = ["d1","d1i","d2","d2i","00","01"]
+        rep_upper2_initial_slope_test_param11 = ["d1","d1i","d2","d2i","00","01"]
+        rep_upper2_initial_slope_test_param12 = ["d1","d1i","d2","d2i","00","01"]
+
+        # 直積
+        target_test_params_base = list(itertools.product(rep_upper2_initial_slope_test_param00, rep_upper2_initial_slope_test_param01, \
+            rep_upper2_initial_slope_test_param02, rep_upper2_initial_slope_test_param03, rep_upper2_initial_slope_test_param04, \
+            rep_upper2_initial_slope_test_param05, rep_upper2_initial_slope_test_param06, rep_upper2_initial_slope_test_param07, \
+            rep_upper2_initial_slope_test_param08, rep_upper2_initial_slope_test_param09, rep_upper2_initial_slope_test_param10, \
+            rep_upper2_initial_slope_test_param11, rep_upper2_initial_slope_test_param12))
+
+        target_test_params_list = [(x00, x01, x02, x03, x04, x05, x06, x07, x08, x09, x10, x11, x12) \
+            for (x00, x01, x02, x03, x04, x05, x06, x07, x08, x09, x10, x11, x12) \
+            in target_test_params_base if x00 != x01 and x05 != x06 and x10[:2] != x11[:2] != x12[:2]]
+
+        random.shuffle(target_test_params_list)
+
+        ok_list = self.calc_stance(target_test_params_list, 1, False, "028_01")
+
+        print("ok_list LIST: %s" % ok_list)
+        self.assertGreater(len(ok_list), 0)
+
+    def test_upper_stance_upper2_up_29(self):
+        rep_upper2_initial_slope_test_param00 = ["上半身"]
+        rep_upper2_initial_slope_test_param01 = ["上半身2"]
+        rep_upper2_initial_slope_test_param02 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param03 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param04 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param05 = ["上半身"]
+        rep_upper2_initial_slope_test_param06 = ["頭"]
+        rep_upper2_initial_slope_test_param07 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param08 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param09 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param10 = ["d1","d1i","d2","d2i","00"]
+        rep_upper2_initial_slope_test_param11 = ["d1","d1i","d2","d2i","00"]
+        rep_upper2_initial_slope_test_param12 = ["d1","d1i","d2","d2i","00"]
+
+        # 直積
+        target_test_params_base = list(itertools.product(rep_upper2_initial_slope_test_param00, rep_upper2_initial_slope_test_param01, \
+            rep_upper2_initial_slope_test_param02, rep_upper2_initial_slope_test_param03, rep_upper2_initial_slope_test_param04, \
+            rep_upper2_initial_slope_test_param05, rep_upper2_initial_slope_test_param06, rep_upper2_initial_slope_test_param07, \
+            rep_upper2_initial_slope_test_param08, rep_upper2_initial_slope_test_param09, rep_upper2_initial_slope_test_param10, \
+            rep_upper2_initial_slope_test_param11, rep_upper2_initial_slope_test_param12))
+
+        target_test_params_list = [(x00, x01, x02, x03, x04, x05, x06, x07, x08, x09, x10, x11, x12) \
+            for (x00, x01, x02, x03, x04, x05, x06, x07, x08, x09, x10, x11, x12) \
+            in target_test_params_base if x00 != x01 and x05 != x06 and x10[:2] != x11[:2] != x12[:2]]
+
+        random.shuffle(target_test_params_list)
+
+        ok_list = self.calc_stance(target_test_params_list, 1, False, "029_03")
+
+        print("ok_list LIST: %s" % ok_list)
+        self.assertGreater(len(ok_list), 0)
+
+    def test_upper_stance_upper2_up_31(self):
+        rep_upper2_initial_slope_test_param00 = ["上半身"]
+        rep_upper2_initial_slope_test_param01 = ["上半身2"]
+        rep_upper2_initial_slope_test_param02 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param03 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param04 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param05 = ["上半身2"]
+        rep_upper2_initial_slope_test_param06 = ["頭"]
+        rep_upper2_initial_slope_test_param07 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param08 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param09 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param10 = ["d1","d1i","d2","d2i","00","01"]
+        rep_upper2_initial_slope_test_param11 = ["d1","d1i","d2","d2i","00","01"]
+        rep_upper2_initial_slope_test_param12 = ["d1","d1i","d2","d2i","00","01"]
+
+        # 直積
+        target_test_params_base = list(itertools.product(rep_upper2_initial_slope_test_param00, rep_upper2_initial_slope_test_param01, \
+            rep_upper2_initial_slope_test_param02, rep_upper2_initial_slope_test_param03, rep_upper2_initial_slope_test_param04, \
+            rep_upper2_initial_slope_test_param05, rep_upper2_initial_slope_test_param06, rep_upper2_initial_slope_test_param07, \
+            rep_upper2_initial_slope_test_param08, rep_upper2_initial_slope_test_param09, rep_upper2_initial_slope_test_param10, \
+            rep_upper2_initial_slope_test_param11, rep_upper2_initial_slope_test_param12))
+
+        target_test_params_list = [(x00, x01, x02, x03, x04, x05, x06, x07, x08, x09, x10, x11, x12) \
+            for (x00, x01, x02, x03, x04, x05, x06, x07, x08, x09, x10, x11, x12) \
+            in target_test_params_base if x00 != x01 and x05 != x06 and x10[:2] != x11[:2] != x12[:2]]
+
+        random.shuffle(target_test_params_list)
+
+        ok_list = self.calc_stance(target_test_params_list, 1, False, "030_07_上半身2-頭")
+
+        print("ok_list LIST: %s" % ok_list)
+        self.assertGreater(len(ok_list), 0)
+
+    def test_upper_stance_upper2_up_32(self):
+        rep_upper2_initial_slope_test_param00 = ["上半身"]
+        rep_upper2_initial_slope_test_param01 = ["上半身2"]
+        rep_upper2_initial_slope_test_param02 = ["1-"]
+        rep_upper2_initial_slope_test_param03 = ["1"]
+        rep_upper2_initial_slope_test_param04 = ["0"]
+        rep_upper2_initial_slope_test_param05 = ["首"]
+        rep_upper2_initial_slope_test_param06 = ["頭"]
+        rep_upper2_initial_slope_test_param07 = ["1"]
+        rep_upper2_initial_slope_test_param08 = ["0"]
+        rep_upper2_initial_slope_test_param09 = ["0"]
+        rep_upper2_initial_slope_test_param10 = [(0,"上半身"), (1,"上半身2"), (2,"首"), (3,"頭")]
+        rep_upper2_initial_slope_test_param11 = [(0,"上半身"), (1,"上半身2"), (2,"首"), (3,"頭")]
+        rep_upper2_initial_slope_test_param12 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param13 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param14 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param15 = ["d1","d1i","d2","d2i","d3","d3i","d0","d0i","00","01"]
+        rep_upper2_initial_slope_test_param16 = ["d1","d1i","d2","d2i","d3","d3i","d0","d0i","00","01"]
+        rep_upper2_initial_slope_test_param17 = ["d1","d1i","d2","d2i","d3","d3i","d0","d0i","00","01"]
+        rep_upper2_initial_slope_test_param18 = ["d1","d1i","d2","d2i","d3","d3i","d0","d0i","00","01"]
+        rep_upper2_initial_slope_test_param19 = ["d1","d1i","d2","d2i","d3","d3i","d0","d0i","00","01"]
+
+        # 直積
+        target_test_params_base = list(itertools.product(rep_upper2_initial_slope_test_param00, rep_upper2_initial_slope_test_param01, \
+            rep_upper2_initial_slope_test_param02, rep_upper2_initial_slope_test_param03, rep_upper2_initial_slope_test_param04, \
+            rep_upper2_initial_slope_test_param05, rep_upper2_initial_slope_test_param06, rep_upper2_initial_slope_test_param07, \
+            rep_upper2_initial_slope_test_param08, rep_upper2_initial_slope_test_param09, rep_upper2_initial_slope_test_param10, \
+            rep_upper2_initial_slope_test_param11, rep_upper2_initial_slope_test_param12, rep_upper2_initial_slope_test_param13, \
+            rep_upper2_initial_slope_test_param14, rep_upper2_initial_slope_test_param15, rep_upper2_initial_slope_test_param16, \
+            rep_upper2_initial_slope_test_param17, rep_upper2_initial_slope_test_param18, rep_upper2_initial_slope_test_param19, \
+        ))
+
+        target_test_params_list = [(x00, x01, x02, x03, x04, x05, x06, x07, x08, x09, x10[1], x11[1], x12, x13, x14, x15, x16, x17, x18, x19) \
+            for (x00, x01, x02, x03, x04, x05, x06, x07, x08, x09, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19) \
+            in target_test_params_base if x10 != x11 and x10[0] < x11[0] and x15[:2] not in [x16[:2], x17[:2], x18[:2], x19[:2]] and x16[:2] not in [x15[:2], x17[:2], x18[:2], x19[:2]] and x17[:2] not in [x16[:2], x15[:2], x18[:2], x19[:2]] \
+                 and x18[:2] not in [x16[:2], x17[:2], x15[:2], x19[:2]] and x19[:2] not in [x16[:2], x17[:2], x18[:2], x15[:2]]]
+
+        random.shuffle(target_test_params_list)
+        
+        prefix = "032-02_03-02追加"
+        ok_list = self.calc_stance(target_test_params_list, 1, False, prefix)
+
+        print("ok_list LIST: %s" % ok_list)
+        print("ok_list target: %s" % prefix)
+        self.assertGreater(len(ok_list), 0)
+
+    def test_upper_stance_upper2_up_33(self):
+        rep_upper2_initial_slope_test_param00 = ["上半身"]
+        rep_upper2_initial_slope_test_param01 = ["上半身2"]
+        rep_upper2_initial_slope_test_param02 = ["0"]
+        rep_upper2_initial_slope_test_param03 = ["1"]
+        rep_upper2_initial_slope_test_param04 = ["1-"]
+        rep_upper2_initial_slope_test_param05 = ["上半身2"]
+        rep_upper2_initial_slope_test_param06 = ["頭"]
+        rep_upper2_initial_slope_test_param07 = ["0"]
+        rep_upper2_initial_slope_test_param08 = ["1"]
+        rep_upper2_initial_slope_test_param09 = ["1"]
+        rep_upper2_initial_slope_test_param10 = [(0,"上半身"), (1,"上半身2"), (2,"首"), (3,"頭")]
+        rep_upper2_initial_slope_test_param11 = [(0,"上半身"), (1,"上半身2"), (2,"首"), (3,"頭")]
+        rep_upper2_initial_slope_test_param12 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param13 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param14 = ["0","1-","1"]
+        rep_upper2_initial_slope_test_param15 = ["d1","d1i","d2","d2i","d3","d3i","d0","d0i","00","01"]
+        rep_upper2_initial_slope_test_param16 = ["d1","d1i","d2","d2i","d3","d3i","d0","d0i","00","01"]
+        rep_upper2_initial_slope_test_param17 = ["d1","d1i","d2","d2i","d3","d3i","d0","d0i","00","01"]
+        rep_upper2_initial_slope_test_param18 = ["d1","d1i","d2","d2i","d3","d3i","d0","d0i","00","01"]
+        rep_upper2_initial_slope_test_param19 = ["d1","d1i","d2","d2i","d3","d3i","d0","d0i","00","01"]
+
+        # 直積
+        target_test_params_base = list(itertools.product(rep_upper2_initial_slope_test_param00, rep_upper2_initial_slope_test_param01, \
+            rep_upper2_initial_slope_test_param02, rep_upper2_initial_slope_test_param03, rep_upper2_initial_slope_test_param04, \
+            rep_upper2_initial_slope_test_param05, rep_upper2_initial_slope_test_param06, rep_upper2_initial_slope_test_param07, \
+            rep_upper2_initial_slope_test_param08, rep_upper2_initial_slope_test_param09, rep_upper2_initial_slope_test_param10, \
+            rep_upper2_initial_slope_test_param11, rep_upper2_initial_slope_test_param12, rep_upper2_initial_slope_test_param13, \
+            rep_upper2_initial_slope_test_param14, rep_upper2_initial_slope_test_param15, rep_upper2_initial_slope_test_param16, \
+            rep_upper2_initial_slope_test_param17, rep_upper2_initial_slope_test_param18, rep_upper2_initial_slope_test_param19, \
+        ))
+
+        target_test_params_list = [(x00, x01, x02, x03, x04, x05, x06, x07, x08, x09, x10[1], x11[1], x12, x13, x14, x15, x16, x17, x18, x19) \
+            for (x00, x01, x02, x03, x04, x05, x06, x07, x08, x09, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19) \
+            in target_test_params_base if x10 != x11 and x10[0] < x11[0] and x15[:2] not in [x16[:2], x17[:2], x18[:2], x19[:2]] and x16[:2] not in [x15[:2], x17[:2], x18[:2], x19[:2]] and x17[:2] not in [x16[:2], x15[:2], x18[:2], x19[:2]] \
+                 and x18[:2] not in [x16[:2], x17[:2], x15[:2], x19[:2]] and x19[:2] not in [x16[:2], x17[:2], x18[:2], x15[:2]]]
+
+        random.shuffle(target_test_params_list)
+        
+        prefix = "033-01_上半身2-頭"
+        ok_list = self.calc_stance(target_test_params_list, 1, False, prefix)
+
+        print("ok_list LIST: %s" % ok_list)
+        print("ok_list target: %s" % prefix)
+        self.assertGreater(len(ok_list), 0)
+                                                                
+
+    def test_upper_stance_upper2_up_34(self):
+        
+        # ボーン名の組合せ
+        rep_upper2_initial_slope_test_bone_names = [(0,"上半身"), (1,"上半身2"), (2,"首"), (3,"頭")]
+        target_test_params_base_bone_names = list(itertools.product(rep_upper2_initial_slope_test_bone_names, repeat=2))
+        target_test_params_list_bone_names = [(x00[1], x01[1]) for (x00, x01) in target_test_params_base_bone_names if x00[0] < x01[0]]
+        print("bone_names LIST: %s" % len(target_test_params_list_bone_names))
+
+        # 数字の組合せ
+        rep_upper2_initial_slope_test_numbers = ["0","1-","1"]
+        base_target_test_params_list_numbers = list(itertools.product(rep_upper2_initial_slope_test_numbers, repeat=3))
+        list_target_test_params_list_numbers = [(x00, x01, x02) for (x00, x01, x02) in base_target_test_params_list_numbers if (x00 != x01 or x01 != x02)]
+        print("numbers LIST: %s" % len(list_target_test_params_list_numbers))
+
+        # 最後の組合せ
+        rep_upper2_initial_slope_test_pairs = ["d1","d1i","d2","d2i","d3","d3i","00"]
+        target_test_params_base_pairs = list(itertools.product(rep_upper2_initial_slope_test_pairs, repeat=4))
+        target_test_params_list_pairs = [(x00, x01, x02, x03) for (x00, x01, x02, x03) in target_test_params_base_pairs 
+            if x00[:3] not in [x01[:3], x02[:3], x03[:3]] and x01[:3] not in [x00[:3], x02[:3], x03[:3]] and x02[:3] not in [x01[:3], x00[:3], x03[:3]] \
+            and x03[:3] not in [x01[:3], x02[:3], x00[:3]]]
+        print("pairs LIST: %s" % len(target_test_params_list_pairs))
+
+        # 直積
+        target_test_params_base = list(itertools.product(target_test_params_list_bone_names, target_test_params_list_bone_names, \
+            list_target_test_params_list_numbers, list_target_test_params_list_numbers, target_test_params_list_pairs))
+
+        target_test_params_list = [("上半身2", "上半身", "1-", "0", "0", names1[0], names1[1], numbers1[0], numbers1[1], numbers1[2], \
+            names2[0], names2[1], numbers2[0], numbers2[1], numbers2[2], pairs[0], pairs[1], pairs[2], pairs[3]) \
+            for (names1, names2, numbers1, numbers2, pairs) in target_test_params_base]
+        random.shuffle(target_test_params_list)
+        print("targets LIST: %s" % len(target_test_params_list))
+        
+        prefix = "034-07"
+        ok_list = self.calc_stance(target_test_params_list, 0.1, False, prefix)
+
+        print("ok_list LIST: %s" % ok_list)
+        print("ok_list target: %s" % prefix)
+        self.assertGreater(len(ok_list), 0)
 
 
 
 
-    
+
     def calc_stance(self, target_test_params, limit, exist_ok, prefix=""):
         # VMD読み込み
         motion = VmdReader().read_vmd_file("D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/ドラマツルギー motion 配布用 moka/ドラマツルギー_0-500.vmd")
@@ -764,19 +1028,15 @@ class TestSubStance(unittest.TestCase):
         output_camera_vmd_path = None
         camera_y_offset = 0
         is_alternative_model = False
+        is_no_delegate = True
+        target_avoidance_rigids = []
+        target_avoidance_bones = []
         base_path = "E:/MMD/vmd_sizing/vmd/input_upper2_up"
 
         logger.info("len: %s", len(target_test_params))
         ok_list = []
 
-        os.makedirs("{0}/{1}_OK1".format(base_path, prefix), exist_ok=exist_ok)
-        os.makedirs("{0}/{1}_OK2".format(base_path, prefix), exist_ok=exist_ok)
-        os.makedirs("{0}/{1}_OK3".format(base_path, prefix), exist_ok=exist_ok)
-        os.makedirs("{0}/{1}_OK4".format(base_path, prefix), exist_ok=exist_ok)
-        os.makedirs("{0}/{1}_OK5".format(base_path, prefix), exist_ok=exist_ok)
-        os.makedirs("{0}/{1}_OK6".format(base_path, prefix), exist_ok=exist_ok)
-        os.makedirs("{0}/{1}_ALLOK".format(base_path, prefix), exist_ok=exist_ok)
-        os.makedirs("{0}/{1}_NG".format(base_path, prefix), exist_ok=exist_ok)
+        # os.makedirs("{0}/{1}_NG".format(base_path, prefix), exist_ok=exist_ok)
 
         for test_param in target_test_params:
             logger.info("test_param: %s", test_param)
@@ -790,7 +1050,7 @@ class TestSubStance(unittest.TestCase):
             try:
                 main.main(copy_motion, trace_model, replace_model, output_vmd_path, \
                     is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, vmd_choice_values, rep_choice_values, rep_rate_values, \
-                    camera_motion, camera_vmd_path, camera_pmx, output_camera_vmd_path, camera_y_offset, is_alternative_model, test_param)
+                    camera_motion, camera_vmd_path, camera_pmx, output_camera_vmd_path, camera_y_offset, is_alternative_model, is_no_delegate, target_avoidance_rigids, target_avoidance_bones, test_param)
             except Exception as e:
                 print(traceback.format_exc())
                 continue
@@ -839,23 +1099,607 @@ class TestSubStance(unittest.TestCase):
                     logger.info("f: %s, is_x_diff: %s, is_y_diff: %s, is_z_diff: %s, is_x_same: %s, is_y_same: %s, is_z_same: %s", bf.frame, is_x_diff, is_y_diff, is_z_diff, is_x_same, is_y_same, is_z_same)
 
             resutl_file_name = "{0}_{1}_{2}.vmd".format(','.join([str(i) for i in test_param]), ','.join([str(i) for i in result_list]), ','.join([str(i) for i in diff_list]))
-            
-            if result_list.count(True) == len(target_frames) * 2:
-                # TRUE(全一致した場合)
-                shutil.move(output_vmd_path, "{0}/{1}_ALLOK/{2}".format(base_path, prefix, resutl_file_name))
+        
+            dir_path = "{0}/{1}_OK{2}".format(base_path, prefix, result_list.count(True))
+            os.makedirs(dir_path, exist_ok=True)
+
+            if result_list.count(True) > 0:
                 ok_list.append(test_param)
-                logger.info("result: TRUE")
-            elif result_list.count(True) > 0:
-                # TRUE(一致した場合)
-                shutil.move(output_vmd_path, "{0}/{1}_OK{2}/{3}".format(base_path, prefix, result_list.count(True), resutl_file_name))
-                ok_list.append(test_param)
-                logger.info("result: TRUE")
-            else:
-                # FALSE(一致しない場合)
-                shutil.move(output_vmd_path, "{0}/{1}_NG/{2}".format(base_path, prefix, resutl_file_name))
-                logger.info("result: FALSE")
+
+            shutil.move(output_vmd_path, "{0}/{1}".format(dir_path, resutl_file_name))               
+            logger.info("result: %s %s", result_list.count(True), resutl_file_name)
+
+        return ok_list
+
+
+
+    
+        
+    def test_delegate_qq_01(self):
+        test_param00 = ["ttt","dtx","dtz","dxz"]
+        test_param01 = ["ttt","dtx","dtz","dxz"]
+        test_param02 = ["ttt","dtx","dtz","dxz"]
+        test_param03 = ["ttt","dtx","dtz","dxz"]
+
+        # 直積
+        target_test_params_base = list(itertools.product(test_param00, test_param01, test_param02, test_param03))
+
+        target_test_params_list = [(x00, x01, x02, x03) \
+            for (x00, x01, x02, x03) \
+            in target_test_params_base if x00[:3] != x01[:3] != x02[:3] != x03[:3]]
+
+        random.shuffle(target_test_params_list)
+
+        ok_list = self.calc_delegate_qq(target_test_params_list, 1, False, "delegate_qq_07")
+
+        print("ok_list LIST: %s" % ok_list)
+        self.assertGreater(len(ok_list), 0)
+                
+        
+    def test_delegate_qq_02(self):
+        test_param00 = ("d1","d2","d3","d4","d5")
+
+        # 直積
+        target_test_params_list = list(itertools.permutations(test_param00))
+        print("start LIST: %s" % len(target_test_params_list))
+
+        random.shuffle(target_test_params_list)
+
+        ok_list = self.calc_delegate_qq(target_test_params_list, 1, False, "delegate_qq_17")
+
+        print("ok_list LIST: %s" % ok_list)
+        self.assertGreater(len(ok_list), 0)
+        
+
+    def test_delegate_qq_03(self):
+        test_param00 = ("x1","x2","x3","x4","x5","x6","x7","x8","xd1","xd2","xd3","xd4","xd5","xd6","xd7","xd8")
+        test_param01 = ("z1","z2","z3","z4")
+        test_param02 = ("xa","xb","xc","xd","xe","xai","xbi","xci","xdi","xei")
+
+        # 直積
+        target_test_params_base = list(itertools.product(test_param00, test_param01, test_param02))
+        target_test_params_list = target_test_params_base
+        random.shuffle(target_test_params_list)
+        print("start LIST: %s" % len(target_test_params_list))
+
+        random.shuffle(target_test_params_list)
+
+        ok_list = self.calc_delegate_qq(target_test_params_list, 1, False, "delegate_qq_07")
+
+        print("ok_list LIST: %s" % ok_list)
+        self.assertGreater(len(ok_list), 0)
+
+    def test_delegate_qq_05(self):
+        target_dir_path = "E:/MMD/vmd_sizing/vmd/delegate_qq/delegate_qq_18_test/*.vmd"
+        rep_target_name_list = ["手首A","手首B","手首C","手首D","手首E","手首F","手首H","手首I","手首J","手首K"]
+        limit = 1
+
+        # 変換先モデル
+        replace_model = PmxReader().read_pmx_file("D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/Tda式初音ミク_盗賊つばき流Ｍトレースモデル配布 v1.07/Tda式初音ミク_盗賊つばき流Mトレースモデルv1.07_腕回転.pmx")
+        # replace_model = PmxReader().read_pmx_file("D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/011_今剣/今剣 ゆるん式 ver0124/ライブ衣装/今剣インナー_準標準.pmx")
+
+        target_frames = [187,227,241,300,412]
+
+        for target_vmd_path in glob.glob(target_dir_path):
+            # VMD読み込み
+            motion = VmdReader().read_vmd_file(target_vmd_path)
+
+            result_txt_list = []
+            total_result_list = []
+
+            for rep_bone_base_name in rep_target_name_list:
+                result_list = []
+                diff_list = []
+
+                for direction in ["右", "左"]:
+                    rep_bone_name = "{0}{1}".format(direction, rep_bone_base_name)
+                    test_target_name = rep_bone_name[:3]
+                    links, indexes = replace_model.create_link_2_top_one(test_target_name)
+
+                    # 事前にグローバル位置を求めておく
+                    target_bfs = [x for x in motion.frames[test_target_name] if x.frame in target_frames]
+                    org_target_poss = []
+
+                    for bf in target_bfs:
+                        _, _, _, _, org_global_3ds = utils.create_matrix_global(replace_model, links, motion.frames, bf, None)
+                        org_target_poss.append(org_global_3ds[-1])
+
+                    # 変換後のグローバル位置を求める
+                    rep_target_bfs = copy.deepcopy([x for x in motion.frames[rep_bone_name] if x.frame in target_frames])
+                    rep_target_poss = []
+
+                    for bf in rep_target_bfs:
+                        rep_links, _ = replace_model.create_link_2_top_all(rep_bone_name)
+                        _, _, _, _, rep_global_3ds = utils.create_matrix_global(replace_model, rep_links, motion.frames, bf, None)
+                        rep_target_poss.append(rep_global_3ds[-1])
+
+                    for org_target_pos, rep_target_pos in zip(org_target_poss, rep_target_poss):
+                        is_x_diff = org_target_pos.x() - limit <= rep_target_pos.x() <= org_target_pos.x() + limit
+                        # is_y_diff = org_target_pos.y() - limit <= rep_target_pos.y() <= org_target_pos.y() + limit
+                        is_z_diff = org_target_pos.z() - limit <= rep_target_pos.z() <= org_target_pos.z() + limit
+                        
+                        # org_euler = org_bf.rotation.toEulerAngles()
+                        # to_euler = bf.rotation.toEulerAngles()
+
+                        # is_x_diff = org_euler.x() - limit <= to_euler.x() <= org_euler.x() + limit
+                        # is_y_diff = org_euler.y() - limit <= to_euler.y() <= org_euler.y() + limit
+                        # is_z_diff = org_euler.z() - limit <= to_euler.z() <= org_euler.z() + limit
+
+                        diff_euler = rep_target_pos - org_target_pos
+
+                        # is_x_same = round(diff_euler.x(),2) == 0
+                        # is_y_same = round(diff_euler.y(),2) == 0
+                        # is_z_same = round(diff_euler.z(),2) == 0
+
+                        result = is_x_diff and is_z_diff
+                        result_list.append(result)
+                        total_result_list.append(result)
+
+                        diff = "{0: 03.2f}".format(round(diff_euler.y(), 2))
+                        diff_list.append(diff)
+
+                        # if result:
+                        #     logger.info("f: %s, org_target_pos: %s", bf.frame, org_target_pos)
+                        #     logger.info("f: %s, rep_target_pos: %s", bf.frame, rep_target_pos)
+                            # logger.info("f: %s, org_rotation: %s", bf.frame, org_euler)
+                            # logger.info("f: %s, rep_rotation: %s", bf.frame, to_euler)
+                            # logger.info("f: %s, is_x_diff: %s, is_y_diff: %s, is_z_diff: %s, is_x_same: %s, is_y_same: %s, is_z_same: %s", bf.frame, is_x_diff, is_y_diff, is_z_diff, is_x_same, is_y_same, is_z_same)
+
+                result_txt_list.append("{0}{1:02}".format(rep_bone_base_name[2], result_list.count(True)))
+
+            resutl_file_path =  target_vmd_path.replace("\\test", "/{0:02}_{1}".format(total_result_list.count(True), ','.join([str(i) for i in result_txt_list])))
             
+            shutil.copy(target_vmd_path, resutl_file_path)
+
+        self.assertGreater(limit, 0)
+
+
+    def test_delegate_qq_04(self):
+        test_param00 = ("x1","x2","x3","x4","x5","x6","x7","x8","x9","x10")
+        test_param01 = ("z1","z2","z3","z4","z5","z6","z7","z8","z9","z10")
+        test_param02 = ("xa","xb","xc","xd","xe","xai","xbi","xci","xdi","xei")
+
+        # 直積
+        target_test_params_base = list(itertools.product(test_param00, test_param01, test_param02))
+        target_test_params_list = target_test_params_base
+        random.shuffle(target_test_params_list)
+        print("start LIST: %s" % len(target_test_params_list))
+
+        random.shuffle(target_test_params_list)
+
+        prefix = "delegate_qq_20"
+        ok_list = self.calc_delegate_qq(target_test_params_list, 1, False, prefix)
+
+        print("ok_list LIST: %s" % ok_list)
+        print("ok_list target: %s" % prefix)
+        self.assertGreater(len(ok_list), 0)
+
+    def test_delegate_qq_06(self):
+        test_param00 = ["t1" ,"t2" ,"x1" ,"y1" ,"z1" ,"x2" ,"y2" ,"z2" ,"d1" ,"d2"]
+
+        # 直積
+        target_test_params_base = list(itertools.product(test_param00, repeat=5))
+
+        target_test_params_list = [(x00, x01, x02, x03, x04) \
+            for (x00, x01, x02, x03, x04) \
+            in target_test_params_base if x00[:1] not in [x01[:1],x02[:1],x03[:1],x04[:1]] and x01[:1] not in[x00[:1],x02[:1],x03[:1],x04[:1]] and \
+            x02[:1] not in [x01[:1],x00[:1],x03[:1],x04[:1]] and x03[:1] not in [x00[:1],x02[:1],x01[:1],x04[:1]] and x04[:1] not in [x01[:1],x02[:1],x03[:1],x00[:1]]]
+
+        random.shuffle(target_test_params_list)
+        print("start LIST: %s" % len(target_test_params_list))
+
+        random.shuffle(target_test_params_list)
+
+        prefix = "delegate_qq_38"
+        ok_list = self.calc_delegate_qq(target_test_params_list, 1, False, prefix)
+
+        print("ok_list LIST: %s" % ok_list)
+        print("ok_list target: %s" % prefix)
+        self.assertGreater(len(ok_list), 0)
+
+    def test_delegate_qq_07(self):
+        test_param00 = ["t1"]
+        test_param01 = ["x1","x2","x3","x4","x5","x6","d1","d2","d3","d4","d5","d6"]
+        test_param02 = ["x1","x2","x3","x4","x5","x6","d1","d2","d3","d4","d5","d6"]
+
+        # 直積
+        target_test_params_base = list(itertools.product(test_param00, test_param01, test_param02))
+
+        target_test_params_list = [(x00, x01, x02) \
+            for (x00, x01, x02) \
+            in target_test_params_base if x00[:1] not in [x01[:1],x02[:1]] and x01[:1] not in[x00[:1],x02[:1]] and x02[:1] not in [x01[:1],x00[:1]]]
+
+        random.shuffle(target_test_params_list)
+        print("start LIST: %s" % len(target_test_params_list))
+
+        random.shuffle(target_test_params_list)
+
+        prefix = "delegate_qq_43"
+        ok_list = self.calc_delegate_qq(target_test_params_list, 1, False, prefix)
+
+        print("ok_list LIST: %s" % ok_list)
+        print("ok_list target: %s" % prefix)
+        self.assertGreater(len(ok_list), 0)
+
+
+    def test_delegate_qq_08(self):
+        test_param00 = ["t1"]
+        test_param01 = ["x2","d5","a1","a2","a3","a4","a5","a6"]
+
+        # 直積
+        target_test_params_base = list(itertools.product(test_param00, test_param01, test_param01, test_param01, "00"))
+
+        target_test_params_list = [(x00, x01, x02, x03, x04) \
+            for (x00, x01, x02, x03, x04) \
+            in target_test_params_base if x00[:1] not in [x01[:1],x02[:1],x03[:1],x04[:1]] and x01[:1] not in[x00[:1],x02[:1],x03[:1],x04[:1]] and \
+            x02[:1] not in [x01[:1],x00[:1],x03[:1],x04[:1]] and x03[:1] not in [x00[:1],x02[:1],x01[:1],x04[:1]] and x04[:1] not in [x01[:1],x02[:1],x03[:1],x00[:1]]]
+
+        random.shuffle(target_test_params_list)
+        print("start LIST: %s" % len(target_test_params_list))
+
+        random.shuffle(target_test_params_list)
+
+        prefix = "delegate_qq_44"
+        ok_list = self.calc_delegate_qq(target_test_params_list, 1, False, prefix)
+
+        print("ok_list LIST: %s" % ok_list)
+        print("ok_list target: %s" % prefix)
+        self.assertGreater(len(ok_list), 0)
+
+
+    def test_delegate_qq_09(self):
+        test_param00 = ["t1"]
+        test_param01 = ["x2"]
+        test_param02 = ["d3"]
+        test_param03 = ["01","a1","a2","a3","a4","a5","a6"]
+
+        # 直積
+        target_test_params_base = list(itertools.product(test_param00, test_param01, test_param02, test_param03, "00"))
+
+        target_test_params_list = [(x00, x01, x02, x03, x04) \
+            for (x00, x01, x02, x03, x04) \
+            in target_test_params_base if x00[:1] not in [x01[:1],x02[:1],x03[:1],x04[:1]] and x01[:1] not in[x00[:1],x02[:1],x03[:1],x04[:1]] and \
+            x02[:1] not in [x01[:1],x00[:1],x03[:1],x04[:1]] and x03[:1] not in [x00[:1],x02[:1],x01[:1],x04[:1]] and x04[:1] not in [x01[:1],x02[:1],x03[:1],x00[:1]]]
+
+        random.shuffle(target_test_params_list)
+        print("start LIST: %s" % len(target_test_params_list))
+
+        random.shuffle(target_test_params_list)
+
+        prefix = "delegate_qq_49"
+        ok_list = self.calc_delegate_qq(target_test_params_list, 1, False, prefix)
+
+        print("ok_list LIST: %s" % ok_list)
+        print("ok_list target: %s" % prefix)
+        self.assertGreater(len(ok_list), 0)
+
+    def test_delegate_qq_10(self):
+        test_param00 = ("t1","x1","d1","a1")
+
+        # 順番
+        target_test_params_list = list(itertools.permutations(test_param00))
+        print("start LIST: %s" % len(target_test_params_list))
+
+        # target_test_params_list = [(x00, x01, x02, x03, x04) \
+        #     for (x00, x01, x02, x03, x04) \
+        #     in target_test_params_base if x00[:1] not in [x01[:1],x02[:1],x03[:1],x04[:1]] and x01[:1] not in[x00[:1],x02[:1],x03[:1],x04[:1]] and \
+        #     x02[:1] not in [x01[:1],x00[:1],x03[:1],x04[:1]] and x03[:1] not in [x00[:1],x02[:1],x01[:1],x04[:1]] and x04[:1] not in [x01[:1],x02[:1],x03[:1],x00[:1]]]
+
+        random.shuffle(target_test_params_list)
+        print("start LIST: %s" % len(target_test_params_list))
+
+        random.shuffle(target_test_params_list)
+
+        prefix = "delegate_qq_50"
+        ok_list = self.calc_delegate_qq(target_test_params_list, 1, False, prefix)
+
+        print("ok_list LIST: %s" % ok_list)
+        print("ok_list target: %s" % prefix)
+        self.assertGreater(len(ok_list), 0)
+
+    def test_delegate_qq_11(self):
+        test_param00 = ["t1"]
+        test_param01 = ["x1","x2","x3","x4","x5","x6","x7"]
+        test_param02 = ["d1","d2","d3","d4","d5","d6","d7"]
+        test_param03 = ["y1","y2","y3","y4","y5","y6","y7","b1","b2","b3","b4","b5","b6","b7"]
+        test_param04 = ["y1","y2","y3","y4","y5","y6","y7","b1","b2","b3","b4","b5","b6","b7"]
+
+        # 直積
+        target_test_params_base = list(itertools.product(test_param00, test_param01, test_param02, test_param03, test_param04, "00"))
+
+        target_test_params_list = [(x00, x01, x02, x03, x04, x05) \
+            for (x00, x01, x02, x03, x04, x05) \
+            in target_test_params_base if x00[:1] not in [x01[:1],x02[:1],x03[:1],x04[:1]] and x01[:1] not in[x00[:1],x02[:1],x03[:1],x04[:1]] and \
+            x02[:1] not in [x01[:1],x00[:1],x03[:1],x04[:1]] and x03[:1] not in [x00[:1],x02[:1],x01[:1],x04[:1]] and x04[:1] not in [x01[:1],x02[:1],x03[:1],x00[:1]]]
+
+        random.shuffle(target_test_params_list)
+        print("start LIST: %s" % len(target_test_params_list))
+
+        random.shuffle(target_test_params_list)
+
+        prefix = "delegate_qq_11_07"
+        rep_target_name_list = ["手首D","ひじD"]
+        ok_list = self.calc_delegate_qq(target_test_params_list, 1, rep_target_name_list, False, prefix)
+
+        print("ok_list LIST: %s" % ok_list)
+        print("ok_list target: %s" % prefix)
+        self.assertGreater(len(ok_list), 0)
+
+    def test_delegate_qq_12(self):
+        test_param00 = ["t1"]
+        test_param01 = ["x1","x2","x3","x4","x5","x6","x7"]
+        test_param02 = ["d1","d2","d3","d4","d5","d6","d7"]
+        test_param03 = ["e1"]
+        test_param04 = ["f1","f2","f3","f4","f5","f6","f7"]
+        test_param05 = ["g1","g2","g3","g4","g5","g6","g7","g0"]
+
+        # 直積
+        target_test_params_base = list(itertools.product(test_param00, test_param01, test_param02, test_param03, test_param04, test_param05))
+        
+        target_test_params_list = target_test_params_base
+        # target_test_params_list = [(x00, x01, x02, x03, x04, x05) \
+        #     for (x00, x01, x02, x03, x04, x05) \
+        #     in target_test_params_base if x00[:1] not in [x01[:1],x02[:1],x03[:1],x04[:1]] and x01[:1] not in[x00[:1],x02[:1],x03[:1],x04[:1]] and \
+        #     x02[:1] not in [x01[:1],x00[:1],x03[:1],x04[:1]] and x03[:1] not in [x00[:1],x02[:1],x01[:1],x04[:1]] and x04[:1] not in [x01[:1],x02[:1],x03[:1],x00[:1]]]
+
+        random.shuffle(target_test_params_list)
+        print("start LIST: %s" % len(target_test_params_list))
+
+        random.shuffle(target_test_params_list)
+
+        prefix = "delegate_qq_12_07"
+        rep_target_name_list = ["手首D","ひじD"]
+        ok_list = self.calc_delegate_qq(target_test_params_list, 1, rep_target_name_list, False, prefix)
+
+        print("ok_list LIST: %s" % ok_list)
+        print("ok_list target: %s" % prefix)
+        self.assertGreater(len(ok_list), 0)
+
+    def test_delegate_qq_13(self):
+        test_param00 = ["t1"]
+        test_param01 = ["x1","x2","x3","x4","x5","x6","x7"]
+        # test_param02 = ["d1","d2","d3","d4","d5","d6","d7"]
+        test_param02 = ["f1","f2","f3","f4","f5","f6","f7"]
+        test_param03 = ["y1","y2","y3","y4","y5","y6","y7"]
+
+        # 直積
+        target_test_params_base = list(itertools.product(test_param00, test_param01, test_param02, test_param03, "00", "00"))
+
+        target_test_params_list = [(x00, x01, x02, x03, x04, x05) \
+            for (x00, x01, x02, x03, x04, x05) \
+            in target_test_params_base if x00[:1] not in [x01[:1],x02[:1],x03[:1],x04[:1]] and x01[:1] not in[x00[:1],x02[:1],x03[:1],x04[:1]] and \
+            x02[:1] not in [x01[:1],x00[:1],x03[:1],x04[:1]] and x03[:1] not in [x00[:1],x02[:1],x01[:1],x04[:1]] and x04[:1] not in [x01[:1],x02[:1],x03[:1],x00[:1]]]
+
+        random.shuffle(target_test_params_list)
+        print("start LIST: %s" % len(target_test_params_list))
+
+        random.shuffle(target_test_params_list)
+
+        prefix = "delegate_qq_13_06"
+        rep_target_name_list = ["手首C","ひじC"]
+        ok_list = self.calc_delegate_qq(target_test_params_list, 1, rep_target_name_list, False, prefix)
+
+        print("ok_list LIST: %s" % ok_list)
+        print("ok_list target: %s" % prefix)
+        self.assertGreater(len(ok_list), 0)
+
+    def test_delegate_qq_14(self):
+        test_param00 = ["t1"]
+        test_param01 = ["x0"]
+        test_param02 = ["d0","d1","d2","d3","d4","d5","d6","d7","d8","d9","da"]
+        test_param03 = ["y0","y1","y2","y3","y4","y5","y6","y7","y8","y9","ya"]
+
+        # 直積
+        target_test_params_base = list(itertools.product(test_param00, test_param01, test_param02, test_param03))
+
+        target_test_params_list = [(x00, x01, x02, x03) \
+            for (x00, x01, x02, x03) \
+            in target_test_params_base if x00[:1] not in [x01[:1],x02[:1],x03[:1]] and x01[:1] not in[x00[:1],x02[:1],x03[:1]] and \
+            x02[:1] not in [x01[:1],x00[:1],x03[:1]] and x03[:1] not in [x00[:1],x02[:1],x01[:1]]]
+
+        random.shuffle(target_test_params_list)
+        print("start LIST: %s" % len(target_test_params_list))
+
+        random.shuffle(target_test_params_list)
+
+        prefix = "delegate_qq_14-02"
+        rep_target_name_list = ["手首C","ひじC"]
+        ok_list = self.calc_delegate_qq(target_test_params_list, 1, rep_target_name_list, False, prefix)
+
+        print("ok_list LIST: %s" % ok_list)
+        print("ok_list target: %s" % prefix)
+        self.assertGreater(len(ok_list), 0)
+
+    def test_delegate_qq_15(self):
+        test_param00 = ["d2t_y","d2t2d_x2y","d2t2d_y2y","d2t2d_z2y","d2t_x2y","d2t_y2y","d2t_z2y","dl_d2y","dl_x2y","dl_y2y","dl_z2y","t2d_x2y","t2d_y2y","t2d_z2y","d2t_y_i","d2t2d_x2y_i","d2t2d_y2y_i","d2t2d_z2y_i","d2t_x2y_i","d2t_y2y_i","d2t_z2y_i","dl_d2y_i","dl_x2y_i","dl_y2y_i","dl_z2y_i","t2d_x2y_i","t2d_y2y_i","t2d_z2y_i","00"]
+
+        # 直積
+        target_test_params_base = list(itertools.product(test_param00, repeat=3))
+
+        target_test_params_list = target_test_params_base
+
+        random.shuffle(target_test_params_list)
+        print("start LIST: %s" % len(target_test_params_list))
+
+        random.shuffle(target_test_params_list)
+
+        prefix = "delegate_qq_15-05"
+        rep_target_name_list = ["手首B","ひじB"]
+        ok_list = self.calc_delegate_qq(target_test_params_list, 1, rep_target_name_list, False, prefix)
+
+        print("ok_list LIST: %s" % ok_list)
+        print("ok_list target: %s" % prefix)
+        self.assertGreater(len(ok_list), 0)
+
+
+    def test_delegate_qq_16(self):
+        test_param00 = ["d2tx_ln", "d2tx_xn", "d2tx_yn", "d2tx_zn", "t2tx_ln", "t2tx_xn", "t2tx_yn", "t2tx_zn", "d2tx_li", "d2tx_xi", "d2tx_yi", "d2tx_zi", "t2tx_li", "t2tx_xi", "t2tx_yi", "t2tx_zi","00"]
+        test_param01 = ["d2dy_ln", "d2dy_xn", "d2dy_yn", "d2dy_zn", "t2dy_ln", "t2dy_xn", "t2dy_yn", "t2dy_zn", "d2dy_li", "d2dy_xi", "d2dy_yi", "d2dy_zi", "t2dy_li", "t2dy_xi", "t2dy_yi", "t2dy_zi","00"]
+
+        # 直積
+        target_test_params_base = list(itertools.product(test_param00, test_param00, test_param01, test_param01))
+
+        target_test_params_list = target_test_params_base
+
+        random.shuffle(target_test_params_list)
+        print("start LIST: %s" % len(target_test_params_list))
+
+        random.shuffle(target_test_params_list)
+
+        prefix = "delegate_qq_16-07"
+        rep_target_name_list = ["手首B","ひじB"]
+        ok_list = self.calc_delegate_qq(target_test_params_list, 1, rep_target_name_list, False, prefix)
+
+        print("ok_list LIST: %s" % ok_list)
+        print("ok_list target: %s" % prefix)
+        self.assertGreater(len(ok_list), 0)
+
+
+
+
+    def calc_delegate_qq(self, target_test_params, limit, rep_target_name_list, exist_ok, prefix=""):
+        # VMD読み込み
+        motion = VmdReader().read_vmd_file("D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/愛言葉III なつき/nac_aikotoba3_0-500_操作中心.vmd")
+
+        # 作成元モデル
+        trace_model = PmxReader().read_pmx_file("D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/らぶ式ミク/らぶ式ミク_準標準.pmx")
+
+        # 変換先モデル
+        replace_model = PmxReader().read_pmx_file("D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/Tda式初音ミク_盗賊つばき流Ｍトレースモデル配布 v1.07/Tda式初音ミク_盗賊つばき流Mトレースモデルv1.07_腕回転.pmx")
+        # replace_model = PmxReader().read_pmx_file("D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/011_今剣/今剣 ゆるん式 ver0124/ライブ衣装/今剣インナー_準標準.pmx")
+
+        target_frames = [187,227,241,300,309,318,412]
+
+        is_avoidance = False
+        is_avoidance_finger = False
+        is_hand_ik = False
+        hand_distance = 1.7
+        is_floor_hand = False
+        is_floor_hand_up = False
+        is_floor_hand_down = False
+        hand_floor_distance = 1
+        leg_floor_distance = 1
+        is_finger_ik = False
+        finger_distance = 1
+        vmd_choice_values = []
+        rep_choice_values = []
+        rep_rate_values = []
+        camera_motion = None
+        camera_vmd_path = None
+        camera_pmx = None
+        output_camera_vmd_path = None
+        camera_y_offset = 0
+        is_alternative_model = True
+        is_no_delegate = False
+        target_avoidance_rigids = []
+        target_avoidance_bones = []
+        base_path = "E:/MMD/vmd_sizing/vmd/delegate_qq"
+
+        logger.info("len: %s", len(target_test_params))
+        ok_list = []
+
+        # os.makedirs("{0}/{1}_NG".format(base_path, prefix), exist_ok=exist_ok)
+        # os.makedirs("{0}/{1}_test".format(base_path, prefix), exist_ok=exist_ok)
+
+        for test_param in target_test_params:
+            logger.info("test_param: %s", test_param)
+
+
+            file_name = "test_{0}.vmd".format(','.join([str(i) for i in test_param]))
+
+            output_vmd_path = "{0}/{1}".format(base_path, file_name)
+
+            copy_motion = copy.deepcopy(motion)
+
+            try:
+                main.main(copy_motion, trace_model, replace_model, output_vmd_path, \
+                    is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, vmd_choice_values, rep_choice_values, rep_rate_values, \
+                    camera_motion, camera_vmd_path, camera_pmx, output_camera_vmd_path, camera_y_offset, is_alternative_model, is_no_delegate, target_avoidance_rigids, target_avoidance_bones, test_param)
+            except Exception as e:
+                print(traceback.format_exc())
+                continue
+            
+            # rep_target_name_list = ["手首A","手首B","手首C","手首D","手首E","手首F","手首H","手首I","手首J","手首K"]
+
+            result_txt_list = []
+            total_result_list = []
+            total_diff_list = []
+
+            for rep_bone_base_name in rep_target_name_list:
+                result_list = []
+                diff_list = []
+
+                for direction in ["右", "左"]:
+                    rep_bone_name = "{0}{1}".format(direction, rep_bone_base_name)
+                    test_target_name = rep_bone_name[:3]
+                    links, indexes = replace_model.create_link_2_top_one(test_target_name)
+
+                    # 事前にグローバル位置を求めておく
+                    target_bfs = [x for x in copy_motion.frames[test_target_name] if x.frame in target_frames]
+                    org_target_poss = []
+
+                    for bf in target_bfs:
+                        _, _, _, _, org_global_3ds = utils.create_matrix_global(replace_model, links, copy_motion.frames, bf, None)
+                        org_target_poss.append(org_global_3ds[-1])
+
+                    # 変換後のグローバル位置を求める
+                    rep_target_bfs = copy.deepcopy([x for x in copy_motion.frames[rep_bone_name] if x.frame in target_frames])
+                    rep_target_poss = []
+
+                    for bf in rep_target_bfs:
+                        rep_links, _ = replace_model.create_link_2_top_all(rep_bone_name)
+                        _, _, _, _, rep_global_3ds = utils.create_matrix_global(replace_model, rep_links, copy_motion.frames, bf, None)
+                        rep_target_poss.append(rep_global_3ds[-1])
+
+                    for org_target_pos, rep_target_pos in zip(org_target_poss, rep_target_poss):
+                        is_x_diff = org_target_pos.x() - limit <= rep_target_pos.x() <= org_target_pos.x() + limit
+                        is_y_diff = org_target_pos.y() - limit <= rep_target_pos.y() <= org_target_pos.y() + limit
+                        is_z_diff = org_target_pos.z() - limit <= rep_target_pos.z() <= org_target_pos.z() + limit
+                        
+                        # org_euler = org_bf.rotation.toEulerAngles()
+                        # to_euler = bf.rotation.toEulerAngles()
+
+                        # is_x_diff = org_euler.x() - limit <= to_euler.x() <= org_euler.x() + limit
+                        # is_y_diff = org_euler.y() - limit <= to_euler.y() <= org_euler.y() + limit
+                        # is_z_diff = org_euler.z() - limit <= to_euler.z() <= org_euler.z() + limit
+
+                        # is_x_same = round(diff_euler.x(),2) == 0
+                        # is_y_same = round(diff_euler.y(),2) == 0
+                        # is_z_same = round(diff_euler.z(),2) == 0
+
+                        result = is_x_diff and is_y_diff and is_z_diff
+                        result_list.append(result)
+                        total_result_list.append(result)
+
+                        if rep_target_name_list[0] in rep_bone_name:
+                            diff_euler = rep_target_pos - org_target_pos
+                            diff = max(abs(diff_euler.x()), abs(diff_euler.y()), abs(diff_euler.z()))
+                            total_diff_list.append(diff)
+                            diff_txt = "{0: 03.2f}".format(round(diff, 2))
+                            diff_list.append(diff_txt)
+
+                        # if result:
+                        #     logger.info("f: %s, org_target_pos: %s", bf.frame, org_target_pos)
+                        #     logger.info("f: %s, rep_target_pos: %s", bf.frame, rep_target_pos)
+                            # logger.info("f: %s, org_rotation: %s", bf.frame, org_euler)
+                            # logger.info("f: %s, rep_rotation: %s", bf.frame, to_euler)
+                            # logger.info("f: %s, is_x_diff: %s, is_y_diff: %s, is_z_diff: %s, is_x_same: %s, is_y_same: %s, is_z_same: %s", bf.frame, is_x_diff, is_y_diff, is_z_diff, is_x_same, is_y_same, is_z_same)
+
+                result_txt_list.append("{0}{1:02}_{2}".format(rep_bone_base_name, result_list.count(True), ','.join([str(i) for i in diff_list])))
+
+            resutl_file_name = "{0: 03.2f}_{1:02}_{2}_{3}.vmd".format(round(sum(total_diff_list),2), total_result_list.count(True), ','.join([str(i) for i in test_param]), ','.join([str(i) for i in result_txt_list]))
+            
+            dir_path = "{0}/{1}_OK{2}".format(base_path, prefix, total_result_list.count(True) // len(rep_target_name_list))
+            os.makedirs(dir_path, exist_ok=True)
+
+            # TRUE(一致した場合)
+            if total_result_list.count(True) > 0:
+                ok_list.append(test_param)
+
+            shutil.move(output_vmd_path, "{0}/{1}".format(dir_path, resutl_file_name))
+            logger.info("result: %s %s", total_result_list.count(True), resutl_file_name)
+                    
         return ok_list
 
 if __name__ == "__main__":
-    unittest.main(defaultTest="TestSubStance.test_upper_stance_upper2_up_26")
+    unittest.main(defaultTest="TestSubStance.test_delegate_qq_16")
