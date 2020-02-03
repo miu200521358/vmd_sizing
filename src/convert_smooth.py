@@ -130,8 +130,9 @@ def main(vmd_path, pmx_path, smooth_cnt, is_comp_circle, is_seam_smooth):
                     bf = all_frames_by_bone[bone_name][fno]                    
                     smooth_motion.frames[bone_name].append(bf)
 
-            # ボーン回転の分散
-            spread_rotation(smooth_motion, model, (smooth_cnt > 1))
+            # FIXME
+            # # ボーン回転の分散
+            # spread_rotation(smooth_motion, model, (smooth_cnt > 1))
 
             bone_frames = []
             for k,v in smooth_motion.frames.items():
