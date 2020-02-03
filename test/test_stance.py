@@ -967,19 +967,271 @@ class TestSubStance(unittest.TestCase):
         target_test_params_base = list(itertools.product(target_test_params_list_bone_names, target_test_params_list_bone_names, \
             list_target_test_params_list_numbers, list_target_test_params_list_numbers, target_test_params_list_pairs))
 
-        target_test_params_list = [("上半身2", "上半身", "1-", "0", "0", names1[0], names1[1], numbers1[0], numbers1[1], numbers1[2], \
+        target_test_params_list = [("頭", "上半身2", "1-", "0", "0", names1[0], names1[1], numbers1[0], numbers1[1], numbers1[2], \
             names2[0], names2[1], numbers2[0], numbers2[1], numbers2[2], pairs[0], pairs[1], pairs[2], pairs[3]) \
             for (names1, names2, numbers1, numbers2, pairs) in target_test_params_base]
         random.shuffle(target_test_params_list)
         print("targets LIST: %s" % len(target_test_params_list))
         
-        prefix = "034-07"
+        prefix = "034-10"
         ok_list = self.calc_stance(target_test_params_list, 0.1, False, prefix)
 
         print("ok_list LIST: %s" % ok_list)
         print("ok_list target: %s" % prefix)
         self.assertGreater(len(ok_list), 0)
+                       
 
+    def test_upper_stance_upper2_up_35(self):
+        
+        # ボーン名の組合せ
+        rep_upper2_initial_slope_test_bone_names = [(0,"上半身"), (1,"上半身2"), (2,"首"), (3,"頭")]
+        target_test_params_base_bone_names = list(itertools.product(rep_upper2_initial_slope_test_bone_names, repeat=2))
+        target_test_params_list_bone_names = [(x00[1], x01[1]) for (x00, x01) in target_test_params_base_bone_names if x00[0] < x01[0]]
+        print("bone_names LIST: %s" % len(target_test_params_list_bone_names))
+
+        # 数字の組合せ
+        rep_upper2_initial_slope_test_numbers = ["0","1-","1"]
+        base_target_test_params_list_numbers = list(itertools.product(rep_upper2_initial_slope_test_numbers, repeat=3))
+        list_target_test_params_list_numbers = [(x00, x01, x02) for (x00, x01, x02) in base_target_test_params_list_numbers if (x00 != x01 or x01 != x02)]
+        print("numbers LIST: %s" % len(list_target_test_params_list_numbers))
+
+        # 最後の組合せ
+        rep_upper2_initial_slope_test_pairs = ["d1","d1i","d2","d2i","d3","d3i","00","01"]
+        target_test_params_base_pairs = list(itertools.product(rep_upper2_initial_slope_test_pairs, repeat=4))
+        target_test_params_list_pairs = [(x00, x01, x02, x03) for (x00, x01, x02, x03) in target_test_params_base_pairs 
+            if x00[:3] not in [x01[:3], x02[:3], x03[:3]] and x01[:3] not in [x00[:3], x02[:3], x03[:3]] and x02[:3] not in [x01[:3], x00[:3], x03[:3]] \
+            and x03[:3] not in [x01[:3], x02[:3], x00[:3]]]
+        print("pairs LIST: %s" % len(target_test_params_list_pairs))
+
+        # 直積
+        target_test_params_base = list(itertools.product(target_test_params_list_bone_names, \
+            list_target_test_params_list_numbers, list_target_test_params_list_numbers, target_test_params_list_pairs))
+
+        target_test_params_list = [("頭", "上半身2", "1-", "0", "0", "上半身", "上半身2", numbers1[0], numbers1[1], numbers1[2], \
+            names2[0], names2[1], numbers2[0], numbers2[1], numbers2[2], pairs[0], pairs[1], pairs[2], pairs[3]) \
+            for (names2, numbers1, numbers2, pairs) in target_test_params_base]
+        random.shuffle(target_test_params_list)
+        print("targets LIST: %s" % len(target_test_params_list))
+        
+        prefix = "035-02"
+        ok_list = self.calc_stance(target_test_params_list, 0.1, False, prefix)
+
+        print("ok_list LIST: %s" % ok_list)
+        print("ok_list target: %s" % prefix)
+        self.assertGreater(len(ok_list), 0)
+                             
+
+    def test_upper_stance_upper2_up_36(self):
+        
+        # 最後の組合せ
+        rep_upper2_initial_slope_test_pairs = ["d1","d1i","d2","d2i","d3","d3i","00","01"]
+        target_test_params_base_pairs = list(itertools.product(rep_upper2_initial_slope_test_pairs, repeat=4))
+        target_test_params_list_pairs = [(x00, x01, x02, x03) for (x00, x01, x02, x03) in target_test_params_base_pairs 
+            if x00[:3] not in [x01[:3], x02[:3], x03[:3]] and x01[:3] not in [x00[:3], x02[:3], x03[:3]] and x02[:3] not in [x01[:3], x00[:3], x03[:3]] \
+            and x03[:3] not in [x01[:3], x02[:3], x00[:3]]]
+        print("pairs LIST: %s" % len(target_test_params_list_pairs))
+
+        target_test_params_list = [("首", "上半身", "1-", "0", "0", "上半身", "上半身2", "0", "0", "1-", \
+            "首", "頭", "0", "0", "1-", "01", pairs[0], pairs[1], pairs[2]) \
+            for (pairs) in target_test_params_list_pairs]
+        random.shuffle(target_test_params_list)
+        print("targets LIST: %s" % len(target_test_params_list))
+        
+        prefix = "036-03"
+        ok_list = self.calc_stance(target_test_params_list, 0.1, False, prefix)
+
+        print("ok_list LIST: %s" % ok_list)
+        print("ok_list target: %s" % prefix)
+        self.assertGreater(len(ok_list), 0)
+                       
+
+
+    def test_upper_stance_upper2_up_37(self):
+        
+        # ボーン名の組合せ
+        rep_upper2_initial_slope_test_bone_names = [(0,"上半身"), (1,"上半身2"), (2,"首"), (3,"頭")]
+        target_test_params_base_bone_names = list(itertools.product(rep_upper2_initial_slope_test_bone_names, repeat=2))
+        target_test_params_list_bone_names = [(x00[1], x01[1]) for (x00, x01) in target_test_params_base_bone_names if x00[0] < x01[0]]
+        print("bone_names LIST: %s" % len(target_test_params_list_bone_names))
+
+        # 直積
+        target_test_params_base = list(itertools.product(target_test_params_list_bone_names, target_test_params_list_bone_names, target_test_params_list_bone_names))
+
+        # 首,上半身,1-,0,0,上半身,上半身2,0,0,1-,首,頭,0,0,1-,01,d3,d1,d2_True,True,True,True,False,False_ 2.77#-0.00#-0.37,-4.20# 0.00# 0.11, 1.03#-0.28#-4.72.vmd
+        target_test_params_list = [(names1[0], names1[1], "1-", "0", "0", names2[0], names2[1], "0", "0", "1-", \
+            names3[0], names3[1], "0", "0", "1-", "01", "d3", "d1", "d2") \
+            for (names1, names2, names3) in target_test_params_base]
+        random.shuffle(target_test_params_list)
+        print("targets LIST: %s" % len(target_test_params_list))
+        
+        prefix = "037-01"
+        ok_list = self.calc_stance(target_test_params_list, 0.1, False, prefix)
+
+        print("ok_list LIST: %s" % ok_list)
+        print("ok_list target: %s" % prefix)
+        self.assertGreater(len(ok_list), 0)
+                             
+
+    # 頭,上半身2,1-,0,0,上半身,上半身2,0,1,0,上半身2,頭,0,1,1,d2i,d3i,00,d2_True,True,True,False,True,True_ 0.85# 0.00# 90.05,-6.12# 0.02# 90.53,-0.87#-0.00# 85.68
+    def test_upper_stance_upper2_up_38(self):
+        
+        # # ボーン名の組合せ
+        # rep_upper2_initial_slope_test_bone_names = [(0,"上半身"), (1,"上半身2"), (2,"首"), (3,"頭")]
+        # target_test_params_base_bone_names = list(itertools.product(rep_upper2_initial_slope_test_bone_names, repeat=2))
+        # target_test_params_list_bone_names = [(x00[1], x01[1]) for (x00, x01) in target_test_params_base_bone_names if x00[0] < x01[0]]
+        # print("bone_names LIST: %s" % len(target_test_params_list_bone_names))
+
+        # 数字の組合せ
+        rep_upper2_initial_slope_test_numbers = ["0","1-","1"]
+        base_target_test_params_list_numbers = list(itertools.product(rep_upper2_initial_slope_test_numbers, repeat=3))
+        list_target_test_params_list_numbers = [(x00, x01, x02) for (x00, x01, x02) in base_target_test_params_list_numbers if (x00 != x01 or x01 != x02)]
+        print("numbers LIST: %s" % len(list_target_test_params_list_numbers))
+
+        # 最後の組合せ
+        rep_upper2_initial_slope_test_pairs = ["d2","d2i","d3","d3i","00"]
+        target_test_params_base_pairs = list(itertools.product(rep_upper2_initial_slope_test_pairs, repeat=3))
+        target_test_params_list_pairs = [(x00, x01, x02) for (x00, x01, x02) in target_test_params_base_pairs 
+            if x00[:3] not in [x01[:3], x02[:3] and x01[:3] not in [x00[:3], x02[:3]] and x02[:3] not in [x01[:3], x00[:3]] ]]
+        print("pairs LIST: %s" % len(target_test_params_list_pairs))
+
+        # 直積
+        target_test_params_base = list(itertools.product(list_target_test_params_list_numbers, list_target_test_params_list_numbers, target_test_params_list_pairs))
+
+        target_test_params_list = [("頭", "上半身2", "1-", "0", "0", "上半身", "上半身2", numbers1[0], numbers1[1], numbers1[2], \
+            "上半身2", "頭", numbers2[0], numbers2[1], numbers2[2], pairs[0], pairs[1], pairs[2], "01") \
+            for (numbers1, numbers2, pairs) in target_test_params_base]
+        random.shuffle(target_test_params_list)
+        print("targets LIST: %s" % len(target_test_params_list))
+        
+        prefix = "038-01"
+        ok_list = self.calc_stance(target_test_params_list, 0.1, False, prefix)
+
+        print("ok_list LIST: %s" % ok_list)
+        print("ok_list target: %s" % prefix)
+        self.assertGreater(len(ok_list), 0)
+                            
+
+    # 頭,上半身2,1-,0,0,上半身,上半身2,0,0,1-,上半身2,頭,0,0,1,d2i,d3i,d2,01_True,True,True,False,True,True_ 0.85# 0.00# 90.05,-6.12# 0.02# 90.53,-0.87#-0.00# 85.68
+    def test_upper_stance_upper2_up_40(self):
+        
+        # ボーン名の組合せ
+        rep_upper2_initial_slope_test_bone_names = [(0,"上半身"), (1,"上半身2"), (2,"首"), (3,"頭")]
+        target_test_params_base_bone_names = list(itertools.product(rep_upper2_initial_slope_test_bone_names, repeat=2))
+        target_test_params_list_bone_names = [(x00[1], x01[1]) for (x00, x01) in target_test_params_base_bone_names if x00[0] < x01[0] and ((0,"上半身"), (1,"上半身2")) != (x00, x01) and ((1,"上半身2"), (3,"頭")) != (x00, x01)]
+        print("bone_names LIST: %s" % len(target_test_params_list_bone_names))
+
+        # 数字の組合せ
+        rep_upper2_initial_slope_test_numbers = ["0","1-","1"]
+        list_target_test_params_base_numbers = list(itertools.product(rep_upper2_initial_slope_test_numbers, repeat=3))
+        list_target_test_params_list_numbers = [(x00, x01, x02) for (x00, x01, x02) in list_target_test_params_base_numbers if x00 == "0" or x01 == "0" or x02 == "0" ]
+        print("numbers LIST: %s" % len(list_target_test_params_list_numbers))
+
+        # 最後の組合せ
+        rep_upper2_initial_slope_test_pairs = ["d1","d1i","d2","d2i","d3","d3i"]
+        target_test_params_base_pairs = list(itertools.product(rep_upper2_initial_slope_test_pairs, repeat=3))
+        target_test_params_list_pairs = [(x00, x01, x02) for (x00, x01, x02) in target_test_params_base_pairs 
+            if x00[:2] not in [x01[:2], x02[:2]] and x01[:2] not in [x00[:2], x02[:2]] and x02[:2] not in [x01[:2], x00[:2]] ]
+        print("pairs LIST: %s" % len(target_test_params_list_pairs))
+
+        # 直積
+        target_test_params_base = list(itertools.product(list_target_test_params_list_numbers, list_target_test_params_list_numbers, list_target_test_params_list_numbers, target_test_params_list_bone_names, target_test_params_list_pairs))
+
+        target_test_params_list = [("上半身", "上半身2", numbers1[0], numbers1[1], numbers1[2], "上半身2", "頭", numbers2[0], numbers2[1], numbers2[2], \
+            names1[0], names1[1], numbers3[0], numbers3[1], numbers3[2], pairs[0], pairs[1], pairs[2], "01") \
+            for (numbers1, numbers2, numbers3, names1, pairs) in target_test_params_base]
+        random.shuffle(target_test_params_list)
+        print("targets LIST: %s" % len(target_test_params_list))
+        
+        prefix = "040-02"
+        ok_list = self.calc_stance(target_test_params_list, 0.1, False, prefix)
+
+        print("ok_list LIST: %s" % ok_list)
+        print("ok_list target: %s" % prefix)
+        self.assertGreater(len(ok_list), 0)
+    
+    # 上半身,上半身2,0,0,1-,上半身2,頭,0,1,1,首,頭,1,0,0,d3i,d2i,d1,01_True,True,True,False,False,False_ 3.97#-0.00# 0.05,-3.00#-0.01# 0.54, 2.22#-0.45#-4.28
+    # 上半身,上半身2,0,1-,1-,上半身2,頭,0,1,1,首,頭,1,0,0,d3i,d1i,d2,01_True,True,True,False,False,False_ 3.97#-0.00# 0.05,-3.00#-0.01# 0.54, 2.22#-0.45#-4.28
+    # 上半身,上半身2,1-,1-,0,上半身2,頭,1,0,0,首,頭,1,0,0,d2i,d3i,d1i,01_True,False,True,False,True,False_ 0.41#-0.05# 1.10,-6.56#-0.03# 1.58,-1.31# 0.01#-3.28
+    def test_upper_stance_upper2_up_41(self):
+        
+        # # ボーン名の組合せ
+        # rep_upper2_initial_slope_test_bone_names = [(0,"上半身"), (1,"上半身2"), (2,"首"), (3,"頭")]
+        # target_test_params_base_bone_names = list(itertools.product(rep_upper2_initial_slope_test_bone_names, repeat=2))
+        # target_test_params_list_bone_names = [(x00[1], x01[1]) for (x00, x01) in target_test_params_base_bone_names if x00[0] < x01[0] and ((0,"上半身"), (1,"上半身2")) != (x00, x01) and ((1,"上半身2"), (3,"頭")) != (x00, x01)]
+        # print("bone_names LIST: %s" % len(target_test_params_list_bone_names))
+
+        # 数字の組合せ
+        rep_upper2_initial_slope_test_numbers = ["0","1-","1"]
+        list_target_test_params_base_numbers = list(itertools.product(rep_upper2_initial_slope_test_numbers, repeat=3))
+        list_target_test_params_list_numbers = [(x00, x01, x02) for (x00, x01, x02) in list_target_test_params_base_numbers if x00 == "0" or x01 == "0" or x02 == "0" ]
+        print("numbers LIST: %s" % len(list_target_test_params_list_numbers))
+
+        # 最後の組合せ
+        rep_upper2_initial_slope_test_pairs = ["d1","d1i","d2","d2i","d3","d3i"]
+        target_test_params_base_pairs = list(itertools.product(rep_upper2_initial_slope_test_pairs, repeat=3))
+        target_test_params_list_pairs = [(x00, x01, x02) for (x00, x01, x02) in target_test_params_base_pairs 
+            if x00[:2] not in [x01[:2], x02[:2]] and x01[:2] not in [x00[:2], x02[:2]] and x02[:2] not in [x01[:2], x00[:2]] ]
+        print("pairs LIST: %s" % len(target_test_params_list_pairs))
+
+        # 直積
+        target_test_params_base = list(itertools.product(list_target_test_params_list_numbers, list_target_test_params_list_numbers, list_target_test_params_list_numbers, target_test_params_list_pairs))
+
+        target_test_params_list = [("上半身", "上半身2", numbers1[0], numbers1[1], numbers1[2], "上半身2", "頭", numbers2[0], numbers2[1], numbers2[2], \
+            "首", "頭", numbers3[0], numbers3[1], numbers3[2], pairs[0], pairs[1], pairs[2], "01") \
+            for (numbers1, numbers2, numbers3, pairs) in target_test_params_base]
+        random.shuffle(target_test_params_list)
+        print("targets LIST: %s" % len(target_test_params_list))
+        
+        prefix = "041-02"
+        ok_list = self.calc_stance(target_test_params_list, 0.1, False, prefix)
+
+        print("ok_list LIST: %s" % ok_list)
+        print("ok_list target: %s" % prefix)
+        self.assertGreater(len(ok_list), 0)
+                             
+    
+    # 上半身,上半身2,0,0,1-,上半身2,頭,0,1,1,首,頭,1,0,0,d3i,d2i,d1,01_True,True,True,False,False,False_ 3.97#-0.00# 0.05,-3.00#-0.01# 0.54, 2.22#-0.45#-4.28
+    # 上半身,上半身2,0,1-,1-,上半身2,頭,0,1,1,首,頭,1,0,0,d3i,d1i,d2,01_True,True,True,False,False,False_ 3.97#-0.00# 0.05,-3.00#-0.01# 0.54, 2.22#-0.45#-4.28
+    # 上半身,上半身2,1-,1-,0,上半身2,頭,1,0,0,首,頭,1,0,0,d2i,d3i,d1i,01_True,False,True,False,True,False_ 0.41#-0.05# 1.10,-6.56#-0.03# 1.58,-1.31# 0.01#-3.28
+    def test_upper_stance_upper2_up_42(self):
+        
+        # ボーン名の組合せ
+        rep_upper2_initial_slope_test_bone_names = [(0,"上半身"), (1,"上半身2"), (2,"首"), (3,"頭")]
+        target_test_params_base_bone_names = list(itertools.product(rep_upper2_initial_slope_test_bone_names, repeat=2))
+        target_test_params_list_bone_names = [(x00[1], x01[1]) for (x00, x01) in target_test_params_base_bone_names if x00[0] < x01[0]]
+        print("bone_names LIST: %s" % len(target_test_params_list_bone_names))
+
+        # 数字の組合せ
+        rep_upper2_initial_slope_test_numbers = ["0","1-","1"]
+        list_target_test_params_base_numbers = list(itertools.product(rep_upper2_initial_slope_test_numbers, repeat=3))
+        list_target_test_params_list_numbers = [(x00, x01, x02) for (x00, x01, x02) in list_target_test_params_base_numbers if 0 < [x00, x01, x02].count("0") < 3 ]
+        print("numbers LIST: %s" % len(list_target_test_params_list_numbers))
+
+        # 最後の組合せ
+        rep_upper2_initial_slope_test_pairs = ["d1","d2","d3"]
+        target_test_params_base_pairs = list(itertools.product(rep_upper2_initial_slope_test_pairs, repeat=3))
+        target_test_params_list_pairs = [(x00, x01, x02) for (x00, x01, x02) in target_test_params_base_pairs 
+            if x00[:2] not in [x01[:2], x02[:2]] and x01[:2] not in [x00[:2], x02[:2]] and x02[:2] not in [x01[:2], x00[:2]] ]
+        print("pairs LIST: %s" % len(target_test_params_list_pairs))
+
+        # 直積
+        target_test_params_base = list(itertools.product(target_test_params_list_bone_names, list_target_test_params_list_numbers, \
+            target_test_params_list_bone_names, list_target_test_params_list_numbers, \
+            target_test_params_list_bone_names, list_target_test_params_list_numbers, target_test_params_list_pairs))
+
+        target_test_params_list = [(names1[0], names1[1], numbers1[0], numbers1[1], numbers1[2], names2[0], names2[1], numbers2[0], numbers2[1], numbers2[2], \
+            names3[0], names3[1], numbers3[0], numbers3[1], numbers3[2], pairs[0], pairs[1], pairs[2], "01") \
+            for (names1, numbers1, names2, numbers2, names3, numbers3, pairs) in target_test_params_base]
+        random.shuffle(target_test_params_list)
+        print("targets LIST: %s" % len(target_test_params_list))
+        
+        prefix = "042-02"
+        ok_list = self.calc_stance(target_test_params_list, 0.1, False, prefix)
+
+        print("ok_list LIST: %s" % ok_list)
+        print("ok_list target: %s" % prefix)
+        self.assertGreater(len(ok_list), 0)
+                             
 
 
 
@@ -1031,19 +1283,19 @@ class TestSubStance(unittest.TestCase):
         is_no_delegate = True
         target_avoidance_rigids = []
         target_avoidance_bones = []
-        base_path = "E:/MMD/vmd_sizing/vmd/input_upper2_up"
+        base_path = "E:/MMD/MikuMikuDance_v926x64/Work/202001_sizing/input_upper2_up/"
 
         logger.info("len: %s", len(target_test_params))
         ok_list = []
 
-        # os.makedirs("{0}/{1}_NG".format(base_path, prefix), exist_ok=exist_ok)
+        os.makedirs("{0}/{1}".format(base_path, prefix), exist_ok=exist_ok)
 
-        for test_param in target_test_params:
-            logger.info("test_param: %s", test_param)
+        for pidx, test_param in enumerate(target_test_params):
+            logger.info("prefix: %s, test_param(%s): %s", len(target_test_params) - pidx, prefix, test_param)
 
             file_name = "test_{0}.vmd".format(','.join([str(i) for i in test_param]))
 
-            output_vmd_path = "{0}/{1}".format(base_path, file_name)
+            output_vmd_path = "{0}/{1}/{2}".format(base_path, prefix, file_name)
 
             copy_motion = copy.deepcopy(motion)
 
@@ -1100,7 +1352,7 @@ class TestSubStance(unittest.TestCase):
 
             resutl_file_name = "{0}_{1}_{2}.vmd".format(','.join([str(i) for i in test_param]), ','.join([str(i) for i in result_list]), ','.join([str(i) for i in diff_list]))
         
-            dir_path = "{0}/{1}_OK{2}".format(base_path, prefix, result_list.count(True))
+            dir_path = "{0}/{1}/{1}_OK{2}".format(base_path, prefix, result_list.count(True))
             os.makedirs(dir_path, exist_ok=True)
 
             if result_list.count(True) > 0:
@@ -1170,7 +1422,7 @@ class TestSubStance(unittest.TestCase):
         self.assertGreater(len(ok_list), 0)
 
     def test_delegate_qq_05(self):
-        target_dir_path = "E:/MMD/vmd_sizing/vmd/delegate_qq/delegate_qq_18_test/*.vmd"
+        target_dir_path = "E:/MMD/MikuMikuDance_v926x64/Work/202001_sizing/delegate_qq/delegate_qq_18_test/*.vmd"
         rep_target_name_list = ["手首A","手首B","手首C","手首D","手首E","手首F","手首H","手首I","手首J","手首K"]
         limit = 1
 
@@ -1187,12 +1439,12 @@ class TestSubStance(unittest.TestCase):
             result_txt_list = []
             total_result_list = []
 
-            for rep_bone_base_name in rep_target_name_list:
+            for rep_bone_index in rep_target_name_list:
                 result_list = []
                 diff_list = []
 
                 for direction in ["右", "左"]:
-                    rep_bone_name = "{0}{1}".format(direction, rep_bone_base_name)
+                    rep_bone_name = "{0}{1}".format(direction, rep_bone_index)
                     test_target_name = rep_bone_name[:3]
                     links, indexes = replace_model.create_link_2_top_one(test_target_name)
 
@@ -1245,7 +1497,7 @@ class TestSubStance(unittest.TestCase):
                             # logger.info("f: %s, rep_rotation: %s", bf.frame, to_euler)
                             # logger.info("f: %s, is_x_diff: %s, is_y_diff: %s, is_z_diff: %s, is_x_same: %s, is_y_same: %s, is_z_same: %s", bf.frame, is_x_diff, is_y_diff, is_z_diff, is_x_same, is_y_same, is_z_same)
 
-                result_txt_list.append("{0}{1:02}".format(rep_bone_base_name[2], result_list.count(True)))
+                result_txt_list.append("{0}{1:02}".format(rep_bone_index[2], result_list.count(True)))
 
             resutl_file_path =  target_vmd_path.replace("\\test", "/{0:02}_{1}".format(total_result_list.count(True), ','.join([str(i) for i in result_txt_list])))
             
@@ -1532,12 +1784,11 @@ class TestSubStance(unittest.TestCase):
         self.assertGreater(len(ok_list), 0)
 
 
-    def test_delegate_qq_16(self):
-        test_param00 = ["d2tx_ln", "d2tx_xn", "d2tx_yn", "d2tx_zn", "t2tx_ln", "t2tx_xn", "t2tx_yn", "t2tx_zn", "d2tx_li", "d2tx_xi", "d2tx_yi", "d2tx_zi", "t2tx_li", "t2tx_xi", "t2tx_yi", "t2tx_zi","00"]
-        test_param01 = ["d2dy_ln", "d2dy_xn", "d2dy_yn", "d2dy_zn", "t2dy_ln", "t2dy_xn", "t2dy_yn", "t2dy_zn", "d2dy_li", "d2dy_xi", "d2dy_yi", "d2dy_zi", "t2dy_li", "t2dy_xi", "t2dy_yi", "t2dy_zi","00"]
+    def test_delegate_qq_18(self):
+        test_param01 = ["d2dy_lnn", "d2dy_xnn", "d2dy_ynn", "d2dy_znn", "t2dy_lnn", "t2dy_xnn", "t2dy_ynn", "t2dy_znn", "d2dy_lin", "d2dy_xin", "d2dy_yin", "d2dy_zin", "t2dy_lin", "t2dy_xin", "t2dy_yin", "t2dy_zin", "d2dy_lnl", "d2dy_xnl", "d2dy_ynl", "d2dy_znl", "t2dy_lnl", "t2dy_xnl", "t2dy_ynl", "t2dy_znl", "d2dy_lil", "d2dy_xil", "d2dy_yil", "d2dy_zil", "t2dy_lil", "t2dy_xil", "t2dy_yil", "t2dy_zil", "d2dy_lnr", "d2dy_xnr", "d2dy_ynr", "d2dy_znr", "t2dy_lnr", "t2dy_xnr", "t2dy_ynr", "t2dy_znr", "d2dy_lir", "d2dy_xir", "d2dy_yir", "d2dy_zir", "t2dy_lir", "t2dy_xir", "t2dy_yir", "t2dy_zir","00"]
 
         # 直積
-        target_test_params_base = list(itertools.product(test_param00, test_param00, test_param01, test_param01))
+        target_test_params_base = list(itertools.product(test_param01, repeat=3))
 
         target_test_params_list = target_test_params_base
 
@@ -1546,18 +1797,40 @@ class TestSubStance(unittest.TestCase):
 
         random.shuffle(target_test_params_list)
 
-        prefix = "delegate_qq_16-07"
-        rep_target_name_list = ["手首B","ひじB"]
-        ok_list = self.calc_delegate_qq(target_test_params_list, 1, rep_target_name_list, False, prefix)
+        prefix = "delegate_qq_18-02"
+        rep_target_index_list = ["C","D","E"]
+        ok_list = self.calc_delegate_qq(target_test_params_list, 0.5, rep_target_index_list, False, prefix)
 
-        print("ok_list LIST: %s" % ok_list)
+        print("ok_list LIST: %s" % len(ok_list))
+        print("ok_list target: %s" % prefix)
+        self.assertGreater(len(ok_list), 0)
+
+
+    def test_delegate_qq_20(self):
+        test_param01 = ["d2d_local_qq","d2d_x2x_qq","d2d_y2x_qq","d2d_z2x_qq","t2d_local_qq","t2d_x2x_qq","t2d_y2x_qq","t2d_z2x_qq","d2d_local_lqq","d2d_x2x_lqq","d2d_y2x_lqq","d2d_z2x_lqq","t2d_local_lqq","t2d_x2x_lqq","t2d_y2x_lqq","t2d_z2x_lqq","d2d_local_rqq","d2d_x2x_rqq","d2d_y2x_rqq","d2d_z2x_rqq","t2d_local_rqq","t2d_x2x_rqq","t2d_y2x_rqq","t2d_z2x_rqq","dl_x2y","dl_y2y","dl_z2y","d2d_local_qqi","d2d_x2x_qqi","d2d_y2x_qqi","d2d_z2x_qqi","t2d_local_qqi","t2d_x2x_qqi","t2d_y2x_qqi","t2d_z2x_qqi","d2d_local_lqqi","d2d_x2x_lqqi","d2d_y2x_lqqi","d2d_z2x_lqqi","t2d_local_lqqi","t2d_x2x_lqqi","t2d_y2x_lqqi","t2d_z2x_lqqi","d2d_local_rqqi","d2d_x2x_rqqi","d2d_y2x_rqqi","d2d_z2x_rqqi","t2d_local_rqqi","t2d_x2x_rqqi","t2d_y2x_rqqi","t2d_z2x_rqqi","dl_x2yi","dl_y2yi","dl_z2yi"]
+
+        # 直積
+        target_test_params_base = list(itertools.product(test_param01, repeat=3))
+
+        target_test_params_list = target_test_params_base
+
+        random.shuffle(target_test_params_list)
+        print("start LIST: %s" % len(target_test_params_list))
+
+        random.shuffle(target_test_params_list)
+
+        prefix = "delegate_qq_20-03"
+        rep_target_index_list = ["C","D","E"]
+        ok_list = self.calc_delegate_qq(target_test_params_list, 0.5, rep_target_index_list, False, prefix)
+
+        print("ok_list LIST: %s" % len(ok_list))
         print("ok_list target: %s" % prefix)
         self.assertGreater(len(ok_list), 0)
 
 
 
 
-    def calc_delegate_qq(self, target_test_params, limit, rep_target_name_list, exist_ok, prefix=""):
+    def calc_delegate_qq(self, target_test_params, limit, rep_target_index_list, exist_ok, prefix=""):
         # VMD読み込み
         motion = VmdReader().read_vmd_file("D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/愛言葉III なつき/nac_aikotoba3_0-500_操作中心.vmd")
 
@@ -1593,21 +1866,22 @@ class TestSubStance(unittest.TestCase):
         is_no_delegate = False
         target_avoidance_rigids = []
         target_avoidance_bones = []
-        base_path = "E:/MMD/vmd_sizing/vmd/delegate_qq"
+        base_path = "E:/MMD/MikuMikuDance_v926x64/Work/202001_sizing/delegate_qq"
 
         logger.info("len: %s", len(target_test_params))
         ok_list = []
 
-        # os.makedirs("{0}/{1}_NG".format(base_path, prefix), exist_ok=exist_ok)
-        # os.makedirs("{0}/{1}_test".format(base_path, prefix), exist_ok=exist_ok)
+        dir_path = "{0}/{1}/test".format(base_path, prefix)
+        os.makedirs(dir_path, exist_ok=exist_ok)
 
-        for test_param in target_test_params:
-            logger.info("test_param: %s", test_param)
-
+        for pidx, test_param in enumerate(target_test_params):
+            logger.info("prefix: %s, test_param(%s): %s", len(target_test_params) - pidx, prefix, test_param)
 
             file_name = "test_{0}.vmd".format(','.join([str(i) for i in test_param]))
 
-            output_vmd_path = "{0}/{1}".format(base_path, file_name)
+            dir_path = "{0}/{1}/test".format(base_path, prefix)
+            os.makedirs(dir_path, exist_ok=True)
+            output_vmd_path = "{0}/{1}".format(dir_path, file_name)
 
             copy_motion = copy.deepcopy(motion)
 
@@ -1619,87 +1893,70 @@ class TestSubStance(unittest.TestCase):
                 print(traceback.format_exc())
                 continue
             
-            # rep_target_name_list = ["手首A","手首B","手首C","手首D","手首E","手首F","手首H","手首I","手首J","手首K"]
+            for rep_bone_index in rep_target_index_list:
+                result_txt_list = []
+                total_result_list = []
+                total_diff_list = []
 
-            result_txt_list = []
-            total_result_list = []
-            total_diff_list = []
+                for bone_part_name in ["ひじ", "手首"]:
+                    result_list = []
+                    diff_list = []
 
-            for rep_bone_base_name in rep_target_name_list:
-                result_list = []
-                diff_list = []
+                    is_elbow_ok = True
 
-                for direction in ["右", "左"]:
-                    rep_bone_name = "{0}{1}".format(direction, rep_bone_base_name)
-                    test_target_name = rep_bone_name[:3]
-                    links, indexes = replace_model.create_link_2_top_one(test_target_name)
+                    for direction in ["右", "左"]:
+                        rep_bone_name = "{0}{1}{2}".format(direction, bone_part_name, rep_bone_index)
 
-                    # 事前にグローバル位置を求めておく
-                    target_bfs = [x for x in copy_motion.frames[test_target_name] if x.frame in target_frames]
-                    org_target_poss = []
+                        test_target_name = rep_bone_name[:3]
+                        links, indexes = replace_model.create_link_2_top_one(test_target_name)
 
-                    for bf in target_bfs:
-                        _, _, _, _, org_global_3ds = utils.create_matrix_global(replace_model, links, copy_motion.frames, bf, None)
-                        org_target_poss.append(org_global_3ds[-1])
+                        # 事前にグローバル位置を求めておく
+                        target_bfs = [x for x in copy_motion.frames[test_target_name] if x.frame in target_frames]
+                        org_target_poss = []
 
-                    # 変換後のグローバル位置を求める
-                    rep_target_bfs = copy.deepcopy([x for x in copy_motion.frames[rep_bone_name] if x.frame in target_frames])
-                    rep_target_poss = []
+                        for bf in target_bfs:
+                            _, _, _, _, org_global_3ds = utils.create_matrix_global(replace_model, links, copy_motion.frames, bf, None)
+                            org_target_poss.append(org_global_3ds[-1])
 
-                    for bf in rep_target_bfs:
-                        rep_links, _ = replace_model.create_link_2_top_all(rep_bone_name)
-                        _, _, _, _, rep_global_3ds = utils.create_matrix_global(replace_model, rep_links, copy_motion.frames, bf, None)
-                        rep_target_poss.append(rep_global_3ds[-1])
+                        # 変換後のグローバル位置を求める
+                        rep_target_bfs = copy.deepcopy([x for x in copy_motion.frames[rep_bone_name] if x.frame in target_frames])
+                        rep_target_poss = []
 
-                    for org_target_pos, rep_target_pos in zip(org_target_poss, rep_target_poss):
-                        is_x_diff = org_target_pos.x() - limit <= rep_target_pos.x() <= org_target_pos.x() + limit
-                        is_y_diff = org_target_pos.y() - limit <= rep_target_pos.y() <= org_target_pos.y() + limit
-                        is_z_diff = org_target_pos.z() - limit <= rep_target_pos.z() <= org_target_pos.z() + limit
+                        for bf in rep_target_bfs:
+                            rep_links, _ = replace_model.create_link_2_top_all(rep_bone_name)
+                            _, _, _, _, rep_global_3ds = utils.create_matrix_global(replace_model, rep_links, copy_motion.frames, bf, None)
+                            rep_target_poss.append(rep_global_3ds[-1])
+
+                        for org_target_pos, rep_target_pos in zip(org_target_poss, rep_target_poss):
+                            is_x_diff = org_target_pos.x() - limit <= rep_target_pos.x() <= org_target_pos.x() + limit
+                            is_y_diff = org_target_pos.y() - limit <= rep_target_pos.y() <= org_target_pos.y() + limit
+                            is_z_diff = org_target_pos.z() - limit <= rep_target_pos.z() <= org_target_pos.z() + limit
+                            
+                            result = is_x_diff and is_y_diff and is_z_diff
+                            result_list.append(result)
+                            total_result_list.append(result)
+
+                            if bone_part_name == "手首":
+                                diff_euler = rep_target_pos - org_target_pos
+                                total_diff_list.append(diff_euler.length())
+                                diff_txt = "{0: 03.2f}".format(round(diff_euler.length(), 2))
+                                diff_list.append(diff_txt)
+
+                    result_txt = "{0:02}#{1}".format(result_list.count(True), ','.join([str(i) for i in diff_list]))
+
+                resutl_file_name = "{0:02}_{1: 03.2f}_{2}_{3}_{4}.vmd".format(total_result_list.count(True), sum(total_diff_list), rep_bone_index, ','.join([str(i) for i in test_param]), result_txt)
+                
+                dir_path = "{0}/{1}/{1}_OK{2:02}".format(base_path, prefix, total_result_list.count(True))
+                os.makedirs(dir_path, exist_ok=True)
+
+                # TRUE(一致した場合)
+                if total_result_list.count(True) > 0:
+                    ok_list.append(test_param)
+
+                shutil.copy(output_vmd_path, "{0}/{1}".format(dir_path, resutl_file_name))
+                logger.info("result: %s %s", total_result_list.count(True), resutl_file_name)
                         
-                        # org_euler = org_bf.rotation.toEulerAngles()
-                        # to_euler = bf.rotation.toEulerAngles()
-
-                        # is_x_diff = org_euler.x() - limit <= to_euler.x() <= org_euler.x() + limit
-                        # is_y_diff = org_euler.y() - limit <= to_euler.y() <= org_euler.y() + limit
-                        # is_z_diff = org_euler.z() - limit <= to_euler.z() <= org_euler.z() + limit
-
-                        # is_x_same = round(diff_euler.x(),2) == 0
-                        # is_y_same = round(diff_euler.y(),2) == 0
-                        # is_z_same = round(diff_euler.z(),2) == 0
-
-                        result = is_x_diff and is_y_diff and is_z_diff
-                        result_list.append(result)
-                        total_result_list.append(result)
-
-                        if rep_target_name_list[0] in rep_bone_name:
-                            diff_euler = rep_target_pos - org_target_pos
-                            diff = max(abs(diff_euler.x()), abs(diff_euler.y()), abs(diff_euler.z()))
-                            total_diff_list.append(diff)
-                            diff_txt = "{0: 03.2f}".format(round(diff, 2))
-                            diff_list.append(diff_txt)
-
-                        # if result:
-                        #     logger.info("f: %s, org_target_pos: %s", bf.frame, org_target_pos)
-                        #     logger.info("f: %s, rep_target_pos: %s", bf.frame, rep_target_pos)
-                            # logger.info("f: %s, org_rotation: %s", bf.frame, org_euler)
-                            # logger.info("f: %s, rep_rotation: %s", bf.frame, to_euler)
-                            # logger.info("f: %s, is_x_diff: %s, is_y_diff: %s, is_z_diff: %s, is_x_same: %s, is_y_same: %s, is_z_same: %s", bf.frame, is_x_diff, is_y_diff, is_z_diff, is_x_same, is_y_same, is_z_same)
-
-                result_txt_list.append("{0}{1:02}_{2}".format(rep_bone_base_name, result_list.count(True), ','.join([str(i) for i in diff_list])))
-
-            resutl_file_name = "{0: 03.2f}_{1:02}_{2}_{3}.vmd".format(round(sum(total_diff_list),2), total_result_list.count(True), ','.join([str(i) for i in test_param]), ','.join([str(i) for i in result_txt_list]))
-            
-            dir_path = "{0}/{1}_OK{2}".format(base_path, prefix, total_result_list.count(True) // len(rep_target_name_list))
-            os.makedirs(dir_path, exist_ok=True)
-
-            # TRUE(一致した場合)
-            if total_result_list.count(True) > 0:
-                ok_list.append(test_param)
-
-            shutil.move(output_vmd_path, "{0}/{1}".format(dir_path, resutl_file_name))
-            logger.info("result: %s %s", total_result_list.count(True), resutl_file_name)
-                    
         return ok_list
 
 if __name__ == "__main__":
-    unittest.main(defaultTest="TestSubStance.test_delegate_qq_16")
+    unittest.main(defaultTest="TestSubStance.test_delegate_qq_20")

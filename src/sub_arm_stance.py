@@ -23,23 +23,25 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
             # センタースタンス補正
             adjust_center_stance(motion, trace_model, replace_model, org_motion_frames)
 
-        if trace_model.can_upper_sizing and replace_model.can_upper_sizing and is_alternative_model == False:
-            # 上半身補正
-            adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger, test_param)
+        adjust_arm_stance(motion, trace_model, replace_model, org_motion_frames, test_param)
 
-        if trace_model.can_arm_sizing and replace_model.can_arm_sizing:
-            if is_alternative_model == False:
-                # # 肩補正
-                # adjust_shoulder_stance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger, test_param)
-                # 腕補正
-                adjust_arm_stance(motion, trace_model, replace_model, org_motion_frames, test_param)
-            else:
-                # 腕補正
-                adjust_arm_stance(motion, trace_model, replace_model, org_motion_frames, test_param)
+        # if trace_model.can_upper_sizing and replace_model.can_upper_sizing and is_alternative_model == False:
+        #     # 上半身補正
+        #     adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger, test_param)
+
+        # if trace_model.can_arm_sizing and replace_model.can_arm_sizing:
+        #     if is_alternative_model == False:
+        #         # # 肩補正
+        #         # adjust_shoulder_stance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger, test_param)
+        #         # 腕補正
+        #         adjust_arm_stance(motion, trace_model, replace_model, org_motion_frames, test_param)
+        #     else:
+        #         # 腕補正
+        #         adjust_arm_stance(motion, trace_model, replace_model, org_motion_frames, test_param)
             
-            if is_no_delegate == False:
-                # 捩り分散
-                convert_smooth.spread_rotation(motion, replace_model, True, test_param)
+        #     if is_no_delegate == False:
+        #         # 捩り分散
+        #         convert_smooth.spread_rotation(motion, replace_model, True, test_param)
 
     return True
 
@@ -322,8 +324,8 @@ def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org
         rep_arm_links, rep_arm_indexes = replace_model.create_link_2_top_lr("腕")
 
         # 上半身から上半身2への傾き
-        org_upper_slope = (trace_model.bones[target_bone_name].position - trace_model.bones["上半身"].position).normalized()
-        rep_upper_slope = (replace_model.bones[target_bone_name].position - replace_model.bones["上半身"].position).normalized()
+        org_upper_slope = (trace_model.bones["頭"].position - trace_model.bones["上半身"].position).normalized()
+        rep_upper_slope = (replace_model.bones["頭"].position - replace_model.bones["上半身"].position).normalized()
         rep_upper_slope_up = QVector3D(-1, 0, 0)
         rep_upper_slope_cross = QVector3D.crossProduct(rep_upper_slope, rep_upper_slope_up).normalized()
         

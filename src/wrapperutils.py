@@ -303,6 +303,26 @@ def read_vmd_modelname(base_file_path):
     return None
 
 
+def read_pmx_modelname(base_file_path):
+    if is_valid_file(base_file_path, "pmx", ".pmx", is_print=False, is_aster=True) == False:
+        return None
+
+    file_path_list = [p for p in glob.glob(base_file_path) if os.path.isfile(p)]
+
+    reader = PmxReader()
+    try:
+        model_name = reader.read_pmx_file_modelname(base_file_path)
+        return model_name
+    except Exception:
+        print("■■■■■■■■■■■■■■■■■")
+        print("■　**ERROR**　")
+        print("■　PMXデータの解析に失敗しました。")
+        print("■■■■■■■■■■■■■■■■■")
+        
+        print(traceback.format_exc())
+    
+    return None
+
 def read_pmx(path, filetype="pmx", is_print=True):
     if is_valid_file(path, filetype, ".pmx", is_print=is_print, is_aster=False) == False:
         return None

@@ -122,6 +122,10 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		bSizer5.Add( self.m_staticText9, 0, wx.ALL, 5 )
 
+		self.m_staticText103 = wx.StaticText( self.m_panelFile, wx.ID_ANY, u"　　　　　　　　 ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText103.Wrap( -1 )
+		bSizer5.Add( self.m_staticText103, 0, wx.ALL, 5 )
+
 		self.m_vmdTraceTxt = wx.TextCtrl( self.m_panelFile, wx.ID_ANY, u"　（調整対象VMD未設定）", wx.DefaultPosition, (300,-1), wx.TE_READONLY|wx.BORDER_NONE|wx.WANTS_CHARS )
 		self.m_vmdTraceTxt.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_3DLIGHT ) )
 		self.m_vmdTraceTxt.SetToolTip( u"VMDファイルに記録されているモデル名です。選択でコピペ可能です。" )
@@ -151,7 +155,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		bSizer48.Add( self.m_staticText10, 0, wx.ALL, 5 )
 
-		self.m_staticText101 = wx.StaticText( self.m_panelFile, wx.ID_ANY, u"　　", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText101 = wx.StaticText( self.m_panelFile, wx.ID_ANY, u"", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText101.Wrap( -1 )
 		bSizer48.Add( self.m_staticText101, 0, wx.ALL, 5 )
 
@@ -159,6 +163,12 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_checkAlternativeModel = wx.CheckBox( self.m_panelFile, wx.ID_ANY, u"代替モデル", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_checkAlternativeModel.SetToolTip( u"チェックを入れると、センターや上半身などの細かいスタンス補正をスキップできます。" )
 		bSizer48.Add( self.m_checkAlternativeModel, 0, wx.ALL, 5 )
+
+		self.m_pmxTraceTxt = wx.TextCtrl( self.m_panelFile, wx.ID_ANY, u"　（作成元PMX未設定）", wx.DefaultPosition, (300,-1), wx.TE_READONLY|wx.BORDER_NONE|wx.WANTS_CHARS )
+		self.m_pmxTraceTxt.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_3DLIGHT ) )
+		self.m_pmxTraceTxt.SetToolTip( u"PMXファイルに記録されているモデル名です。選択でコピペ可能です。" )
+
+		bSizer48.Add( self.m_pmxTraceTxt, 0, wx.ALL, 5 )
 
 		bSizer4.Add( bSizer48, 0, wx.ALL, 0 )
 
@@ -183,7 +193,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		bSizer481.Add( self.m_staticText11, 0, wx.ALL, 5 )
 
-		self.m_staticText102 = wx.StaticText( self.m_panelFile, wx.ID_ANY, u"　　", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText102 = wx.StaticText( self.m_panelFile, wx.ID_ANY, u"", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText102.Wrap( -1 )
 		bSizer481.Add( self.m_staticText102, 0, wx.ALL, 5 )
 
@@ -2494,6 +2504,12 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.OnCreateOutputVmd(event)
 		self.OnCreateOutputCameraVmd(event)
 
+		if self.m_fileOrgPmx.GetPath() != "":
+			# 作成元PMXファイルパスが空でなければ、トレースモデル名表示
+			self.ShowTraceModelbyPmx(event)
+		else:
+			self.m_pmxTraceTxt.SetValue("　（作成元PMX未設定）")
+
 		if target_ctrl == self.m_fileVmd:
 			self.vmd_data = None
 			self.camera_vmd_data = None
@@ -2930,6 +2946,18 @@ class VmdSizingForm3 ( wx.Frame ):
 			self.m_vmdTraceTxt.SetValue("　（VMD登録モデル取得失敗）")
 		else:
 			self.m_vmdTraceTxt.SetValue("　（VMD登録モデル: "+ model_name +"）")
+
+	def ShowTraceModelbyPmx(self, event):
+		if wrapperutils.is_valid_file(self.m_fileOrgPmx.GetPath(), "モーション作成元PMXファイル", ".pmx", False) == False:
+			logger.warn("pmxエラー")
+			return False
+		
+		# モデル名表示追加
+		model_name = wrapperutils.read_pmx_modelname(self.m_fileOrgPmx.GetPath())
+		if model_name == None:
+			self.m_pmxTraceTxt.SetValue("　（PMXモデル名取得失敗）")
+		else:
+			self.m_pmxTraceTxt.SetValue("　（PMXモデル名: "+ model_name +"）")
 
 	# 出力ファイルパスの生成
 	def OnCreateOutputVmd(self, event):	

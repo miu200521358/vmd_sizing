@@ -104,38 +104,36 @@ def main(motion, trace_model, replace_model, output_vmd_path, \
 
     return is_success
 
-
-
-if __name__=="__main__":
+def parse_exec():
     # Parse arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('--vmd_path', dest='vmd_path', help='input vmd', type=str)
     parser.add_argument('--trace_pmx_path', dest='trace_pmx_path', help='input trace pmx', type=str)
     parser.add_argument('--replace_pmx_path', dest='replace_pmx_path', help='replace trace pmx', type=str)
-    parser.add_argument('--avoidance', dest='avoidance', help='upper hand avoidance', type=int)
-    parser.add_argument('--avoidance_finger', dest='avoidance_finger', help='is_avoidance_finger', type=int)
-    parser.add_argument('--hand_ik', dest='hand_ik', help='hand ik', type=int)
-    parser.add_argument('--hand_distance', dest='hand_distance', help='hand distance', type=float)
-    parser.add_argument('--floor_hand', dest='floor_hand', help='floor_hand', type=int)
-    parser.add_argument('--floor_hand_up', dest='floor_hand_up', help='floor_hand_up', type=int)
-    parser.add_argument('--floor_hand_down', dest='floor_hand_down', help='floor_hand_down', type=int)
-    parser.add_argument('--hand_floor_distance', dest='hand_floor_distance', help='hand_floor_distance', type=float)
-    parser.add_argument('--leg_floor_distance', dest='leg_floor_distance', help='leg_floor_distance', type=float)
-    parser.add_argument('--finger_ik', dest='finger_ik', help='finger_ik', type=int)
-    parser.add_argument('--finger_distance', dest='finger_distance', help='finger_distance', type=float)
+    parser.add_argument('--avoidance', dest='avoidance', help='upper hand avoidance', default=0, type=int)
+    parser.add_argument('--avoidance_finger', dest='avoidance_finger', help='is_avoidance_finger', default=0, type=int)
+    parser.add_argument('--hand_ik', dest='hand_ik', help='hand ik', default=0, type=int)
+    parser.add_argument('--hand_distance', dest='hand_distance', help='hand distance', default=1.7, type=float)
+    parser.add_argument('--floor_hand', dest='floor_hand', help='floor_hand', default=0, type=int)
+    parser.add_argument('--floor_hand_up', dest='floor_hand_up', help='floor_hand_up', default=1, type=int)
+    parser.add_argument('--floor_hand_down', dest='floor_hand_down', help='floor_hand_down', default=1, type=int)
+    parser.add_argument('--hand_floor_distance', dest='hand_floor_distance', help='hand_floor_distance', default=1.8, type=float)
+    parser.add_argument('--leg_floor_distance', dest='leg_floor_distance', help='leg_floor_distance', default=1.5, type=float)
+    parser.add_argument('--finger_ik', dest='finger_ik', help='finger_ik', default=0, type=int)
+    parser.add_argument('--finger_distance', dest='finger_distance', help='finger_distance', default=1.4, type=float)
     parser.add_argument('--vmd_choice_values', dest='vmd_choice_values', help='vmd_choice_values', default="", type=str)
     parser.add_argument('--rep_choice_values', dest='rep_choice_values', help='rep_choice_values', default="", type=str)
     parser.add_argument('--rep_rate_values', dest='rep_rate_values', help='rep_rate_values', default="", type=str)
-    parser.add_argument('--camera_vmd_path', dest='camera_vmd_path', help='camera_vmd_path', type=str)
-    parser.add_argument('--camera_pmx_path', dest='camera_pmx_path', help='camera_pmx_path', type=str)
-    parser.add_argument('--camera_y_offset', dest='camera_y_offset', help='camera_y_offset', type=float)
+    parser.add_argument('--camera_vmd_path', dest='camera_vmd_path', help='camera_vmd_path', default="", type=str)
+    parser.add_argument('--camera_pmx_path', dest='camera_pmx_path', help='camera_pmx_path', default="", type=str)
+    parser.add_argument('--camera_y_offset', dest='camera_y_offset', help='camera_y_offset', default=0, type=float)
     parser.add_argument('--output_path', dest='output_path', help='output_path', default="", type=str)
-    parser.add_argument('--alternative_model', dest='alternative_model', help='alternative_model', default="", type=int)
-    parser.add_argument('--no_delegate', dest='no_delegate', help='no_delegate', default="", type=int)
+    parser.add_argument('--alternative_model', dest='alternative_model', help='alternative_model', default=0, type=int)
+    parser.add_argument('--no_delegate', dest='no_delegate', help='no_delegate', default=0, type=int)
     parser.add_argument('--target_avoidance_rigids', dest='target_avoidance_rigids', help='target_avoidance_rigids', default="", type=str)
     parser.add_argument('--target_avoidance_bones', dest='target_avoidance_bones', help='target_avoidance_bones', default="", type=str)
     parser.add_argument('--test_param', dest='test_param', help='test_param', default="", type=str)
-    parser.add_argument('--verbose', dest='verbose', help='verbose', type=int)
+    parser.add_argument('--verbose', dest='verbose', help='verbose',default=2 , type=int)
     args = parser.parse_args()
 
     logger.setLevel(level[args.verbose])
@@ -217,3 +215,8 @@ if __name__=="__main__":
 
         # 終了音を鳴らす
         winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
+
+
+if __name__=="__main__":
+    # 引数変換
+    parse_exec()
