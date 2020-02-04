@@ -245,132 +245,39 @@ def delegate_qq(delegate_dic, target_qq, delegate_qq, target_local_axis, target_
         target2targetx_y2x_qq = QQuaternion.fromAxisAndAngle(target_local_axis, target2targetx_local_qq.toEulerAngles().y())
         target2targetx_z2x_qq = QQuaternion.fromAxisAndAngle(target_local_axis, target2targetx_local_qq.toEulerAngles().z())
 
+        # ---------------
         # ひじローカルＹ軸にそった各成分
         delegate2delegatey_local_qq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, delegate_degree)
-        delegate2delegatey_x2x_qq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, delegate2delegatey_local_qq.toEulerAngles().x())
-        delegate2delegatey_y2x_qq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, delegate2delegatey_local_qq.toEulerAngles().y())
-        delegate2delegatey_z2x_qq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, delegate2delegatey_local_qq.toEulerAngles().z())
-        
-        target2delegatey_local_qq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, target_degree)
-        target2delegatey_x2x_qq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, target2delegatey_local_qq.toEulerAngles().x())
-        target2delegatey_y2x_qq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, target2delegatey_local_qq.toEulerAngles().y())
-        target2delegatey_z2x_qq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, target2delegatey_local_qq.toEulerAngles().z())
-
-        # ----------------
-
-        delegate2targetx_local_lqq = QQuaternion.fromAxisAndAngle(target_local_axis, delegate_degree)
-        delegate2targetx_x2x_lqq = QQuaternion.fromAxisAndAngle(target_local_axis, delegate2targetx_local_qq.toEulerAngles().x() * (1 if "左" in delegate_dic["delegate"] else -1))
-        delegate2targetx_y2x_lqq = QQuaternion.fromAxisAndAngle(target_local_axis, delegate2targetx_local_qq.toEulerAngles().y() * (1 if "左" in delegate_dic["delegate"] else -1))
-        delegate2targetx_z2x_lqq = QQuaternion.fromAxisAndAngle(target_local_axis, delegate2targetx_local_qq.toEulerAngles().z() * (1 if "左" in delegate_dic["delegate"] else -1))
-        
-        target2targetx_local_lqq = QQuaternion.fromAxisAndAngle(target_local_axis, target_degree)
-        target2targetx_x2x_lqq = QQuaternion.fromAxisAndAngle(target_local_axis, target2targetx_local_qq.toEulerAngles().x() * (1 if "左" in delegate_dic["delegate"] else -1))
-        target2targetx_y2x_lqq = QQuaternion.fromAxisAndAngle(target_local_axis, target2targetx_local_qq.toEulerAngles().y() * (1 if "左" in delegate_dic["delegate"] else -1))
-        target2targetx_z2x_lqq = QQuaternion.fromAxisAndAngle(target_local_axis, target2targetx_local_qq.toEulerAngles().z() * (1 if "左" in delegate_dic["delegate"] else -1))
-
-        # ひじローカルＹ軸にそった各成分
-        delegate2delegatey_local_lqq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, delegate_degree)
-        delegate2delegatey_x2x_lqq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, delegate2delegatey_local_lqq.toEulerAngles().x() * (1 if "左" in delegate_dic["delegate"] else -1))
-        delegate2delegatey_y2x_lqq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, delegate2delegatey_local_lqq.toEulerAngles().y() * (1 if "左" in delegate_dic["delegate"] else -1))
-        delegate2delegatey_z2x_lqq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, delegate2delegatey_local_lqq.toEulerAngles().z() * (1 if "左" in delegate_dic["delegate"] else -1))
-        
-        target2delegatey_local_lqq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, target_degree)
-        target2delegatey_x2x_lqq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, target2delegatey_local_lqq.toEulerAngles().x() * (1 if "左" in delegate_dic["delegate"] else -1))
-        target2delegatey_y2x_lqq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, target2delegatey_local_lqq.toEulerAngles().y() * (1 if "左" in delegate_dic["delegate"] else -1))
-        target2delegatey_z2x_lqq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, target2delegatey_local_lqq.toEulerAngles().z() * (1 if "左" in delegate_dic["delegate"] else -1))
-
-        # ----------------
-
-        delegate2targetx_local_rqq = QQuaternion.fromAxisAndAngle(target_local_axis, delegate_degree)
-        delegate2targetx_x2x_rqq = QQuaternion.fromAxisAndAngle(target_local_axis, delegate2targetx_local_rqq.toEulerAngles().x() * (-1 if "左" in delegate_dic["delegate"] else 1))
-        delegate2targetx_y2x_rqq = QQuaternion.fromAxisAndAngle(target_local_axis, delegate2targetx_local_rqq.toEulerAngles().y() * (-1 if "左" in delegate_dic["delegate"] else 1))
-        delegate2targetx_z2x_rqq = QQuaternion.fromAxisAndAngle(target_local_axis, delegate2targetx_local_rqq.toEulerAngles().z() * (-1 if "左" in delegate_dic["delegate"] else 1))
-        
-        target2targetx_local_rqq = QQuaternion.fromAxisAndAngle(target_local_axis, target_degree)
-        target2targetx_x2x_rqq = QQuaternion.fromAxisAndAngle(target_local_axis, target2targetx_local_rqq.toEulerAngles().x() * (-1 if "左" in delegate_dic["delegate"] else 1))
-        target2targetx_y2x_rqq = QQuaternion.fromAxisAndAngle(target_local_axis, target2targetx_local_rqq.toEulerAngles().y() * (-1 if "左" in delegate_dic["delegate"] else 1))
-        target2targetx_z2x_rqq = QQuaternion.fromAxisAndAngle(target_local_axis, target2targetx_local_rqq.toEulerAngles().z() * (-1 if "左" in delegate_dic["delegate"] else 1))
-
-        # ひじローカルＹ軸にそった各成分
-        delegate2delegatey_local_rqq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, delegate_degree)
-        delegate2delegatey_x2x_rqq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, delegate2delegatey_local_rqq.toEulerAngles().x() * (-1 if "左" in delegate_dic["delegate"] else 1))
-        delegate2delegatey_y2x_rqq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, delegate2delegatey_local_rqq.toEulerAngles().y() * (-1 if "左" in delegate_dic["delegate"] else 1))
-        delegate2delegatey_z2x_rqq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, delegate2delegatey_local_rqq.toEulerAngles().z() * (-1 if "左" in delegate_dic["delegate"] else 1))
-        
-        target2delegatey_local_rqq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, target_degree)
-        target2delegatey_x2x_rqq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, target2delegatey_local_rqq.toEulerAngles().x() * (-1 if "左" in delegate_dic["delegate"] else 1))
-        target2delegatey_y2x_rqq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, target2delegatey_local_rqq.toEulerAngles().y() * (-1 if "左" in delegate_dic["delegate"] else 1))
-        target2delegatey_z2x_rqq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, target2delegatey_local_rqq.toEulerAngles().z() * (-1 if "左" in delegate_dic["delegate"] else 1))
+        delegate2delegatey_x2y_qq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, delegate2delegatey_local_qq.toEulerAngles().x())
+        delegate2delegatey_y2y_qq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, delegate2delegatey_local_qq.toEulerAngles().y())
+        delegate2delegatey_z2y_qq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, delegate2delegatey_local_qq.toEulerAngles().z())
 
         # ひじのローカルY
         delegate_local_x2y_qq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, delegate_local_qq.toEulerAngles().y())
         delegate_local_y2y_qq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, delegate_local_qq.toEulerAngles().y())
         delegate_local_z2y_qq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, delegate_local_qq.toEulerAngles().y())
 
-        # ひじ
-        delegate_result_qq = delegate_qq
+        # --------------
+        # ひじZをひじローカルYで分離する        
+        delegate_z_extra_z2y_qq = delegate2targetx_z2x_qq * delegate2delegatey_z2y_qq.inverted()
+        delegate_z_extra_z2x_degree = degrees(2 * acos(min(1, max(-1, delegate_z_extra_z2y_qq.scalar()))))
+        delegate2delegate_z2y_extra_qq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, delegate_z_extra_z2x_degree)
+
+        delegate_z_extra_x2y_qq = delegate2targetx_x2x_qq * delegate2delegatey_x2y_qq.inverted()
+        delegate_z_extra_x2x_degree = degrees(2 * acos(min(1, max(-1, delegate_z_extra_x2y_qq.scalar()))))
+        delegate2delegate_x2y_extra_qq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, delegate_z_extra_x2x_degree)
+
+        # # 腕
+        # target_result_qq = target_qq
+
+        # # ひじ
+        # delegate_result_qq = delegate_qq
 
         # 腕
-        target_result_qq = target_qq
+        target_result_qq = target_qq * target2targetx_x2x_qq.inverted() * delegate2targetx_x2x_qq * delegate2targetx_z2x_qq
 
-        qq_params = { \
-            "d2d_local_qq": delegate2delegatey_local_qq,
-            "d2d_x2x_qq": delegate2delegatey_x2x_qq,
-            "d2d_y2x_qq": delegate2delegatey_y2x_qq,
-            "d2d_z2x_qq": delegate2delegatey_z2x_qq,
-            "t2d_local_qq": target2delegatey_local_qq,
-            "t2d_x2x_qq": target2delegatey_x2x_qq,
-            "t2d_y2x_qq": target2delegatey_y2x_qq,
-            "t2d_z2x_qq": target2delegatey_z2x_qq,
-            "d2d_local_lqq": delegate2delegatey_local_lqq,
-            "d2d_x2x_lqq": delegate2delegatey_x2x_lqq,
-            "d2d_y2x_lqq": delegate2delegatey_y2x_lqq,
-            "d2d_z2x_lqq": delegate2delegatey_z2x_lqq,
-            "t2d_local_lqq": target2delegatey_local_lqq,
-            "t2d_x2x_lqq": target2delegatey_x2x_lqq,
-            "t2d_y2x_lqq": target2delegatey_y2x_lqq,
-            "t2d_z2x_lqq": target2delegatey_z2x_lqq,
-            "d2d_local_rqq": delegate2delegatey_local_rqq,
-            "d2d_x2x_rqq": delegate2delegatey_x2x_rqq,
-            "d2d_y2x_rqq": delegate2delegatey_y2x_rqq,
-            "d2d_z2x_rqq": delegate2delegatey_z2x_rqq,
-            "t2d_local_rqq": target2delegatey_local_rqq,
-            "t2d_x2x_rqq": target2delegatey_x2x_rqq,
-            "t2d_y2x_rqq": target2delegatey_y2x_rqq,
-            "t2d_z2x_rqq": target2delegatey_z2x_rqq,
-            "dl_x2y": delegate_local_x2y_qq,
-            "dl_y2y": delegate_local_y2y_qq,
-            "dl_z2y": delegate_local_z2y_qq,
-            "d2d_local_qqi": delegate2delegatey_local_qq.inverted(),
-            "d2d_x2x_qqi": delegate2delegatey_x2x_qq.inverted(),
-            "d2d_y2x_qqi": delegate2delegatey_y2x_qq.inverted(),
-            "d2d_z2x_qqi": delegate2delegatey_z2x_qq.inverted(),
-            "t2d_local_qqi": target2delegatey_local_qq.inverted(),
-            "t2d_x2x_qqi": target2delegatey_x2x_qq.inverted(),
-            "t2d_y2x_qqi": target2delegatey_y2x_qq.inverted(),
-            "t2d_z2x_qqi": target2delegatey_z2x_qq.inverted(),
-            "d2d_local_lqqi": delegate2delegatey_local_lqq.inverted(),
-            "d2d_x2x_lqqi": delegate2delegatey_x2x_lqq.inverted(),
-            "d2d_y2x_lqqi": delegate2delegatey_y2x_lqq.inverted(),
-            "d2d_z2x_lqqi": delegate2delegatey_z2x_lqq.inverted(),
-            "t2d_local_lqqi": target2delegatey_local_lqq.inverted(),
-            "t2d_x2x_lqqi": target2delegatey_x2x_lqq.inverted(),
-            "t2d_y2x_lqqi": target2delegatey_y2x_lqq.inverted(),
-            "t2d_z2x_lqqi": target2delegatey_z2x_lqq.inverted(),
-            "d2d_local_rqqi": delegate2delegatey_local_rqq.inverted(),
-            "d2d_x2x_rqqi": delegate2delegatey_x2x_rqq.inverted(),
-            "d2d_y2x_rqqi": delegate2delegatey_y2x_rqq.inverted(),
-            "d2d_z2x_rqqi": delegate2delegatey_z2x_rqq.inverted(),
-            "t2d_local_rqqi": target2delegatey_local_rqq.inverted(),
-            "t2d_x2x_rqqi": target2delegatey_x2x_rqq.inverted(),
-            "t2d_y2x_rqqi": target2delegatey_y2x_rqq.inverted(),
-            "t2d_z2x_rqqi": target2delegatey_z2x_rqq.inverted(),
-            "dl_x2yi": delegate_local_x2y_qq.inverted(),
-            "dl_y2yi": delegate_local_y2y_qq.inverted(),
-            "dl_z2yi": delegate_local_z2y_qq.inverted(),
-            "00": QQuaternion() \
-        }
-
+        # ひじ
+        delegate_result_qq = delegate_local_y2y_qq * delegate2delegate_z2y_extra_qq * delegate2delegate_x2y_extra_qq.inverted()
 
         v_qq_dic["{0}X".format(delegate_dic["target"])] = delegate_local_qq
         v_qq_dic["{0}Y".format(delegate_dic["target"])] = QQuaternion.fromEulerAngles(delegate_degree, 0, 0)
@@ -378,26 +285,26 @@ def delegate_qq(delegate_dic, target_qq, delegate_qq, target_local_axis, target_
         v_qq_dic["{0}V".format(delegate_dic["target"])] = QQuaternion.fromEulerAngles(target_degree, 0, 0)
 
         v_qq_dic["{0}A".format(delegate_dic["target"])] = target_qq
-        v_qq_dic["{0}B".format(delegate_dic["target"])] = target_qq * delegate2targetx_z2x_qq
-        v_qq_dic["{0}C".format(delegate_dic["target"])] = target_qq * delegate2targetx_z2x_qq
-        v_qq_dic["{0}D".format(delegate_dic["target"])] = target_qq * delegate2targetx_z2x_qq
-        v_qq_dic["{0}E".format(delegate_dic["target"])] = target_qq * delegate2targetx_z2x_qq
-        v_qq_dic["{0}F".format(delegate_dic["target"])] = target_qq * delegate2targetx_z2x_qq
-        v_qq_dic["{0}H".format(delegate_dic["target"])] = target_qq * delegate2targetx_z2x_qq
-        v_qq_dic["{0}I".format(delegate_dic["target"])] = target_qq * delegate2targetx_z2x_qq
-        v_qq_dic["{0}J".format(delegate_dic["target"])] = target_qq * delegate2targetx_z2x_qq
-        v_qq_dic["{0}K".format(delegate_dic["target"])] = target_qq * delegate2targetx_z2x_qq
+        v_qq_dic["{0}B".format(delegate_dic["target"])] = target_qq * delegate2targetx_x2x_qq.inverted()
+        v_qq_dic["{0}C".format(delegate_dic["target"])] = target_qq * delegate2targetx_z2x_qq.inverted()
+        v_qq_dic["{0}D".format(delegate_dic["target"])] = target_qq * delegate2targetx_x2x_qq.inverted() * delegate2targetx_z2x_qq.inverted()
+        v_qq_dic["{0}E".format(delegate_dic["target"])] = target_qq * target2targetx_x2x_qq.inverted() * delegate2targetx_x2x_qq
+        v_qq_dic["{0}F".format(delegate_dic["target"])] = target_qq * target2targetx_x2x_qq.inverted() * delegate2targetx_z2x_qq
+        v_qq_dic["{0}H".format(delegate_dic["target"])] = target_qq * target2targetx_x2x_qq.inverted() * delegate2targetx_x2x_qq * delegate2targetx_z2x_qq
+        v_qq_dic["{0}I".format(delegate_dic["target"])] = target_qq * target2targetx_x2x_qq.inverted() * delegate2targetx_x2x_qq.inverted()
+        v_qq_dic["{0}J".format(delegate_dic["target"])] = target_qq * target2targetx_x2x_qq.inverted() * delegate2targetx_z2x_qq.inverted()
+        v_qq_dic["{0}K".format(delegate_dic["target"])] = target_qq * target2targetx_x2x_qq.inverted() * delegate2targetx_x2x_qq.inverted() * delegate2targetx_z2x_qq.inverted()
                 
         v_qq_dic["{0}A".format(delegate_dic["delegate"])] = delegate_qq
-        v_qq_dic["{0}B".format(delegate_dic["delegate"])] = delegate_local_y2y_qq
-        v_qq_dic["{0}C".format(delegate_dic["delegate"])] = qq_params[test_param[0]]
-        v_qq_dic["{0}D".format(delegate_dic["delegate"])] = qq_params[test_param[0]] * qq_params[test_param[1]]
-        v_qq_dic["{0}E".format(delegate_dic["delegate"])] = qq_params[test_param[0]] * qq_params[test_param[1]] * qq_params[test_param[2]]
-        v_qq_dic["{0}F".format(delegate_dic["delegate"])] = delegate_local_y2y_qq
-        v_qq_dic["{0}H".format(delegate_dic["delegate"])] = delegate_local_y2y_qq
-        v_qq_dic["{0}I".format(delegate_dic["delegate"])] = delegate_local_y2y_qq
-        v_qq_dic["{0}J".format(delegate_dic["delegate"])] = delegate_local_y2y_qq
-        v_qq_dic["{0}K".format(delegate_dic["delegate"])] = delegate_local_y2y_qq
+        v_qq_dic["{0}B".format(delegate_dic["delegate"])] = delegate_local_y2y_qq * delegate2delegate_z2y_extra_qq * delegate2delegate_x2y_extra_qq.inverted()
+        v_qq_dic["{0}C".format(delegate_dic["delegate"])] = delegate_local_y2y_qq * delegate2delegate_z2y_extra_qq * delegate2delegate_x2y_extra_qq.inverted()
+        v_qq_dic["{0}D".format(delegate_dic["delegate"])] = delegate_local_y2y_qq * delegate2delegate_z2y_extra_qq * delegate2delegate_x2y_extra_qq.inverted()
+        v_qq_dic["{0}E".format(delegate_dic["delegate"])] = delegate_local_y2y_qq * delegate2delegate_z2y_extra_qq * delegate2delegate_x2y_extra_qq.inverted()
+        v_qq_dic["{0}F".format(delegate_dic["delegate"])] = delegate_local_y2y_qq * delegate2delegate_z2y_extra_qq * delegate2delegate_x2y_extra_qq.inverted()
+        v_qq_dic["{0}H".format(delegate_dic["delegate"])] = delegate_local_y2y_qq * delegate2delegate_z2y_extra_qq * delegate2delegate_x2y_extra_qq.inverted()
+        v_qq_dic["{0}I".format(delegate_dic["delegate"])] = delegate_local_y2y_qq * delegate2delegate_z2y_extra_qq * delegate2delegate_x2y_extra_qq.inverted()
+        v_qq_dic["{0}J".format(delegate_dic["delegate"])] = delegate_local_y2y_qq * delegate2delegate_z2y_extra_qq * delegate2delegate_x2y_extra_qq.inverted()
+        v_qq_dic["{0}K".format(delegate_dic["delegate"])] = delegate_local_y2y_qq * delegate2delegate_z2y_extra_qq * delegate2delegate_x2y_extra_qq.inverted()
 
         v_qq_dic["{0}A".format("{0}手首".format(delegate_dic["delegate"][0]))] = QQuaternion()
         v_qq_dic["{0}B".format("{0}手首".format(delegate_dic["delegate"][0]))] = QQuaternion()
@@ -418,6 +325,111 @@ def delegate_qq(delegate_dic, target_qq, delegate_qq, target_local_axis, target_
 
 
 
+        # qq_params = { \
+        #     "d2d_local_qq": delegate2delegatey_local_qq,
+        #     "d2d_x2x_qq": delegate2delegatey_x2y_qq,
+        #     "d2d_y2x_qq": delegate2delegatey_y2x_qq,
+        #     "d2d_z2x_qq": delegate2delegatey_z2y_qq,
+        #     "t2d_local_qq": target2delegatey_local_qq,
+        #     "t2d_x2x_qq": target2delegatey_x2x_qq,
+        #     "t2d_y2x_qq": target2delegatey_y2x_qq,
+        #     "t2d_z2x_qq": target2delegatey_z2x_qq,
+        #     "d2d_local_lqq": delegate2delegatey_local_lqq,
+        #     "d2d_x2x_lqq": delegate2delegatey_x2x_lqq,
+        #     "d2d_y2x_lqq": delegate2delegatey_y2x_lqq,
+        #     "d2d_z2x_lqq": delegate2delegatey_z2x_lqq,
+        #     "t2d_local_lqq": target2delegatey_local_lqq,
+        #     "t2d_x2x_lqq": target2delegatey_x2x_lqq,
+        #     "t2d_y2x_lqq": target2delegatey_y2x_lqq,
+        #     "t2d_z2x_lqq": target2delegatey_z2x_lqq,
+        #     "d2d_local_rqq": delegate2delegatey_local_rqq,
+        #     "d2d_x2x_rqq": delegate2delegatey_x2x_rqq,
+        #     "d2d_y2x_rqq": delegate2delegatey_y2x_rqq,
+        #     "d2d_z2x_rqq": delegate2delegatey_z2x_rqq,
+        #     "t2d_local_rqq": target2delegatey_local_rqq,
+        #     "t2d_x2x_rqq": target2delegatey_x2x_rqq,
+        #     "t2d_y2x_rqq": target2delegatey_y2x_rqq,
+        #     "t2d_z2x_rqq": target2delegatey_z2x_rqq,
+        #     "dl_x2y": delegate_local_x2y_qq,
+        #     "dl_y2y": delegate_local_y2y_qq,
+        #     "dl_z2y": delegate_local_z2y_qq,
+        #     "d2d_local_qqi": delegate2delegatey_local_qq.inverted(),
+        #     "d2d_x2x_qqi": delegate2delegatey_x2y_qq.inverted(),
+        #     "d2d_y2x_qqi": delegate2delegatey_y2x_qq.inverted(),
+        #     "d2d_z2x_qqi": delegate2delegatey_z2y_qq.inverted(),
+        #     "t2d_local_qqi": target2delegatey_local_qq.inverted(),
+        #     "t2d_x2x_qqi": target2delegatey_x2x_qq.inverted(),
+        #     "t2d_y2x_qqi": target2delegatey_y2x_qq.inverted(),
+        #     "t2d_z2x_qqi": target2delegatey_z2x_qq.inverted(),
+        #     "d2d_local_lqqi": delegate2delegatey_local_lqq.inverted(),
+        #     "d2d_x2x_lqqi": delegate2delegatey_x2x_lqq.inverted(),
+        #     "d2d_y2x_lqqi": delegate2delegatey_y2x_lqq.inverted(),
+        #     "d2d_z2x_lqqi": delegate2delegatey_z2x_lqq.inverted(),
+        #     "t2d_local_lqqi": target2delegatey_local_lqq.inverted(),
+        #     "t2d_x2x_lqqi": target2delegatey_x2x_lqq.inverted(),
+        #     "t2d_y2x_lqqi": target2delegatey_y2x_lqq.inverted(),
+        #     "t2d_z2x_lqqi": target2delegatey_z2x_lqq.inverted(),
+        #     "d2d_local_rqqi": delegate2delegatey_local_rqq.inverted(),
+        #     "d2d_x2x_rqqi": delegate2delegatey_x2x_rqq.inverted(),
+        #     "d2d_y2x_rqqi": delegate2delegatey_y2x_rqq.inverted(),
+        #     "d2d_z2x_rqqi": delegate2delegatey_z2x_rqq.inverted(),
+        #     "t2d_local_rqqi": target2delegatey_local_rqq.inverted(),
+        #     "t2d_x2x_rqqi": target2delegatey_x2x_rqq.inverted(),
+        #     "t2d_y2x_rqqi": target2delegatey_y2x_rqq.inverted(),
+        #     "t2d_z2x_rqqi": target2delegatey_z2x_rqq.inverted(),
+        #     "dl_x2yi": delegate_local_x2y_qq.inverted(),
+        #     "dl_y2yi": delegate_local_y2y_qq.inverted(),
+        #     "dl_z2yi": delegate_local_z2y_qq.inverted(),
+        #     "00": QQuaternion() \
+        # }
+
+
+
+        # # ----------------
+
+        # delegate2targetx_local_lqq = QQuaternion.fromAxisAndAngle(target_local_axis, delegate_degree)
+        # delegate2targetx_x2x_lqq = QQuaternion.fromAxisAndAngle(target_local_axis, delegate2targetx_local_qq.toEulerAngles().x() * (1 if "左" in delegate_dic["delegate"] else -1))
+        # delegate2targetx_y2x_lqq = QQuaternion.fromAxisAndAngle(target_local_axis, delegate2targetx_local_qq.toEulerAngles().y() * (1 if "左" in delegate_dic["delegate"] else -1))
+        # delegate2targetx_z2x_lqq = QQuaternion.fromAxisAndAngle(target_local_axis, delegate2targetx_local_qq.toEulerAngles().z() * (1 if "左" in delegate_dic["delegate"] else -1))
+        
+        # target2targetx_local_lqq = QQuaternion.fromAxisAndAngle(target_local_axis, target_degree)
+        # target2targetx_x2x_lqq = QQuaternion.fromAxisAndAngle(target_local_axis, target2targetx_local_qq.toEulerAngles().x() * (1 if "左" in delegate_dic["delegate"] else -1))
+        # target2targetx_y2x_lqq = QQuaternion.fromAxisAndAngle(target_local_axis, target2targetx_local_qq.toEulerAngles().y() * (1 if "左" in delegate_dic["delegate"] else -1))
+        # target2targetx_z2x_lqq = QQuaternion.fromAxisAndAngle(target_local_axis, target2targetx_local_qq.toEulerAngles().z() * (1 if "左" in delegate_dic["delegate"] else -1))
+
+        # # ひじローカルＹ軸にそった各成分
+        # delegate2delegatey_local_lqq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, delegate_degree)
+        # delegate2delegatey_x2x_lqq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, delegate2delegatey_local_lqq.toEulerAngles().x() * (1 if "左" in delegate_dic["delegate"] else -1))
+        # delegate2delegatey_y2x_lqq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, delegate2delegatey_local_lqq.toEulerAngles().y() * (1 if "左" in delegate_dic["delegate"] else -1))
+        # delegate2delegatey_z2x_lqq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, delegate2delegatey_local_lqq.toEulerAngles().z() * (1 if "左" in delegate_dic["delegate"] else -1))
+        
+        # target2delegatey_local_lqq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, target_degree)
+        # target2delegatey_x2x_lqq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, target2delegatey_local_lqq.toEulerAngles().x() * (1 if "左" in delegate_dic["delegate"] else -1))
+        # target2delegatey_y2x_lqq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, target2delegatey_local_lqq.toEulerAngles().y() * (1 if "左" in delegate_dic["delegate"] else -1))
+        # target2delegatey_z2x_lqq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, target2delegatey_local_lqq.toEulerAngles().z() * (1 if "左" in delegate_dic["delegate"] else -1))
+
+        # # ----------------
+
+        # delegate2targetx_local_rqq = QQuaternion.fromAxisAndAngle(target_local_axis, delegate_degree)
+        # delegate2targetx_x2x_rqq = QQuaternion.fromAxisAndAngle(target_local_axis, delegate2targetx_local_rqq.toEulerAngles().x() * (-1 if "左" in delegate_dic["delegate"] else 1))
+        # delegate2targetx_y2x_rqq = QQuaternion.fromAxisAndAngle(target_local_axis, delegate2targetx_local_rqq.toEulerAngles().y() * (-1 if "左" in delegate_dic["delegate"] else 1))
+        # delegate2targetx_z2x_rqq = QQuaternion.fromAxisAndAngle(target_local_axis, delegate2targetx_local_rqq.toEulerAngles().z() * (-1 if "左" in delegate_dic["delegate"] else 1))
+        
+        # target2targetx_local_rqq = QQuaternion.fromAxisAndAngle(target_local_axis, target_degree)
+        # target2targetx_x2x_rqq = QQuaternion.fromAxisAndAngle(target_local_axis, target2targetx_local_rqq.toEulerAngles().x() * (-1 if "左" in delegate_dic["delegate"] else 1))
+        # target2targetx_y2x_rqq = QQuaternion.fromAxisAndAngle(target_local_axis, target2targetx_local_rqq.toEulerAngles().y() * (-1 if "左" in delegate_dic["delegate"] else 1))
+        # target2targetx_z2x_rqq = QQuaternion.fromAxisAndAngle(target_local_axis, target2targetx_local_rqq.toEulerAngles().z() * (-1 if "左" in delegate_dic["delegate"] else 1))
+
+        # # ひじローカルＹ軸にそった各成分
+        # delegate2delegatey_local_rqq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, delegate_degree)
+        # delegate2delegatey_x2x_rqq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, delegate2delegatey_local_rqq.toEulerAngles().x() * (-1 if "左" in delegate_dic["delegate"] else 1))
+        # delegate2delegatey_y2x_rqq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, delegate2delegatey_local_rqq.toEulerAngles().y() * (-1 if "左" in delegate_dic["delegate"] else 1))
+        # delegate2delegatey_z2x_rqq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, delegate2delegatey_local_rqq.toEulerAngles().z() * (-1 if "左" in delegate_dic["delegate"] else 1))
+        
+        # target2delegatey_local_rqq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, target_degree)
+        # target2delegatey_x2x_rqq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, target2delegatey_local_rqq.toEulerAngles().x() * (-1 if "左" in delegate_dic["delegate"] else 1))
+        # target2delegatey_y2x_rqq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, target2delegatey_local_rqq.toEulerAngles().y() * (-1 if "左" in delegate_dic["delegate"] else 1))
+        # target2delegatey_z2x_rqq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, target2delegatey_local_rqq.toEulerAngles().z() * (-1 if "左" in delegate_dic["delegate"] else 1))
 
         # v_qq_dic["{0}D".format(delegate_dic["target"])] = target_qq * degree2target_z2x_qq
         # v_qq_dic["{0}E".format(delegate_dic["target"])] = target_qq * degree2target_z2x_qq
