@@ -1232,6 +1232,54 @@ class TestSubStance(unittest.TestCase):
         print("ok_list target: %s" % prefix)
         self.assertGreater(len(ok_list), 0)
                              
+    # 首,頭,0,1-,0,上半身,上半身2,0,1,1,上半身2,頭,1,1,0,d2,d3,d1,01_True,False,True,False,True,False_-0.18#-0.08# 9.07,-7.14#-0.05# 9.56,-1.89# 0.06# 4.69
+    # 首,頭,1-,1-,0,上半身,上半身2,1,1-,0,首,頭,1,1,0,d3,d2,d1,01_True,True,True,False,False,False_ 4.72#-0.00# 1.11,-2.25#-0.01# 1.60, 2.96#-0.56#-3.21
+    # 上半身,首,1,1,0,上半身,首,1-,1-,0,首,頭,1,0,0,d2,d3,d1,01_True,False,True,False,True,False_ 4.00#-0.08# 4.27,-2.97#-0.09# 4.77, 2.24#-0.54#-0.05
+    # 上半身,首,1,1,0,上半身,上半身2,1-,0,1-,上半身2,頭,1,0,1,d2,d1,d3,01_True,False,True,False,True,False_ 1.55# 0.04#-9.84,-5.42# 0.06#-9.36,-0.17#-0.06#-14.21
+    # 上半身,上半身2,0,1,0,上半身,頭,1,1,0,上半身,上半身2,0,1-,1,d3,d2,d1,01_True,False,True,False,True,False_ 0.70# 0.06# 11.30,-6.26# 0.08# 11.78,-1.00# 0.07# 6.92
+    # 上半身,上半身2,0,1,0,上半身,頭,1,1-,0,上半身2,首,0,1,1,d1,d2,d3,01_True,False,True,False,True,False_ 0.70# 0.01#-9.82,-6.26# 0.03#-9.34,-1.01# 0.03#-14.20
+    # 上半身,上半身2,0,1,1,上半身,頭,1,1,0,首,頭,0,1-,0,d1,d2,d3,01_True,False,True,False,True,False_ 0.70#-0.09# 8.19,-6.26#-0.07# 8.68,-1.02#-0.07# 3.82
+    # 上半身,上半身2,1,0,0,上半身,首,1-,0,1-,首,頭,1,0,1,d2,d1,d3,01_True,True,True,False,False,False_ 8.51#-0.00# 2.26, 1.54#-0.05# 2.76, 6.72#-1.12#-1.97
+    # 上半身,上半身2,1,0,0,上半身,上半身2,1-,0,1-,首,頭,1,0,1,d2,d1,d3,01_True,True,True,False,False,False_ 4.53#-0.00# 2.25,-2.44#-0.01# 2.74, 2.78#-0.54#-2.07
+    # 上半身,頭,1,0,1-,上半身,頭,1-,0,1,上半身2,頭,1,0,0,d2,d3,d1,01_True,False,True,False,True,False_ 0.54# 0.01# 11.54,-6.42# 0.04# 12.02,-1.17# 0.05# 7.17
+    def test_upper_stance_upper2_up_43(self):
+
+        target_test_params_list_bone_names1 = [("上半身","上半身2")]
+        target_test_params_list_bone_names2 = [("上半身","首"), ("上半身","頭"), ("上半身2","首"), ("上半身2","頭")]
+        target_test_params_list_bone_names3 = [("首","頭")]
+        
+        # 数字の組合せ
+        rep_upper2_initial_slope_test_numbers = ["0","1-","1"]
+        list_target_test_params_base_numbers = list(itertools.product(rep_upper2_initial_slope_test_numbers, repeat=3))
+        list_target_test_params_list_numbers = [(x00, x01, x02) for (x00, x01, x02) in list_target_test_params_base_numbers if 0 < [x00, x01, x02].count("0") < 3 ]
+        print("numbers LIST: %s" % len(list_target_test_params_list_numbers))
+
+        # 最後の組合せ
+        rep_upper2_initial_slope_test_pairs = ["d1","d2","d3"]
+        target_test_params_base_pairs = list(itertools.product(rep_upper2_initial_slope_test_pairs, repeat=3))
+        target_test_params_list_pairs = [(x00, x01, x02) for (x00, x01, x02) in target_test_params_base_pairs 
+            if x00[:2] not in [x01[:2], x02[:2]] and x01[:2] not in [x00[:2], x02[:2]] and x02[:2] not in [x01[:2], x00[:2]] ]
+        print("pairs LIST: %s" % len(target_test_params_list_pairs))
+
+        # 直積
+        target_test_params_base = list(itertools.product(target_test_params_list_bone_names1, list_target_test_params_list_numbers, \
+            target_test_params_list_bone_names2, list_target_test_params_list_numbers, \
+            target_test_params_list_bone_names3, list_target_test_params_list_numbers, target_test_params_list_pairs))
+
+        target_test_params_list = [(names1[0], names1[1], numbers1[0], numbers1[1], numbers1[2], names2[0], names2[1], numbers2[0], numbers2[1], numbers2[2], \
+            names3[0], names3[1], numbers3[0], numbers3[1], numbers3[2], pairs[0], pairs[1], pairs[2], "01") \
+            for (names1, numbers1, names2, numbers2, names3, numbers3, pairs) in target_test_params_base]
+        random.shuffle(target_test_params_list)
+        print("targets LIST: %s" % len(target_test_params_list))
+        
+        prefix = "043-01"
+        ok_list = self.calc_stance(target_test_params_list, 0.1, False, prefix)
+
+        print("ok_list LIST: %s" % ok_list)
+        print("ok_list target: %s" % prefix)
+        self.assertGreater(len(ok_list), 0)
+                             
+
 
 
 
@@ -1959,4 +2007,4 @@ class TestSubStance(unittest.TestCase):
         return ok_list
 
 if __name__ == "__main__":
-    unittest.main(defaultTest="TestSubStance.test_delegate_qq_20")
+    unittest.main(defaultTest="TestSubStance.test_upper_stance_upper2_up_43")

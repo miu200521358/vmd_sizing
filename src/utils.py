@@ -811,7 +811,7 @@ def delegate_qq(delegate_dic, target_qq, delegate_qq, target_local_axis, target_
 
         # 余計な回転量
         delegate_extra_degree = degrees(2 * acos(min(1, max(-1, delegate_work_qq.scalar()))))
-        delegate_extra_degree = delegate_extra_degree
+        delegate_extra_degree = delegate_extra_degree * delegate_dic["extra"]
 
         # 余計な回転量を委譲先のローカル軸に合わせた回転量
         target_local_extra_qq = QQuaternion.fromAxisAndAngle(target_local_axis, delegate_extra_degree)
@@ -842,18 +842,20 @@ def delegate_qq(delegate_dic, target_qq, delegate_qq, target_local_axis, target_
 # 委譲リスト
 DELEGATE_BORN_LIST = {
     "左手首": [
-        # {"target":"左ひじ", "delegate": "左手首", "is_twist": False, "is_elbow": False, "axis": QVector3D(1, 0, 0)}
-        {"target":"左腕", "delegate": "左ひじ", "is_twist": False, "is_elbow": True, "axis": QVector3D(1, 0, 0)}
-        # , {"target":"左肩", "delegate": "左腕", "is_twist": False, "is_elbow": False, "axis": QVector3D(1, 1, 1)}
-        # , {"target":"左手捩", "delegate": "左ひじ", "is_twist": True, "is_elbow": False, "axis": QVector3D(1, 1, 1)}
-        # , {"target":"左腕捩", "delegate": "左腕", "is_twist": True, "is_elbow": False, "axis": QVector3D(1, 1, 1)}
+        # {"target":"左腕", "delegate": "左ひじ", "is_twist": False, "is_elbow": True, "axis": QVector3D(1, 0, 0)}
+        {"target":"左ひじ", "delegate": "左手首", "is_twist": False, "is_elbow": False, "axis": QVector3D(1, 0, 0), "extra": 1}
+        , {"target":"左腕", "delegate": "左ひじ", "is_twist": False, "is_elbow": False, "axis": QVector3D(1, 0, 0), "extra": 1}
+        # , {"target":"左肩", "delegate": "左腕", "is_twist": False, "is_elbow": False, "axis": QVector3D(1, 1, 1), "extra": 1}
+        , {"target":"左手捩", "delegate": "左ひじ", "is_twist": True, "is_elbow": False, "axis": QVector3D(1, 0, 0), "extra": 1}
+        , {"target":"左腕捩", "delegate": "左腕", "is_twist": True, "is_elbow": False, "axis": QVector3D(1, 0, 0), "extra": 1}
     ], 
     "右手首": [
-        # {"target":"右ひじ", "delegate": "右手首", "is_twist": False, "is_elbow": False, "axis": QVector3D(1, 0, 0)}
-        {"target":"右腕", "delegate": "右ひじ", "is_twist": False, "is_elbow": True, "axis": QVector3D(1, 0, 0)}
-        # , {"target":"右肩", "delegate": "右腕", "is_twist": False, "is_elbow": False, "axis": QVector3D(1, 1, 1)}
-        # , {"target":"右手捩", "delegate": "右ひじ", "is_twist": True, "is_elbow": False, "axis": QVector3D(1, 1, 1)}
-        # , {"target":"右腕捩", "delegate": "右腕", "is_twist": True, "is_elbow": False, "axis": QVector3D(1, 1, 1)}
+        # {"target":"右腕", "delegate": "右ひじ", "is_twist": False, "is_elbow": True, "axis": QVector3D(1, 0, 0), "extra": -1}
+        {"target":"右ひじ", "delegate": "右手首", "is_twist": False, "is_elbow": False, "axis": QVector3D(1, 0, 0), "extra": -1}
+        , {"target":"右腕", "delegate": "右ひじ", "is_twist": False, "is_elbow": False, "axis": QVector3D(1, 0, 0), "extra": -1}
+        # , {"target":"右肩", "delegate": "右腕", "is_twist": False, "is_elbow": False, "axis": QVector3D(1, 1, 1), "extra": -1}
+        , {"target":"右手捩", "delegate": "右ひじ", "is_twist": True, "is_elbow": False, "axis": QVector3D(1, 0, 0), "extra": -1}
+        , {"target":"右腕捩", "delegate": "右腕", "is_twist": True, "is_elbow": False, "axis": QVector3D(1, 0, 0), "extra": -1}
     ]
 }
 
