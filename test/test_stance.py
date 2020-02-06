@@ -1279,7 +1279,46 @@ class TestSubStance(unittest.TestCase):
         print("ok_list target: %s" % prefix)
         self.assertGreater(len(ok_list), 0)
                              
+    def test_upper_stance_upper2_up_44(self):
 
+        # ボーン名の組合せ
+        rep_upper2_initial_slope_test_bone_names = [(0,"上半身"), (1,"上半身2"), (2,"首"), (3,"頭")]
+        target_test_params_base_bone_names = list(itertools.product(rep_upper2_initial_slope_test_bone_names, repeat=2))
+        target_test_params_list_bone_names = [(x00[1], x01[1]) for (x00, x01) in target_test_params_base_bone_names if x00[0] < x01[0]]
+        target_test_params_base_bone_names_comb = list(itertools.combinations(target_test_params_list_bone_names, 3))
+        print("bone_names LIST: %s" % len(target_test_params_list_bone_names))
+        
+        # 数字の組合せ
+        rep_upper2_initial_slope_test_numbers = ["0","1-","1"]
+        list_target_test_params_base_numbers = list(itertools.product(rep_upper2_initial_slope_test_numbers, repeat=3))
+        list_target_test_params_list_numbers = [(x00, x01, x02) for (x00, x01, x02) in list_target_test_params_base_numbers if 0 < [x00, x01, x02].count("0") < 3 ]
+        print("numbers LIST: %s" % len(list_target_test_params_list_numbers))
+
+        # 最後の組合せ
+        rep_upper2_initial_slope_test_pairs = ["d1","d2","d3"]
+        target_test_params_base_pairs = list(itertools.product(rep_upper2_initial_slope_test_pairs, repeat=3))
+        target_test_params_list_pairs = [(x00, x01, x02) for (x00, x01, x02) in target_test_params_base_pairs 
+            if x00[:2] not in [x01[:2], x02[:2]] and x01[:2] not in [x00[:2], x02[:2]] and x02[:2] not in [x01[:2], x00[:2]] ]
+        print("pairs LIST: %s" % len(target_test_params_list_pairs))
+
+        # 直積
+        target_test_params_base = list(itertools.product(target_test_params_base_bone_names_comb[0], list_target_test_params_list_numbers, \
+            target_test_params_base_bone_names_comb[1], list_target_test_params_list_numbers, \
+            target_test_params_base_bone_names_comb[2], list_target_test_params_list_numbers, target_test_params_list_pairs))
+
+        target_test_params_list = [(names1[0], names1[1], numbers1[0], numbers1[1], numbers1[2], names2[0], names2[1], numbers2[0], numbers2[1], numbers2[2], \
+            names3[0], names3[1], numbers3[0], numbers3[1], numbers3[2], pairs[0], pairs[1], pairs[2], "01") \
+            for (names1, numbers1, names2, numbers2, names3, numbers3, pairs) in target_test_params_base]
+        random.shuffle(target_test_params_list)
+        print("targets LIST: %s" % len(target_test_params_list))
+        
+        prefix = "044-03"
+        ok_list = self.calc_stance(target_test_params_list, 0.1, False, prefix)
+
+        print("ok_list LIST: %s" % ok_list)
+        print("ok_list target: %s" % prefix)
+        self.assertGreater(len(ok_list), 0)
+                             
 
 
 
@@ -2007,4 +2046,4 @@ class TestSubStance(unittest.TestCase):
         return ok_list
 
 if __name__ == "__main__":
-    unittest.main(defaultTest="TestSubStance.test_upper_stance_upper2_up_43")
+    unittest.main(defaultTest="TestSubStance.test_upper_stance_upper2_up_44")
