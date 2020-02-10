@@ -345,6 +345,45 @@ def calc_match_qq(v1, v2):
 
     return local_qq, local_degree
 
+# 行列をクォータニオンに変化する
+# https://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/
+def calc_mat_2_qq(mat):
+    a = [[mat.row(0).x(), mat.row(0).y(), mat.row(0).z(), mat.row(0).w()]
+        , [mat.row(1).x(), mat.row(1).y(), mat.row(1).z(), mat.row(1).w()]
+        , [mat.row(2).x(), mat.row(2).y(), mat.row(2).z(), mat.row(2).w()]
+        , [mat.row(3).x(), mat.row(3).y(), mat.row(3).z(), mat.row(3).w()]]
+    q = QQuaternion()
+    
+    # I removed + 1
+    trace = a[0][0] + a[1][1] + a[2][2]
+    # I changed M_EPSILON to 0
+    if  trace > 0:
+        s = 0.5 / sqrt(trace+ 1)
+        q.setScalar( 0.25 / s )
+        q.setX(( a[2][1] - a[1][2] ) * s)
+        q.setY(( a[0][2] - a[2][0] ) * s)
+        q.setZ(( a[1][0] - a[0][1] ) * s)
+    else:
+        if a[0][0] > a[1][1] and a[0][0] > a[2][2]:
+            s = 2 * sqrt( 1 + a[0][0] - a[1][1] - a[2][2])
+            q.setScalar((a[2][1] - a[1][2] ) / s)
+            q.setX(0.25 * s)
+            q.setY((a[0][1] + a[1][0] ) / s)
+            q.setZ((a[0][2] + a[2][0] ) / s)
+        elif a[1][1] > a[2][2]:
+            s = 2 * sqrt( 1 + a[1][1] - a[0][0] - a[2][2])
+            q.setScalar((a[0][2] - a[2][0] ) / s)
+            q.setX((a[0][1] + a[1][0] ) / s)
+            q.setY(0.25 * s)
+            q.setZ((a[1][2] + a[2][1] ) / s)
+        else:
+            s = 2 * sqrt( 1 + a[2][2] - a[0][0] - a[1][1] )
+            q.setScalar((a[1][0] - a[0][1] ) / s)
+            q.setX((a[0][2] + a[2][0] ) / s)
+            q.setY((a[1][2] + a[2][1] ) / s)
+            q.setZ(0.25 * s)
+
+    return q
 
 # 子の回転を親に分散させる
 # https://ch.nicovideo.jp/HOPHEAD/blomaga/ar805999 MMDではYXZ型
@@ -371,54 +410,73 @@ def delegate_qq(model, frames, bf, arm2root_links, arm2root_indexes, delegate_di
     target_local_z_axis = QVector3D.crossProduct(target_local_x_axis, target_local_y_axis).normalized()
 
     if delegate_dic["is_elbow"] == True:
-        # # ひじX の回転量
-        # delegatex_qq, delegatex_degree = calc_delegate_extra_qq(delegate_qq, delegate_local_x_axis, delegate_local_x_axis, delegate_dic["delegate"], fno)
-        # # ひじZ の回転量
-        # delegatez2y_qq, delegatez2y_degree = calc_delegate_extra_qq(delegate_qq, delegate_local_z_axis, delegate_local_y_axis, delegate_dic["delegate"], fno)
+        elbow_initial_axis = delegate_local_x_axis  # ひじ初期向き
+        elbow_global_axis = QVector3D(1, 0, 0)      # ひじグローバル向き
 
-        elbow_initial_axis = delegate_local_x_axis # ひじ仮想初期位置
-        mat1 = QMatrix4x4()
-        mat1.rotate(delegate_qq)            # ひじの回転量
-        mat1.translate(elbow_initial_axis)  # ひじ仮想初期位置に移動
-
+        elbow_all_mat = QMatrix4x4()
+        elbow_all_mat.rotate(delegate_qq)            # ひじの回転量
         # ひじベクトル
-        elbow_original_vector = mat1 * QVector3D()
-        # ひじ仮想初期位置からひじベクトルに回す回転量
-        elbow_match_qq, elbow_match_degree = calc_match_qq(elbow_initial_axis, elbow_original_vector)
-        # ひじYの回転量
-        elbow_y_qq = QQuaternion.fromAxisAndAngle(delegate_local_y_axis, elbow_match_degree)
+        elbow_original_vector = elbow_all_mat * elbow_initial_axis
 
-        # ひじYを抜き出した残り
-        mat2 = QMatrix4x4()
-        mat2.rotate(elbow_y_qq)            # ひじYの回転量
-        mat2.translate(elbow_initial_axis)  # ひじ仮想初期位置に移動
+        # ひじからX成分を除去する
+        elbow_yz_qq, elbow_yz_degree = calc_match_qq(elbow_initial_axis, elbow_original_vector)
 
-        elbow_y_vector = mat2 * QVector3D()
-        elbow_remain_qq, elbow_remain_degree = calc_match_qq(elbow_y_vector, elbow_original_vector)
-        elbow2arm_remain_qq = QQuaternion.fromAxisAndAngle(target_local_x_axis, elbow_remain_degree)
+        # YZ回転からZ成分だけ取り出す -------------
 
-        # # elbow_remain_qq = delegate_qq * elbow_y_qq.inverted() #* delegatex_qq.inverted()
-        # # elbow_remain_degree = degrees(2 * acos(min(1, max(-1, elbow_remain_qq.scalar()))))
-        # # elbow2arm_remain_qq = QQuaternion.fromAxisAndAngle(target_local_x_axis, elbow_remain_degree)
+        # 除去されたひじX成分
+        elbow_yz_mat = QMatrix4x4()
+        elbow_yz_mat.rotate(elbow_yz_qq)    # ひじYZの回転量
+        elbow_x_qq = calc_mat_2_qq(elbow_all_mat * elbow_yz_mat.inverted()[0])
 
-        # logger.info("fno: %s, %s: %s, %s", fno, delegate_dic["delegate"], delegate_degree, delegate_qq.toEulerAngles())
-        # logger.info("fno: %s, %sX: %s, %s", fno, delegate_dic["delegate"], delegatex_degree, delegatex_qq.toEulerAngles())
-        # logger.info("fno: %s, %sY: %s, %s", fno, delegate_dic["delegate"], elbow_match_degree, elbow_y_qq.toEulerAngles())
-        # logger.info("fno: %s, %sZ2Y: %s, %s", fno, delegate_dic["delegate"], delegatez2y_degree, delegatez2y_qq.toEulerAngles())
-        # logger.info("fno: %s, %s残: %s, %s", fno, delegate_dic["delegate"], elbow_remain_degree, elbow_remain_qq.toEulerAngles())
+        elbow_local_all_qq, elbow_local_all_degree = calc_match_qq(elbow_initial_axis, elbow_global_axis)
+        elbow_local_all_mat = QMatrix4x4()
+        elbow_local_all_mat.rotate(elbow_local_all_qq)
+
+        elbow_global_all_qq, elbow_global_all_degree = calc_match_qq(elbow_global_axis, elbow_initial_axis)
+        elbow_global_all_mat = QMatrix4x4()
+        elbow_global_all_mat.rotate(elbow_global_all_qq)
+
+        elbow_local_mat = QMatrix4x4()
+        elbow_local_mat.rotate(elbow_yz_qq)
+        elbow_local_qq = calc_mat_2_qq(elbow_local_mat * elbow_local_all_mat)
+
+        # <--- ここまでで肘ローカルに回転を持ってこれている。
+
+        #  YZ回転からZ成分を抽出する。
+        p_mat = QMatrix4x4()
+        p_mat.rotate(elbow_local_all_qq)
+        p_mat.translate(elbow_global_axis)
+        p = (p_mat * QVector3D())
+        p.setZ(0)
+        p.normalized()
+
+        elbow_local_z_qq, elbow_local_z_degree = calc_match_qq(elbow_global_axis, p)
+
+        elbow_z_mat = QMatrix4x4()
+        elbow_z_mat.rotate(elbow_local_z_qq)
+        elbow_z_qq = calc_mat_2_qq(elbow_z_mat * elbow_global_all_mat)
+
+        # YZ回転からY成分だけ取り出す。
+        elbow_yz_mat = QMatrix4x4()
+        elbow_yz_mat.rotate(elbow_yz_qq)
+        elbow_z_mat = QMatrix4x4()
+        elbow_z_mat.rotate(elbow_z_qq)
+        elbow_y_mat = elbow_yz_mat * elbow_z_mat.inverted()[0]
+        elbow_y_qq = calc_mat_2_qq(elbow_y_mat)
+
+        # X成分の捻れが混入したので、XY回転からYZ回転を取り出すことでXキャンセルをかける。
+        m = QMatrix4x4()
+        m.translate(elbow_initial_axis)
+        m = m * elbow_y_mat
+        v = m * QVector3D()
+        v.normalized()
+        elbow_x_qq = calc_match_qq(elbow_initial_axis, v)
 
         # 腕
-        target_result_qq = target_qq #* elbow2arm_remain_qq
+        target_result_qq = target_qq
 
         # ひじ
         delegate_result_qq = elbow_y_qq
-
-        # logger.info("--------------")
-        # logger.info("fno: %s, %spos: %s", fno, delegate_dic["target"], front_arm_global_pos)
-        # logger.info("fno: %s, %spos: %s", fno, delegate_dic["delegate"], front_elbow_global_pos)
-        # logger.info("fno: %s, %s%spos: %s", fno, delegate_dic["target"][0], "手首", front_wrist_global_pos)
-        # logger.info("fno: %s, %s元: %s", fno, delegate_dic["delegate"], delegate_qq.toEulerAngles())
-        # logger.info("fno: %s, %s変換: %s", fno, delegate_dic["delegate"], elbow2wrist_qq.toEulerAngles())
 
         return target_result_qq, delegate_result_qq, v_qq_dic
     else:
