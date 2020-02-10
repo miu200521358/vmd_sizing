@@ -45,7 +45,7 @@ def smooth_morph(motion, blended_morphs):
         pmfilter = convert_smooth.OneEuroFilter(**config)
 
         for mv in mv_list:
-            pm = pmfilter(mv.ratio, mv.frame)
+            pm = pmfilter(min(1, max(0, mv.ratio)), mv.frame)
             mv.ratio = pm
 
 # モーフの置き換え処理を実行する

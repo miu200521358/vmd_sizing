@@ -208,7 +208,7 @@ def parse_exec():
         print(e.message)
 
         # 終了音を鳴らす
-        winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
+        winsound.PlaySound("SystemQuestion", winsound.SND_ALIAS)
 
     except Exception as e:
         print("■■■■■■■■■■■■■■■■■")
@@ -219,7 +219,7 @@ def parse_exec():
         print(traceback.format_exc())
 
         # 終了音を鳴らす
-        winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
+        winsound.PlaySound("SystemQuestion", winsound.SND_ALIAS)
 
 
 if __name__=="__main__":

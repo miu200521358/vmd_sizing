@@ -241,11 +241,11 @@ def spread_rotation(motion, model, is_thinning, test_param):
                 prepare_spread_rotation_4_arm(motion, bone_name)
 
             # 手首から親までのボーンリンク
-            links, indexes = model.create_link_2_top_one(end_bone_name)
+            arm2root_links, arm2root_indexes = model.create_link_2_top_one(end_bone_name)
             arm_links = []
 
             # 肩Pまで（上半身2より前）のボーンを処理対象とする
-            for l in links:
+            for l in arm2root_links:
                 if "上半身" in l.name:
                     break
 
@@ -289,18 +289,21 @@ def spread_rotation(motion, model, is_thinning, test_param):
                     continue
 
                 # 処理対象ボーンのローカル軸
-                target_local_axis, target_local_z_axis = utils.get_local_axis_4delegate_qq(model, target_bone)
+                target_local_axis = utils.get_local_axis_4delegate_qq(model, target_bone)
 
                 # 委譲元ボーンのローカル軸
-                delegate_local_axis, delegate_local_z_axis = utils.get_local_axis_4delegate_qq(model, delegate_bone)
+                delegate_local_axis = utils.get_local_axis_4delegate_qq(model, delegate_bone)
     
                 for fno in sorted(all_frames_by_bone[target_bone.name].keys()):
                     target_bf = all_frames_by_bone[target_bone.name][fno]
                     delegate_bf = all_frames_by_bone[delegate_bone.name][fno]
 
+                    frames = {}
+                    for l in arm2root_links:
+                        frames[l.name] = [all_frames_by_bone[target_bone.name][fno]]
+
                     # 回転を分散する
-                    target_result_qq, delegate_result_qq, v_qq_dic = utils.delegate_qq(delegate_dic, target_bf.rotation, delegate_bf.rotation, \
-                        target_local_axis, target_local_z_axis, delegate_local_axis, delegate_local_z_axis, fno, test_param)
+                    target_result_qq, delegate_result_qq, v_qq_dic = utils.delegate_qq(model, frames, delegate_bf, arm2root_links, arm2root_indexes, delegate_dic, target_bf.rotation, delegate_bf.rotation, target_local_axis, delegate_local_axis, fno, test_param)
 
                     # 回転量を再設定
                     target_bf.rotation = target_result_qq
