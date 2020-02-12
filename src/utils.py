@@ -5,7 +5,7 @@ import re
 import logging
 import copy
 from datetime import datetime
-from math import atan2, acos, asin, cos, sin, degrees, isnan, isclose, sqrt, pi, isinf
+from math import atan2, acos, asin, cos, sin, degrees, isnan, isclose, sqrt, pi, isinf, radians
 from statistics import median, mean
 from PyQt5.QtGui import QQuaternion, QVector3D, QVector2D, QMatrix4x4, QVector4D
 
@@ -244,7 +244,7 @@ def calc_split_qq(target_qq, bone_name):
     return part_x_qq, part_y_qq, part_z_qq, part_x_degree, part_y_degree, part_z_degree
 
 # 処理対称軸から余計な回転量を抽出する
-def calc_delegate_extra_qq(target_qq, target_axis, local_axis, bone_name, fno):
+def calc_delegate_extra_qq(fno, bone_name, target_qq, target_axis, local_axis):
     # 回転角度
     target_degree = degrees(2 * acos(min(1, max(-1, target_qq.scalar()))))
     # 任意軸の回転に変換
@@ -338,7 +338,10 @@ def calc_match_qq(v1, v2):
     rotation_axis = QVector3D.crossProduct(v1, v2)
 
     s = sqrt((1 + cos_theta) * 2)
-    invs = 1 / s
+    if s == 0:
+        invs = 0
+    else:
+        invs = 1 / s
 
     local_qq = QQuaternion( s * 0.5, rotation_axis.x() * invs, rotation_axis.y() * invs, rotation_axis.z() * invs )
     local_degree = degrees(2 * acos(min(1, max(-1, local_qq.scalar()))))
@@ -347,7 +350,7 @@ def calc_match_qq(v1, v2):
 
 # 行列をクォータニオンに変化する
 # https://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/
-def calc_mat_2_qq(mat):
+def calc_matrix2qq(mat):
     a = [[mat.row(0).x(), mat.row(0).y(), mat.row(0).z(), mat.row(0).w()]
         , [mat.row(1).x(), mat.row(1).y(), mat.row(1).z(), mat.row(1).w()]
         , [mat.row(2).x(), mat.row(2).y(), mat.row(2).z(), mat.row(2).w()]
@@ -385,9 +388,172 @@ def calc_mat_2_qq(mat):
 
     return q
 
+# 逆肘（初期値より後ろにひじが向かっている場合）であるか
+def is_reverse_elbow(elbow_y_qq, elbow_global_x_axis, arm_vec, elbow_vec):
+    # ひじグローバル軸をひじローカル軸に変換するqq
+    global2local_qq, _ = calc_match_qq(elbow_global_x_axis, QVector3D(1, 0, 0))
+
+    mat1 = QMatrix4x4()
+    mat1.rotate(elbow_y_qq)
+    
+    mat2 = QMatrix4x4()
+    mat2.rotate(global2local_qq)
+    
+    qq = calc_matrix2qq(mat1 * mat2)
+
+    # 順回転なら逆肘ではない
+    if qq.y() < 0:
+        return False
+
+    arm_elbow_dot = QVector3D.dotProduct(arm_vec, elbow_vec)
+    elbow_degree = degrees(acos(min(1, max(-1, arm_elbow_dot))))
+
+    # 適当に「少しだけ逆肘ニュアンスが付いている角度」として20度未満を閾値にした。
+    # 20前後はあり得るっぽい。ドコまで攻めていいかは未検討。
+    if 20 > elbow_degree:
+        return False
+
+    logger.info("逆ひじdegree: %s", elbow_degree)
+    return True
+
+def split_qq_2_xyz(fno, bone_name, qq, global_x_axis):
+    # ボーン自身のX軸の向き（グローバル座標における向き）
+    initial_axis = global_x_axis
+    # ローカル座標系（ボーンベクトルが（1，0，0）になる空間）の向き
+    local_axis = QVector3D(1, 0, 0)
+    
+    # ひじからX成分を抽出する ------------
+
+    mat_x1 = QMatrix4x4()
+    mat_x1.rotate(qq)
+
+    x_vec = mat_x1 * initial_axis
+    x_vec.normalize()
+
+    # YZの回転量（自身のねじれを無視する）
+    yz_qq, yz_degree = calc_match_qq(initial_axis, x_vec)
+
+    # 除去されたX成分
+    x_qq = qq * yz_qq.inverted()
+
+    #  YZ回転からZ成分を抽出する --------------
+
+    # グローバル座標系（Ａスタンス）からローカル座標系（ボーンベクトルが（1，0，0）になる空間）への変換
+    global2local_qq, _ = calc_match_qq(initial_axis, local_axis)
+
+    # YZ回転からZ成分を抽出する。
+    mat_z1 = QMatrix4x4()
+    mat_z1.rotate(yz_qq)
+
+    mat_z2 = QMatrix4x4()
+    mat_z2.rotate(global2local_qq)
+
+    localz_vec = mat_z1 * mat_z2 * local_axis
+    localz_vec.setZ(0)
+    localz_vec.normalize()
+    local_z_qq, _ = calc_match_qq(local_axis, localz_vec)
+
+    # ボーンローカル座標系の回転をグローバル座標系の回転に戻す
+    local2global_qq, _ = calc_match_qq(local_axis, initial_axis)
+
+    mat_z4 = QMatrix4x4()
+    mat_z4.rotate(local_z_qq)
+
+    mat_z5 = QMatrix4x4()
+    mat_z5.rotate(local2global_qq)
+
+    z_qq = calc_matrix2qq(mat_z4 * mat_z5)
+
+    # YZ回転からY成分だけ取り出す -----------
+
+    # X成分の捻れが混入したので、XY回転からYZ回転を取り出すことでXキャンセルをかける。
+    mat_y1 = QMatrix4x4()
+    mat_y1.rotate(yz_qq)
+
+    mat_y2 = QMatrix4x4()
+    mat_y2.rotate(z_qq)
+
+    y_qq = calc_matrix2qq(mat_y1 * mat_y2.inverted()[0])
+
+    return x_qq, y_qq, z_qq, yz_qq
+
+# qqを捩りの軸に合わせて変換
+def convert_twist_qq(fno, from_qq, to_qq, from_x_axis, to_x_axis):
+    axis_sign = -1 if (to_x_axis.x() > 0) else 1
+
+    from_degree = degrees(2 * acos(min(1, max(-1, from_qq.scalar())))) * axis_sign
+
+    logger.info("fno: %s, from_degree: %s", fno, from_degree)
+    to_result_qq = QQuaternion.fromAxisAndAngle(to_x_axis, from_degree)
+
+    return to_qq * to_result_qq
+
+    # # 軸周りqq
+    # from_degree = degrees(2 * acos(min(1, max(-1, from_qq.scalar()))))
+    # from2to_qq = QQuaternion.fromAxisAndAngle(to_x_axis, from_degree)
+    # # 軸周りベクトルとの内積
+    # dot = QQuaternion.dotProduct(from_qq, from2to_qq)
+    # # 角度
+    # theta = acos(min(1, max(-1, dot)))
+    # # 任意軸周りの回転量
+    # extra_degree = degrees(theta)
+    # logger.info("fno: %s, from: %s, extra: %s", fno, from_degree, extra_degree)
+
+    # to_extra_qq = QQuaternion.fromAxisAndAngle(to_x_axis, extra_degree)
+
+    # return to_qq * to_extra_qq
+
+# 回転を委譲する
+def delegate_twist_qq(fno, bone_name, original_from_qq, from_qq, to_qq, from_x_axis, to_x_axis):
+    # 委譲先初期向き
+    to_initial_axis = to_x_axis
+    # 委譲先ローカル座標系（ボーンベクトルが（1，0，0）になる空間）の向き
+    to_local_axis = QVector3D(1, 0, 0)
+
+    to_global2local_qq, _ = calc_match_qq( to_initial_axis, to_local_axis )
+
+    # 委譲元の回転を、委譲先のローカル軸に変換
+
+    # オリジナル回転 - ローカル座標のX軸回転を算出
+    mat_of1 = QMatrix4x4()
+    mat_of1.rotate(original_from_qq)
+
+    mat_of2 = QMatrix4x4()
+    mat_of2.rotate(to_global2local_qq)
+
+    from_original_2_to_local_vec = mat_of1 * mat_of2 * to_local_axis
+    from_original_2_to_local_vec.setX(0)
+    from_original_2_to_local_vec.normalize()
+
+    # 変換後回転 - ローカル座標のX軸回転を算出
+    mat_f1 = QMatrix4x4()
+    mat_f1.rotate(from_qq)
+
+    mat_f2 = QMatrix4x4()
+    mat_f2.rotate(to_global2local_qq)
+
+    mat_f3 = QMatrix4x4()
+    mat_f3.rotate(to_qq)
+
+    from_result_2_to_local_vec = (mat_f3 * mat_f2) * (mat_f1 * mat_f2) * to_local_axis
+    from_result_2_to_local_vec.setX(0)
+    from_result_2_to_local_vec.normalize()
+
+    logger.info("fno: %s, %s to_org: %s", fno, bone_name, from_original_2_to_local_vec)
+    logger.info("fno: %s, %s to_res: %s", fno, bone_name, from_result_2_to_local_vec)
+
+    diff_qq, diff_degree = calc_match_qq(from_result_2_to_local_vec, from_original_2_to_local_vec)
+
+    logger.info("fno: %s, %s diff: %s, %s", fno, bone_name, diff_degree, diff_qq.toEulerAngles())
+
+    # 委譲先Xの回転に変換
+    from_2_to_qq = QQuaternion.fromAxisAndAngle(to_x_axis, diff_qq.toEulerAngles().x())
+
+    return to_qq * from_2_to_qq 
+
 # 子の回転を親に分散させる
 # https://ch.nicovideo.jp/HOPHEAD/blomaga/ar805999 MMDではYXZ型
-def delegate_qq(model, frames, bf, arm2root_links, arm2root_indexes, delegate_dic, target_qq, delegate_qq, target_local_x_axis, delegate_local_x_axis, fno, test_param):
+def delegate_qq2(model, frames, bf, arm2root_links, arm2root_indexes, delegate_dic, target_qq, delegate_qq, target_local_x_axis, delegate_local_x_axis, fno, test_param):
     target_result_qq = copy.deepcopy(target_qq)
     delegate_result_qq = copy.deepcopy(delegate_qq)
     v_qq_dic = {}
@@ -410,75 +576,61 @@ def delegate_qq(model, frames, bf, arm2root_links, arm2root_indexes, delegate_di
     target_local_z_axis = QVector3D.crossProduct(target_local_x_axis, target_local_y_axis).normalized()
 
     if delegate_dic["is_elbow"] == True:
-        elbow_initial_axis = delegate_local_x_axis  # ひじ初期向き
-        elbow_global_axis = QVector3D(1, 0, 0)      # ひじグローバル向き
 
-        elbow_all_mat = QMatrix4x4()
-        elbow_all_mat.rotate(delegate_qq)            # ひじの回転量
-        # ひじベクトル
-        elbow_original_vector = elbow_all_mat * elbow_initial_axis
+        # --------------------------
 
-        # ひじからX成分を除去する
-        elbow_yz_qq, elbow_yz_degree = calc_match_qq(elbow_initial_axis, elbow_original_vector)
+        # 逆肘（初期値より後ろにひじが向かっている場合）判定
+        is_reverse = is_reverse_elbow(elbow_y_qq, elbow_global2local_qq, target_local_x_axis, delegate_local_x_axis)
+        logger.info("fno: %s, %s rev: %s", fno, delegate_dic["delegate"], is_reverse)
 
-        # YZ回転からZ成分だけ取り出す -------------
+        if is_reverse:
+            # 逆肘はひじボーンY回転を維持し、Z回転は腕で吸収する。
+            delegate_result_qq = elbow_y_qq
+        else:
+            # 通常はひじYZ回転をひじボーンの順回転として扱う
+            delegate_result_qq = elbow_yz_qq
 
-        # 除去されたひじX成分
-        elbow_yz_mat = QMatrix4x4()
-        elbow_yz_mat.rotate(elbow_yz_qq)    # ひじYZの回転量
-        elbow_x_qq = calc_mat_2_qq(elbow_all_mat * elbow_yz_mat.inverted()[0])
+        # 腕の回転軸でひじベクトルを近づける ---------------
 
-        elbow_local_all_qq, elbow_local_all_degree = calc_match_qq(elbow_initial_axis, elbow_global_axis)
-        elbow_local_all_mat = QMatrix4x4()
-        elbow_local_all_mat.rotate(elbow_local_all_qq)
+        # オリジナルひじ回転後のボーンベクトル
+        mat_a1 = QMatrix4x4()
+        mat_a1.rotate(delegate_qq)
+        elbow_original_vec = mat_a1 * delegate_local_x_axis
+        # 置換ひじ回転後のボーンベクトル
+        mat_a2 = QMatrix4x4()
+        mat_a2.rotate(delegate_result_qq)
+        elbow_result_vec = mat_a2 * delegate_local_x_axis
 
-        elbow_global_all_qq, elbow_global_all_degree = calc_match_qq(elbow_global_axis, elbow_initial_axis)
-        elbow_global_all_mat = QMatrix4x4()
-        elbow_global_all_mat.rotate(elbow_global_all_qq)
+        logger.info("fno: %s, %s org: %s", fno, delegate_dic["delegate"], elbow_original_vec)
+        logger.info("fno: %s, %s res: %s", fno, delegate_dic["delegate"], elbow_result_vec)
 
-        elbow_local_mat = QMatrix4x4()
-        elbow_local_mat.rotate(elbow_yz_qq)
-        elbow_local_qq = calc_mat_2_qq(elbow_local_mat * elbow_local_all_mat)
+        arm_initial_axis = target_local_x_axis      # 腕初期向き
+        arm_local_axis = QVector3D(1, 0, 0)         # 腕ローカル座標系（腕ボーンベクトルが（1，0，0）になる空間）の向き
 
-        # <--- ここまでで肘ローカルに回転を持ってこれている。
+        arm_global2local_qq, _ = calc_match_qq( arm_initial_axis, arm_local_axis )
+        arm_local2global_qq, _ = calc_match_qq( arm_local_axis, arm_initial_axis )
 
-        #  YZ回転からZ成分を抽出する。
-        p_mat = QMatrix4x4()
-        p_mat.rotate(elbow_local_all_qq)
-        p_mat.translate(elbow_global_axis)
-        p = (p_mat * QVector3D())
-        p.setZ(0)
-        p.normalized()
+        # 腕のローカル軸に変換
 
-        elbow_local_z_qq, elbow_local_z_degree = calc_match_qq(elbow_global_axis, p)
+        elbow_original_2_arm_local_vec = arm_global2local_qq * elbow_original_vec
+        elbow_result_2_arm_local_vec = arm_global2local_qq * elbow_result_vec
 
-        elbow_z_mat = QMatrix4x4()
-        elbow_z_mat.rotate(elbow_local_z_qq)
-        elbow_z_qq = calc_mat_2_qq(elbow_z_mat * elbow_global_all_mat)
+        # 腕ローカル座標のX軸回転を算出。
+        elbow_original_2_arm_local_vec.setX(0)
+        elbow_original_2_arm_local_vec.normalize()
 
-        # YZ回転からY成分だけ取り出す。
-        elbow_yz_mat = QMatrix4x4()
-        elbow_yz_mat.rotate(elbow_yz_qq)
-        elbow_z_mat = QMatrix4x4()
-        elbow_z_mat.rotate(elbow_z_qq)
-        elbow_y_mat = elbow_yz_mat * elbow_z_mat.inverted()[0]
-        elbow_y_qq = calc_mat_2_qq(elbow_y_mat)
+        elbow_result_2_arm_local_vec.setX(0)
+        elbow_result_2_arm_local_vec.normalize()
 
-        # X成分の捻れが混入したので、XY回転からYZ回転を取り出すことでXキャンセルをかける。
-        m = QMatrix4x4()
-        m.translate(elbow_initial_axis)
-        m = m * elbow_y_mat
-        v = m * QVector3D()
-        v.normalized()
-        elbow_x_qq = calc_match_qq(elbow_initial_axis, v)
+        elbow_diff_qq, elbow_diff_degree = calc_match_qq(elbow_result_2_arm_local_vec, elbow_original_2_arm_local_vec)
+
+        logger.info("fno: %s, %s diff: %s, %s", fno, delegate_dic["delegate"], elbow_diff_degree, elbow_diff_qq.toEulerAngles())
+
+        # 腕Xの回転に変換
+        elbowx2armx_qq = QQuaternion.fromAxisAndAngle(target_local_x_axis, elbow_diff_qq.toEulerAngles().x())
 
         # 腕
-        target_result_qq = target_qq
-
-        # ひじ
-        delegate_result_qq = elbow_y_qq
-
-        return target_result_qq, delegate_result_qq, v_qq_dic
+        target_result_qq = target_qq * elbowx2armx_qq
     else:
         # 処理対象の余分な角度
         delegate_work_qq = delegate_local_qq
@@ -538,9 +690,10 @@ DELEGATE_BORN_LIST = {
 
 def get_local_axis_4delegate_qq(model, bone):
     if bone.fixed_axis != QVector3D():
-        # 軸制限がある場合、それを優先させる
+        # 軸制限がある場合、親からの向きを保持
+        # from_pos = model.bones[bone.name].position
+        # to_pos = model.bones[model.bone_indexes[bone.parent_index]].position
         x_axis = bone.fixed_axis
-        z_axis = bone.local_z_vector
     else:
         from_pos = model.bones[bone.name].position
         if bone.tail_position != QVector3D():

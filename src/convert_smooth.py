@@ -223,7 +223,7 @@ def spread_rotation(motion, model, is_thinning, test_param):
         all_frames_by_bone[bname] = frames_by_bone
 
     # 腕の分散
-    for target_bones, end_bone_name in [(["左肩", "左腕", "左腕捩", "左ひじ", "左手捩", "左手首"], "左手首"), (["右肩", "右腕", "右腕捩", "右ひじ", "右手捩", "右手首"], "右手首")]:
+    for direction, target_bones, end_bone_name in [("左", ["左肩", "左腕", "左腕捩", "左ひじ", "左手捩", "左手首"], "左手首"), ("右", ["右肩", "右腕", "右腕捩", "右ひじ", "右手捩", "右手首"], "右手首")]:
 
         if set(target_bones).issubset(model.bones):
 
@@ -275,53 +275,53 @@ def spread_rotation(motion, model, is_thinning, test_param):
                     all_frames_by_bone[b.name][fno] = bf
 
                 print("分散準備: %s" % (b.name))
-            
-            for delegate_dic in utils.DELEGATE_BORN_LIST[end_bone_name]:
-                if delegate_dic["target"] not in model.bones or delegate_dic["delegate"] not in model.bones:
-                    # 処理対象ボーンか委譲対象ボーンが取れなかった場合、処理スルー
-                    continue
-                
-                target_bone = model.bones[delegate_dic["target"]]
-                delegate_bone = model.bones[delegate_dic["delegate"]]
 
-                if target_bone.parent_index not in model.bone_indexes or delegate_bone.parent_index not in model.bone_indexes:
-                    # 処理対象ボーンか委譲対象ボーンの親が取れなかった場合、処理スルー
-                    continue
+            arm_bone_name = "{0}腕".format(direction)
+            arm_twist_bone_name = "{0}腕捩".format(direction)
+            elbow_bone_name = "{0}ひじ".format(direction)
+            wrist_twist_bone_name = "{0}手捩".format(direction)
+            wrist_bone_name = "{0}手首".format(direction)
 
-                # 処理対象ボーンのローカル軸
-                target_local_axis = utils.get_local_axis_4delegate_qq(model, target_bone)
+            # 各ボーンのローカル軸
+            arm_local_x_axis = utils.get_local_axis_4delegate_qq(model, model.bones[arm_bone_name])
+            arm_twist_local_x_axis = utils.get_local_axis_4delegate_qq(model, model.bones[arm_twist_bone_name])
+            elbow_local_x_axis = utils.get_local_axis_4delegate_qq(model, model.bones[elbow_bone_name])
+            wrist_twist_local_x_axis = utils.get_local_axis_4delegate_qq(model, model.bones[wrist_twist_bone_name])
+            wrist_local_x_axis = utils.get_local_axis_4delegate_qq(model, model.bones[wrist_bone_name])
 
-                # 委譲元ボーンのローカル軸
-                delegate_local_axis = utils.get_local_axis_4delegate_qq(model, delegate_bone)
-    
-                for fno in sorted(all_frames_by_bone[target_bone.name].keys()):
-                    target_bf = all_frames_by_bone[target_bone.name][fno]
-                    delegate_bf = all_frames_by_bone[delegate_bone.name][fno]
+            prev_fno = 0
+            for fno in bone_framenos:
+                arm_bf = all_frames_by_bone[arm_bone_name][fno]
+                arm_twist_bf = all_frames_by_bone[arm_twist_bone_name][fno]
+                elbow_bf = all_frames_by_bone[elbow_bone_name][fno]
+                wrist_twist_bf = all_frames_by_bone[wrist_twist_bone_name][fno]
+                wrist_bf = all_frames_by_bone[wrist_bone_name][fno]
 
-                    frames = {}
-                    for l in arm2root_links:
-                        frames[l.name] = [all_frames_by_bone[target_bone.name][fno]]
+                # 回転を分散する
+                arm_result_qq, arm_twist_result_qq, elbow_result_qq, wrist_twist_result_qq, wrist_result_qq \
+                    = delegate_twist_qq_4_arm(fno, arm_bf.rotation, arm_twist_bf.rotation, elbow_bf.rotation, wrist_twist_bf.rotation, wrist_bf.rotation \
+                                                , arm_local_x_axis, arm_twist_local_x_axis, elbow_local_x_axis, wrist_twist_local_x_axis, wrist_local_x_axis)
 
-                    # 回転を分散する
-                    target_result_qq, delegate_result_qq, v_qq_dic = utils.delegate_qq(model, frames, delegate_bf, arm2root_links, arm2root_indexes, delegate_dic, target_bf.rotation, delegate_bf.rotation, target_local_axis, delegate_local_axis, fno, test_param)
+                # 回転量を再設定
+                arm_bf.rotation = arm_result_qq
+                arm_twist_bf.rotation = arm_twist_result_qq
+                elbow_bf.rotation = elbow_result_qq
+                wrist_twist_bf.rotation = wrist_twist_result_qq
+                wrist_bf.rotation = wrist_result_qq
 
-                    # 回転量を再設定
-                    target_bf.rotation = target_result_qq
-                    delegate_bf.rotation = delegate_result_qq
+                # どれかが有効なキーであれば、全部有効
+                arm_bf.key = arm_twist_bf.key = elbow_bf.key = wrist_twist_bf.key = wrist_bf.key = (arm_bf.key or arm_twist_bf.key or elbow_bf.key or wrist_twist_bf.key or wrist_bf.key)
 
-                    # どれかが有効なキーであれば、全部有効
-                    target_bf.key = delegate_bf.key = (target_bf.key or delegate_bf.key)
+                # 再設定
+                all_frames_by_bone[arm_bone_name][fno] = arm_bf
+                all_frames_by_bone[arm_twist_bone_name][fno] = arm_twist_bf
+                all_frames_by_bone[elbow_bone_name][fno] = elbow_bf
+                all_frames_by_bone[wrist_twist_bone_name][fno] = wrist_twist_bf
+                all_frames_by_bone[wrist_bone_name][fno] = wrist_bf
 
-                    all_frames_by_bone[target_bone.name][fno] = target_bf
-                    all_frames_by_bone[delegate_bone.name][fno] = delegate_bf
-
-                    for k, v in v_qq_dic.items():
-                        v_bf = calc_bone_by_complement_by_bone(all_frames_by_bone, k, fno, is_only=False, is_exist=False)    
-                        v_bf.rotation = v
-                        v_bf.key = True
-                        all_frames_by_bone[k][fno] = v_bf
-
-                print("分散完了: %s → %s" % (delegate_bone.name, target_bone.name))
+                if fno // 500 > prev_fno:
+                    print("分散完了: %s" % (fno))
+                    prev_fno = fno // 500
 
     # 有効なのだけ設定する
     for bone_name in all_frames_by_bone.keys():
@@ -337,6 +337,56 @@ def spread_rotation(motion, model, is_thinning, test_param):
             
             if len(bone_frames) > 0:
                 motion.frames[bone_name] = bone_frames
+
+# 腕系回転をそれぞれ捩り等に分散する
+def delegate_twist_qq_4_arm(fno, arm_qq, arm_twist_qq, elbow_qq, wrist_twist_qq, wrist_qq, \
+    arm_local_x_axis, arm_twist_local_x_axis, elbow_local_x_axis, wrist_twist_local_x_axis, wrist_local_x_axis):
+    arm_result_qq = QQuaternion()
+    arm_twist_result_qq = QQuaternion()
+    elbow_result_qq = QQuaternion()
+    wrist_twist_result_qq = QQuaternion()
+    wrist_result_qq = QQuaternion()
+
+    # 回転を分離
+    arm_x_qq, arm_y_qq, arm_z_qq, arm_yz_qq = utils.split_qq_2_xyz(fno, "腕", arm_qq, arm_local_x_axis)
+    elbow_x_qq, elbow_y_qq, elbow_z_qq, elbow_yz_qq = utils.split_qq_2_xyz(fno, "ひじ", elbow_qq, elbow_local_x_axis)
+    wrist_x_qq, wrist_y_qq, wrist_z_qq, wrist_yz_qq = utils.split_qq_2_xyz(fno, "腕", wrist_qq, wrist_local_x_axis)
+
+    # 腕YZを腕に
+    arm_result_qq = arm_y_qq * arm_z_qq
+
+    # 腕Xを腕捻りに（くの字はズレる）
+    arm_twist_result_qq = utils.convert_twist_qq(fno, arm_x_qq, arm_twist_result_qq, arm_local_x_axis, arm_twist_local_x_axis)
+    # arm_twist_result_qq = utils.delegate_twist_qq(fno, "腕", arm_qq, arm_result_qq, arm_twist_result_qq, arm_local_x_axis, arm_twist_local_x_axis)
+    
+    # ひじYZをひじYに（ズレっぱなし）
+
+    # 逆肘（初期値より後ろにひじが向かっている場合）判定
+    is_reverse = utils.is_reverse_elbow(elbow_y_qq, elbow_local_x_axis, arm_local_x_axis, elbow_local_x_axis)
+    logger.info("fno: %s, 逆ひじ: %s", fno, is_reverse)
+
+    # ローカルY軸 
+    elbow_local_y_axis = QVector3D.crossProduct(elbow_local_x_axis, QVector3D(0, 0, -1)).normalized()
+
+    if is_reverse:
+        # 逆肘はひじボーンY回転を維持し、Z回転は腕で吸収する。
+        elbow_y_degree = math.degrees(2 * math.acos(min(1, max(-1, elbow_y_qq.scalar()))))
+        elbow_result_qq = QQuaternion.fromAxisAndAngle(elbow_local_y_axis, elbow_y_degree)
+    else:
+        # 通常はひじYZ回転をひじボーンの順回転として扱う
+        elbow_yz_degree = math.degrees(2 * math.acos(min(1, max(-1, elbow_yz_qq.scalar()))))
+        elbow_result_qq = QQuaternion.fromAxisAndAngle(elbow_local_y_axis, elbow_yz_degree)
+
+    # ひじベクトルを腕捻りで帳尻合わせ（ここでだいたい整合するか近似する）
+    arm_twist_result_qq = utils.delegate_twist_qq(fno, "ひじ", elbow_qq, elbow_result_qq, arm_twist_result_qq, elbow_local_x_axis, arm_twist_local_x_axis)
+
+    # 手首XYZ回転を手首YZにする
+    # 手捩りで手首ベクトル帳尻合わせ（ここでだいたい整合するか近似する）
+
+    wrist_result_qq = wrist_x_qq * wrist_y_qq * wrist_z_qq
+
+    return arm_result_qq, arm_twist_result_qq, elbow_result_qq, wrist_twist_result_qq, wrist_result_qq
+
 
 
 def prepare_spread_rotation_4_arm(motion, bone_name):
