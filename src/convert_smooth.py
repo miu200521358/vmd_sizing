@@ -299,7 +299,7 @@ def spread_rotation(motion, model, is_thinning, test_param):
 
                 # 回転を分散する
                 arm_result_qq, arm_twist_result_qq, elbow_result_qq, wrist_twist_result_qq, wrist_result_qq \
-                    = delegate_twist_qq_4_arm(fno, arm_bf.rotation, arm_twist_bf.rotation, elbow_bf.rotation, wrist_twist_bf.rotation, wrist_bf.rotation \
+                    = delegate_twist_qq_4_arm(fno, direction, arm_bf.rotation, arm_twist_bf.rotation, elbow_bf.rotation, wrist_twist_bf.rotation, wrist_bf.rotation \
                                                 , arm_local_x_axis, arm_twist_local_x_axis, elbow_local_x_axis, wrist_twist_local_x_axis, wrist_local_x_axis)
 
                 # 回転量を再設定
@@ -339,7 +339,7 @@ def spread_rotation(motion, model, is_thinning, test_param):
                 motion.frames[bone_name] = bone_frames
 
 # 腕系回転をそれぞれ捩り等に分散する
-def delegate_twist_qq_4_arm(fno, arm_qq, arm_twist_qq, elbow_qq, wrist_twist_qq, wrist_qq, \
+def delegate_twist_qq_4_arm(fno, direction, arm_qq, arm_twist_qq, elbow_qq, wrist_twist_qq, wrist_qq, \
     arm_local_x_axis, arm_twist_local_x_axis, elbow_local_x_axis, wrist_twist_local_x_axis, wrist_local_x_axis):
     arm_result_qq = QQuaternion()
     arm_twist_result_qq = QQuaternion()
@@ -348,15 +348,15 @@ def delegate_twist_qq_4_arm(fno, arm_qq, arm_twist_qq, elbow_qq, wrist_twist_qq,
     wrist_result_qq = QQuaternion()
 
     # 回転を分離
-    arm_x_qq, arm_y_qq, arm_z_qq, arm_yz_qq = utils.split_qq_2_xyz(fno, "腕", arm_qq, arm_local_x_axis)
-    elbow_x_qq, elbow_y_qq, elbow_z_qq, elbow_yz_qq = utils.split_qq_2_xyz(fno, "ひじ", elbow_qq, elbow_local_x_axis)
-    wrist_x_qq, wrist_y_qq, wrist_z_qq, wrist_yz_qq = utils.split_qq_2_xyz(fno, "腕", wrist_qq, wrist_local_x_axis)
+    arm_x_qq, arm_y_qq, arm_z_qq, arm_yz_qq = utils.split_qq_2_xyz(fno, "{0}腕".format(direction), arm_qq, arm_local_x_axis)
+    elbow_x_qq, elbow_y_qq, elbow_z_qq, elbow_yz_qq = utils.split_qq_2_xyz(fno, "{0}ひじ".format(direction), elbow_qq, elbow_local_x_axis)
+    wrist_x_qq, wrist_y_qq, wrist_z_qq, wrist_yz_qq = utils.split_qq_2_xyz(fno, "{0}手首".format(direction), wrist_qq, wrist_local_x_axis)
 
     # 腕YZを腕に
     arm_result_qq = arm_y_qq * arm_z_qq
 
     # 腕Xを腕捻りに（くの字はズレる）
-    arm_twist_result_qq = utils.convert_twist_qq(fno, arm_x_qq, arm_twist_result_qq, arm_local_x_axis, arm_twist_local_x_axis)
+    arm_twist_result_qq = utils.convert_twist_qq(fno, "{0}腕".format(direction), arm_x_qq, arm_twist_result_qq, arm_local_x_axis, arm_twist_local_x_axis)
     # arm_twist_result_qq = utils.delegate_twist_qq(fno, "腕", arm_qq, arm_result_qq, arm_twist_result_qq, arm_local_x_axis, arm_twist_local_x_axis)
     
     # ひじYZをひじYに（ズレっぱなし）
@@ -378,7 +378,7 @@ def delegate_twist_qq_4_arm(fno, arm_qq, arm_twist_qq, elbow_qq, wrist_twist_qq,
         elbow_result_qq = QQuaternion.fromAxisAndAngle(elbow_local_y_axis, elbow_yz_degree)
 
     # ひじベクトルを腕捻りで帳尻合わせ（ここでだいたい整合するか近似する）
-    arm_twist_result_qq = utils.delegate_twist_qq(fno, "ひじ", elbow_qq, elbow_result_qq, arm_twist_result_qq, elbow_local_x_axis, arm_twist_local_x_axis)
+    arm_twist_result_qq = utils.delegate_twist_qq(fno, "{0}ひじ".format(direction), elbow_qq, elbow_result_qq, arm_twist_result_qq, elbow_local_x_axis, arm_twist_local_x_axis)
 
     # 手首XYZ回転を手首YZにする
     # 手捩りで手首ベクトル帳尻合わせ（ここでだいたい整合するか近似する）

@@ -84,6 +84,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, \
 
     logger.debug("bone_frames: %s", len(bone_frames))
     logger.debug("morph_frames: %s", len(morph_frames))
+    logger.info("bone_frames[0]: %s, %s", bone_frames[0].format_name, bone_frames[0].frame)
 
     writer = VmdWriter()
     

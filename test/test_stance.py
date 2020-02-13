@@ -1356,6 +1356,69 @@ class TestSubStance(unittest.TestCase):
         print("ok_list target: %s" % prefix)
         self.assertGreater(len(ok_list), 0)
                              
+    # 上半身,首,1-,0,0,上半身,頭,1,1,0,首,頭,1,0,0,d1,d2,d3,01_True,True,True,False,False,False_ 5.28#-0.00#-1.56,-1.69#-0.02#-1.07, 3.52#-0.64#-5.87
+    # 上半身,首,1-,0,0,上半身2,首,1,0,0,首,頭,1,1,0,d1,d3,d2,01_True,True,True,False,False,False_ 2.21#-0.00# 4.20,-4.76# 0.01# 4.69, 0.48#-0.20#-0.16
+    # 上半身,首,1,0,1-,上半身,頭,1,1,0,上半身2,首,1-,0,1,d3,d2,d1,01_True,True,True,False,False,False_-0.33#-0.00# 8.13,-7.30# 0.03# 8.62,-2.04# 0.16# 3.75
+    # 上半身,上半身2,0,0,1-,上半身,首,1,1-,0,上半身2,首,0,0,1,d1,d2,d3,01_True,False,True,True,False,False_-0.60#-0.04#-11.13,-7.56#-0.00#-10.65,-2.30# 0.17#-15.51
+    # 上半身,上半身2,0,0,1,上半身,頭,1,1,0,首,頭,0,1,1-,d1,d2,d3,01_True,False,True,False,True,False_ 0.70#-0.09# 8.19,-6.26#-0.07# 8.68,-1.02#-0.07# 3.82
+    # 上半身,上半身2,0,0,1-,上半身,頭,1,1-,0,上半身2,首,0,1-,0,d1,d2,d3,01_True,False,True,False,True,False_ 0.70# 0.01#-9.82,-6.26# 0.03#-9.34,-1.01# 0.03#-14.20
+    # 上半身,上半身2,0,0,1-,上半身,頭,1,1-,0,上半身2,首,0,1-,1,d1,d2,d3,01_True,False,True,False,True,False_ 0.70# 0.01#-9.82,-6.26# 0.03#-9.34,-1.01# 0.03#-14.20
+    # 上半身,上半身2,0,1,0,上半身,首,1,1-,0,上半身2,首,0,0,1,d1,d2,d3,01_True,False,True,True,False,False_-0.60#-0.04#-11.13,-7.56#-0.00#-10.65,-2.30# 0.17#-15.51
+    # 上半身,上半身2,0,1,0,上半身,首,1,1-,0,上半身2,首,0,1-,1,d1,d2,d3,01_True,False,True,True,False,False_-0.60#-0.04#-11.13,-7.56#-0.00#-10.65,-2.30# 0.17#-15.51
+    # 上半身,上半身2,0,1,0,上半身,頭,1,1-,0,上半身2,首,0,1,1,d1,d2,d3,01_True,False,True,False,True,False_ 0.70# 0.01#-9.82,-6.26# 0.03#-9.34,-1.01# 0.03#-14.20
+    # 上半身,上半身2,0,1,1-,上半身,首,1,1-,0,上半身2,首,0,1,1,d1,d2,d3,01_True,False,True,True,False,False_-0.60#-0.04#-11.13,-7.56#-0.00#-10.65,-2.30# 0.17#-15.51
+    # 上半身,上半身2,0,1-,1-,上半身,首,1,1-,0,上半身2,首,0,1-,1,d1,d2,d3,01_True,False,True,True,False,False_-0.60#-0.04#-11.13,-7.56#-0.00#-10.65,-2.30# 0.17#-15.51
+    # 上半身,上半身2,0,1,1,上半身,頭,1,1,0,首,頭,0,0,1-,d1,d2,d3,01_True,False,True,False,True,False_ 0.70#-0.09# 8.19,-6.26#-0.07# 8.68,-1.02#-0.07# 3.82
+    # 上半身,上半身2,0,1-,1,上半身,頭,1,1,0,首,頭,0,1-,0,d1,d2,d3,01_True,False,True,False,True,False_ 0.70#-0.09# 8.19,-6.26#-0.07# 8.68,-1.02#-0.07# 3.82
+    # 上半身,上半身2,0,1-,1,上半身,頭,1,1,0,首,頭,0,1-,1-,d1,d2,d3,01_True,False,True,False,True,False_ 0.70#-0.09# 8.19,-6.26#-0.07# 8.68,-1.02#-0.07# 3.82
+    # 上半身,上半身2,0,1,1,上半身2,頭,1,1,0,首,頭,0,1-,1-,d1,d2,d3,01_True,False,True,False,True,False_-0.18#-0.08# 9.07,-7.14#-0.05# 9.56,-1.89# 0.06# 4.69
+    # 上半身,上半身2,1-,0,0,上半身,首,1,0,0,首,頭,1,1-,0,d3,d2,d1,01_True,False,True,True,False,False_ 11.81# 0.07# 3.55, 4.84#-0.00# 4.04, 9.99#-1.54#-0.58
+    # 上半身,上半身2,1,0,0,上半身,首,1-,0,1-,首,頭,1,0,1,d2,d1,d3,01_True,True,True,False,False,False_ 8.51#-0.00# 2.26, 1.54#-0.05# 2.76, 6.72#-1.12#-1.97
+    # 上半身,上半身2,1,0,0,上半身,頭,1,1,0,首,頭,1-,0,0,d3,d2,d1,01_True,True,True,False,False,False_-4.93# 0.00#-1.57,-11.90# 0.07#-1.09,-6.59# 0.82#-5.95
+    # 上半身,上半身2,1,0,0,上半身,頭,1,1-,0,上半身2,頭,1-,0,0,d3,d2,d1,01_True,False,True,False,True,False_ 1.73# 0.02# 8.77,-5.23# 0.04# 9.25, 0.01#-0.11# 4.40
+    # 上半身,上半身2,1-,0,0,上半身2,頭,1,1-,0,首,頭,1,1-,0,d1,d2,d3,01_True,False,True,False,True,False_ 0.42#-0.04# 9.66,-6.54#-0.01# 10.15,-1.29# 0.02# 5.29
+    # 上半身,上半身2,1,0,1-,上半身,首,1-,0,1,首,頭,1,1-,0,d1,d3,d2,01_True,False,True,True,False,False_ 10.49# 0.06#-0.14, 3.52#-0.00# 0.35, 8.68#-1.35#-4.31
+    # 上半身,上半身2,1,1,0,上半身,首,0,1-,1,上半身,頭,1-,1-,0,d2,d1,d3,01_True,True,False,False,True,False_ 0.00#-95.81# 10.71,-12.09#-95.73# 14.86,-12.81#-95.36#-0.04
+    # 上半身,上半身2,1,1-,0,上半身,頭,1-,0,0,上半身2,頭,1,1,0,d3,d1,d2,01_True,False,True,True,False,False_ 17.19# 5.78#-0.05, 10.25# 5.81# 0.00, 16.13# 3.36#-4.22
+    # 上半身,上半身2,1,1-,0,上半身,頭,1-,1-,0,上半身2,首,0,0,1-,d2,d3,d1,01_True,False,True,True,False,False_-4.31#-0.06#-86.02,-11.28# 0.00#-85.54,-5.98# 0.67#-90.41
+    # 上半身,頭,1-,0,0,上半身2,首,1,1-,0,首,頭,1,1-,0,d1,d2,d3,01_True,False,True,False,True,False_ 0.92#-0.01# 11.79,-6.04# 0.01# 12.27,-0.80#-0.02# 7.42
+    # 上半身,頭,1,1,0,上半身2,首,1-,0,1,上半身2,頭,1,0,1-,d2,d1,d3,01_True,False,True,False,True,False_-0.03#-0.06# 7.84,-7.00#-0.03# 8.33,-1.75# 0.06# 3.46
+    # 上半身,頭,1-,1-,0,上半身2,頭,0,1,1,首,頭,1,1-,0,d3,d2,d1,01_True,False,True,True,False,False_ 7.94# 0.04#-86.89, 0.98# 0.00#-86.40, 6.16#-0.99#-91.13
+    # 上半身,頭,1-,1-,0,上半身2,頭,0,1-,1,首,頭,1,1-,0,d3,d2,d1,01_True,False,True,True,False,False_ 7.94# 0.04#-86.89, 0.98# 0.00#-86.40, 6.16#-0.99#-91.13
+    def test_upper_stance_upper2_up_47(self):
+
+        # ボーン名の組合せ
+        rep_upper2_initial_slope_test_bone_names = [(0,"上半身"), (1,"上半身2"), (2,"首"), (3,"頭")]
+        target_test_params_base_bone_names = list(itertools.product(rep_upper2_initial_slope_test_bone_names, repeat=2))
+        target_test_params_list_bone_names = [(x00[1], x01[1]) for (x00, x01) in target_test_params_base_bone_names if x00[0] < x01[0]]
+        target_test_params_base_bone_names_comb = list(itertools.combinations(target_test_params_list_bone_names, 3))
+        target_test_params_list_bone_names_comb = [(x00, x01, x02) for (x00, x01, x02) in target_test_params_base_bone_names_comb if x00 != x01 != x02 and x00 == ("上半身", "上半身2")]
+        print("bone_names LIST: %s" % len(target_test_params_list_bone_names_comb))
+        print("bone_names LIST: %s" % target_test_params_list_bone_names_comb)
+        
+        # 数字の組合せ
+        rep_upper2_initial_slope_test_numbers = ["0","1-","1"]
+        list_target_test_params_base_numbers = list(itertools.product(rep_upper2_initial_slope_test_numbers, repeat=3))
+        list_target_test_params_list_numbers = [(x00, x01, x02) for (x00, x01, x02) in list_target_test_params_base_numbers if 0 < [x00, x01, x02].count("0") < 3 ]
+        print("numbers LIST: %s" % len(list_target_test_params_list_numbers))
+
+        # 直積
+        target_test_params_base = list(itertools.product(target_test_params_list_bone_names_comb, list_target_test_params_list_numbers
+            , list_target_test_params_list_numbers, list_target_test_params_list_numbers))
+
+        target_test_params_list = [(names_comb[0][0], names_comb[0][1], numbers1[0], numbers1[1], numbers1[2], names_comb[1][0], names_comb[1][1], numbers2[0], numbers2[1], numbers2[2], \
+        names_comb[2][0], names_comb[2][1], numbers3[0], numbers3[1], numbers3[2], "d1", "d2", "d3","01") \
+            for (names_comb, numbers1, numbers2, numbers3) in target_test_params_base]
+        random.shuffle(target_test_params_list)
+        print("targets LIST: %s" % len(target_test_params_list))
+        
+        prefix = "047-02"
+        ok_list = self.calc_stance(target_test_params_list, 0.1, False, prefix)
+
+        print("ok_list LIST: %s" % ok_list)
+        print("ok_list target: %s" % prefix)
+        self.assertGreater(len(ok_list), 0)
+                             
 
 
 
@@ -1414,7 +1477,7 @@ class TestSubStance(unittest.TestCase):
         os.makedirs("{0}/{1}".format(base_path, prefix), exist_ok=exist_ok)
 
         for pidx, test_param in enumerate(target_test_params):
-            logger.info("prefix: %s, test_param(%s): %s", prefix, len(target_test_params) - pidx, test_param)
+            logger.info("prefix: %s, test_param(%s -> %s): %s", prefix, len(target_test_params), pidx, test_param)
 
             file_name = "test_{0}.vmd".format(','.join([str(i) for i in test_param]))
 
@@ -2082,4 +2145,4 @@ class TestSubStance(unittest.TestCase):
         return ok_list
 
 if __name__ == "__main__":
-    unittest.main(defaultTest="TestSubStance.test_upper_stance_upper2_up_46")
+    unittest.main(defaultTest="TestSubStance.test_upper_stance_upper2_up_47")

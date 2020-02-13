@@ -231,7 +231,9 @@ class VmdWriter():
 
         # bone frames
         fout.write(struct.pack('<L', len(bone_frames))) # ボーンフレーム数
-        for bf in bone_frames:
+        for e, bf in enumerate(bone_frames):
+            # if e < 10:
+            #     print("e: %s, f: %s, n: %s" % (e, bf.frame, bf.format_name))
             bf.write(fout)
         fout.write(struct.pack('<L', len(morph_frames))) # 表情キーフレーム数
         for mf in morph_frames:

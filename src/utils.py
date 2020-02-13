@@ -478,12 +478,16 @@ def split_qq_2_xyz(fno, bone_name, qq, global_x_axis):
     return x_qq, y_qq, z_qq, yz_qq
 
 # qqを捩りの軸に合わせて変換
-def convert_twist_qq(fno, from_qq, to_qq, from_x_axis, to_x_axis):
-    axis_sign = -1 if (to_x_axis.x() > 0) else 1
+def convert_twist_qq(fno, bone_name, from_qq, to_qq, from_x_axis, to_x_axis):
+    logger.info("fno: %s, %s, from_qq: %s", fno, bone_name, from_qq)
+    logger.info("fno: %s, %s, from_euler: %s", fno, bone_name, from_qq.toEulerAngles())
+    
+    # 逆回転の場合、逆値
+    axis_sign = -1 if (from_qq.y() > 0) else 1
 
     from_degree = degrees(2 * acos(min(1, max(-1, from_qq.scalar())))) * axis_sign
 
-    logger.info("fno: %s, from_degree: %s", fno, from_degree)
+    logger.info("fno: %s, %s, from_degree: %s", fno, bone_name, from_degree)
     to_result_qq = QQuaternion.fromAxisAndAngle(to_x_axis, from_degree)
 
     return to_qq * to_result_qq
