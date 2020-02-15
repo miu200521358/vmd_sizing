@@ -17,7 +17,7 @@ from PmxModel import PmxModel, SizingException
 from PmxReader import PmxReader
 import utils, sub_move, sub_arm_stance, sub_avoidance2, sub_arm_ik, sub_morph, sub_camera, sub_camera2
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format="s%(levelname)s %(funcName)s :%(message)s")
 logger = logging.getLogger("VmdSizing").getChild(__name__)
 
 level = {0:logging.ERROR,

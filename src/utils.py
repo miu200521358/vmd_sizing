@@ -16,6 +16,7 @@ from PmxModel import PmxModel, SizingException
 from PmxReader import PmxReader
 
 logger = logging.getLogger("VmdSizing").getChild(__name__)
+logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
 
 # MMDでの補間曲線の最大値
 COMPLEMENT_MMD_MAX = 127
@@ -509,81 +510,77 @@ def split_qq_2_xyz(fno, bone_name, qq, global_x_axis):
     return x_qq, y_qq, z_qq, yz_qq
 
 # qqを捩りの軸に合わせて変換
-def convert_twist_qq(fno, bone_name, from_qq, to_qq, from_x_axis, to_x_axis, file_logger):
-    output_file_logger(file_logger, "fno: {fno}, {bone_name}, from_qq: {from_qq}".format(fno=fno, bone_name=bone_name, from_qq=from_qq))
-    output_file_logger(file_logger, "fno: {fno}, {bone_name}, from_euler: {from_qq}".format(fno=fno, bone_name=bone_name, from_qq=from_qq.toEulerAngles()))
-    
+def convert_twist_qq(fno, bone_name, from_qq, twist_qq, from_x_axis, twist_x_axis, file_logger):
     from_degree = degrees(2 * acos(min(1, max(-1, from_qq.scalar()))))
+    output_file_logger(file_logger, "fno: {fno}, {bone_name}, from_degree: {from_degree} convert_twist_qq: {from_qq}".format(fno=fno, bone_name=bone_name, from_degree=from_degree, from_qq=from_qq))
 
-    if from_qq.scalar() < 0:
-        from_degree = -from_degree
-        output_file_logger(file_logger, "fno: {fno}, {bone_name}, after1 from_qq: qs: {qs}, qx: {qx}, ax: {ax}, d: {d}".format(fno=fno, bone_name=bone_name, qs=from_qq.scalar(), qx=from_qq.x(), ax=to_x_axis.x(), d=from_degree))
+    twist_x_qq = from_qq
+    twist_x_degree = degrees(2 * acos(min(1, max(-1, twist_x_qq.scalar()))))
+    output_file_logger(file_logger, "fno: {fno}, {bone_name}, twist_x_degree: {twist_x_degree}, from_x_axis: {from_x_axis}".format(fno=fno, bone_name=bone_name, twist_x_degree=twist_x_degree, from_x_axis=from_x_axis))
 
-    if (from_qq.x() < 0 and to_x_axis.x() > 0) or (from_qq.x() > 0 and to_x_axis.x() < 0):
-        from_degree = -from_degree
-        output_file_logger(file_logger, "fno: {fno}, {bone_name}, after2 from_qq: qs: {qs}, qx: {qx}, ax: {ax}, d: {d}".format(fno=fno, bone_name=bone_name, qs=from_qq.scalar(), qx=from_qq.x(), ax=to_x_axis.x(), d=from_degree))
-
-    if fno == 312:
-        from_degree = from_degree + 45
+    if (from_qq.x() < 0 and from_qq.scalar() > 0 and from_x_axis.x() > 0) \
+        or (from_qq.x() > 0 and from_qq.scalar() < 0 and from_x_axis.x() < 0):
+        twist_x_degree = -twist_x_degree
+        output_file_logger(file_logger, "fno: {fno}, {bone_name}, 調整 twist_x_degree: {twist_x_degree}".format(fno=fno, bone_name=bone_name, twist_x_degree=twist_x_degree))
 
     # # 回転補正
-    # if from_qq.x() > 0 and to_x_axis.x() < 0:
-    #     from_qq.setX(from_qq.x() * -1)
-    #     from_qq.setScalar(from_qq.scalar() * -1)
-    #     logger.info("fno: %s, %s, [0] from_qq: %s", fno, bone_name, from_qq)
-    # elif from_qq.x() < 0 and to_x_axis.x() > 0:
-    #     from_qq.setX(from_qq.x() * -1)
-    #     from_qq.setScalar(from_qq.scalar() * -1)
-    #     logger.info("fno: %s, %s, [1] from_qq: %s", fno, bone_name, from_qq)
+    # if twist_x_qq.scalar() < 0 and twist_x_qq.x() > 0 and twist_x_axis.x() <= 0:
+    #     twist_x_qq.setX(twist_x_qq.x() * -1)
+    #     twist_x_qq.setScalar(twist_x_qq.scalar() * -1)
+    # elif twist_x_qq.scalar() > 0 and twist_x_qq.x() < 0 and twist_x_axis.x() >= 0:
+    #     twist_x_qq.setX(twist_x_qq.x() * -1)
+    #     twist_x_qq.setScalar(twist_x_qq.scalar() * -1)
     # # 回転補正（コロン式ミクさん等軸反転パターン）
-    # elif from_qq.x() < 0 and to_x_axis.x() > 0:
-    #     from_qq.setX(from_qq.x() * -1)
-    #     from_qq.setScalar(from_qq.scalar() * -1)
-    #     logger.info("fno: %s, %s, [2] from_qq: %s", fno, bone_name, from_qq)
-    # elif from_qq.x() > 0 and to_x_axis.x() < 0:
-    #     from_qq.setX(from_qq.x() * -1)
-    #     from_qq.setScalar(from_qq.scalar() * -1)
-    #     logger.info("fno: %s, %s, [3] from_qq: %s", fno, bone_name, from_qq)
+    # elif twist_x_qq.scalar() < 0 and twist_x_qq.x() < 0 and twist_x_axis.x() > 0:
+    #     logger.debug("右回転補正")
+    #     twist_x_qq.setX(twist_x_qq.x() * -1)
+    #     twist_x_qq.setScalar(twist_x_qq.scalar() * -1)
+    # elif twist_x_qq.scalar() > 0 and twist_x_qq.x() > 0 and twist_x_axis.x() < 0:
+    #     logger.debug("左回転補正")
+    #     twist_x_qq.setX(twist_x_qq.x() * -1)
+    #     twist_x_qq.setScalar(twist_x_qq.scalar() * -1)
 
-    # from_degree = degrees(2 * acos(min(1, max(-1, from_qq.scalar()))))
+    twist_x_qq = QQuaternion.fromAxisAndAngle(twist_x_axis, twist_x_degree)
+    output_file_logger(file_logger, "fno: {fno}, {bone_name}, twist_x_degree: {twist_x_degree}, twist_x_qq: {twist_x_qq}".format(fno=fno, bone_name=bone_name, twist_x_degree=twist_x_degree, twist_x_qq=twist_x_qq))
 
-    output_file_logger(file_logger, "fno: {fno}, {bone_name}, from_degree: {d}".format(fno=fno, bone_name=bone_name, d=from_degree))
-    to_result_qq = QQuaternion.fromAxisAndAngle(to_x_axis, from_degree)
+    twist_result_qq = twist_qq * twist_x_qq
+    twist_result_degree = degrees(2 * acos(min(1, max(-1, twist_result_qq.scalar()))))
+    output_file_logger(file_logger, "fno: {fno}, {bone_name}, twist_result_degree: {twist_result_degree}, twist_result_qq: {twist_result_qq}".format(fno=fno, bone_name=bone_name, twist_result_degree=twist_result_degree, twist_result_qq=twist_result_qq))
 
-    return to_qq * to_result_qq, from_degree
+    return twist_result_qq, twist_result_degree
 
 # 回転を委譲する
-def delegate_twist_qq(fno, bone_name, original_from_qq, from_qq, original_to_qq, to_qq, twist_qq, twist_degree, from_x_axis, to_x_axis, twist_x_axis, file_logger):
+def delegate_twist_qq(fno, bone_name, original_parent_qq, parent_qq, original_twist_qq, twist_qq, original_child_qq, child_qq, twist_degree, parent_x_axis, twist_x_axis, child_x_axis, file_logger):
     # 委譲先ローカル座標系（ボーンベクトルが（1，0，0）になる空間）の向き
-    to_local_axis = QVector3D(1, 0, 0)
+    child_local_axis = QVector3D(1, 0, 0)
 
     # 委譲元初期向きからローカル軸への変換
-    from_global2local_qq, _ = calc_match_qq( from_x_axis, to_local_axis )
-    twist_global2from_global_qq, _ = calc_match_qq( twist_x_axis, from_x_axis )
+    child_global2local_qq, _ = calc_match_qq( child_x_axis, child_local_axis )
+    twist_global2child_global_qq, _ = calc_match_qq( twist_x_axis, child_x_axis )
 
     # 元々の委譲先回転量 ----------------
     mat_of1 = QMatrix4x4()
-    mat_of1.rotate(original_from_qq)
+    mat_of1.rotate(original_child_qq)
 
     mat_of2 = QMatrix4x4()
-    mat_of2.rotate(twist_global2from_global_qq)
+    mat_of2.rotate(twist_global2child_global_qq)
     
     # 委譲元の回転を、委譲先のローカル軸に変換
     # オリジナル回転 - ローカル座標のX軸回転を算出
-    from_original_2_to_local_vec = mat_of1 * mat_of2 * to_local_axis
+    from_original_2_to_local_vec = mat_of1 * mat_of2 * child_local_axis
     # from_original_2_to_local_vec.setX(0)
     from_original_2_to_local_vec.normalize()
 
     # 変換後の委譲先回転量 ----------------
     mat_af1 = QMatrix4x4()
-    mat_af1.rotate(from_qq)
+    mat_af1.rotate(child_qq)
 
     mat_af2 = QMatrix4x4()
-    mat_af2.rotate(twist_global2from_global_qq)
+    mat_af2.rotate(twist_global2child_global_qq)
 
     # 委譲元の回転を、委譲先のローカル軸に変換
     # オリジナル回転 - ローカル座標のX軸回転を算出
-    from_result_2_to_local_vec = mat_af1 * mat_af2 * to_local_axis
+    from_result_2_to_local_vec = mat_af1 * mat_af2 * child_local_axis
     # from_result_2_to_local_vec.setX(0)
     from_result_2_to_local_vec.normalize()
 
@@ -591,30 +588,67 @@ def delegate_twist_qq(fno, bone_name, original_from_qq, from_qq, original_to_qq,
     output_file_logger(file_logger, "fno: {fno}, {bone_name}, to_res: {to_res}".format(fno=fno, bone_name=bone_name, to_res=from_result_2_to_local_vec))
 
     diff_qq, diff_degree = calc_match_qq(from_result_2_to_local_vec, from_original_2_to_local_vec)
-    output_file_logger(file_logger, "fno: {fno}, {bone_name}, diff_qq: {diff_qq}".format(fno=fno, bone_name=bone_name, diff_qq=diff_qq))
-    output_file_logger(file_logger, "fno: {fno}, {bone_name}, diff_degree: {diff_degree}".format(fno=fno, bone_name=bone_name, diff_degree=diff_degree))
-
-    output_file_logger(file_logger, "fno: {fno}, {bone_name}, twist_qq: {twist_qq}".format(fno=fno, bone_name=bone_name, twist_qq=twist_qq))
-    output_file_logger(file_logger, "fno: {fno}, {bone_name}, twist_degree: {twist_degree}".format(fno=fno, bone_name=bone_name, twist_degree=twist_degree))
-
-    # elbow_twist_degree = diff_degree
-    if diff_qq.scalar() < 0:
-        diff_degree = -diff_degree
-        output_file_logger(file_logger, "fno: {fno}, {bone_name}, after1 reverse: qs: {qs}, qx: {qx}, ax: {ax}, d: {d}".format(fno=fno, bone_name=bone_name, qs=diff_qq.scalar(), qx=diff_qq.x(), ax=to_x_axis.x(), d=diff_degree))
-
-    if (diff_qq.x() < 0 and to_x_axis.x() > 0) or (diff_qq.x() > 0 and to_x_axis.x() < 0):
-        diff_degree = -diff_degree
-        output_file_logger(file_logger, "fno: {fno}, {bone_name}, after2 reverse: qs: {qs}, qx: {qx}, ax: {ax}, d: {d}".format(fno=fno, bone_name=bone_name, qs=diff_qq.scalar(), qx=diff_qq.x(), ax=to_x_axis.x(), d=diff_degree))
-
-    # if twist_degree < 45:
-    #     twist_degree = -twist_degree
-
-    output_file_logger(file_logger, "fno: {fno}, {bone_name}, after diff_degree: {diff_degree}".format(fno=fno, bone_name=bone_name, diff_degree=diff_degree))
+    # diff_x_qq = QQuaternion.fromAxisAndAngle(parent_x_axis, diff_degree)
 
     # 委譲先Xの回転に変換
-    twist_result_qq = QQuaternion.fromAxisAndAngle(twist_x_axis, diff_degree)
+    twist_result_qq, twist_result_degree = convert_twist_qq(fno, bone_name, diff_qq, twist_qq, parent_x_axis, twist_x_axis, file_logger)
 
-    return twist_qq * twist_result_qq
+    # ----------------------
+
+    # 元々の回転結果
+    mat_bf1 = QMatrix4x4()
+    mat_bf1.rotate(original_parent_qq)
+    # mat_bf1.translate(parent_x_axis)
+
+    mat_bf2 = QMatrix4x4()
+    mat_bf2.rotate(original_twist_qq)
+    # mat_bf2.translate(twist_x_axis)
+
+    mat_bf3 = QMatrix4x4()
+    mat_bf3.rotate(original_child_qq)
+
+    original_arm_vec = mat_bf1 * mat_bf2 * mat_bf3 * child_x_axis
+    original_arm_vec.normalize()
+
+    output_file_logger(file_logger, "fno: {fno}, {bone_name}, o_vec: {o_vec}".format(fno=fno, bone_name=bone_name, o_vec=original_arm_vec))
+
+    # 元々の回転結果
+    mat_cf1 = QMatrix4x4()
+    mat_cf1.rotate(parent_qq)
+    # mat_cf1.translate(parent_x_axis)
+
+    mat_cf2 = QMatrix4x4()
+    mat_cf2.rotate(twist_result_qq)
+    # mat_cf2.translate(twist_x_axis)
+
+    mat_cf3 = QMatrix4x4()
+    mat_cf3.rotate(child_qq)
+
+    result_arm_vec = mat_cf1 * mat_cf2 * mat_cf3 * child_x_axis
+    result_arm_vec.normalize()
+
+    output_file_logger(file_logger, "fno: {fno}, {bone_name}, r_vec: {r_vec}".format(fno=fno, bone_name=bone_name, r_vec=result_arm_vec))
+
+    result_diff_qq, result_diff_degree = calc_match_qq(result_arm_vec, original_arm_vec)
+    result_diff_qq = QQuaternion.fromAxisAndAngle(twist_x_axis, result_diff_degree)
+
+    output_file_logger(file_logger, "fno: {fno}, {bone_name}, result_diff_degree: {result_diff_degree}, result_diff_qq: {result_diff_qq}".format(fno=fno, bone_name=bone_name, result_diff_degree=result_diff_degree, result_diff_qq=result_diff_qq))
+
+    # twist_result_qq = twist_result_qq * result_diff_qq
+    # if result_diff_degree > 45:
+    #     twist_result_qq = twist_result_qq.inverted() * result_diff_qq
+    # if (result_arm_vec.x() < 0 and original_arm_vec.x() > 0) or (result_arm_vec.x() > 0 and original_arm_vec.x() < 0):
+    #     # twist_result_degree = -twist_result_degree
+    #     # result_diff_degree = -result_diff_degree
+    #     twist_result_qq = twist_result_qq.inverted() * result_diff_qq
+
+    # # twist_result_qq = QQuaternion.fromAxisAndAngle(twist_x_axis, twist_result_degree)
+    # result_diff_qq = QQuaternion.fromAxisAndAngle(twist_x_axis, result_diff_degree)
+
+    # output_file_logger(file_logger, "fno: {fno}, {bone_name}, twist_result_degree: {twist_result_degree}, twist_result_qq: {twist_result_qq}".format(fno=fno, bone_name=bone_name, twist_result_degree=twist_result_degree, twist_result_qq=twist_result_qq))
+    # output_file_logger(file_logger, "fno: {fno}, {bone_name}, result_diff_degree: {result_diff_degree}, result_diff_qq: {result_diff_qq}".format(fno=fno, bone_name=bone_name, result_diff_degree=result_diff_degree, result_diff_qq=result_diff_qq))
+
+    return twist_result_qq
 
 # 子の回転を親に分散させる
 # https://ch.nicovideo.jp/HOPHEAD/blomaga/ar805999 MMDではYXZ型

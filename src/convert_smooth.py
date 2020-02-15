@@ -357,9 +357,11 @@ def delegate_twist_qq_4_arm(fno, direction, arm_qq, arm_twist_qq, elbow_qq, wris
     # 腕YZを腕に
     arm_result_qq = arm_y_qq * arm_z_qq
 
+    # arm_x_degree = math.degrees(2 * math.acos(min(1, max(-1, arm_x_qq.scalar()))))
+    # arm_x_qq = QQuaternion.fromAxisAndAngle(arm_local_x_axis, arm_x_degree)
+
     # 腕Xを腕捻りに（くの字はズレる）
     arm_twist_result_qq, arm_twist_result_degree = utils.convert_twist_qq(fno, "{0}腕".format(direction), arm_x_qq, arm_twist_qq, arm_local_x_axis, arm_twist_local_x_axis, file_logger)
-    # arm_twist_result_qq = utils.delegate_twist_qq(fno, "{0}腕".format(direction), arm_qq, arm_result_qq, arm_twist_result_qq, arm_local_x_axis, arm_twist_local_x_axis)
     
     # ひじYZをひじYに（ズレっぱなし）
 
@@ -367,7 +369,7 @@ def delegate_twist_qq_4_arm(fno, direction, arm_qq, arm_twist_qq, elbow_qq, wris
     is_reverse = utils.is_reverse_elbow(elbow_y_qq, elbow_local_x_axis, arm_local_x_axis, elbow_local_x_axis)
     utils.output_file_logger(file_logger, "fno: {fno}, 逆ひじ: {is_reverse}".format(fno=fno, is_reverse=is_reverse))
 
-    # ローカルY軸 
+    # 手首ローカルY軸 
     elbow_local_y_axis = QVector3D.crossProduct(elbow_local_x_axis, QVector3D(0, 0, -1)).normalized()
 
     if is_reverse:
@@ -380,13 +382,18 @@ def delegate_twist_qq_4_arm(fno, direction, arm_qq, arm_twist_qq, elbow_qq, wris
         elbow_result_qq = QQuaternion.fromAxisAndAngle(elbow_local_y_axis, elbow_yz_degree)
 
     # ひじベクトルを腕捻りで帳尻合わせ（ここでだいたい整合するか近似する）
-    arm_twist_result_qq = utils.delegate_twist_qq(fno, "{0}ひじ".format(direction), elbow_qq, elbow_result_qq, arm_qq, arm_result_qq, arm_twist_result_qq, arm_twist_result_degree, \
-        elbow_local_x_axis, arm_local_x_axis, arm_twist_local_x_axis, file_logger)
+    arm_twist_result_qq = utils.delegate_twist_qq(fno, "{0}腕捩".format(direction), arm_qq, arm_result_qq, arm_twist_qq, arm_twist_result_qq, elbow_qq, elbow_result_qq, \
+        arm_twist_result_degree, arm_local_x_axis, arm_twist_local_x_axis, elbow_local_x_axis, file_logger)
 
-    # 手首XYZ回転を手首YZにする
-    # 手捩りで手首ベクトル帳尻合わせ（ここでだいたい整合するか近似する）
+    # # 手首XYZ回転を手首YZにする
+    # wrist_result_qq = wrist_y_qq * wrist_z_qq
 
-    wrist_result_qq = wrist_x_qq * wrist_y_qq * wrist_z_qq
+    # # 手首Xを手捻りに
+    # wrist_twist_result_qq, wrist_twist_result_degree = utils.convert_twist_qq(fno, "{0}手首".format(direction), wrist_x_qq, wrist_twist_qq, wrist_local_x_axis, wrist_twist_local_x_axis, file_logger)
+
+    # # 手捩りで手首ベクトル帳尻合わせ（ここでだいたい整合するか近似する）
+    # wrist_twist_result_qq = utils.delegate_twist_qq(fno, "{0}手捩".format(direction), wrist_qq, wrist_result_qq, elbow_qq, elbow_result_qq, wrist_twist_result_qq, wrist_twist_result_degree, \
+    #     wrist_local_x_axis, elbow_local_x_axis, wrist_twist_local_x_axis, file_logger)
 
     return arm_result_qq, arm_twist_result_qq, elbow_result_qq, wrist_twist_result_qq, wrist_result_qq
 
