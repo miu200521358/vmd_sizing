@@ -27,7 +27,7 @@ level = {0:logging.ERROR,
 
 def main(motion, trace_model, replace_model, output_vmd_path, \
     is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, vmd_choice_values, rep_choice_values, rep_rate_values, \
-    camera_motion, camera_vmd_path, camera_pmx, output_camera_vmd_path, camera_y_offset, is_alternative_model, is_no_delegate, target_avoidance_rigids, target_avoidance_bones, is_debug, test_param):   
+    camera_motion, camera_vmd_path, camera_pmx, output_camera_vmd_path, camera_y_offset, is_alternative_model, is_add_delegate, target_avoidance_rigids, target_avoidance_bones, is_debug, test_param):   
     # print("モーション: %s" % motion.path)
     # if camera_motion:
     #     print("カメラモーション: %s" % camera_motion.path)
@@ -53,7 +53,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, \
     is_success = sub_move.exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, file_logger) and is_success
 
     # スタンス補正処理
-    is_success = sub_arm_stance.exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, is_alternative_model, is_no_delegate, file_logger, test_param) and is_success
+    is_success = sub_arm_stance.exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, is_alternative_model, is_add_delegate, file_logger, test_param) and is_success
 
     # 腕IK処理
     is_success = sub_arm_ik.exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, org_motion_frames, file_logger) and is_success
@@ -185,7 +185,7 @@ def parse_exec():
         is_finger_ik = True if args.finger_ik == 1 else False
 
         is_alternative_model = True if args.alternative_model == 1 else False
-        is_no_delegate = True if args.no_delegate == 1 else False
+        is_add_delegate = True if args.no_delegate == 1 else False
 
         camera_motion = None
         output_camera_vmd_path = None
@@ -204,7 +204,7 @@ def parse_exec():
         main(motion, trace_model, replace_model, output_vmd_path, \
             is_avoidance, is_avoidance_finger, is_hand_ik, args.hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, args.hand_floor_distance, args.leg_floor_distance, \
             is_finger_ik, args.finger_distance, args.vmd_choice_values.split(","), args.rep_choice_values.split(","), args.rep_rate_values.split(","), \
-            camera_motion, args.camera_vmd_path, camera_pmx, output_camera_vmd_path, args.camera_y_offset, is_alternative_model, is_no_delegate, \
+            camera_motion, args.camera_vmd_path, camera_pmx, output_camera_vmd_path, args.camera_y_offset, is_alternative_model, is_add_delegate, \
             args.target_avoidance_rigids.split(","), args.target_avoidance_bones.split(","), is_debug, args.test_param.split(","))
 
         if os.name == "nt":
@@ -232,6 +232,8 @@ def parse_exec():
 
         # 終了音を鳴らす
         winsound.PlaySound("SystemQuestion", winsound.SND_ALIAS)
+    finally:
+        logging.shutdown()
 
 
 if __name__=="__main__":

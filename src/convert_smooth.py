@@ -385,15 +385,15 @@ def delegate_twist_qq_4_arm(fno, direction, arm_qq, arm_twist_qq, elbow_qq, wris
     arm_twist_result_qq = utils.delegate_twist_qq(fno, "{0}腕捩".format(direction), arm_qq, arm_result_qq, arm_twist_qq, arm_twist_result_qq, elbow_qq, elbow_result_qq, \
         arm_twist_result_degree, arm_local_x_axis, arm_twist_local_x_axis, elbow_local_x_axis, file_logger)
 
-    # # 手首XYZ回転を手首YZにする
-    # wrist_result_qq = wrist_y_qq * wrist_z_qq
+    # 手首XYZ回転を手首YZにする
+    wrist_result_qq = wrist_yz_qq
 
-    # # 手首Xを手捻りに
-    # wrist_twist_result_qq, wrist_twist_result_degree = utils.convert_twist_qq(fno, "{0}手首".format(direction), wrist_x_qq, wrist_twist_qq, wrist_local_x_axis, wrist_twist_local_x_axis, file_logger)
+    # 手首Xを手捻りに
+    wrist_twist_result_qq, wrist_twist_result_degree = utils.convert_twist_qq(fno, "{0}手首".format(direction), wrist_x_qq, wrist_twist_qq, wrist_local_x_axis, wrist_twist_local_x_axis, file_logger)
 
-    # # 手捩りで手首ベクトル帳尻合わせ（ここでだいたい整合するか近似する）
-    # wrist_twist_result_qq = utils.delegate_twist_qq(fno, "{0}手捩".format(direction), wrist_qq, wrist_result_qq, elbow_qq, elbow_result_qq, wrist_twist_result_qq, wrist_twist_result_degree, \
-    #     wrist_local_x_axis, elbow_local_x_axis, wrist_twist_local_x_axis, file_logger)
+    # 手捩りで手首ベクトル帳尻合わせ（ここでだいたい整合するか近似する）
+    wrist_twist_result_qq = utils.delegate_twist_qq(fno, "{0}手捩".format(direction), elbow_qq, elbow_result_qq, wrist_twist_qq, wrist_twist_result_qq, wrist_qq, wrist_result_qq, \
+        wrist_twist_result_degree, elbow_local_x_axis, wrist_twist_local_x_axis, wrist_local_x_axis, file_logger)
 
     return arm_result_qq, arm_twist_result_qq, elbow_result_qq, wrist_twist_result_qq, wrist_result_qq
 

@@ -1399,7 +1399,7 @@ class TestSubStance(unittest.TestCase):
         # 数字の組合せ
         rep_upper2_initial_slope_test_numbers = ["0","1-","1"]
         list_target_test_params_base_numbers = list(itertools.product(rep_upper2_initial_slope_test_numbers, repeat=3))
-        list_target_test_params_list_numbers = [(x00, x01, x02) for (x00, x01, x02) in list_target_test_params_base_numbers if [x00, x01, x02].count("0") == 2 ]
+        list_target_test_params_list_numbers = [(x00, x01, x02) for (x00, x01, x02) in list_target_test_params_base_numbers if [x00, x01, x02].count("0") == 1 ]
         print("numbers LIST: %s" % len(list_target_test_params_list_numbers))
 
         # 最後の組合せ
@@ -1417,7 +1417,7 @@ class TestSubStance(unittest.TestCase):
         random.shuffle(target_test_params_list)
         print("targets LIST: %s" % len(target_test_params_list))
         
-        prefix = "047-03"
+        prefix = "047-09"
         ok_list = self.calc_stance(target_test_params_list, 0.1, False, prefix)
 
         print("ok_list LIST: %s" % ok_list)
@@ -1471,7 +1471,7 @@ class TestSubStance(unittest.TestCase):
         output_camera_vmd_path = None
         camera_y_offset = 0
         is_alternative_model = False
-        is_no_delegate = True
+        is_add_delegate = False
         target_avoidance_rigids = []
         target_avoidance_bones = []
         base_path = "E:/MMD/MikuMikuDance_v926x64/Work/202001_sizing/input_upper2_up/"
@@ -1481,23 +1481,30 @@ class TestSubStance(unittest.TestCase):
 
         os.makedirs("{0}/{1}".format(base_path, prefix), exist_ok=exist_ok)
 
+        log_dir_path = "{0}/{1}/log".format(base_path, prefix)
+        os.makedirs(log_dir_path, exist_ok=True)
+
         for pidx, test_param in enumerate(target_test_params):
             logger.info("prefix: %s, test_param(%s -> %s): %s", prefix, len(target_test_params), pidx, test_param)
 
             file_name = "test_{0}.vmd".format(','.join([str(i) for i in test_param]))
+            log_name = "test_{0}.log".format(','.join([str(i) for i in test_param]))
 
             output_vmd_path = "{0}/{1}/{2}".format(base_path, prefix, file_name)
+            output_log_path = "{0}/{1}/{2}".format(base_path, prefix, log_name)
 
             copy_motion = copy.deepcopy(motion)
 
             try:
                 main.main(copy_motion, trace_model, replace_model, output_vmd_path, \
                     is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, vmd_choice_values, rep_choice_values, rep_rate_values, \
-                    camera_motion, camera_vmd_path, camera_pmx, output_camera_vmd_path, camera_y_offset, is_alternative_model, is_no_delegate, target_avoidance_rigids, target_avoidance_bones, test_param)
+                    camera_motion, camera_vmd_path, camera_pmx, output_camera_vmd_path, camera_y_offset, is_alternative_model, is_add_delegate, target_avoidance_rigids, target_avoidance_bones, False, test_param)
             except Exception as e:
                 print(traceback.format_exc())
                 continue
-            
+            finally:
+                logging.shutdown()
+           
             # 変換後のグローバル位置を求める
             org_target_bfs = copy.deepcopy([x for x in copy_motion.frames[test_target_name] if x.frame in target_frames])
             rep_target_poss = []
@@ -1551,6 +1558,8 @@ class TestSubStance(unittest.TestCase):
 
             shutil.move(output_vmd_path, "{0}/{1}".format(dir_path, resutl_file_name))               
             logger.info("result: %s %s", result_list.count(True), resutl_file_name)
+        
+            shutil.move(output_log_path, "{0}/{1}".format(log_dir_path, resutl_file_name.replace(".vmd", ".log")))               
 
         return ok_list
 
@@ -2054,7 +2063,7 @@ class TestSubStance(unittest.TestCase):
         output_camera_vmd_path = None
         camera_y_offset = 0
         is_alternative_model = True
-        is_no_delegate = False
+        is_add_delegate = False
         target_avoidance_rigids = []
         target_avoidance_bones = []
         base_path = "E:/MMD/MikuMikuDance_v926x64/Work/202001_sizing/delegate_qq"
@@ -2079,7 +2088,7 @@ class TestSubStance(unittest.TestCase):
             try:
                 main.main(copy_motion, trace_model, replace_model, output_vmd_path, \
                     is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, vmd_choice_values, rep_choice_values, rep_rate_values, \
-                    camera_motion, camera_vmd_path, camera_pmx, output_camera_vmd_path, camera_y_offset, is_alternative_model, is_no_delegate, target_avoidance_rigids, target_avoidance_bones, test_param)
+                    camera_motion, camera_vmd_path, camera_pmx, output_camera_vmd_path, camera_y_offset, is_alternative_model, is_add_delegate, target_avoidance_rigids, target_avoidance_bones, False, test_param)
             except Exception as e:
                 print(traceback.format_exc())
                 continue

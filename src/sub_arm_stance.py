@@ -15,7 +15,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 
 is_print1 = True
 
-def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, is_alternative_model, is_no_delegate, file_logger, test_param):
+def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, is_alternative_model, is_add_delegate, file_logger, test_param):
     if motion.motion_cnt > 0:        
         logger.info("test_param: %s", test_param)
 
@@ -39,7 +39,7 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
             
             adjust_arm_stance(motion, trace_model, replace_model, org_motion_frames, file_logger, test_param)
 
-            if is_no_delegate == False:
+            if is_add_delegate == True:
                 # 捩り分散
                 convert_smooth.spread_rotation(motion, replace_model, True, file_logger, test_param)
 

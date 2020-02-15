@@ -201,9 +201,9 @@ class VmdSizingForm3 ( wx.Frame ):
 		bSizer481.Add( self.m_staticText102, 0, wx.ALL, 5 )
 
 		# 代替モデル（スタンス補正無効）
-		self.m_checkNoDelegate = wx.CheckBox( self.m_panelFile, wx.ID_ANY, u"捩り分散不要", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_checkNoDelegate.SetToolTip( u"チェックを入れると、腕捻り等への分散処理をスキップできます。" )
-		bSizer481.Add( self.m_checkNoDelegate, 0, wx.ALL, 5 )
+		self.m_checkAddDelegate = wx.CheckBox( self.m_panelFile, wx.ID_ANY, u"捩り分散あり", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_checkAddDelegate.SetToolTip( u"チェックを入れると、腕捻り等への分散処理を追加できます。" )
+		bSizer481.Add( self.m_checkAddDelegate, 0, wx.ALL, 5 )
 
 		bSizer4.Add( bSizer481, 0, wx.ALL, 0 )
 
@@ -2632,7 +2632,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_fileRepPmx.Disable()
 		self.m_fileOutputVmd.Disable()
 		self.m_checkAlternativeModel.Disable()
-		self.m_checkNoDelegate.Disable()
+		self.m_checkAddDelegate.Disable()
 		# 履歴ボタン押下不可
 		self.m_btnHistoryVmd.Disable()
 		self.m_btnHistoryOrgPmx.Disable()
@@ -2688,7 +2688,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_fileRepPmx.Enable()
 		self.m_fileOutputVmd.Enable()
 		self.m_checkAlternativeModel.Enable()
-		self.m_checkNoDelegate.Enable()
+		self.m_checkAddDelegate.Enable()
 		# 履歴ボタン押下可
 		self.m_btnHistoryVmd.Enable()
 		self.m_btnHistoryOrgPmx.Enable()
@@ -3313,7 +3313,7 @@ class ExecWorkerThread(Thread):
 				, self._notify_window.m_camera_fileOutputVmd.GetPath()
 				, self._notify_window.m_camera_spinYoffset.GetValue()
 				, self._notify_window.m_checkAlternativeModel.GetValue()
-				, self._notify_window.m_checkNoDelegate.GetValue()
+				, self._notify_window.m_checkAddDelegate.GetValue()
 				, target_avoidance_rigids
 				, target_avoidance_bones
 				, self._notify_window.is_debug
