@@ -15,7 +15,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 
 DOT_LIMIT = 0.85
 
-def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik, target_avoidance_rigids, target_avoidance_bones, org_motion_frames, error_file_logger):
+def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik, target_avoidance_rigids, target_avoidance_bones, org_motion_frames, file_logger):
     is_error_outputed = False
 
     # -----------------------------------------------------------------
@@ -26,7 +26,7 @@ def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
             # 腕構造チェックがFALSEの場合、接触回避補正なし
             return False
                 
-        print("■■ 剛体接触回避処理 -----------------")
+        utils.output_file_logger(file_logger, "■■ 剛体接触回避処理 -----------------")
 
         # 指定ボーンまでのリンク生成
         bone_ik_links = {}
@@ -64,7 +64,7 @@ def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
             sub_arm_ik.prepare(motion, arm_links, 0, False, target_bones)
 
         # 剛体接触回避処理実行
-        is_error_outputed = exec_avoidance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, bone_ik_links, bone_all_links, bone_all_indexes, target_avoidance_bones, target_avoidance_rigids, rigid_links, rigid_indexes, error_file_logger)
+        is_error_outputed = exec_avoidance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, bone_ik_links, bone_all_links, bone_all_indexes, target_avoidance_bones, target_avoidance_rigids, rigid_links, rigid_indexes, file_logger)
 
         for bone_name, links in bone_ik_links.items():
             if "左" in bone_name:
@@ -107,7 +107,7 @@ def create_ik_links(model, links, end_bone_name):
 
 
 # 接触回避実行
-def exec_avoidance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, bone_ik_links, bone_all_links, bone_all_indexes, target_avoidance_bones, target_avoidance_rigids, rigid_links, rigid_indexes, error_file_logger):
+def exec_avoidance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, bone_ik_links, bone_all_links, bone_all_indexes, target_avoidance_bones, target_avoidance_rigids, rigid_links, rigid_indexes, file_logger):
     # 腕IKによる位置調整を行う場合
 
     # エラーを一度でも出力しているか(腕IK)
@@ -158,7 +158,7 @@ def exec_avoidance(motion, trace_model, replace_model, output_vmd_path, org_moti
                         collision, return_pos = target_rigid_obb.judge_collision(rep_bone_pos)
 
                         if collision == True:
-                            print("○剛体接触あり: f: {0}, {1} -> {2}, 差分: x: {3:02.3f}, y: {4:02.3f}, z: {5:02.3f}".format(bf.frame, target_bone, target_rigid_name, return_pos.x(), return_pos.y(), return_pos.z() ))
+                            utils.output_file_logger(file_logger, "○剛体接触あり: f: {0}, {1} -> {2}, 差分: x: {3:02.3f}, y: {4:02.3f}, z: {5:02.3f}".format(bf.frame, target_bone, target_rigid_name, return_pos.x(), return_pos.y(), return_pos.z() ))
                             # 剛体にめり込んでいる場合、それを避ける
                     
                             # 手首の位置を差分分移動させる
@@ -200,21 +200,21 @@ def exec_avoidance(motion, trace_model, replace_model, output_vmd_path, org_moti
                             # 最も上のボーンの内積チェック                                
                             dot = abs(QQuaternion.dotProduct(motion.frames[target_bone_ik_links[-1].name][bf_idx].rotation, org_fill_motion_frames[target_bone_ik_links[-1].name][bf_idx].rotation))
                             if dot < DOT_LIMIT:
-                                print("接触回避失敗: f: {0}, {1} -> {2}, 差分: x: {3:02.3f}, y: {4:02.3f}, z: {5:02.3f}, dot: {6:02.3f}".format(bf.frame, target_bone, target_rigid_name, return_pos.x(), return_pos.y(), return_pos.z(), dot ))
+                                utils.output_file_logger(file_logger, "接触回避失敗: f: {0}, {1} -> {2}, 差分: x: {3:02.3f}, y: {4:02.3f}, z: {5:02.3f}, dot: {6:02.3f}".format(bf.frame, target_bone, target_rigid_name, return_pos.x(), return_pos.y(), return_pos.z(), dot ))
                                 # 失敗時のみエラーログ出力
                                 if not is_error_outputed:
                                     is_error_outputed = True
-                                    if not error_file_logger:
-                                        error_file_logger = utils.create_error_file_logger(motion, trace_model, replace_model, output_vmd_path)
+                                    if not file_logger:
+                                        file_logger = utils.create_file_logger(motion, trace_model, replace_model, output_vmd_path)
 
-                                    error_file_logger.info("ボーン: %s", target_bone_all_links[0])
-                                    error_file_logger.info("位置: %s", target_bone_all_links[0])
-                                    error_file_logger.info("剛体: %s", target_rigid)
-                                    error_file_logger.info("rep_bone_pos: %s", rep_bone_pos)
-                                    error_file_logger.info("return_pos: %s", return_pos)
-                                    error_file_logger.info("new_rep_bone_pos: %s", new_rep_bone_pos)
+                                    file_logger.info("ボーン: %s", target_bone_all_links[0])
+                                    file_logger.info("位置: %s", target_bone_all_links[0])
+                                    file_logger.info("剛体: %s", target_rigid)
+                                    file_logger.info("rep_bone_pos: %s", rep_bone_pos)
+                                    file_logger.info("return_pos: %s", return_pos)
+                                    file_logger.info("new_rep_bone_pos: %s", new_rep_bone_pos)
 
-                                error_file_logger.warning("接触回避失敗: f: %s, %s -> %s, 差分: x: %s, y: %s, z: %s, dot: %s", bf.frame, target_bone, target_rigid_name, return_pos.x(), return_pos.y(), return_pos.z(), dot )
+                                file_logger.warning("接触回避失敗: f: %s, %s -> %s, 差分: x: %s, y: %s, z: %s, dot: %s", bf.frame, target_bone, target_rigid_name, return_pos.x(), return_pos.y(), return_pos.z(), dot )
                             else:
                                 # logger.debug("接触回避成功: f: %s, 左腕:%s, 右腕:%s", bf.frame, lad, rad)
                                 pass
@@ -231,7 +231,7 @@ def exec_avoidance(motion, trace_model, replace_model, output_vmd_path, org_moti
                                     motion.frames[al.name][now_al_bf[0]] = copy.deepcopy(past_al_bf[1])
                         else:
                             if 0 < return_pos.length() <= 1:
-                                print("－剛体接触なし: f: {0}, {1} -> {2}, 差分: x: {3:02.3f}, y: {4:02.3f}, z: {5:02.3f}".format(bf.frame, target_bone, target_rigid_name, return_pos.x(), return_pos.y(), return_pos.z() ))
+                                utils.output_file_logger(file_logger, "－剛体接触なし: f: {0}, {1} -> {2}, 差分: x: {3:02.3f}, y: {4:02.3f}, z: {5:02.3f}".format(bf.frame, target_bone, target_rigid_name, return_pos.x(), return_pos.y(), return_pos.z() ))
 
                         # 前回登録キーとして保持
                         prev_bf = copy.deepcopy(bf)

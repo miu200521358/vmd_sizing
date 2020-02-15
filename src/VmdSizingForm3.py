@@ -22,6 +22,7 @@ from pathlib import Path
 from threading import Thread, Event
 import traceback
 import winsound
+from PyQt5.QtGui import QQuaternion, QVector3D, QVector2D, QMatrix4x4, QVector4D
 
 import wrapperutils, convert_vmd, blend_pmx, convert_csv, convert_smooth, form_bezier, utils
 
@@ -34,10 +35,12 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 
 class VmdSizingForm3 ( wx.Frame ):
 
-	def __init__( self, parent ):
+	def __init__( self, parent, is_debug ):
 		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver4.05_β16", pos = wx.DefaultPosition, size = wx.Size( 600,650 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
+		self.is_debug = is_debug
+
 		# 分割配列
 		self.slice_frame_values = []
 
@@ -3313,6 +3316,7 @@ class ExecWorkerThread(Thread):
 				, self._notify_window.m_checkNoDelegate.GetValue()
 				, target_avoidance_rigids
 				, target_avoidance_bones
+				, self._notify_window.is_debug
 			)
 
 		# Here's where the result would be returned (this is an
@@ -3431,6 +3435,7 @@ class SmoothWorkerThread(Thread):
 			self._notify_window.m_smooth_spinSmoothCount.GetValue(), \
 			self._notify_window.m_smooth_choiceSmoothingComp.GetSelection() == 1, \
 			self._notify_window.m_smooth_choiceSmoothingSeam.GetSelection() == 1, \
+			self._notify_window.is_debug
 			)
 
 		# Here's where the result would be returned (this is an

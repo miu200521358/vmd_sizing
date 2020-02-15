@@ -108,13 +108,13 @@ def is_all_sizing(motion, org_pmx, rep_pmx, camera_motion, output_vmd_path=None)
         # 何かしら不足しているか
         is_shortage = False
         
-        error_file_logger = None
+        file_logger = None
 
         if len(not_org_bones) > 0 or (not output_vmd_path and len(not_org_morphs) > 0):
             print_methods = []
             if output_vmd_path:
-                error_file_logger = utils.create_error_file_logger(motion, org_pmx, rep_pmx, output_vmd_path)
-                print_methods = [print, error_file_logger.info]
+                file_logger = utils.create_file_logger(motion, org_pmx, rep_pmx, output_vmd_path)
+                print_methods = [print, file_logger.info]
             else:
                 print_methods = [print]
 
@@ -131,8 +131,8 @@ def is_all_sizing(motion, org_pmx, rep_pmx, camera_motion, output_vmd_path=None)
         if len(not_rep_bones) > 0 or (not output_vmd_path and len(not_rep_morphs) > 0):
             print_methods = []
             if output_vmd_path:
-                error_file_logger = utils.create_error_file_logger(motion, org_pmx, rep_pmx, output_vmd_path)
-                print_methods = [print, error_file_logger.info]
+                file_logger = utils.create_file_logger(motion, org_pmx, rep_pmx, output_vmd_path)
+                print_methods = [print, file_logger.info]
             else:
                 print_methods = [print]
 
@@ -157,8 +157,8 @@ def is_all_sizing(motion, org_pmx, rep_pmx, camera_motion, output_vmd_path=None)
             # 作成元モデルの上半身構造チェック
             print_methods = []
             if output_vmd_path:
-                error_file_logger = utils.create_error_file_logger(motion, org_pmx, rep_pmx, output_vmd_path)
-                print_methods = [print, error_file_logger.info]
+                file_logger = utils.create_file_logger(motion, org_pmx, rep_pmx, output_vmd_path)
+                print_methods = [print, file_logger.info]
             else:
                 print_methods = [print]
 
@@ -175,8 +175,8 @@ def is_all_sizing(motion, org_pmx, rep_pmx, camera_motion, output_vmd_path=None)
             # 変換先モデルの上半身構造チェック
             print_methods = []
             if output_vmd_path:
-                error_file_logger = utils.create_error_file_logger(motion, org_pmx, rep_pmx, output_vmd_path)
-                print_methods = [print, error_file_logger.info]
+                file_logger = utils.create_file_logger(motion, org_pmx, rep_pmx, output_vmd_path)
+                print_methods = [print, file_logger.info]
             else:
                 print_methods = [print]
 
@@ -193,8 +193,8 @@ def is_all_sizing(motion, org_pmx, rep_pmx, camera_motion, output_vmd_path=None)
             # 作成元モデルの腕構造チェック
             print_methods = []
             if output_vmd_path:
-                error_file_logger = utils.create_error_file_logger(motion, org_pmx, rep_pmx, output_vmd_path)
-                print_methods = [print, error_file_logger.info]
+                file_logger = utils.create_file_logger(motion, org_pmx, rep_pmx, output_vmd_path)
+                print_methods = [print, file_logger.info]
             else:
                 print_methods = [print]
 
@@ -211,8 +211,8 @@ def is_all_sizing(motion, org_pmx, rep_pmx, camera_motion, output_vmd_path=None)
             # 変換先モデルの腕構造チェック
             print_methods = []
             if output_vmd_path:
-                error_file_logger = utils.create_error_file_logger(motion, org_pmx, rep_pmx, output_vmd_path)
-                print_methods = [print, error_file_logger.info]
+                file_logger = utils.create_file_logger(motion, org_pmx, rep_pmx, output_vmd_path)
+                print_methods = [print, file_logger.info]
             else:
                 print_methods = [print]
 
@@ -228,8 +228,8 @@ def is_all_sizing(motion, org_pmx, rep_pmx, camera_motion, output_vmd_path=None)
         if motion.motion_cnt == 0:
             print_methods = []
             if output_vmd_path:
-                error_file_logger = utils.create_error_file_logger(motion, org_pmx, rep_pmx, output_vmd_path)
-                print_methods = [print, error_file_logger.info]
+                file_logger = utils.create_file_logger(motion, org_pmx, rep_pmx, output_vmd_path)
+                print_methods = [print, file_logger.info]
             else:
                 print_methods = [print]
 
@@ -244,8 +244,8 @@ def is_all_sizing(motion, org_pmx, rep_pmx, camera_motion, output_vmd_path=None)
         if camera_motion and camera_motion.camera_cnt == 0:
             print_methods = []
             if output_vmd_path:
-                error_file_logger = utils.create_error_file_logger(motion, org_pmx, rep_pmx, output_vmd_path)
-                print_methods = [print, error_file_logger.info]
+                file_logger = utils.create_file_logger(motion, org_pmx, rep_pmx, output_vmd_path)
+                print_methods = [print, file_logger.info]
             else:
                 print_methods = [print]
 
@@ -345,12 +345,12 @@ def read_pmx(path, filetype="pmx", is_print=True):
 
 def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_vmd_path, \
         is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger, finger_distance, vmd_choice_values, rep_choice_values, rep_rate_values, \
-        camera_motion, camera_vmd_path, camera_pmx, camera_pmx_path, output_camera_vmd_path, camera_y_offset, is_alternative_model, is_no_delegate, target_avoidance_rigids, target_avoidance_bones):
+        camera_motion, camera_vmd_path, camera_pmx, camera_pmx_path, output_camera_vmd_path, camera_y_offset, is_alternative_model, is_no_delegate, target_avoidance_rigids, target_avoidance_bones, is_debug):
     print("■■■■■■■■■■■■■■■■■")
     print("■　VMDサイジング処理実行")
     print("■■■■■■■■■■■■■■■■■")
 
-    error_file_logger = None
+    file_logger = None
     
     try:
         if not output_vmd_path:
@@ -431,7 +431,7 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
             # 読み込んだモーションデータそのものを弄らないよう、コピーした結果を渡す
             is_success = main.main(copy.deepcopy(motion), org_pmx, rep_pmx, output_vmd_path, \
                 is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger, finger_distance, vmd_choice_values, rep_choice_values, rep_rate_values, \
-                copy.deepcopy(camera_motion), camera_vmd_path, camera_pmx_data, output_camera_vmd_path, camera_y_offset, is_alternative_model, is_no_delegate, target_avoidance_rigids, target_avoidance_bones, "")
+                copy.deepcopy(camera_motion), camera_vmd_path, camera_pmx_data, output_camera_vmd_path, camera_y_offset, is_alternative_model, is_no_delegate, target_avoidance_rigids, target_avoidance_bones, is_debug, "")
 
             logger.debug("is_shortage: %s, is_success: %s", is_shortage, is_success)
 
@@ -469,14 +469,14 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
         print("")
         print(e.message)
 
-        error_file_logger = utils.create_error_file_logger(motion, org_pmx, rep_pmx, output_vmd_path)
+        file_logger = utils.create_file_logger(motion, org_pmx, rep_pmx, output_vmd_path)
         
-        error_file_logger.error("■■■■■■■■■■■■■■■■■")
-        error_file_logger.error("■　**ERROR**　")
-        error_file_logger.error("■　VMDサイジング処理が処理できないデータで終了しました。")
-        error_file_logger.error("■■■■■■■■■■■■■■■■■")
+        file_logger.error("■■■■■■■■■■■■■■■■■")
+        file_logger.error("■　**ERROR**　")
+        file_logger.error("■　VMDサイジング処理が処理できないデータで終了しました。")
+        file_logger.error("■■■■■■■■■■■■■■■■■")
 
-        error_file_logger.error(e.message)
+        file_logger.error(e.message)
 
     except Exception:
         print("■■■■■■■■■■■■■■■■■")
@@ -486,14 +486,14 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
 
         print(traceback.format_exc())
 
-        error_file_logger = utils.create_error_file_logger(motion, org_pmx, rep_pmx, output_vmd_path)
+        file_logger = utils.create_file_logger(motion, org_pmx, rep_pmx, output_vmd_path)
         
-        error_file_logger.error("■■■■■■■■■■■■■■■■■")
-        error_file_logger.error("■　**ERROR**　")
-        error_file_logger.error("■　VMDサイジング処理が意図せぬエラーで終了しました。")
-        error_file_logger.error("■■■■■■■■■■■■■■■■■")
+        file_logger.error("■■■■■■■■■■■■■■■■■")
+        file_logger.error("■　**ERROR**　")
+        file_logger.error("■　VMDサイジング処理が意図せぬエラーで終了しました。")
+        file_logger.error("■■■■■■■■■■■■■■■■■")
 
-        error_file_logger.error(traceback.format_exc())
+        file_logger.error(traceback.format_exc())
     finally:
         logging.shutdown()
 

@@ -15,21 +15,21 @@ from typing import Union
 logger = logging.getLogger("VmdSizing").getChild(__name__)
 
 
-def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames):
-    print("■■ 移動補正 -----------------")
+def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, file_logger):
+    utils.output_file_logger(file_logger, "■■ 移動補正 -----------------")
 
     # 移植先のセンターとグルーブは、作成元の比率に合わせる
     adjust_center(trace_model, replace_model, "センター")
     adjust_center(trace_model, replace_model, "グルーブ")
 
     # 足IKのXYZの比率
-    xz_ratio, y_ratio, leg_ik_stance = calc_leg_ik_ratio(trace_model, replace_model)
+    xz_ratio, y_ratio, leg_ik_stance = calc_leg_ik_ratio(trace_model, replace_model, file_logger, True)
 
     # センターのZ軸オフセットを計算
-    cal_center_z_offset(trace_model, replace_model, "センター")
+    cal_center_z_offset(trace_model, replace_model, "センター", file_logger)
 
     # 足IKのオフセットを計算
-    calc_ik_offset(trace_model, replace_model, xz_ratio)
+    calc_ik_offset(trace_model, replace_model, xz_ratio, file_logger)
     
     # 全ての親をコピー
     copy_root_parent(trace_model)
@@ -91,7 +91,7 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames)
                         logger.debug("rep_ik: %s", rep_ik)
                         bf.position = rep_ik
 
-                print("移動補正: %s" % k)
+                utils.output_file_logger(file_logger, "移動補正: %s" % k)
 
         if "左足ＩＫ" in trace_model.bones and "右足ＩＫ" in trace_model.bones and  "左足ＩＫ" in replace_model.bones and "右足ＩＫ" in replace_model.bones \
             and  "左つま先ＩＫ" in trace_model.bones and "右つま先ＩＫ" in trace_model.bones and  "左つま先ＩＫ" in replace_model.bones and "右つま先ＩＫ" in replace_model.bones:
@@ -111,8 +111,8 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames)
             leg_ik_ratio = y_ratio if y_ratio < leg_ik_rate * 0.8 else leg_ik_rate
             leg_length_ratio = y_ratio if y_ratio < leg_length_rate * 0.8 else leg_length_rate
 
-            print("つま先補正用 - 足IK比率: %s, 足の大きさ比率: %s" % (leg_ik_ratio, leg_length_ratio) )
-            # print("つま先補正用 - 足先EX比率: %s" % leg_ex_length_rate )
+            utils.output_file_logger(file_logger, "つま先補正用 - 足IK比率: %s, 足の大きさ比率: %s" % (leg_ik_ratio, leg_length_ratio) )
+            # utils.output_file_logger(file_logger, "つま先補正用 - 足先EX比率: %s" % leg_ex_length_rate )
 
             for direction in ["右" ,"左"]:
                 for link_name in ["{0}足ＩＫ".format(direction), "{0}足IK親".format(direction)]:
@@ -133,11 +133,11 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames)
                                     # leg_ex_bone = utils.calc_bone_by_complement(org_motion_frames, "{0}足先EX".format(direction), bf.frame)
 
                                     # if leg_ex_bone.rotation == QQuaternion():
-                                    #     print("%sフレーム: %sつま先補正: %s足IK: 高さ: %s, y: %s" % (bf.frame, link_name, direction, org_leg_ik_y, org_motion_frames[link_name][bf_idx].position.y()))
+                                    #     utils.output_file_logger(file_logger, "%sフレーム: %sつま先補正: %s足IK: 高さ: %s, y: %s" % (bf.frame, link_name, direction, org_leg_ik_y, org_motion_frames[link_name][bf_idx].position.y()))
                                     #     # 足先EXが入ってない場合、つま先までの長さで補正
                                     #     leg_ratio = leg_length_rate
                                     # else:
-                                    #     print("%sフレーム: %s足先EX補正: %s足IK: 高さ: %s, y: %s" % (bf.frame, link_name, direction, org_leg_ik_y, org_motion_frames[link_name][bf_idx].position.y()))
+                                    #     utils.output_file_logger(file_logger, "%sフレーム: %s足先EX補正: %s足IK: 高さ: %s, y: %s" % (bf.frame, link_name, direction, org_leg_ik_y, org_motion_frames[link_name][bf_idx].position.y()))
                                     #     # 足先EXが入っている場合、足先EXまでの長さで補正
                                     #     leg_ratio = leg_ex_length_rate
 
@@ -177,14 +177,14 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames)
                                         # つま先ＩＫの位置で再補正
                                         bf.position.setY( bf.position.y() + toe_ik_diff )
 
-                                    # print("%sフレーム: %sつま先補正: %s足IK: 高さ: %s, 補正値: %s,%s" % (bf.frame, link_name, direction, org_leg_ik_y, leg_ik_diff, toe_ik_diff))
+                                    # utils.output_file_logger(file_logger, "%sフレーム: %sつま先補正: %s足IK: 高さ: %s, 補正値: %s,%s" % (bf.frame, link_name, direction, org_leg_ik_y, leg_ik_diff, toe_ik_diff))
                                     logger.debug("%sフレーム: %sつま先補正: %s足IK: 高さ: %s, 補正値: %s,%s", bf.frame, link_name, direction, org_leg_ik_y, leg_ik_diff, toe_ik_diff)
                                 else:
-                                    # print("%sフレーム: %s範囲外: %s足IK: 高さ: %s, y: %s" % (bf.frame, link_name, direction, org_leg_ik_y, org_motion_frames[link_name][bf_idx].position.y()))
+                                    # utils.output_file_logger(file_logger, "%sフレーム: %s範囲外: %s足IK: 高さ: %s, y: %s" % (bf.frame, link_name, direction, org_leg_ik_y, org_motion_frames[link_name][bf_idx].position.y()))
                                     logger.debug("%sフレーム: %s範囲外: %s足IK: 高さ: %s, y: %s", bf.frame, link_name, direction, org_leg_ik_y, org_motion_frames[link_name][bf_idx].position.y())
                                     pass
 
-                    print("つま先補正: %s" % link_name)
+                    utils.output_file_logger(file_logger, "つま先補正: %s" % link_name)
 
     return True
 
@@ -269,7 +269,7 @@ def calc_ankle_rotation(from_pos, to_pos):
     return from_qq
 
 
-def calc_ik_offset(trace_model, replace_model, xz_ratio):
+def calc_ik_offset(trace_model, replace_model, xz_ratio, file_logger):
     if "左足" in trace_model.bones and "左足" in replace_model.bones and "左足ＩＫ" in trace_model.bones and "左足ＩＫ" in replace_model.bones and "右足ＩＫ" in trace_model.bones and "右足ＩＫ" in replace_model.bones:
         leg_ratio = replace_model.bones["左足"].position.y() / trace_model.bones["左足"].position.y()
 
@@ -307,8 +307,8 @@ def calc_ik_offset(trace_model, replace_model, xz_ratio):
         #     right_leg_ik_offset.setZ( re_z * ( 1 if utils.sign(right_leg_ik_offset.z()) == utils.sign(rep_right_leg_ik_pos.z()) else -1 ) )
         logger.debug("right_leg_ik_offset after: %s", right_leg_ik_offset)
 
-        print("左足IKオフセット: x: %s, z: %s" % ( left_leg_ik_offset.x(), left_leg_ik_offset.z()))
-        print("右足IKオフセット: x: %s, z: %s" % ( right_leg_ik_offset.x(), right_leg_ik_offset.z()))
+        utils.output_file_logger(file_logger, "左足IKオフセット: x: %s, z: %s" % ( left_leg_ik_offset.x(), left_leg_ik_offset.z()))
+        utils.output_file_logger(file_logger, "右足IKオフセット: x: %s, z: %s" % ( right_leg_ik_offset.x(), right_leg_ik_offset.z()))
 
         replace_model.bones["左足ＩＫ"].local_offset = left_leg_ik_offset
         replace_model.bones["右足ＩＫ"].local_offset = right_leg_ik_offset
@@ -320,7 +320,7 @@ def calc_ik_offset(trace_model, replace_model, xz_ratio):
     
     return False
 
-def cal_center_z_offset(trace_model, replace_model, bone_name):
+def cal_center_z_offset(trace_model, replace_model, bone_name, file_logger):
     if bone_name in trace_model.bones and bone_name in replace_model.bones and "センター" in trace_model.bones and "センター" in replace_model.bones and "左足首" in trace_model.bones and "左足首" in replace_model.bones and "左足" in trace_model.bones and "左足" in replace_model.bones and "左つま先ＩＫ" in trace_model.bones and "左つま先ＩＫ" in replace_model.bones:
         # 移植元にも移植先にも対象ボーンがある場合
         # 作成元センターのZ位置
@@ -375,15 +375,15 @@ def cal_center_z_offset(trace_model, replace_model, bone_name):
         #     # 小さい子は、オフセットを小さくする
             # replace_model.bones[bone_name].local_offset *= ( replace_leg_zlength / trace_leg_zlength )
 
-        print("Zオフセット: %s: %s" % ( bone_name, replace_model.bones[bone_name].local_offset.z()))
+        utils.output_file_logger(file_logger, "Zオフセット: %s: %s" % ( bone_name, replace_model.bones[bone_name].local_offset.z()))
 
         return True
     else:
-        print("Zオフセットなし: %s" % ( bone_name ))
+        utils.output_file_logger(file_logger, "Zオフセットなし: %s" % ( bone_name ))
 
         return False
 
-def calc_leg_ik_ratio(trace_model, replace_model, is_print=True):
+def calc_leg_ik_ratio(trace_model, replace_model, file_logger, is_print):
     if "左足" in trace_model.bones and "左足" in replace_model.bones and "左ひざ" in trace_model.bones and "左ひざ" in replace_model.bones and "左足首" in trace_model.bones and "左足首" in replace_model.bones and "センター" in trace_model.bones and "センター" in replace_model.bones:
         # XZ比率(足の長さ)
         replace_leg_length = ( (replace_model.bones["左足首"].position - replace_model.bones["左ひざ"].position) + (replace_model.bones["左ひざ"].position - replace_model.bones["左足"].position) ).length()
@@ -398,7 +398,7 @@ def calc_leg_ik_ratio(trace_model, replace_model, is_print=True):
         y_ratio = 1 if trace_leg_length == 0 else ( replace_leg_length / trace_leg_length )
 
         if is_print:
-            print("足の長さの比率: xz: %s, y: %s" % (xz_ratio, y_ratio))
+            utils.output_file_logger(file_logger, "足の長さの比率: xz: %s, y: %s" % (xz_ratio, y_ratio))
 
         # # 左足のスタンス距離比
         # l_stance = ((replace_model.bones["左足ＩＫ"].position - replace_model.bones["センター"].position).x()) - ((trace_model.bones["左足ＩＫ"].position - trace_model.bones["センター"].position).x() * xz_ratio)
@@ -408,12 +408,12 @@ def calc_leg_ik_ratio(trace_model, replace_model, is_print=True):
         # logger.debug("trace: %s", (trace_model.bones["左足ＩＫ"].position - trace_model.bones["センター"].position).x())
         # logger.debug("trace2: %s", ((trace_model.bones["左足ＩＫ"].position - trace_model.bones["センター"].position).x() * xz_ratio))
 
-        # # print("足のスタンス補正値: l: %s, r: %s" % (l_stance, r_stance))
+        # # utils.output_file_logger(file_logger, "足のスタンス補正値: l: %s, r: %s" % (l_stance, r_stance))
 
         return xz_ratio, y_ratio, {"左": 1, "右": 1}
 
     if is_print:
-        print("「足」「ひざ」「足首」「センター」のいずれかのボーンが不足しているため、足の長さの比率が測れませんでした")
+        utils.output_file_logger(file_logger, "「足」「ひざ」「足首」「センター」のいずれかのボーンが不足しているため、足の長さの比率が測れませんでした")
 
     return 1, 1, {"左": 1, "右": 1}
 
@@ -448,7 +448,7 @@ def compare_length(trace_model, replace_model):
             trace_bone_length = trace_model.bones[k].len
             replace_bone_length = replace_model.bones[k].len
 
-            # print("k: %s, len: %s" % (k, replace_model.bones[k].len) )
+            # utils.output_file_logger(file_logger, "k: %s, len: %s" % (k, replace_model.bones[k].len) )
 
             # 0割対策を入れて、倍率取得
             length = 1 if trace_bone_length == 0 else replace_bone_length / trace_bone_length
@@ -457,81 +457,8 @@ def compare_length(trace_model, replace_model):
             # length.setY(length.y() if np.isnan(length.y()) == False and np.isinf(length.y()) == False else 0)
             # length.setZ(length.z() if np.isnan(length.z()) == False and np.isinf(length.z()) == False else 0)
             # if k in ["右足ＩＫ親" ,"左足ＩＫ親", "右足ＩＫ" ,"左足ＩＫ", "右つま先ＩＫ" ,"左つま先ＩＫ", "センター", "グルーブ", "全ての親"]:
-            #     print("%s, 比率: %s, 生成元の長さ: %s, 変換先の長さ: %s" % (k, length, trace_bone_length, replace_bone_length))
+            #     utils.output_file_logger(file_logger, "%s, 比率: %s, 生成元の長さ: %s, 変換先の長さ: %s" % (k, length, trace_bone_length, replace_bone_length))
 
             lengths[k] = length
     
     return lengths
-
-# ------------------------------------------------------------
-# モデル間の目ボーンの高さを求める
-#
-#  シンメトリとは限らないので、左右の目の中間の高さ
-#  (高さの平均)を採用する。
-#  @todo 片目だけある場合をスマートに書けていない。
-# ------------------------------------------------------------
-def calc_eye_level(model: PmxModel) -> Union[float, None]:
-    if "左目" not in model.bones and "右目" not in model.bones:
-        # 両目共にボーンがない場合はNone
-        return None
-
-    left_eye_level = right_eye_level = 0 # type: float
-    if "左目" not in model.bones:
-        # 左目がなければ右目の値を採用できるか
-        if "右目" in model.bones:
-            left_eye_level = right_eye_level = model.bones["右目"].position.y()
-        # 両目がないパターンは最初にチェック済み
-    else :
-        # 素直に左目の値を採用できる
-        left_eye_level = model.bones["左目"].position.y()
-
-    if "右目" not in model.bones:
-        # 右目がなければ左目の値を採用する(ここに来る時は左目の値は確定している)
-        right_eye_level = left_eye_level
-    else :
-        # 素直に右目の値を採用できる
-        right_eye_level = model.bones["右目"].position.y()
-
-    # 右目左目の高さの平均を求める
-    # どちらか片方しかない場合は同値が入ってくるので略
-    eye_average_level = (left_eye_level + right_eye_level) / 2 # type: float
-
-    print("モデル: %s 両目の中間の高さ: %s" % (model.name, eye_average_level))
-
-    return eye_average_level
-
-# ------------------------------------------------------------
-# モデル間の目ボーンの高さ比率を求める
-# ------------------------------------------------------------
-def calc_eye_level_ratio(trace_model: PmxModel, replace_model: PmxModel) -> Union[float, None]:
-    replace_eye_level = calc_eye_level(replace_model) # type: float
-    trace_eye_level = calc_eye_level(trace_model) # type: float
-
-    # 両モデルまたは片方に目ボーンがない場合は倍率を求められない
-    if replace_eye_level is None or trace_eye_level is None:
-        print("どちらかのモデルに目ボーンがないので目線での高さの調節ができません")
-        return None
-
-    # Y比率(目ボーン中間の高さ比率)
-    eye_level_ratio = replace_eye_level / trace_eye_level # type: float
-
-    print("目の高さ比率: %s" % eye_level_ratio)
-
-    return eye_level_ratio
-
-# ------------------------------------------------------------
-# モデル間の頭ボーンの高さ比率を求める
-# ------------------------------------------------------------
-def calc_head_ratio(trace_model, replace_model) -> float:
-    if "頭" not in trace_model.bones or "頭" not in replace_model.bones:
-        # 頭ボーンがない場合は倍率を求められない
-        return None
-
-    # Y比率(頭ボーンのY差)
-    replace_head_height = replace_model.bones["頭"].position.y() # type: float
-    trace_head_height = trace_model.bones["頭"].position.y() # type: float
-    y_ratio = replace_head_height / trace_head_height #type: float
-
-    logger.debug("y_ratio replace_head_height: %s, trace_head_height: %s", replace_head_height, trace_head_height)
-
-    return y_ratio

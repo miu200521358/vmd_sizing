@@ -4,6 +4,7 @@
 import re
 import logging
 import copy
+import os
 from datetime import datetime
 from math import atan2, acos, asin, cos, sin, degrees, isnan, isclose, sqrt, pi, isinf, radians
 from statistics import median, mean
@@ -58,25 +59,41 @@ def create_custom_logger(name, handler):
     return new_logger
 
 # ログを生成する
-def create_error_file_logger(motion, trace_model, replace_model, output_vmd_path):
-    global loggers
+def create_file_logger(motion, trace_model, replace_model, output_vmd_path):
+    file_path = re.sub(r'\.vmd$', ".log", output_vmd_path)
+    logger.debug("file_path: %s", file_path)
+    file_handler = logging.FileHandler(file_path)
 
-    error_path = re.sub(r'\.vmd$', ".log", output_vmd_path)
-    logger.debug("error_path: %s", error_path)
-    error_file_handler = logging.FileHandler(error_path)
+    file_logger = create_custom_logger("VmdSizing", file_handler)
 
-    error_file_logger = create_custom_logger("VmdSizingError", error_file_handler)
-    error_file_logger.debug("モーション: %s" , motion.path)
-    error_file_logger.debug("作成元: %s" , trace_model.path)
-    error_file_logger.debug("変換先: %s" , replace_model.path)
+    return file_logger
 
-    return error_file_logger
+def output_file_logger(file_logger, txt, level=logging.INFO):
+    is_print=False
 
-def close_error_file_logger(error_file_logger, error_file_handler):
-    if error_file_logger:
+    if level >= logging.DEBUG:
+        file_logger.debug(txt)
+
+    if level >= logging.INFO:
+        if is_print:
+            print(txt)
+        file_logger.info(txt)
+
+    if level >= logging.WARNING:
+        if is_print:
+            print(txt)
+        file_logger.warning(txt)
+
+    if level >= logging.ERROR:
+        if is_print:
+            print(txt)
+        file_logger.error(txt)
+
+def close_file_logger(file_logger, error_file_handler):
+    if file_logger:
         error_file_handler.close()
-        error_file_logger.removeHandler(error_file_handler)
-    error_file_logger = None
+        file_logger.removeHandler(error_file_handler)
+    file_logger = None
 
 # 指定されたフレームより前のキーを返す
 def get_prev_bf(frames, bone_name, frameno):
@@ -243,7 +260,7 @@ def calc_split_qq(target_qq, bone_name):
 
     return part_x_qq, part_y_qq, part_z_qq, part_x_degree, part_y_degree, part_z_degree
 
-# 処理対称軸から余計な回転量を抽出する
+# 処理対象軸から余計な回転量を抽出する
 def calc_delegate_extra_qq(fno, bone_name, target_qq, target_axis, local_axis):
     # 回転角度
     target_degree = degrees(2 * acos(min(1, max(-1, target_qq.scalar()))))
@@ -475,85 +492,129 @@ def split_qq_2_xyz(fno, bone_name, qq, global_x_axis):
 
     y_qq = calc_matrix2qq(mat_y1 * mat_y2.inverted()[0])
 
+    # X成分だけ取り出す -----------
+
+    # # X成分の捻れが混入したので、XY回転からYZ回転を取り出すことでXキャンセルをかける。
+    # mat_x1 = QMatrix4x4()
+    # mat_x1.rotate(qq)
+
+    # mat_x2 = QMatrix4x4()
+    # mat_x2.rotate(y_qq)
+
+    # mat_x3 = QMatrix4x4()
+    # mat_x3.rotate(z_qq)
+
+    # x_qq = calc_matrix2qq(mat_x1 * mat_x2.inverted()[0] * mat_x3.inverted()[0])
+
     return x_qq, y_qq, z_qq, yz_qq
 
 # qqを捩りの軸に合わせて変換
-def convert_twist_qq(fno, bone_name, from_qq, to_qq, from_x_axis, to_x_axis):
-    logger.info("fno: %s, %s, from_qq: %s", fno, bone_name, from_qq)
-    logger.info("fno: %s, %s, from_euler: %s", fno, bone_name, from_qq.toEulerAngles())
+def convert_twist_qq(fno, bone_name, from_qq, to_qq, from_x_axis, to_x_axis, file_logger):
+    output_file_logger(file_logger, "fno: {fno}, {bone_name}, from_qq: {from_qq}".format(fno=fno, bone_name=bone_name, from_qq=from_qq))
+    output_file_logger(file_logger, "fno: {fno}, {bone_name}, from_euler: {from_qq}".format(fno=fno, bone_name=bone_name, from_qq=from_qq.toEulerAngles()))
     
-    # 逆回転の場合、逆値
-    axis_sign = -1 if (from_qq.y() > 0) else 1
+    from_degree = degrees(2 * acos(min(1, max(-1, from_qq.scalar()))))
 
-    from_degree = degrees(2 * acos(min(1, max(-1, from_qq.scalar())))) * axis_sign
+    if from_qq.scalar() < 0:
+        from_degree = -from_degree
+        output_file_logger(file_logger, "fno: {fno}, {bone_name}, after1 from_qq: qs: {qs}, qx: {qx}, ax: {ax}, d: {d}".format(fno=fno, bone_name=bone_name, qs=from_qq.scalar(), qx=from_qq.x(), ax=to_x_axis.x(), d=from_degree))
 
-    logger.info("fno: %s, %s, from_degree: %s", fno, bone_name, from_degree)
+    if (from_qq.x() < 0 and to_x_axis.x() > 0) or (from_qq.x() > 0 and to_x_axis.x() < 0):
+        from_degree = -from_degree
+        output_file_logger(file_logger, "fno: {fno}, {bone_name}, after2 from_qq: qs: {qs}, qx: {qx}, ax: {ax}, d: {d}".format(fno=fno, bone_name=bone_name, qs=from_qq.scalar(), qx=from_qq.x(), ax=to_x_axis.x(), d=from_degree))
+
+    if fno == 312:
+        from_degree = from_degree + 45
+
+    # # 回転補正
+    # if from_qq.x() > 0 and to_x_axis.x() < 0:
+    #     from_qq.setX(from_qq.x() * -1)
+    #     from_qq.setScalar(from_qq.scalar() * -1)
+    #     logger.info("fno: %s, %s, [0] from_qq: %s", fno, bone_name, from_qq)
+    # elif from_qq.x() < 0 and to_x_axis.x() > 0:
+    #     from_qq.setX(from_qq.x() * -1)
+    #     from_qq.setScalar(from_qq.scalar() * -1)
+    #     logger.info("fno: %s, %s, [1] from_qq: %s", fno, bone_name, from_qq)
+    # # 回転補正（コロン式ミクさん等軸反転パターン）
+    # elif from_qq.x() < 0 and to_x_axis.x() > 0:
+    #     from_qq.setX(from_qq.x() * -1)
+    #     from_qq.setScalar(from_qq.scalar() * -1)
+    #     logger.info("fno: %s, %s, [2] from_qq: %s", fno, bone_name, from_qq)
+    # elif from_qq.x() > 0 and to_x_axis.x() < 0:
+    #     from_qq.setX(from_qq.x() * -1)
+    #     from_qq.setScalar(from_qq.scalar() * -1)
+    #     logger.info("fno: %s, %s, [3] from_qq: %s", fno, bone_name, from_qq)
+
+    # from_degree = degrees(2 * acos(min(1, max(-1, from_qq.scalar()))))
+
+    output_file_logger(file_logger, "fno: {fno}, {bone_name}, from_degree: {d}".format(fno=fno, bone_name=bone_name, d=from_degree))
     to_result_qq = QQuaternion.fromAxisAndAngle(to_x_axis, from_degree)
 
-    return to_qq * to_result_qq
-
-    # # 軸周りqq
-    # from_degree = degrees(2 * acos(min(1, max(-1, from_qq.scalar()))))
-    # from2to_qq = QQuaternion.fromAxisAndAngle(to_x_axis, from_degree)
-    # # 軸周りベクトルとの内積
-    # dot = QQuaternion.dotProduct(from_qq, from2to_qq)
-    # # 角度
-    # theta = acos(min(1, max(-1, dot)))
-    # # 任意軸周りの回転量
-    # extra_degree = degrees(theta)
-    # logger.info("fno: %s, from: %s, extra: %s", fno, from_degree, extra_degree)
-
-    # to_extra_qq = QQuaternion.fromAxisAndAngle(to_x_axis, extra_degree)
-
-    # return to_qq * to_extra_qq
+    return to_qq * to_result_qq, from_degree
 
 # 回転を委譲する
-def delegate_twist_qq(fno, bone_name, original_from_qq, from_qq, to_qq, from_x_axis, to_x_axis):
-    # 委譲先初期向き
-    to_initial_axis = to_x_axis
+def delegate_twist_qq(fno, bone_name, original_from_qq, from_qq, original_to_qq, to_qq, twist_qq, twist_degree, from_x_axis, to_x_axis, twist_x_axis, file_logger):
     # 委譲先ローカル座標系（ボーンベクトルが（1，0，0）になる空間）の向き
     to_local_axis = QVector3D(1, 0, 0)
 
-    to_global2local_qq, _ = calc_match_qq( to_initial_axis, to_local_axis )
+    # 委譲元初期向きからローカル軸への変換
+    from_global2local_qq, _ = calc_match_qq( from_x_axis, to_local_axis )
+    twist_global2from_global_qq, _ = calc_match_qq( twist_x_axis, from_x_axis )
 
-    # 委譲元の回転を、委譲先のローカル軸に変換
-
-    # オリジナル回転 - ローカル座標のX軸回転を算出
+    # 元々の委譲先回転量 ----------------
     mat_of1 = QMatrix4x4()
     mat_of1.rotate(original_from_qq)
 
     mat_of2 = QMatrix4x4()
-    mat_of2.rotate(to_global2local_qq)
-
+    mat_of2.rotate(twist_global2from_global_qq)
+    
+    # 委譲元の回転を、委譲先のローカル軸に変換
+    # オリジナル回転 - ローカル座標のX軸回転を算出
     from_original_2_to_local_vec = mat_of1 * mat_of2 * to_local_axis
-    from_original_2_to_local_vec.setX(0)
+    # from_original_2_to_local_vec.setX(0)
     from_original_2_to_local_vec.normalize()
 
-    # 変換後回転 - ローカル座標のX軸回転を算出
-    mat_f1 = QMatrix4x4()
-    mat_f1.rotate(from_qq)
+    # 変換後の委譲先回転量 ----------------
+    mat_af1 = QMatrix4x4()
+    mat_af1.rotate(from_qq)
 
-    mat_f2 = QMatrix4x4()
-    mat_f2.rotate(to_global2local_qq)
+    mat_af2 = QMatrix4x4()
+    mat_af2.rotate(twist_global2from_global_qq)
 
-    mat_f3 = QMatrix4x4()
-    mat_f3.rotate(to_qq)
-
-    from_result_2_to_local_vec = (mat_f3 * mat_f2) * (mat_f1 * mat_f2) * to_local_axis
-    from_result_2_to_local_vec.setX(0)
+    # 委譲元の回転を、委譲先のローカル軸に変換
+    # オリジナル回転 - ローカル座標のX軸回転を算出
+    from_result_2_to_local_vec = mat_af1 * mat_af2 * to_local_axis
+    # from_result_2_to_local_vec.setX(0)
     from_result_2_to_local_vec.normalize()
 
-    logger.info("fno: %s, %s to_org: %s", fno, bone_name, from_original_2_to_local_vec)
-    logger.info("fno: %s, %s to_res: %s", fno, bone_name, from_result_2_to_local_vec)
+    output_file_logger(file_logger, "fno: {fno}, {bone_name}, to_org: {to_org}".format(fno=fno, bone_name=bone_name, to_org=from_original_2_to_local_vec))
+    output_file_logger(file_logger, "fno: {fno}, {bone_name}, to_res: {to_res}".format(fno=fno, bone_name=bone_name, to_res=from_result_2_to_local_vec))
 
     diff_qq, diff_degree = calc_match_qq(from_result_2_to_local_vec, from_original_2_to_local_vec)
+    output_file_logger(file_logger, "fno: {fno}, {bone_name}, diff_qq: {diff_qq}".format(fno=fno, bone_name=bone_name, diff_qq=diff_qq))
+    output_file_logger(file_logger, "fno: {fno}, {bone_name}, diff_degree: {diff_degree}".format(fno=fno, bone_name=bone_name, diff_degree=diff_degree))
 
-    logger.info("fno: %s, %s diff: %s, %s", fno, bone_name, diff_degree, diff_qq.toEulerAngles())
+    output_file_logger(file_logger, "fno: {fno}, {bone_name}, twist_qq: {twist_qq}".format(fno=fno, bone_name=bone_name, twist_qq=twist_qq))
+    output_file_logger(file_logger, "fno: {fno}, {bone_name}, twist_degree: {twist_degree}".format(fno=fno, bone_name=bone_name, twist_degree=twist_degree))
+
+    # elbow_twist_degree = diff_degree
+    if diff_qq.scalar() < 0:
+        diff_degree = -diff_degree
+        output_file_logger(file_logger, "fno: {fno}, {bone_name}, after1 reverse: qs: {qs}, qx: {qx}, ax: {ax}, d: {d}".format(fno=fno, bone_name=bone_name, qs=diff_qq.scalar(), qx=diff_qq.x(), ax=to_x_axis.x(), d=diff_degree))
+
+    if (diff_qq.x() < 0 and to_x_axis.x() > 0) or (diff_qq.x() > 0 and to_x_axis.x() < 0):
+        diff_degree = -diff_degree
+        output_file_logger(file_logger, "fno: {fno}, {bone_name}, after2 reverse: qs: {qs}, qx: {qx}, ax: {ax}, d: {d}".format(fno=fno, bone_name=bone_name, qs=diff_qq.scalar(), qx=diff_qq.x(), ax=to_x_axis.x(), d=diff_degree))
+
+    # if twist_degree < 45:
+    #     twist_degree = -twist_degree
+
+    output_file_logger(file_logger, "fno: {fno}, {bone_name}, after diff_degree: {diff_degree}".format(fno=fno, bone_name=bone_name, diff_degree=diff_degree))
 
     # 委譲先Xの回転に変換
-    from_2_to_qq = QQuaternion.fromAxisAndAngle(to_x_axis, diff_qq.toEulerAngles().x())
+    twist_result_qq = QQuaternion.fromAxisAndAngle(twist_x_axis, diff_degree)
 
-    return to_qq * from_2_to_qq 
+    return twist_qq * twist_result_qq
 
 # 子の回転を親に分散させる
 # https://ch.nicovideo.jp/HOPHEAD/blomaga/ar805999 MMDではYXZ型

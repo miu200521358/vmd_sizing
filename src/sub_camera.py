@@ -116,7 +116,7 @@ RIGHT_ARM_BONE_NAMES = ["右肩", "右腕", "右ひじ", "右手首", "右親指
 #
 # カメラ縮尺処理を実行
 # 
-def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, camera_motion, camera_y_offset):
+def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, camera_motion, camera_y_offset, file_logger):
 
     if not camera_motion:
         # カメラモーションが未指定の場合、処理しない
@@ -126,14 +126,15 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
         # カメラフレームがなかったら処理しない
         return True
 
-    print("■■ カメラ補正 -----------------")
-    print("カメラ作成元モデル: %s" % trace_model.name)
+    utils.output_file_logger(file_logger, "■■ カメラ補正 -----------------")
+    utils.output_file_logger(file_logger, "カメラモーション: {motion}".format(motion=os.path.basename(motion.path)))
+    utils.output_file_logger(file_logger, "カメラモデル: {trace_model}".format(trace_model=os.path.basename(trace_model.path)))
 
     # 足IKの比率
     # leg_xz_ratio, leg_y_ratio, _ = sub_move.calc_leg_ik_ratio(trace_model, replace_model)
     
     # 身体の比率
-    body_ratio, head_ratio, head_ratio_small, org_face_length, replace_head_ratio = calc_body_head_ratio(trace_model, replace_model, camera_y_offset)
+    body_ratio, head_ratio, head_ratio_small, org_face_length, replace_head_ratio = calc_body_head_ratio(trace_model, replace_model, camera_y_offset, file_logger)
 
     # arm_ratio = calc_arm_ratio(trace_model, replace_model)
 
@@ -148,8 +149,8 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
     }
 
     # 情報提供
-    print("カメラ補正値 全長: %s(Yオフセット: %s), 頭: %s, 変換先頭身: %s" % (body_ratio, camera_y_offset, head_ratio, replace_head_ratio))
-    # print("　足XZ: %s, 足Y: %s" % (leg_xz_ratio, leg_y_ratio))
+    utils.output_file_logger(file_logger, "カメラ補正値 全長: %s(Yオフセット: %s), 頭: %s, 変換先頭身: %s" % (body_ratio, camera_y_offset, head_ratio, replace_head_ratio))
+    # utils.output_file_logger(file_logger, "　足XZ: %s, 足Y: %s" % (leg_xz_ratio, leg_y_ratio))
 
     # 作成元モデル：全身のリンク
     org_body_links, org_body_indexes, org_link_names = create_body_links(trace_model, 0)
@@ -189,7 +190,7 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
             # 実際にコピーするのは、サイジングした位置情報
             cf.position = copy.deepcopy(camera_motion.cameras[cf_idx - 1].position)
             cf.length = copy.deepcopy(camera_motion.cameras[cf_idx - 1].length)
-            print("%sフレーム目 前位置・距離コピー" % (cf.frame))
+            utils.output_file_logger(file_logger, "%sフレーム目 前位置・距離コピー" % (cf.frame))
 
             continue
 
@@ -205,7 +206,7 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
         # 作成元モデルのどのボーンが最も注視点に近いか
         org_nearest_bone_name, org_nearest_global_pos, org_nearest_project_pos, \
             org_bottom_bone_name, org_bottom_global_pos, org_bottom_project_pos, \
-            org_top_bone_name, org_top_global_pos, org_top_project_pos = calc_nearest_bone(org_body_global_3ds, ratio_dict, replace_head_ratio, cf, camera_ratios)
+            org_top_bone_name, org_top_global_pos, org_top_project_pos = calc_nearest_bone(org_body_global_3ds, ratio_dict, replace_head_ratio, cf, camera_ratios, file_logger)
 
         # 作成元モデルの最も近いボーン名と同じボーンの位置を、変換先モデルから取得する
         rep_nearest_global_pos = create_bone_global_3ds(replace_model, motion.frames, rep_body_links, cf.frame, rep_link_names, org_nearest_bone_name)
@@ -217,7 +218,7 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
             org_bottom_bone_name, org_bottom_global_pos, org_bottom_project_pos, \
             org_top_bone_name, org_top_global_pos, org_top_project_pos, \
             rep_nearest_global_pos, rep_bottom_global_pos, rep_top_global_pos, ratio_dict, org_face_length, replace_head_ratio, \
-            org_body_links, org_body_indexes, org_link_names, rep_body_links, rep_body_indexes, rep_link_names, cf, camera_ratios )
+            org_body_links, org_body_indexes, org_link_names, rep_body_links, rep_body_indexes, rep_link_names, cf, camera_ratios, file_logger )
 
         # カメラ倍率を保持
         camera_ratios.append({"frame": cf.frame, "ratio": camera_ratio, "vertical_type": vertical_type, "nearest": org_nearest_bone_name})
@@ -229,7 +230,7 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
             # 変換先モデルのどのボーンが最も注視点に近いか
             rep_nearest_bone_name, rep_nearest_global_pos, rep_nearest_project_pos, \
                 rep_bottom_bone_name, rep_bottom_global_pos, rep_bottom_project_pos, \
-                rep_top_bone_name, rep_top_global_pos, rep_top_project_pos = calc_nearest_bone(rep_body_global_3ds, ratio_dict, replace_head_ratio, cf, camera_ratios)
+                rep_top_bone_name, rep_top_global_pos, rep_top_project_pos = calc_nearest_bone(rep_body_global_3ds, ratio_dict, replace_head_ratio, cf, camera_ratios, file_logger)
 
         logger.debug("[after] cf.frame: %s", cf.frame )
         logger.debug("[after] cf.position: %s", cf.position )
@@ -237,13 +238,13 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
         logger.debug("[after] cf.length: %s", cf.length )
 
         # if cf.frame // 1000 > prev_log_cnt:
-        #     print("カメラ調整: %s" % cf.frame)
+        #     utils.output_file_logger(file_logger, "カメラ調整: %s" % cf.frame)
         #     prev_log_cnt = cf.frame // 1000
 
         # if cf.frame > 540:
         #     break
 
-    print("カメラ調整終了")
+    utils.output_file_logger(file_logger, "カメラ調整終了")
 
     return True
 
@@ -273,14 +274,14 @@ def calc_arm_ratio(trace_model, replace_model):
     return 1
 
 # 身体の比率算出
-def calc_body_head_ratio(trace_model, replace_model, camera_y_offset):
-    trace_head_ratio, trace_face_length, trace_total_height, trace_head_height, trace_eye_length = get_head_height(trace_model, 0, "作成元モデル")
+def calc_body_head_ratio(trace_model, replace_model, camera_y_offset, file_logger):
+    trace_head_ratio, trace_face_length, trace_total_height, trace_head_height, trace_eye_length = get_head_height(trace_model, 0, "作成元モデル", file_logger)
     logger.debug("trace_head_ratio: %s", trace_head_ratio)
     logger.debug("trace_face_length: %s", trace_face_length)
     logger.debug("trace_total_height: %s", trace_total_height)
     logger.debug("trace_head_height: %s", trace_head_height)
 
-    replace_head_ratio, replace_face_length, replace_total_height, replace_head_height, replace_eye_length = get_head_height(replace_model, camera_y_offset, "変換先モデル")
+    replace_head_ratio, replace_face_length, replace_total_height, replace_head_height, replace_eye_length = get_head_height(replace_model, camera_y_offset, "変換先モデル", file_logger)
     logger.debug("replace_head_ratio: %s", replace_head_ratio)
     logger.debug("replace_face_length: %s", replace_face_length)
     logger.debug("replace_total_height: %s", replace_total_height)
@@ -314,18 +315,18 @@ def calc_body_head_ratio(trace_model, replace_model, camera_y_offset):
     # neck_ratio = replace_neck_height / trace_neck_height
 
     # 情報提供
-    print("作成元モデル 全長: %s, 頭身: %s, 顔の大きさ: %s" % (trace_total_height, trace_head_ratio, trace_face_length))
-    print("変換先モデル 全長: %s, 頭身: %s, 顔の大きさ: %s" % (replace_total_height, replace_head_ratio, replace_face_length))
+    utils.output_file_logger(file_logger, "作成元モデル 全長: %s, 頭身: %s, 顔の大きさ: %s" % (trace_total_height, trace_head_ratio, trace_face_length))
+    utils.output_file_logger(file_logger, "変換先モデル 全長: %s, 頭身: %s, 顔の大きさ: %s" % (replace_total_height, replace_head_ratio, replace_face_length))
 
     return body_ratio, head_ratio, head_ratio_small, trace_face_length, replace_head_ratio
 
 # 頭身取得
-def get_head_height(model, camera_y_offset, model_type):
+def get_head_height(model, camera_y_offset, model_type, file_logger):
     if "頭" in model.bones and "首" in model.bones:
         # 頭の頂点を取得する
         head_tail_pos, head_tail_vertex = model.get_head_upper_vertex_position()
 
-        print("%s: 頭頂頂点index: %s, pos: %s, %s, %s" % (model_type, head_tail_vertex, head_tail_pos.x(), head_tail_pos.y(), head_tail_pos.z()) )
+        utils.output_file_logger(file_logger, "%s: 頭頂頂点index: %s, pos: %s, %s, %s" % (model_type, head_tail_vertex, head_tail_pos.x(), head_tail_pos.y(), head_tail_pos.z()) )
 
         # 頭の頂点をオフセット調整する
         head_tail_pos.setY(head_tail_pos.y() + camera_y_offset)
@@ -492,7 +493,7 @@ def create_bone_global_3ds(model, motion_frames, body_links, frame, link_names, 
     return QVector3D()
 
 # 最も近いボーン名とボーン位置を返す
-def calc_nearest_bone(body_global_3ds, ratio_dict, replace_head_ratio, cf, camera_ratios):
+def calc_nearest_bone(body_global_3ds, ratio_dict, replace_head_ratio, cf, camera_ratios, file_logger):
 
     # 前回直近ボーン
     past_nearest_bone_name = None
@@ -801,7 +802,7 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
     org_bottom_bone_name, org_bottom_global_pos, org_bottom_project_pos, \
     org_top_bone_name, org_top_global_pos, org_top_project_pos, \
     rep_nearest_global_pos, rep_bottom_global_pos, rep_top_global_pos, ratio_dict, org_face_length, replace_head_ratio, \
-    org_body_links, org_body_indexes, org_link_names, rep_body_links, rep_body_indexes, rep_link_names, cf, camera_ratios ):
+    org_body_links, org_body_indexes, org_link_names, rep_body_links, rep_body_indexes, rep_link_names, cf, camera_ratios, file_logger ):
     
     # org_cf = copy.deepcopy(cf)
 
@@ -1203,7 +1204,7 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
     #     QVector3D.dotProduct(org_cf.position.normalized(), org_top_global_pos.normalized()),QVector3D.dotProduct(cf.position.normalized(), rep_top_global_pos.normalized()), \
     #     vertical_type)
 
-    print("{0}フレーム目 縮尺比率: {1:02.3f}, 注視点: {2}, 上辺: {3}, 下辺: {4}, 調整({5}): x={6:02.3f}, y={7:02.3f}, z={8:02.3f}, l={9:02.3f}".format(cf.frame, ratio, org_nearest_bone_name, org_top_bone_name, org_bottom_bone_name, vertical_type, offset.x(), offset.y(), offset.z(), length_offset))
+    utils.output_file_logger(file_logger, "{0}フレーム目 縮尺比率: {1:02.3f}, 注視点: {2}, 上辺: {3}, 下辺: {4}, 調整({5}): x={6:02.3f}, y={7:02.3f}, z={8:02.3f}, l={9:02.3f}".format(cf.frame, ratio, org_nearest_bone_name, org_top_bone_name, org_bottom_bone_name, vertical_type, offset.x(), offset.y(), offset.z(), length_offset))
 
     return ratio, vertical_type
 

@@ -15,41 +15,41 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 
 is_print1 = True
 
-def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, is_alternative_model, is_no_delegate, error_file_logger, test_param):
+def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, is_alternative_model, is_no_delegate, file_logger, test_param):
     if motion.motion_cnt > 0:        
         logger.info("test_param: %s", test_param)
 
         if is_alternative_model == False:
             # センタースタンス補正
-            adjust_center_stance(motion, trace_model, replace_model, org_motion_frames)
+            adjust_center_stance(motion, trace_model, replace_model, org_motion_frames, file_logger)
 
         if trace_model.can_upper_sizing and replace_model.can_upper_sizing and is_alternative_model == False:
             # 上半身補正
-            adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger, test_param)
+            adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, file_logger, test_param)
 
         if trace_model.can_arm_sizing and replace_model.can_arm_sizing:
         #     if is_alternative_model == False:
         #         # # 肩補正
-        #         # adjust_shoulder_stance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger, test_param)
+        #         # adjust_shoulder_stance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, file_logger, test_param)
         #         # 腕補正
         #         adjust_arm_stance(motion, trace_model, replace_model, org_motion_frames, test_param)
         #     else:
         #         # 腕補正
         #         adjust_arm_stance(motion, trace_model, replace_model, org_motion_frames, test_param)
             
-            adjust_arm_stance(motion, trace_model, replace_model, org_motion_frames, test_param)
+            adjust_arm_stance(motion, trace_model, replace_model, org_motion_frames, file_logger, test_param)
 
             if is_no_delegate == False:
                 # 捩り分散
-                convert_smooth.spread_rotation(motion, replace_model, True, test_param)
+                convert_smooth.spread_rotation(motion, replace_model, True, file_logger, test_param)
 
     return True
 
-def adjust_center_stance(motion, trace_model, replace_model, org_motion_frames):
+def adjust_center_stance(motion, trace_model, replace_model, org_motion_frames, file_logger):
     # -----------------------------------------------------------------
     # センター位置補正
 
-    print("■■ センタースタンス補正 -----------------")
+    utils.output_file_logger(file_logger, "■■ センタースタンス補正 -----------------")
 
     # センター調整に必要なボーン群
     center_target_bones = ["センター", "上半身", "下半身", "左足ＩＫ", "右足ＩＫ", "左足", "右足"]
@@ -92,7 +92,7 @@ def adjust_center_stance(motion, trace_model, replace_model, org_motion_frames):
             "org_ik_rate": org_ik_length, "rep_ik_length": rep_ik_length}
 
         # 足IKのXYZの比率
-        xz_ratio, y_ratio, leg_ik_stance = sub_move.calc_leg_ik_ratio(trace_model, replace_model, False)
+        xz_ratio, y_ratio, leg_ik_stance = sub_move.calc_leg_ik_ratio(trace_model, replace_model, file_logger, False)
 
         for bf in motion.frames["センター"]:
             if bf.key == True:
@@ -103,7 +103,7 @@ def adjust_center_stance(motion, trace_model, replace_model, org_motion_frames):
                 bf.position += calc_center_trunk_offset(org_motion_frames, motion, trace_model, replace_model, bf, xz_ratio, center_trunk_links)
                 utils.output_message("f: %s, ** ** ** : %s" % (bf.frame, bf.position))
 
-        print("センタースタンス補正終了")
+        utils.output_file_logger(file_logger, "センタースタンス補正終了")
 
 
 def calc_center_offset(org_motion_frames, motion, trace_model, replace_model, center_bf, xz_ratio, center_ik_links):
@@ -299,11 +299,11 @@ def calc_center_trunk_offset(org_motion_frames, motion, trace_model, replace_mod
     return center_trunk_offset
 
 # ------------------------
-def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger, test_param):
+def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, file_logger, test_param):
     # -----------------------------------------------------------------
     # 上半身の角度補正
 
-    print("■■ 上半身スタンス補正 -----------------")
+    utils.output_file_logger(file_logger, "■■ 上半身スタンス補正 -----------------")
 
     # 上半身調整に必要なボーン群
     upper_target_bones = ["上半身", "頭", "首", "左腕", "右腕"]
@@ -334,18 +334,18 @@ def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org
 
         rep_upper_initial_slope_qq = QQuaternion.fromDirection(rep_upper_slope, rep_upper_slope_cross)
 
-        # print("up: %s" % QVector3D.crossProduct(org_target_slope, rep_target_slope))
+        # utils.output_file_logger(file_logger, "up: %s" % QVector3D.crossProduct(org_target_slope, rep_target_slope))
 
         # 準備（細分化）
         prepare_split_stance(motion, "上半身")
 
-        print("上半身スタンス準備終了")
+        utils.output_file_logger(file_logger, "上半身スタンス準備終了")
 
         for bf in motion.frames["上半身"]:
             if bf.key == True:
                 calc_rotation_stance(org_motion_frames, motion, trace_model, org_upper_links, org_upper_indexes, org_head_links, org_head_indexes, org_arm_links, org_arm_indexes, \
                     replace_model, rep_upper_links, rep_upper_indexes, rep_head_links, rep_head_indexes, rep_arm_links, rep_arm_indexes, "", "上半身", "上半身", "頭", "上半身", \
-                    rep_upper_initial_slope_qq, is_error_outputed, error_file_logger, output_vmd_path, bf, define_is_rotation_no_check_upper, \
+                    rep_upper_initial_slope_qq, is_error_outputed, file_logger, output_vmd_path, bf, define_is_rotation_no_check_upper, \
                     define_calc_up_from_upper, define_calc_up_to_upper, 0.9, QVector3D(0, 1, 1), True)
 
         # 子の角度調整
@@ -353,7 +353,7 @@ def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org
         # adjust_rotation_by_parent(org_motion_frames, motion, trace_model, replace_model, "右肩", "上半身", test_param)
         # adjust_rotation_by_parent(org_motion_frames, motion, trace_model, replace_model, "右肩", "上半身", test_param)
 
-        print("上半身スタンス補正終了")
+        utils.output_file_logger(file_logger, "上半身スタンス補正終了")
 
         # 上半身2調整に必要なボーン群
         upper2_target_bones = ["上半身", "上半身2", "頭", "首", "左腕", "右腕"]
@@ -412,13 +412,13 @@ def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org
             # 準備
             prepare_split_stance(motion, "上半身2")
 
-            print("上半身2スタンス準備終了")
+            utils.output_file_logger(file_logger, "上半身2スタンス準備終了")
 
             for bf in motion.frames["上半身2"]:
                 if bf.key == True:
                     calc_rotation_stance(org_motion_frames, motion, trace_model, org_head_links, org_head_indexes, org_head_links, org_head_indexes, org_arm_links, org_arm_indexes, \
                         replace_model, rep_head_links, rep_head_indexes, rep_head_links, rep_head_indexes, rep_arm_links, rep_arm_indexes, "", "上半身2", "上半身2", "頭", "上半身2", \
-                        rep_upper2_initial_slope_qq, is_error_outputed, error_file_logger, output_vmd_path, bf, define_is_rotation_no_check_upper, \
+                        rep_upper2_initial_slope_qq, is_error_outputed, file_logger, output_vmd_path, bf, define_is_rotation_no_check_upper, \
                         define_calc_up_from_upper2, define_calc_up_to_upper2, 0.9, QVector3D(0, 1, 1), True)
 
             # # 子の角度調整
@@ -426,7 +426,7 @@ def adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org
             # adjust_rotation_by_parent(org_motion_frames, motion, trace_model, replace_model, "右肩", "上半身2", test_param)
             # adjust_rotation_by_parent(org_motion_frames, motion, trace_model, replace_model, "左肩", "上半身2", test_param)
 
-            print("上半身2スタンス補正終了")
+            utils.output_file_logger(file_logger, "上半身2スタンス補正終了")
 
 # 定義: 回転チェック不要条件（上半身）
 def define_is_rotation_no_check_upper(rep_from_slope):
@@ -546,19 +546,19 @@ def define_calc_up_to_upper2(org_rot_motion_frames, rep_rot_motion_frames, trace
     #     rep_initial_slope_qq, bf, diff_fill_ratio, is_x_diff_shoulder, org_rot_direction_qq, rep_rot_direction_qq, rep_front_base_pos, org_front_base_pos, arm_diff_length, test_param, "右")
 
 # ------------------------
-def adjust_shoulder_stance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger, test_param):
+def adjust_shoulder_stance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, file_logger, test_param):
     # -----------------------------------------------------------------
     # 肩の角度補正
 
-    print("■■ 肩スタンス補正 -----------------")
+    utils.output_file_logger(file_logger, "■■ 肩スタンス補正 -----------------")
 
-    adjust_shoulder_stance_direction(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger, "左", test_param)
-    adjust_shoulder_stance_direction(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger, "右", test_param)
+    adjust_shoulder_stance_direction(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, file_logger, "左", test_param)
+    adjust_shoulder_stance_direction(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, file_logger, "右", test_param)
 
     adjust_rotation_by_parent(org_motion_frames, motion, trace_model, replace_model, "右腕", "右肩", test_param)
     adjust_rotation_by_parent(org_motion_frames, motion, trace_model, replace_model, "左腕", "左肩", test_param)
 
-def adjust_shoulder_stance_direction(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, error_file_logger, direction, test_param):
+def adjust_shoulder_stance_direction(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, file_logger, direction, test_param):
     # -----------------------------------------------------------------
     # 肩の角度補正
 
@@ -600,7 +600,7 @@ def adjust_shoulder_stance_direction(motion, trace_model, replace_model, output_
         # 準備（細分化）
         prepare_split_stance(motion, shoulder_name)
 
-        print("{0}スタンス準備終了".format(shoulder_name))
+        utils.output_file_logger(file_logger, "{0}スタンス準備終了".format(shoulder_name))
 
         # start_bf = utils.calc_bone_by_complement({}, "ルート", 0)
 
@@ -709,24 +709,24 @@ def adjust_shoulder_stance_direction(motion, trace_model, replace_model, output_
 
                 # calc_shoulder_rotation(org_motion_frames, motion, trace_model, org_neck_links, org_neck_indexes, org_shoulder_links, org_shoulder_indexes, org_arm_links, org_arm_indexes, \
                 #     replace_model, rep_neck_links, rep_neck_indexes, rep_shoulder_links, rep_shoulder_indexes, rep_arm_links, rep_arm_indexes, direction, "首", "肩", "腕", rot_bone_name, \
-                #     rep_initial_slope_qq, rep_initial_slope_qq_cross, is_error_outputed, error_file_logger, output_vmd_path, bf, 0.7, test_param)
+                #     rep_initial_slope_qq, rep_initial_slope_qq_cross, is_error_outputed, file_logger, output_vmd_path, bf, 0.7, test_param)
 
                 calc_rotation_stance(org_motion_frames, motion, trace_model, org_neck_links, org_neck_indexes, org_shoulder_links, org_shoulder_indexes, org_arm_links, org_arm_indexes, \
                     replace_model, rep_neck_links, rep_neck_indexes, rep_shoulder_links, rep_shoulder_indexes, rep_arm_links, rep_arm_indexes, direction, "首", "肩", "腕", rot_bone_name, \
-                    rep_initial_slope_qq, is_error_outputed, error_file_logger, output_vmd_path, bf, define_is_rotation_no_check_shoulder, define_calc_up_from_shoulder, \
+                    rep_initial_slope_qq, is_error_outputed, file_logger, output_vmd_path, bf, define_is_rotation_no_check_shoulder, define_calc_up_from_shoulder, \
                     define_calc_up_to_shoulder, 0.7, QVector3D(1, 1, 1), True, test_param)
 
-        print("{0}スタンス補正終了".format(shoulder_name))
+        utils.output_file_logger(file_logger, "{0}スタンス補正終了".format(shoulder_name))
 
 
 # 肩スタンス補正
 def calc_shoulder_rotation(org_motion_frames, motion, trace_model, org_base_links, org_base_indexes, org_shoulder_links, org_shoulder_indexes, org_arm_links, org_arm_indexes, \
     replace_model, rep_base_links, rep_base_indexes, rep_shoulder_links, rep_shoulder_indexes, rep_arm_links, rep_arm_indexes, direction, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
-    rep_initial_slope_qq, is_error_outputed, error_file_logger, output_vmd_path, bf, dot_limit, test_param):
+    rep_initial_slope_qq, is_error_outputed, file_logger, output_vmd_path, bf, dot_limit, test_param):
 
     calc_rotation_stance(org_motion_frames, motion, trace_model, org_base_links, org_base_indexes, org_shoulder_links, org_shoulder_indexes, org_arm_links, org_arm_indexes, \
         replace_model, rep_base_links, rep_base_indexes, rep_shoulder_links, rep_shoulder_indexes, rep_arm_links, rep_arm_indexes, direction, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
-        rep_initial_slope_qq, is_error_outputed, error_file_logger, output_vmd_path, bf, define_is_rotation_no_check_shoulder, define_calc_up_from_shoulder, define_calc_up_to_shoulder, dot_limit, QVector3D(1, 1, 1), True, test_param)
+        rep_initial_slope_qq, is_error_outputed, file_logger, output_vmd_path, bf, define_is_rotation_no_check_shoulder, define_calc_up_from_shoulder, define_calc_up_to_shoulder, dot_limit, QVector3D(1, 1, 1), True, test_param)
 
 # 定義: 回転チェック不要条件（肩）
 def define_is_rotation_no_check_shoulder(rep_from_slope):
@@ -847,7 +847,7 @@ def recalc_to_pos(org_rot_motion_frames, rep_rot_motion_frames, trace_model, org
 
 def calc_rotation_stance(org_motion_frames, motion, trace_model, org_base_links, org_base_indexes, org_target_links, org_target_indexes, org_arm_links, org_arm_indexes, \
     replace_model, rep_base_links, rep_base_indexes, rep_target_links, rep_target_indexes, rep_arm_links, rep_arm_indexes, direction_name, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, \
-    rep_initial_slope_qq, is_error_outputed, error_file_logger, output_vmd_path, bf, define_is_rotation_no_check, define_calc_up_from, define_calc_up_to, dot_limit, diff_fill_ratio, is_x_diff_shoulder, test_param=None):
+    rep_initial_slope_qq, is_error_outputed, file_logger, output_vmd_path, bf, define_is_rotation_no_check, define_calc_up_from, define_calc_up_to, dot_limit, diff_fill_ratio, is_x_diff_shoulder, test_param=None):
     target_from_bone_name = "{0}{1}".format(direction_name, from_bone_name)
     target_to_bone_name = "{0}{1}".format(direction_name, to_bone_name)
     is_print = False
@@ -1006,15 +1006,7 @@ def calc_rotation_stance(org_motion_frames, motion, trace_model, org_base_links,
             # 元にもあるキーである場合、内積チェック
             uad = abs(QQuaternion.dotProduct(from_rotation, org_bfs[0].rotation))
             if uad < dot_limit:
-                print("%sフレーム目%sスタンス補正失敗: 角度:%s, uad: %s" % (bf.frame, target_from_bone_name, from_rotation.toEulerAngles(), uad))
-
-                # 失敗時のみエラーログ出力
-                if not is_error_outputed:
-                    is_error_outputed = True
-                    if not error_file_logger:
-                        error_file_logger = utils.create_error_file_logger(motion, trace_model, replace_model, output_vmd_path)
-
-                error_file_logger.warning("%sフレーム目%sスタンス補正失敗: 角度:%s, uad: %s" , bf.frame, target_from_bone_name, from_rotation.toEulerAngles(), uad)
+                utils.output_file_logger(file_logger, "%sフレーム目%sスタンス補正失敗: 角度:%s, uad: %s" % (bf.frame, target_from_bone_name, from_rotation.toEulerAngles(), uad))
             else:
                 # 内積の差が小さい場合、回転適用
                 bf.rotation = from_rotation
@@ -1078,11 +1070,11 @@ def split_stance(motion, bone_name, prev_bf, bf, bf_idx):
         sub_arm_ik.split_complement(motion, next_x1v, next_y1v, next_x2v, next_y2v, prev_bf, bf, fillbf, x1_idxs, y1_idxs, x2_idxs, y2_idxs, bone_name, ",")
 
 
-def adjust_arm_stance(motion, trace_model, replace_model, org_motion_frames, test_param):
+def adjust_arm_stance(motion, trace_model, replace_model, org_motion_frames, file_logger, test_param):
     # -----------------------------------------------------------------
     # 腕の角度補正
                 
-    print("■■ 腕スタンス補正 -----------------")
+    utils.output_file_logger(file_logger, "■■ 腕スタンス補正 -----------------")
 
     all_d_list = [{"肩":"左肩", "腕":"左腕", "ひじ":"左ひじ", "手首":"左手首"}, {"肩":"右肩", "腕":"右腕", "ひじ":"右ひじ", "手首":"右手首"}]
     if set(all_d_list[0].values()).issubset(trace_model.bones) and set(all_d_list[0].values()).issubset(replace_model.bones) and \
@@ -1138,7 +1130,7 @@ def adjust_arm_stance(motion, trace_model, replace_model, org_motion_frames, tes
 
                         bf.rotation = bf.rotation * arm_stance_qqs[dlist["腕"]]
 
-            print("腕スタンス補正終了")
+            utils.output_file_logger(file_logger, "腕スタンス補正終了")
 
             if dlist["ひじ"] in motion.frames:
                 # ひじ
@@ -1146,7 +1138,7 @@ def adjust_arm_stance(motion, trace_model, replace_model, org_motion_frames, tes
                     if bf.key == True:
                         bf.rotation = arm_stance_qqs[dlist["腕"]].inverted() * bf.rotation * arm_stance_qqs[dlist["ひじ"]]
 
-            print("ひじスタンス補正終了")
+            utils.output_file_logger(file_logger, "ひじスタンス補正終了")
 
             if dlist["手首"] in motion.frames:
                 # 手首
@@ -1155,7 +1147,7 @@ def adjust_arm_stance(motion, trace_model, replace_model, org_motion_frames, tes
                         # arm_stance_qqs[dlist["腕"]].inverted() * 
                         bf.rotation = arm_stance_qqs[dlist["ひじ"]].inverted() * bf.rotation * arm_stance_qqs[dlist["手首"]]
 
-            print("手首スタンス補正終了")
+            utils.output_file_logger(file_logger, "手首スタンス補正終了")
 
         # finger_bone_names = ["左人指１", "左人指２", "左人指３", "左中指１", "左中指２", "左中指３", "左薬指１", "左薬指２", "左薬指３", "左小指１", "左小指２", "左小指３" \
         #                         , "右人指１", "右人指２", "右人指３", "右中指１", "右中指２", "右中指３", "右薬指１", "右薬指２", "右薬指３", "右小指１", "右小指２", "右小指３"]
@@ -1186,7 +1178,7 @@ def adjust_arm_stance(motion, trace_model, replace_model, org_motion_frames, tes
         #                             # bf.rotation = arm_stance_qqs["{0}腕".format(direction)].inverted() * arm_stance_qqs["{0}ひじ".format(direction)].inverted() * prev_finger_stance_qqs[prev_from_joint_name].inverted() * bf.rotation * finger_stance_qqs[from_joint_name]
         #                             bf.rotation = prev_finger_stance_qqs[prev_from_joint_name].inverted() * bf.rotation * finger_stance_qqs[from_joint_name]
 
-    print("腕スタンス補正終了")
+    utils.output_file_logger(file_logger, "腕スタンス補正終了")
 
 
 def calc_upper_stance(trace_model, replace_model, upper_bone):

@@ -26,7 +26,7 @@ is_print2 = False
 is_print3 = False
 is_print4 = False
 
-def main(vmd_path, pmx_path, smooth_cnt, is_comp_circle, is_seam_smooth):
+def main(vmd_path, pmx_path, smooth_cnt, is_comp_circle, is_seam_smooth, file_logger, is_debug):
 
     try:
         # VMD読み込み
@@ -39,7 +39,7 @@ def main(vmd_path, pmx_path, smooth_cnt, is_comp_circle, is_seam_smooth):
         if len(motion.frames.values()) > 0:
             smooth_vmd_fpath = re.sub(r'\.vmd$', "_smooth_{0:%Y%m%d_%H%M%S}.vmd".format(datetime.now()), vmd_path)
             
-            print("■■ スムージング -----------------")
+            utils.output_file_logger(file_logger, "■■ スムージング -----------------")
 
             all_frames_by_bone = {}
             for bname in motion.frames.keys():
@@ -122,7 +122,7 @@ def main(vmd_path, pmx_path, smooth_cnt, is_comp_circle, is_seam_smooth):
 
                             utils.output_message("cnt>0 smooth_all_bf完了 %s" % (bone_name), is_print2)
 
-                        print("ボーン: %s %s回目" % (bone_name, (cnt + 1)))
+                        utils.output_file_logger(file_logger, "ボーン: %s %s回目" % (bone_name, (cnt + 1)))
 
             for bone_name in all_frames_by_bone.keys():
                 smooth_motion.frames[bone_name] = []
@@ -150,22 +150,22 @@ def main(vmd_path, pmx_path, smooth_cnt, is_comp_circle, is_seam_smooth):
             # ボーンモーション生成
             writer.write_vmd_file(smooth_vmd_fpath, model.name, bone_frames, morph_frames, [], [], [], motion.showiks)
 
-            print("スムージングVMD出力成功: %s" % smooth_vmd_fpath)
+            utils.output_file_logger(file_logger, "スムージングVMD出力成功: %s" % smooth_vmd_fpath)
         else:
-            print("スムージング対象となるキーがないため、終了します。")
+            utils.output_file_logger(file_logger, "スムージング対象となるキーがないため、終了します。")
 
         if len(motion.cameras) > 0:
             smooth_vmd_fpath = re.sub(r'\.vmd$', "_camera_{0:%Y%m%d_%H%M%S}.csv".format(datetime.now()), vmd_path)
 
-            print("未実装")
+            utils.output_file_logger(file_logger, "未実装")
 
     except Exception as e:
-        print("■■■■■■■■■■■■■■■■■")
-        print("■　**ERROR**　")
-        print("■　VMDスムージング処理が意図せぬエラーで終了しました。")
-        print("■■■■■■■■■■■■■■■■■")
+        utils.output_file_logger(file_logger, "■■■■■■■■■■■■■■■■■")
+        utils.output_file_logger(file_logger, "■　**ERROR**　")
+        utils.output_file_logger(file_logger, "■　VMDスムージング処理が意図せぬエラーで終了しました。")
+        utils.output_file_logger(file_logger, "■■■■■■■■■■■■■■■■■")
         
-        print(traceback.format_exc())
+        utils.output_file_logger(file_logger, traceback.format_exc())
 
         raise e
 
@@ -210,9 +210,9 @@ def smooth_all_bf(all_frames_by_bone, model, bone_name, start_frameno, last_fram
                 break
 
 # ボーン回転の分散
-def spread_rotation(motion, model, is_thinning, test_param):
+def spread_rotation(motion, model, is_thinning, file_logger, test_param):
 
-    print("■■ 捩り分散 -----------------")
+    utils.output_file_logger(file_logger, "■■ 捩り分散 -----------------")
 
     # 全ボーンのdict
     all_frames_by_bone = {}
@@ -274,7 +274,7 @@ def spread_rotation(motion, model, is_thinning, test_param):
                     bf = calc_bone_by_complement_by_bone(all_frames_by_bone, b.name, fno, is_only=False, is_exist=False)
                     all_frames_by_bone[b.name][fno] = bf
 
-                print("分散準備: %s" % (b.name))
+                utils.output_file_logger(file_logger, "分散準備: %s" % (b.name))
 
             arm_bone_name = "{0}腕".format(direction)
             arm_twist_bone_name = "{0}腕捩".format(direction)
@@ -300,7 +300,7 @@ def spread_rotation(motion, model, is_thinning, test_param):
                 # 回転を分散する
                 arm_result_qq, arm_twist_result_qq, elbow_result_qq, wrist_twist_result_qq, wrist_result_qq \
                     = delegate_twist_qq_4_arm(fno, direction, arm_bf.rotation, arm_twist_bf.rotation, elbow_bf.rotation, wrist_twist_bf.rotation, wrist_bf.rotation \
-                                                , arm_local_x_axis, arm_twist_local_x_axis, elbow_local_x_axis, wrist_twist_local_x_axis, wrist_local_x_axis)
+                                                , arm_local_x_axis, arm_twist_local_x_axis, elbow_local_x_axis, wrist_twist_local_x_axis, wrist_local_x_axis, file_logger)
 
                 # 回転量を再設定
                 arm_bf.rotation = arm_result_qq
@@ -320,7 +320,7 @@ def spread_rotation(motion, model, is_thinning, test_param):
                 all_frames_by_bone[wrist_bone_name][fno] = wrist_bf
 
                 if fno // 500 > prev_fno:
-                    print("分散完了: %s" % (fno))
+                    utils.output_file_logger(file_logger, "分散完了: %s" % (fno))
                     prev_fno = fno // 500
 
     # 有効なのだけ設定する
@@ -340,12 +340,14 @@ def spread_rotation(motion, model, is_thinning, test_param):
 
 # 腕系回転をそれぞれ捩り等に分散する
 def delegate_twist_qq_4_arm(fno, direction, arm_qq, arm_twist_qq, elbow_qq, wrist_twist_qq, wrist_qq, \
-    arm_local_x_axis, arm_twist_local_x_axis, elbow_local_x_axis, wrist_twist_local_x_axis, wrist_local_x_axis):
+    arm_local_x_axis, arm_twist_local_x_axis, elbow_local_x_axis, wrist_twist_local_x_axis, wrist_local_x_axis, file_logger):
     arm_result_qq = QQuaternion()
     arm_twist_result_qq = QQuaternion()
     elbow_result_qq = QQuaternion()
     wrist_twist_result_qq = QQuaternion()
     wrist_result_qq = QQuaternion()
+
+    utils.output_file_logger(file_logger, "fno: {fno} -----------------------".format(fno=fno))
 
     # 回転を分離
     arm_x_qq, arm_y_qq, arm_z_qq, arm_yz_qq = utils.split_qq_2_xyz(fno, "{0}腕".format(direction), arm_qq, arm_local_x_axis)
@@ -356,14 +358,14 @@ def delegate_twist_qq_4_arm(fno, direction, arm_qq, arm_twist_qq, elbow_qq, wris
     arm_result_qq = arm_y_qq * arm_z_qq
 
     # 腕Xを腕捻りに（くの字はズレる）
-    arm_twist_result_qq = utils.convert_twist_qq(fno, "{0}腕".format(direction), arm_x_qq, arm_twist_result_qq, arm_local_x_axis, arm_twist_local_x_axis)
-    # arm_twist_result_qq = utils.delegate_twist_qq(fno, "腕", arm_qq, arm_result_qq, arm_twist_result_qq, arm_local_x_axis, arm_twist_local_x_axis)
+    arm_twist_result_qq, arm_twist_result_degree = utils.convert_twist_qq(fno, "{0}腕".format(direction), arm_x_qq, arm_twist_qq, arm_local_x_axis, arm_twist_local_x_axis, file_logger)
+    # arm_twist_result_qq = utils.delegate_twist_qq(fno, "{0}腕".format(direction), arm_qq, arm_result_qq, arm_twist_result_qq, arm_local_x_axis, arm_twist_local_x_axis)
     
     # ひじYZをひじYに（ズレっぱなし）
 
     # 逆肘（初期値より後ろにひじが向かっている場合）判定
     is_reverse = utils.is_reverse_elbow(elbow_y_qq, elbow_local_x_axis, arm_local_x_axis, elbow_local_x_axis)
-    logger.info("fno: %s, 逆ひじ: %s", fno, is_reverse)
+    utils.output_file_logger(file_logger, "fno: {fno}, 逆ひじ: {is_reverse}".format(fno=fno, is_reverse=is_reverse))
 
     # ローカルY軸 
     elbow_local_y_axis = QVector3D.crossProduct(elbow_local_x_axis, QVector3D(0, 0, -1)).normalized()
@@ -378,7 +380,8 @@ def delegate_twist_qq_4_arm(fno, direction, arm_qq, arm_twist_qq, elbow_qq, wris
         elbow_result_qq = QQuaternion.fromAxisAndAngle(elbow_local_y_axis, elbow_yz_degree)
 
     # ひじベクトルを腕捻りで帳尻合わせ（ここでだいたい整合するか近似する）
-    arm_twist_result_qq = utils.delegate_twist_qq(fno, "{0}ひじ".format(direction), elbow_qq, elbow_result_qq, arm_twist_result_qq, elbow_local_x_axis, arm_twist_local_x_axis)
+    arm_twist_result_qq = utils.delegate_twist_qq(fno, "{0}ひじ".format(direction), elbow_qq, elbow_result_qq, arm_qq, arm_result_qq, arm_twist_result_qq, arm_twist_result_degree, \
+        elbow_local_x_axis, arm_local_x_axis, arm_twist_local_x_axis, file_logger)
 
     # 手首XYZ回転を手首YZにする
     # 手捩りで手首ベクトル帳尻合わせ（ここでだいたい整合するか近似する）
@@ -472,7 +475,7 @@ def spread_rotation_4_arm(motion, bone_name, prev_bf, bf, bf_idx):
     #                 all_frames_by_bone[parent_bone.name][fno] = parent_bf
     #                 all_frames_by_bone[child_bone.name][fno] = child_bf
 
-    #             print("回転分散完了: %s → %s" % (parent_bone.name, child_bone.name))
+    #             utils.output_file_logger(file_logger, "回転分散完了: %s → %s" % (parent_bone.name, child_bone.name))
 
     # # ベジェ曲線で繋いで、有効なのだけ設定する
     # for bone_name in all_frames_by_bone.keys():
@@ -503,7 +506,7 @@ def spread_rotation_4_arm(motion, bone_name, prev_bf, bf, bf_idx):
     #         if len(bone_frames) > 1:
     #             motion.frames[bone.name] = bone_frames
 
-    #         # print("再登録: %s" % (bone_name))
+    #         # utils.output_file_logger(file_logger, "再登録: %s" % (bone_name))
 
 
 def split_bf(all_frames_by_bone, model, bone_name, axis, prev_prev_bf, prev_bf, now_bf, next_bf, is_comp_circle, is_seam_smooth):

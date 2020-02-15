@@ -13,31 +13,31 @@ import utils, convert_smooth
 
 logger = logging.getLogger("VmdSizing").getChild(__name__)
 
-def exec(motion, trace_model, replace_model, output_vmd_path, vmd_choice_values, rep_choice_values, rep_rate_values):
+def exec(motion, trace_model, replace_model, output_vmd_path, vmd_choice_values, rep_choice_values, rep_rate_values, file_logger):
 
     # モーフ置換
     if len(vmd_choice_values) > 0 and len(rep_choice_values) > 0 and len(rep_rate_values) > 0 and len(vmd_choice_values) == len(rep_choice_values) == len(rep_rate_values):
-        print("■■ モーフ補正 -----------------")
+        utils.output_file_logger(file_logger, "■■ モーフ補正 -----------------")
 
         # モーフの大きさ変更処理
-        replace_morphs = create_replace_morphs(motion, vmd_choice_values, rep_choice_values, rep_rate_values)
+        replace_morphs = create_replace_morphs(motion, vmd_choice_values, rep_choice_values, rep_rate_values, file_logger)
 
         # モーフのクリア処理
-        clear_morphs(motion, vmd_choice_values)
+        clear_morphs(motion, vmd_choice_values, file_logger)
 
         # モーフのブレンド処理
-        blended_morphs = blend_morphs(motion, replace_morphs)
+        blended_morphs = blend_morphs(motion, replace_morphs, file_logger)
 
         # モーフの滑らか化(フラグON)
-        smooth_morph(motion, blended_morphs)
+        smooth_morph(motion, blended_morphs, file_logger)
 
         # モーフの登録処理
-        regist_morphs(motion, blended_morphs)
+        regist_morphs(motion, blended_morphs, file_logger)
 
     return True
 
 # モーフの円滑化
-def smooth_morph(motion, blended_morphs):
+def smooth_morph(motion, blended_morphs, file_logger):
     config = {"freq": 30, "mincutoff": 0.1, "beta": 0.5, "dcutoff": 0.8}
     
     for (mk, mv_list) in blended_morphs.items():
@@ -49,7 +49,7 @@ def smooth_morph(motion, blended_morphs):
             mv.ratio = pm
 
 # モーフの置き換え処理を実行する
-def create_replace_morphs(motion, vmd_choice_values, rep_choice_values, rep_rate_values):
+def create_replace_morphs(motion, vmd_choice_values, rep_choice_values, rep_rate_values, file_logger):
     # 変換後のモーフリスト　キー：変換後モーフ、値：モーフリスト
     replace_morphs = {}
     
@@ -57,7 +57,7 @@ def create_replace_morphs(motion, vmd_choice_values, rep_choice_values, rep_rate
     for vcv, rcv, rcr in zip(vmd_choice_values, rep_choice_values, rep_rate_values):
         # VMDの該当キーがある場合
         if vcv in motion.morphs.keys():
-            print("モーフ置換 %s → %s (%s)" % (vcv, rcv, rcr))
+            utils.output_file_logger(file_logger, "モーフ置換 %s → %s (%s)" % (vcv, rcv, rcr))
             # Shift-JISでエンコード
             rcv_encode = rcv.encode('cp932').decode('shift_jis').encode('shift_jis')
             # モーフを組合せで保持
@@ -73,7 +73,7 @@ def create_replace_morphs(motion, vmd_choice_values, rep_choice_values, rep_rate
     return replace_morphs
 
 # モーフの登録処理
-def blend_morphs(motion, replace_morphs):
+def blend_morphs(motion, replace_morphs, file_logger):
 
     # ブレンドしたモーフ情報　キー：置換後モーフ、値：モーフリスト
     blended_morphs = {}
@@ -115,13 +115,13 @@ def blend_morphs(motion, replace_morphs):
     return blended_morphs
 
 # モーフのクリア処理
-def clear_morphs(motion, vmd_choice_values):
+def clear_morphs(motion, vmd_choice_values, file_logger):
     for vcv in vmd_choice_values:
         if vcv in motion.morphs.keys():
             motion.morphs[vcv] = []
 
 # モーフの登録処理
-def regist_morphs(motion, blended_morphs):
+def regist_morphs(motion, blended_morphs, file_logger):
     for bmk, bmv in blended_morphs.items():
         logger.debug("bmk: %s", bmk)
         motion.morphs[bmk] = bmv

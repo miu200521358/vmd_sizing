@@ -18,7 +18,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 # file_logger = logging.getLogger("message")
 # file_logger.addHandler(logging.FileHandler("test.csv"))
 
-def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, org_motion_frames, error_file_logger):
+def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, org_motion_frames, file_logger):
     is_error_outputed = False
 
     # -----------------------------------------------------------------
@@ -29,23 +29,23 @@ def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_h
             # 腕構造チェックがFALSEの場合、腕IK補正なし
             return False
         elif is_finger_ik and (("左親指０" in motion.frames and "左親指０" not in replace_model.bones) or ("右親指０" in motion.frames and "右親指０" not in replace_model.bones)):
-            print("■■■■■■■■■■■■■■■■■")
-            print("■　**WARNING**　")
-            print("■　モーションに「親指０」が登録されており、変換先モデルに「親指０」がありません。")
-            print("■　指位置合わせをスキップします。")
-            print("■■■■■■■■■■■■■■■■■")
+            utils.output_file_logger(file_logger, "■■■■■■■■■■■■■■■■■", logging.WARNING)
+            utils.output_file_logger(file_logger, "■　**WARNING**　", logging.WARNING)
+            utils.output_file_logger(file_logger, "■　モーションに「親指０」が登録されており、変換先モデルに「親指０」がありません。", logging.WARNING)
+            utils.output_file_logger(file_logger, "■　指位置合わせをスキップします。", logging.WARNING)
+            utils.output_file_logger(file_logger, "■■■■■■■■■■■■■■■■■", logging.WARNING)
 
-            error_file_logger = utils.create_error_file_logger(motion, trace_model, replace_model, output_vmd_path)
+            file_logger = utils.create_file_logger(motion, trace_model, replace_model, output_vmd_path)
 
-            error_file_logger.warning("■■■■■■■■■■■■■■■■■")
-            error_file_logger.warning("■　**WARNING**　")
-            error_file_logger.warning("■　モーションに「親指０」が登録されており、変換先モデルに「親指０」がありません。")
-            error_file_logger.warning("■　指位置合わせをスキップします。")
-            error_file_logger.warning("■■■■■■■■■■■■■■■■■")
+            utils.output_file_logger(file_logger, "■■■■■■■■■■■■■■■■■", logging.WARNING)
+            utils.output_file_logger(file_logger, "■　**WARNING**　", logging.WARNING)
+            utils.output_file_logger(file_logger, "■　モーションに「親指０」が登録されており、変換先モデルに「親指０」がありません。", logging.WARNING)
+            utils.output_file_logger(file_logger, "■　指位置合わせをスキップします。", logging.WARNING)
+            utils.output_file_logger(file_logger, "■■■■■■■■■■■■■■■■■", logging.WARNING)
 
             return False
                 
-        print("■■ 手首位置合わせ補正 -----------------")
+        utils.output_file_logger(file_logger, "■■ 手首位置合わせ補正 -----------------")
 
         # センターから手首までの位置(トレース先モデル)
         all_rep_wrist_links, _ = replace_model.create_link_2_top_lr("手首")
@@ -63,25 +63,25 @@ def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_h
             target_bones.extend(["センター", "上半身"])
 
         # 事前準備
-        prepare(motion, arm_links, hand_distance, is_floor_hand, target_bones)
+        prepare(motion, arm_links, hand_distance, is_floor_hand, target_bones, file_logger)
 
         if hand_distance >= 0:
             # 手首位置合わせ処理実行
-            is_error_outputed = exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, org_motion_frames, all_rep_wrist_links, arm_links, target_bones, error_file_logger)
+            is_error_outputed = exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, org_motion_frames, all_rep_wrist_links, arm_links, target_bones, file_logger)
 
             # キー有効可否設定
-            reset_activate(motion, arm_links, is_floor_hand)
+            reset_activate(motion, arm_links, is_floor_hand, file_logger)
 
             # 補間曲線再設定
-            reset_complement(motion, arm_links, is_floor_hand)
+            reset_complement(motion, arm_links, is_floor_hand, file_logger)
 
             # 必要なキーだけ残す
-            leave_valid_key_frames(motion, arm_links, is_floor_hand)
+            leave_valid_key_frames(motion, arm_links, is_floor_hand, file_logger)
 
     return not is_error_outputed
 
 # 必要なキーだけ残す
-def leave_valid_key_frames(motion, arm_links, is_floor_hand):
+def leave_valid_key_frames(motion, arm_links, is_floor_hand, file_logger):
     # 有効なキーのみのリストを再設定
     if "センター" in motion.frames and is_floor_hand:
         motion.frames["センター"] = [x for x in motion.frames["センター"] if x.key == True]
@@ -95,7 +95,7 @@ def leave_valid_key_frames(motion, arm_links, is_floor_hand):
             motion.frames[al.name] = [x for x in motion.frames[al.name] if x.key == True]
 
 # 隣接有効キーを落とす
-def reset_activate(motion, arm_links, is_floor_hand):
+def reset_activate(motion, arm_links, is_floor_hand, file_logger):
     if is_floor_hand:
         for link_name in ["センター", "上半身"]:
             if link_name in motion.frames:
@@ -114,7 +114,7 @@ def reset_activate(motion, arm_links, is_floor_hand):
 
 
 # 腕IK調整後始末
-def reset_complement(motion, arm_links, is_floor_hand):
+def reset_complement(motion, arm_links, is_floor_hand, file_logger):
     # 補間曲線を有効なキーだけに揃える
     
     # センター移動補間曲線
@@ -131,14 +131,14 @@ def reset_complement(motion, arm_links, is_floor_hand):
                 for bf_idx, bf in enumerate(motion.frames[link_name]):
                     reset_complement_frame(motion, link_name, bf_idx, utils.R_x1_idxs, utils.R_y1_idxs, utils.R_x2_idxs, utils.R_y2_idxs)
 
-            print("事後調整 b: %s" % link_name)
+            utils.output_file_logger(file_logger, "事後調整 b: %s" % link_name)
     
     for direction in ["左", "右"]:
         for al in arm_links[direction]:
             for bf_idx, bf in enumerate(motion.frames[al.name]):
                 reset_complement_frame(motion, al.name, bf_idx, utils.R_x1_idxs, utils.R_y1_idxs, utils.R_x2_idxs, utils.R_y2_idxs)
 
-            print("事後調整 b: %s" % al.name)
+            utils.output_file_logger(file_logger, "事後調整 b: %s" % al.name)
 
 
 def reset_complement_frame(motion, link_name, bf_idx, x1_idxs, y1_idxs, x2_idxs, y2_idxs):
@@ -324,7 +324,7 @@ def split_complement(motion, next_x1v, next_y1v, next_x2v, next_y2v, prev_bf, ne
 
 
 # 腕IK調整事前準備
-def prepare(motion, arm_links, hand_distance, is_floor_hand, target_bones):
+def prepare(motion, arm_links, hand_distance, is_floor_hand, target_bones, file_logger):
     prev_log_cnt = 0
 
     for d in ["左", "右"]:
@@ -368,10 +368,10 @@ def prepare(motion, arm_links, hand_distance, is_floor_hand, target_bones):
                 break
             
         if f // 500 > prev_log_cnt:
-            print("事前調整 f: %s" % f)
+            utils.output_file_logger(file_logger, "事前調整 f: %s" % f)
             prev_log_cnt = f // 500
 
-    print("事前調整終了")
+    utils.output_file_logger(file_logger, "事前調整終了")
 
 def prepare_fill_frame(motion, link_name, bf, hand_distance=0):
     for tbf_idx, tbf in enumerate(motion.frames[link_name]):
@@ -409,7 +409,7 @@ def prepare_fill_frame(motion, link_name, bf, hand_distance=0):
 
 
 # 手首位置合わせ実行
-def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, org_motion_frames, all_rep_wrist_links, arm_links, target_bones, error_file_logger):    
+def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, org_motion_frames, all_rep_wrist_links, arm_links, target_bones, file_logger):    
     # 腕IKによる位置調整を行う場合
 
     # エラーを一度でも出力しているか(腕IK)
@@ -438,13 +438,13 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
     org_palm_length = 1
     if "左人指３" in trace_model.bones and "左手首" in trace_model.bones:
         org_palm_length = (trace_model.bones["左手首"].position - trace_model.bones["左人指３"].position).length()
-        print("作成元モデルの手の大きさ: %s" % org_palm_length)
+        utils.output_file_logger(file_logger, "作成元モデルの手の大きさ: %s" % org_palm_length)
 
     # # 変換先モデルの手のひらの大きさ（手首から人指３までの長さ）
     rep_palm_length = 1
     if "左人指３" in replace_model.bones and "左手首" in replace_model.bones:
         rep_palm_length = (replace_model.bones["左手首"].position - replace_model.bones["左人指３"].position).length()
-        print("変換先モデルの手の大きさ: %s" % rep_palm_length)
+        utils.output_file_logger(file_logger, "変換先モデルの手の大きさ: %s" % rep_palm_length)
     
     # 手のひらの大きさ差
     palm_diff_length = rep_palm_length / org_palm_length
@@ -475,7 +475,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
     # 比率が1以上の場合、とりあえず1で固定
     arm_palm_diff_length = 1 if arm_palm_diff_length > 1 else arm_palm_diff_length
 
-    print("腕/手の長さ比率(上限1): %s" % arm_palm_diff_length)
+    utils.output_file_logger(file_logger, "腕/手の長さ比率(上限1): %s" % arm_palm_diff_length)
 
     # 作成元モデルの手首の厚み
     org_wrist_thickness = trace_model.get_wrist_thickness_lr()
@@ -487,7 +487,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
 
     # 左右の手首の厚み
     if rep_wrist_thickness["左"] == 0 or org_wrist_thickness["左"] == 0 or rep_wrist_thickness["右"] == 0 or org_wrist_thickness["右"] == 0:
-        print("手首の厚みが正常に測れなかったため、厚みを考慮できません。")
+        utils.output_file_logger(file_logger, "手首の厚みが正常に測れなかったため、厚みを考慮できません。")
         # 手首の厚みが取得できなかった場合、0で固定
         wrist_thickness = {
             "左": 0,
@@ -499,7 +499,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
             "右": abs(rep_wrist_thickness["右"] - org_wrist_thickness["右"]) * arm_palm_diff_length
         }
 
-    print("手首の厚み差: l: %s, r: %s" % ( wrist_thickness["左"], wrist_thickness["右"]))
+    utils.output_file_logger(file_logger, "手首の厚み差: l: %s, r: %s" % ( wrist_thickness["左"], wrist_thickness["右"]))
     
     # キーフレーム分割済みのフレーム情報を別保持
     org_fill_motion_frames = copy.deepcopy(motion.frames)
@@ -552,7 +552,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
 
         for mdl_type, fll in zip(["作成元", "変換先"], [all_org_finger_links_list, all_rep_finger_links_list]):
             for direction in ["左", "右"]:
-                print("{0}モデルの{1}指頂点INDEX: {2}".format(mdl_type, direction, ",".join(["{0}: {1}".format(l, x["vertex"]) for e, (l, x) in enumerate(zip(["首", "親", "人", "中", "薬", "小"], fll[direction])) if e > 0 ])))
+                utils.output_file_logger(file_logger, "{0}モデルの{1}指頂点INDEX: {2}".format(mdl_type, direction, ",".join(["{0}: {1}".format(l, x["vertex"]) for e, (l, x) in enumerate(zip(["首", "親", "人", "中", "薬", "小"], fll[direction])) if e > 0 ])))
 
         # # 親指の長さの差（始点：手首, 終点：親指２の先）
         # _, org_thumb_to_pos = utils.calc_tail_pos(trace_model, "右親指２")
@@ -568,7 +568,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
         # # else:
         # thumb_finger_diff_length = (org_thubm_finger_length * arm_palm_diff_length) - rep_thubm_finger_length
 
-        # print("親指の長さ差: %s" % thumb_finger_diff_length)
+        # utils.output_file_logger(file_logger, "親指の長さ差: %s" % thumb_finger_diff_length)
 
     if is_floor_hand:
         # # 足IKまでの位置(作成元モデル)
@@ -588,7 +588,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
         # rep_leg_thickness_z = (all_rep_leg_links["左"][0].position.z() + all_rep_leg_links["右"][0].position.z()) / 2
         
         # leg_thickness = rep_leg_thickness_z - org_leg_thickness_z
-        # print("足の厚み: %s: 作成元: %s, 変換先: %s" % ( leg_thickness, org_leg_thickness_z, rep_leg_thickness_z ))
+        # utils.output_file_logger(file_logger, "足の厚み: %s: 作成元: %s, 変換先: %s" % ( leg_thickness, org_leg_thickness_z, rep_leg_thickness_z ))
 
         # 背面の厚み
         org_back_thickness = 0
@@ -611,7 +611,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
         
         back_thickness = 0 if rep_back_thickness - org_back_thickness < 0 else rep_back_thickness - org_back_thickness
 
-        print("背面の厚み(最小0): %s: 作成元: %s(%s), 変換先: %s(%s)" % ( back_thickness, org_back_thickness, org_back_vertex, rep_back_thickness, rep_back_vertex ))
+        utils.output_file_logger(file_logger, "背面の厚み(最小0): %s: 作成元: %s(%s), 変換先: %s(%s)" % ( back_thickness, org_back_thickness, org_back_vertex, rep_back_thickness, rep_back_vertex ))
 
         # 手首と上半身のリンク生成(トレース先)
         upper_links = {
@@ -700,7 +700,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                             reverse_direction = "右" if "左" == direction else "左"
 
                             # 手首が近接している場合のみ、腕IK処理実施
-                            print("○手首近接あり: f: %s(%s), 境界: %s, 手首間の距離: %s" % (bf.frame, org_direction, hand_distance, org_wrist_diff_rate ))
+                            utils.output_file_logger(file_logger, "○手首近接あり: f: %s(%s), 境界: %s, 手首間の距離: %s" % (bf.frame, org_direction, hand_distance, org_wrist_diff_rate ))
 
                             # 元モデルの向いている回転量
                             org_upper_direction_qq = utils.calc_upper_direction_qq(trace_model, org_upper_links, org_motion_frames, bf)
@@ -977,21 +977,21 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                         lad = abs(QQuaternion.dotProduct(motion.frames["左腕"][bf_idx].rotation, org_fill_motion_frames["左腕"][bf_idx].rotation))
                         rad = abs(QQuaternion.dotProduct(motion.frames["右腕"][bf_idx].rotation, org_fill_motion_frames["右腕"][bf_idx].rotation))
                         if lad < 0.85 or rad < 0.85:
-                            print("%sフレーム目手首位置合わせ失敗: 手首間: %s, 左腕:%s, 右腕:%s" % (bf.frame, org_wrist_diff_rate, lad, rad))
+                            utils.output_file_logger(file_logger, "%sフレーム目手首位置合わせ失敗: 手首間: %s, 左腕:%s, 右腕:%s" % (bf.frame, org_wrist_diff_rate, lad, rad))
                             # 失敗時のみエラーログ出力
                             if not is_error_outputed:
                                 is_error_outputed = True
-                                if not error_file_logger:
-                                    error_file_logger = utils.create_error_file_logger(motion, trace_model, replace_model, output_vmd_path)
+                                if not file_logger:
+                                    file_logger = utils.create_file_logger(motion, trace_model, replace_model, output_vmd_path)
 
-                                error_file_logger.info("作成元モデルの手の大きさ: %s", org_palm_length)
-                                error_file_logger.info("変換先モデルの手の大きさ: %s", rep_palm_length)
-                                error_file_logger.info("手首の厚み: l: %s, r: %s", wrist_thickness["左"], wrist_thickness["右"])
-                                # error_file_logger.debug("作成元の上半身の厚み: %s", org_upper_thickness_diff)
-                                # error_file_logger.debug("変換先の上半身の厚み: %s", rep_upper_thickness_diff)
-                                # error_file_logger.debug("肩幅の差: %s" , showlder_diff_length)
+                                file_logger.info("作成元モデルの手の大きさ: %s", org_palm_length)
+                                file_logger.info("変換先モデルの手の大きさ: %s", rep_palm_length)
+                                file_logger.info("手首の厚み: l: %s, r: %s", wrist_thickness["左"], wrist_thickness["右"])
+                                # file_logger.debug("作成元の上半身の厚み: %s", org_upper_thickness_diff)
+                                # file_logger.debug("変換先の上半身の厚み: %s", rep_upper_thickness_diff)
+                                # file_logger.debug("肩幅の差: %s" , showlder_diff_length)
 
-                            error_file_logger.warning("%sフレーム目手首位置合わせ失敗: 手首間: %s, 左腕:%s, 右腕:%s" , bf.frame, org_wrist_diff_rate, lad, rad)
+                            file_logger.warning("%sフレーム目手首位置合わせ失敗: 手首間: %s, 左腕:%s, 右腕:%s" , bf.frame, org_wrist_diff_rate, lad, rad)
                         else:
                             # logger.debug("手首位置合わせ成功: f: %s, 左腕:%s, 右腕:%s", bf.frame, lad, rad)
                             pass
@@ -1017,7 +1017,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                     # logger.debug("クリア: cfk: %s, bf_idx: %s, rot: %s", cfk, bf_idx, motion.frames[cfk][bf_idx].rotation.toEulerAngles())
                     else:
                         if not is_finger_ik and hand_distance <= org_wrist_diff_rate <= hand_distance * 2:
-                            print("－手首近接なし: f: %s(%s), 境界: %s, 手首間の距離: %s" % (bf.frame, org_direction, hand_distance, org_wrist_diff_rate ))
+                            utils.output_file_logger(file_logger, "－手首近接なし: f: %s(%s), 境界: %s, 手首間の距離: %s" % (bf.frame, org_direction, hand_distance, org_wrist_diff_rate ))
 
                     if is_finger_ik:
                         # 最短距離
@@ -1091,7 +1091,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                 prev_load = " (前F引継)"
 
                             # 手首が近接している場合のみ、腕IK処理実施
-                            print("○指近接あり: f: %s(%s%s:%s%s)%s, 境界: %s, 指先間の距離: %s" % (bf.frame, min_force_direction, min_force_joint_name, min_reverse_direction, min_reverse_joint_name, prev_load, finger_distance, org_finger_diff_rate ))
+                            utils.output_file_logger(file_logger, "○指近接あり: f: %s(%s%s:%s%s)%s, 境界: %s, 指先間の距離: %s" % (bf.frame, min_force_direction, min_force_joint_name, min_reverse_direction, min_reverse_joint_name, prev_load, finger_distance, org_finger_diff_rate ))
 
                             direction = min_force_direction
                             reverse_direction = min_reverse_direction
@@ -1413,9 +1413,9 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                 # 反対側の指位置から角度を求める
                                 calc_arm_IK2FK(rep_reverse_finger_pos, replace_model, arm_finger_links[reverse_direction], rep_reverse_target_finger_links, reverse_direction, motion.frames, bf, prev_space_bf)
 
-                                print("※手首角度調整追加: f: %s, 元: %s, 先: %s" % (bf.frame, org_wrist_diff, rep_wrist_diff ))
+                                utils.output_file_logger(file_logger, "※手首角度調整追加: f: %s, 元: %s, 先: %s" % (bf.frame, org_wrist_diff, rep_wrist_diff ))
                             # else:
-                            #     print("×手首角度調整なし: f: %s, %s: %s, %s: %s" % (bf.frame, direction, (rep_force_wrist_diff - org_force_wrist_diff), reverse_direction, (rep_reverse_wrist_diff - org_reverse_wrist_diff) ))
+                            #     utils.output_file_logger(file_logger, "×手首角度調整なし: f: %s, %s: %s, %s: %s" % (bf.frame, direction, (rep_force_wrist_diff - org_force_wrist_diff), reverse_direction, (rep_reverse_wrist_diff - org_reverse_wrist_diff) ))
                             #     pass
 
                             # 指位置合わせ結果判定 ------------
@@ -1423,21 +1423,21 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                             lad = abs(QQuaternion.dotProduct(motion.frames["左腕"][bf_idx].rotation, org_fill_motion_frames["左腕"][bf_idx].rotation))
                             rad = abs(QQuaternion.dotProduct(motion.frames["右腕"][bf_idx].rotation, org_fill_motion_frames["右腕"][bf_idx].rotation))
                             if lad < 0.85 or rad < 0.85:
-                                print("%sフレーム目指位置合わせ失敗: 指先間: %s, 左腕:%s, 右腕:%s" % (bf.frame, org_finger_diff_rate, lad, rad))
+                                utils.output_file_logger(file_logger, "%sフレーム目指位置合わせ失敗: 指先間: %s, 左腕:%s, 右腕:%s" % (bf.frame, org_finger_diff_rate, lad, rad))
                                 # 失敗時のみエラーログ出力
                                 if not is_error_outputed:
                                     is_error_outputed = True
-                                    if not error_file_logger:
-                                        error_file_logger = utils.create_error_file_logger(motion, trace_model, replace_model, output_vmd_path)
+                                    if not file_logger:
+                                        file_logger = utils.create_file_logger(motion, trace_model, replace_model, output_vmd_path)
 
-                                    error_file_logger.info("作成元モデルの手の大きさ: %s", org_palm_length)
-                                    error_file_logger.info("変換先モデルの手の大きさ: %s", rep_palm_length)
-                                    error_file_logger.info("指の厚み: l: %s, r: %s", wrist_thickness["左"], wrist_thickness["右"])
-                                    # error_file_logger.debug("作成元の上半身の厚み: %s", org_neck_thickness_diff)
-                                    # error_file_logger.debug("変換先の上半身の厚み: %s", rep_neck_thickness_diff)
-                                    # error_file_logger.debug("肩幅の差: %s" , showlder_diff_length)
+                                    file_logger.info("作成元モデルの手の大きさ: %s", org_palm_length)
+                                    file_logger.info("変換先モデルの手の大きさ: %s", rep_palm_length)
+                                    file_logger.info("指の厚み: l: %s, r: %s", wrist_thickness["左"], wrist_thickness["右"])
+                                    # file_logger.debug("作成元の上半身の厚み: %s", org_neck_thickness_diff)
+                                    # file_logger.debug("変換先の上半身の厚み: %s", rep_neck_thickness_diff)
+                                    # file_logger.debug("肩幅の差: %s" , showlder_diff_length)
 
-                                error_file_logger.warning("%sフレーム目指位置合わせ失敗: 指先間: %s, 左腕:%s, 右腕:%s" , bf.frame, org_finger_diff_rate, lad, rad)
+                                file_logger.warning("%sフレーム目指位置合わせ失敗: 指先間: %s, 左腕:%s, 右腕:%s" , bf.frame, org_finger_diff_rate, lad, rad)
                             else:
                                 # logger.debug("指位置合わせ成功: f: %s, 左腕:%s, 右腕:%s", bf.frame, lad, rad)
                                 pass
@@ -1468,7 +1468,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                                                     
                         else:
                             if finger_distance <= org_finger_diff_rate <= finger_distance * 2:
-                                print("－指近接なし: f: %s(%s), 境界: %s, 指先間の距離: %s" % (bf.frame, org_direction, finger_distance, org_finger_diff_rate ))
+                                utils.output_file_logger(file_logger, "－指近接なし: f: %s(%s), 境界: %s, 指先間の距離: %s" % (bf.frame, org_direction, finger_distance, org_finger_diff_rate ))
                     
                     # logger.debug("bf_idx: %s, cf:%s", bf_idx, motion.frames["センター"][bf_idx].frame)
 
@@ -1525,17 +1525,17 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
 
                                 logger.debug("hand_floor wrist: center: %s", motion.frames["センター"][bf_idx].position)
 
-                                print("○手首床近接あり: f: %s, 境界: %s, %s: %s, %s: %s, 調整: %s" % (bf.frame, hand_floor_distance, org_direction, org_wrist_y / org_palm_length, reverse_org_direction, org_reverse_wrist_y / org_palm_length, rep_center_diff))
+                                utils.output_file_logger(file_logger, "○手首床近接あり: f: %s, 境界: %s, %s: %s, %s: %s, 調整: %s" % (bf.frame, hand_floor_distance, org_direction, org_wrist_y / org_palm_length, reverse_org_direction, org_reverse_wrist_y / org_palm_length, rep_center_diff))
                             else:
                                 if (not is_floor_hand_up and rep_center_diff > 0):
-                                    print("－手首床近接UP×: f: %s, 境界: %s, %s: %s, %s: %s, 調整: %s" % (bf.frame, hand_floor_distance, org_direction, org_wrist_y / org_palm_length, reverse_org_direction, org_reverse_wrist_y / org_palm_length, rep_center_diff))
+                                    utils.output_file_logger(file_logger, "－手首床近接UP×: f: %s, 境界: %s, %s: %s, %s: %s, 調整: %s" % (bf.frame, hand_floor_distance, org_direction, org_wrist_y / org_palm_length, reverse_org_direction, org_reverse_wrist_y / org_palm_length, rep_center_diff))
 
                                 if (not is_floor_hand_down and rep_center_diff < 0):
-                                    print("－手首床近接DOWN×: f: %s, 境界: %s, %s: %s, %s: %s, 調整: %s" % (bf.frame, hand_floor_distance, org_direction, org_wrist_y / org_palm_length, reverse_org_direction, org_reverse_wrist_y / org_palm_length, rep_center_diff))
+                                    utils.output_file_logger(file_logger, "－手首床近接DOWN×: f: %s, 境界: %s, %s: %s, %s: %s, 調整: %s" % (bf.frame, hand_floor_distance, org_direction, org_wrist_y / org_palm_length, reverse_org_direction, org_reverse_wrist_y / org_palm_length, rep_center_diff))
 
                         else:
                             if (org_wrist_y <= org_palm_length * hand_floor_distance * 2 or org_reverse_wrist_y <= org_palm_length * hand_floor_distance * 2):
-                                print("－手首床近接なし: f: %s, 境界: %s, %s: %s, %s: %s" % (bf.frame, hand_floor_distance, org_direction, org_wrist_y / org_palm_length, reverse_org_direction, org_reverse_wrist_y / org_palm_length))
+                                utils.output_file_logger(file_logger, "－手首床近接なし: f: %s, 境界: %s, %s: %s, %s: %s" % (bf.frame, hand_floor_distance, org_direction, org_wrist_y / org_palm_length, reverse_org_direction, org_reverse_wrist_y / org_palm_length))
 
                         if (org_leg_y <= org_palm_length * leg_floor_distance or org_reverse_leg_y <= org_palm_length * leg_floor_distance):
                             # 足床調整
@@ -1571,17 +1571,17 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
 
                                 logger.debug("hand_floor leg: center: %s", motion.frames["センター"][bf_idx].position)
 
-                                print("○足床近接あり: f: %s, 境界: %s, %s: %s, %s: %s, 調整: %s" % (bf.frame, leg_floor_distance, org_direction, org_leg_y / org_palm_length, reverse_org_direction, org_reverse_leg_y / org_palm_length, rep_center_diff))
+                                utils.output_file_logger(file_logger, "○足床近接あり: f: %s, 境界: %s, %s: %s, %s: %s, 調整: %s" % (bf.frame, leg_floor_distance, org_direction, org_leg_y / org_palm_length, reverse_org_direction, org_reverse_leg_y / org_palm_length, rep_center_diff))
                             else:
                                 if (not is_floor_hand_up and rep_center_diff > 0):
-                                    print("－足床近接UP×: f: %s, 境界: %s, %s: %s, %s: %s, 調整: %s" % (bf.frame, leg_floor_distance, org_direction, org_leg_y / org_palm_length, reverse_org_direction, org_reverse_leg_y / org_palm_length, rep_center_diff))
+                                    utils.output_file_logger(file_logger, "－足床近接UP×: f: %s, 境界: %s, %s: %s, %s: %s, 調整: %s" % (bf.frame, leg_floor_distance, org_direction, org_leg_y / org_palm_length, reverse_org_direction, org_reverse_leg_y / org_palm_length, rep_center_diff))
 
                                 if (not is_floor_hand_down and rep_center_diff < 0):
-                                    print("－足床近接DOWN×: f: %s, 境界: %s, %s: %s, %s: %s, 調整: %s" % (bf.frame, leg_floor_distance, org_direction, org_leg_y / org_palm_length, reverse_org_direction, org_reverse_leg_y / org_palm_length, rep_center_diff))
+                                    utils.output_file_logger(file_logger, "－足床近接DOWN×: f: %s, 境界: %s, %s: %s, %s: %s, 調整: %s" % (bf.frame, leg_floor_distance, org_direction, org_leg_y / org_palm_length, reverse_org_direction, org_reverse_leg_y / org_palm_length, rep_center_diff))
 
                         else:
                             if (org_leg_y <= org_palm_length * leg_floor_distance * 2 or org_reverse_leg_y <= org_palm_length * leg_floor_distance * 2):
-                                print("－足床近接なし: f: %s, 境界: %s, %s: %s, %s: %s" % (bf.frame, hand_floor_distance, org_direction, org_wrist_y / org_palm_length, reverse_org_direction, org_reverse_wrist_y / org_palm_length))
+                                utils.output_file_logger(file_logger, "－足床近接なし: f: %s, 境界: %s, %s: %s, %s: %s" % (bf.frame, hand_floor_distance, org_direction, org_wrist_y / org_palm_length, reverse_org_direction, org_reverse_wrist_y / org_palm_length))
 
                         logger.debug("%s: org_wrist_y: %s(%s), org_reverse_wrist_y: %s(%s)", bf.frame, org_wrist_y, org_palm_length * hand_floor_distance, org_reverse_wrist_y, org_palm_length * hand_floor_distance)
                         logger.debug("%s: org_upper_y: %s(%s)(%s)", bf.frame, org_upper_y, org_leg_y * 1.2, org_reverse_leg_y * 1.2)
@@ -1611,7 +1611,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
                             if (org_wrist_y <= org_palm_length * hand_floor_distance and (abs(org_wrist_y * arm_palm_diff_length - rep_wrist_y) > 0.6 or rep_wrist_y < 0)) or (org_reverse_wrist_y <= org_palm_length * hand_floor_distance and (abs(org_reverse_wrist_y * arm_palm_diff_length - rep_reverse_wrist_y) > 0.6 or rep_reverse_wrist_y < 0 )):
                                 # 差が大きい場合、調整
 
-                                print("○手首床近接あり上半身調整: f: %s, 手首のY位置: %s:%s, %s:%s" % (bf.frame, org_direction, org_wrist_y, reverse_org_direction, org_reverse_wrist_y))
+                                utils.output_file_logger(file_logger, "○手首床近接あり上半身調整: f: %s, 手首のY位置: %s:%s, %s:%s" % (bf.frame, org_direction, org_wrist_y, reverse_org_direction, org_reverse_wrist_y))
 
                                 rep_wrist_pos = rep_finger_global_3ds[len(rep_finger_global_3ds) - all_rep_finger_indexes[org_direction]["手首"] - 1]
                                 rep_reverse_wrist_pos = rep_reverse_finger_global_3ds[len(rep_reverse_finger_global_3ds) - all_rep_finger_indexes[reverse_org_direction]["手首"] - 1]
@@ -1722,21 +1722,21 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
 
                                     uad = abs(QQuaternion.dotProduct(motion.frames["上半身"][bf_idx].rotation, org_fill_motion_frames["上半身"][bf_idx].rotation))
                                     if uad < 0.95:
-                                        print("%sフレーム目上半身位置合わせ失敗: 上半身:%s" % (bf.frame, uad))
+                                        utils.output_file_logger(file_logger, "%sフレーム目上半身位置合わせ失敗: 上半身:%s" % (bf.frame, uad))
                                         # 失敗時のみエラーログ出力
                                         if not is_error_outputed:
                                             is_error_outputed = True
-                                            if not error_file_logger:
-                                                error_file_logger = utils.create_error_file_logger(motion, trace_model, replace_model, output_vmd_path)
+                                            if not file_logger:
+                                                file_logger = utils.create_file_logger(motion, trace_model, replace_model, output_vmd_path)
 
-                                            error_file_logger.info("作成元モデルの手の大きさ: %s", org_palm_length)
-                                            error_file_logger.info("変換先モデルの手の大きさ: %s", rep_palm_length)
-                                            error_file_logger.info("手首の厚み: l: %s, r: %s", wrist_thickness["左"], wrist_thickness["右"])
-                                            # error_file_logger.debug("作成元の上半身の厚み: %s", org_upper_thickness_diff)
-                                            # error_file_logger.debug("変換先の上半身の厚み: %s", rep_upper_thickness_diff)
-                                            # error_file_logger.debug("肩幅の差: %s" , showlder_diff_length)
+                                            file_logger.info("作成元モデルの手の大きさ: %s", org_palm_length)
+                                            file_logger.info("変換先モデルの手の大きさ: %s", rep_palm_length)
+                                            file_logger.info("手首の厚み: l: %s, r: %s", wrist_thickness["左"], wrist_thickness["右"])
+                                            # file_logger.debug("作成元の上半身の厚み: %s", org_upper_thickness_diff)
+                                            # file_logger.debug("変換先の上半身の厚み: %s", rep_upper_thickness_diff)
+                                            # file_logger.debug("肩幅の差: %s" , showlder_diff_length)
 
-                                        error_file_logger.warning("%sフレーム目上半身位置合わせ失敗: 上半身:%s" % (bf.frame, uad))
+                                        file_logger.warning("%sフレーム目上半身位置合わせ失敗: 上半身:%s" % (bf.frame, uad))
                                         
                                         # 失敗時は元に戻す
                                         motion.frames["上半身"][bf_idx] = copy.deepcopy(org_fill_motion_frames["上半身"][bf_idx])

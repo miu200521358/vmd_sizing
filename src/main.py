@@ -27,7 +27,7 @@ level = {0:logging.ERROR,
 
 def main(motion, trace_model, replace_model, output_vmd_path, \
     is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, vmd_choice_values, rep_choice_values, rep_rate_values, \
-    camera_motion, camera_vmd_path, camera_pmx, output_camera_vmd_path, camera_y_offset, is_alternative_model, is_no_delegate, target_avoidance_rigids, target_avoidance_bones, test_param):   
+    camera_motion, camera_vmd_path, camera_pmx, output_camera_vmd_path, camera_y_offset, is_alternative_model, is_no_delegate, target_avoidance_rigids, target_avoidance_bones, is_debug, test_param):   
     # print("モーション: %s" % motion.path)
     # if camera_motion:
     #     print("カメラモーション: %s" % camera_motion.path)
@@ -39,26 +39,34 @@ def main(motion, trace_model, replace_model, output_vmd_path, \
 
     # 処理に成功しているか
     is_success = True
-    error_file_logger = None
+    file_logger = utils.create_file_logger(motion, trace_model, replace_model, output_vmd_path.lower())
+    utils.output_file_logger(file_logger, "■■ ---------------------------")
+    utils.output_file_logger(file_logger, "モーション: {motion}".format(motion=os.path.basename(motion.path)))
+    utils.output_file_logger(file_logger, "作成元モデル: {trace_model}".format(trace_model=os.path.basename(trace_model.path)))
+    utils.output_file_logger(file_logger, "変換先モデル: {replace_model}".format(replace_model=os.path.basename(replace_model.path)))
+    utils.output_file_logger(file_logger, "---------------------------")
+
+    if is_debug:
+        file_logger.setLevel(logging.DEBUG)
 
     # 移動系ボーン縮尺処理
-    is_success = sub_move.exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames) and is_success
+    is_success = sub_move.exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, file_logger) and is_success
 
     # スタンス補正処理
-    is_success = sub_arm_stance.exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, is_alternative_model, is_no_delegate, error_file_logger, test_param) and is_success
+    is_success = sub_arm_stance.exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, is_alternative_model, is_no_delegate, file_logger, test_param) and is_success
 
     # 腕IK処理
-    is_success = sub_arm_ik.exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, org_motion_frames, error_file_logger) and is_success
+    is_success = sub_arm_ik.exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, org_motion_frames, file_logger) and is_success
 
     # カメラ処理
     # カメラの元モデルは、カメラ用PMXデータ
-    is_success = sub_camera.exec(motion, camera_pmx, replace_model, output_vmd_path, org_motion_frames, camera_motion, camera_y_offset) and is_success
+    is_success = sub_camera.exec(motion, camera_pmx, replace_model, output_vmd_path, org_motion_frames, camera_motion, camera_y_offset, file_logger) and is_success
 
     # 頭部と腕の接触回避処理
-    is_success = sub_avoidance2.exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik, target_avoidance_rigids, target_avoidance_bones, org_motion_frames, error_file_logger) and is_success
+    is_success = sub_avoidance2.exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik, target_avoidance_rigids, target_avoidance_bones, org_motion_frames, file_logger) and is_success
 
     # モーフ処理
-    is_success = sub_morph.exec(motion, trace_model, replace_model, output_vmd_path, vmd_choice_values, rep_choice_values, rep_rate_values) and is_success
+    is_success = sub_morph.exec(motion, trace_model, replace_model, output_vmd_path, vmd_choice_values, rep_choice_values, rep_rate_values, file_logger) and is_success
 
     # ディクショナリ型の疑似二次元配列から、一次元配列に変換
     bone_frames = []
@@ -191,10 +199,13 @@ def parse_exec():
         if args.camera_pmx_path:
             camera_pmx = VmdReader().read_vmd_file(args.camera_pmx_path)
 
+        is_debug = True if args.verbose > level[args.verbose] else False
+
         main(motion, trace_model, replace_model, output_vmd_path, \
             is_avoidance, is_avoidance_finger, is_hand_ik, args.hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, args.hand_floor_distance, args.leg_floor_distance, \
             is_finger_ik, args.finger_distance, args.vmd_choice_values.split(","), args.rep_choice_values.split(","), args.rep_rate_values.split(","), \
-            camera_motion, args.camera_vmd_path, camera_pmx, output_camera_vmd_path, args.camera_y_offset, is_alternative_model, is_no_delegate, args.target_avoidance_rigids.split(","), args.target_avoidance_bones.split(","), args.test_param.split(","))
+            camera_motion, args.camera_vmd_path, camera_pmx, output_camera_vmd_path, args.camera_y_offset, is_alternative_model, is_no_delegate, \
+            args.target_avoidance_rigids.split(","), args.target_avoidance_bones.split(","), is_debug, args.test_param.split(","))
 
         if os.name == "nt":
             # Windows

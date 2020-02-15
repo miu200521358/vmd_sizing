@@ -14,14 +14,17 @@ def resource_path(relative):
 
     
 if __name__ == '__main__':
-    if len(sys.argv) > 1:
+    if len(sys.argv) > 2:
         # 引数指定がある場合、コマンドライン実行
         main.parse_exec()
     else:
+        # デバッグレベルの指定のみの場合、デバッグを出力する
+        is_debug = True if len(sys.argv) > 1 and "is_debug" in sys.argv else False
+
         # 引数指定がない場合、通常起動
         app = wx.App(False)
         icon=wx.Icon(resource_path('src/vmdsizing.ico'),wx.BITMAP_TYPE_ICO)
-        frame = VmdSizingProject3(None)
+        frame = VmdSizingProject3(None, is_debug)
         frame.SetIcon(icon)
         frame.Show(True)
         app.MainLoop()
