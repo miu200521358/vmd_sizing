@@ -347,7 +347,7 @@ def delegate_twist_qq_4_arm(fno, direction, arm_qq, arm_twist_qq, elbow_qq, wris
     wrist_twist_result_qq = QQuaternion()
     wrist_result_qq = QQuaternion()
 
-    utils.output_file_logger(file_logger, "fno: {fno} -----------------------".format(fno=fno))
+    utils.output_file_logger(file_logger, "fno: {fno} -----------------------".format(fno=fno), level=logging.DEBUG)
 
     # 回転を分離
     arm_x_qq, arm_y_qq, arm_z_qq, arm_yz_qq = utils.split_qq_2_xyz(fno, "{0}腕".format(direction), arm_qq, arm_local_x_axis)
@@ -367,7 +367,7 @@ def delegate_twist_qq_4_arm(fno, direction, arm_qq, arm_twist_qq, elbow_qq, wris
 
     # 逆肘（初期値より後ろにひじが向かっている場合）判定
     is_reverse = utils.is_reverse_elbow(elbow_y_qq, elbow_local_x_axis, arm_local_x_axis, elbow_local_x_axis)
-    utils.output_file_logger(file_logger, "fno: {fno}, 逆ひじ: {is_reverse}".format(fno=fno, is_reverse=is_reverse))
+    utils.output_file_logger(file_logger, "fno: {fno}, 逆ひじ: {is_reverse}".format(fno=fno, is_reverse=is_reverse), level=logging.DEBUG)
 
     # 手首ローカルY軸 
     elbow_local_y_axis = QVector3D.crossProduct(elbow_local_x_axis, QVector3D(0, 0, -1)).normalized()

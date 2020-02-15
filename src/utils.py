@@ -70,25 +70,23 @@ def create_file_logger(motion, trace_model, replace_model, output_vmd_path):
     return file_logger
 
 def output_file_logger(file_logger, txt, level=logging.INFO):
-    is_print=False
+    is_print=True
 
     if level >= logging.DEBUG:
         file_logger.debug(txt)
-
-    if level >= logging.INFO:
-        if is_print:
-            print(txt)
+    
+    elif level >= logging.INFO:
         file_logger.info(txt)
 
-    if level >= logging.WARNING:
-        if is_print:
-            print(txt)
+    elif level >= logging.WARNING:
         file_logger.warning(txt)
-
-    if level >= logging.ERROR:
-        if is_print:
-            print(txt)
+    
+    elif level >= logging.ERROR:
         file_logger.error(txt)
+
+    # 指定が実行レベルより高い場合、メッセージ出力あり
+    if level >= file_logger.getEffectiveLevel() and is_print:
+        print(txt)
 
 def close_file_logger(file_logger, error_file_handler):
     if file_logger:
@@ -512,28 +510,28 @@ def split_qq_2_xyz(fno, bone_name, qq, global_x_axis):
 # qqを捩りの軸に合わせて変換
 def convert_twist_qq(fno, bone_name, from_qq, twist_qq, from_x_axis, twist_x_axis, file_logger):
     from_degree = degrees(2 * acos(min(1, max(-1, from_qq.scalar()))))
-    output_file_logger(file_logger, "fno: {fno}, {bone_name}, from_degree: {from_degree} from_qq: {from_qq}".format(fno=fno, bone_name=bone_name, from_degree=from_degree, from_qq=from_qq))
+    output_file_logger(file_logger, "fno: {fno}, {bone_name}, from_degree: {from_degree} from_qq: {from_qq}".format(fno=fno, bone_name=bone_name, from_degree=from_degree, from_qq=from_qq), level=logging.DEBUG)
 
     twist_x_qq = from_qq
-    output_file_logger(file_logger, "fno: {fno}, {bone_name}, from_x_axis: {from_x_axis}".format(fno=fno, bone_name=bone_name, from_x_axis=from_x_axis))
+    output_file_logger(file_logger, "fno: {fno}, {bone_name}, from_x_axis: {from_x_axis}".format(fno=fno, bone_name=bone_name, from_x_axis=from_x_axis), level=logging.DEBUG)
 
     if (from_qq.normalized().x() < 0 and from_qq.scalar() < 0):
         twist_x_qq.setScalar(-twist_x_qq.scalar())
-        output_file_logger(file_logger, "fno: {fno}, {bone_name}, 調整1 twist_x_qq: {twist_x_qq}".format(fno=fno, bone_name=bone_name, twist_x_qq=twist_x_qq))
+        output_file_logger(file_logger, "fno: {fno}, {bone_name}, 調整1 twist_x_qq: {twist_x_qq}".format(fno=fno, bone_name=bone_name, twist_x_qq=twist_x_qq), level=logging.DEBUG)
     elif (from_qq.normalized().x() < 0 and from_x_axis.x() > 0):
         twist_x_qq.setScalar(-twist_x_qq.scalar())
-        output_file_logger(file_logger, "fno: {fno}, {bone_name}, 調整2 twist_x_qq: {twist_x_qq}".format(fno=fno, bone_name=bone_name, twist_x_qq=twist_x_qq))
+        output_file_logger(file_logger, "fno: {fno}, {bone_name}, 調整2 twist_x_qq: {twist_x_qq}".format(fno=fno, bone_name=bone_name, twist_x_qq=twist_x_qq), level=logging.DEBUG)
     elif (from_qq.normalized().x() > 0 and from_x_axis.x() < 0):
         twist_x_qq.setScalar(-twist_x_qq.scalar())
-        output_file_logger(file_logger, "fno: {fno}, {bone_name}, 調整3 twist_x_qq: {twist_x_qq}".format(fno=fno, bone_name=bone_name, twist_x_qq=twist_x_qq))
+        output_file_logger(file_logger, "fno: {fno}, {bone_name}, 調整3 twist_x_qq: {twist_x_qq}".format(fno=fno, bone_name=bone_name, twist_x_qq=twist_x_qq), level=logging.DEBUG)
 
     twist_x_degree = degrees(2 * acos(min(1, max(-1, twist_x_qq.scalar()))))
     twist_converted_qq = QQuaternion.fromAxisAndAngle(twist_x_axis, twist_x_degree)
-    output_file_logger(file_logger, "fno: {fno}, {bone_name}, twist_x_degree: {twist_x_degree}, twist_converted_qq: {twist_converted_qq}".format(fno=fno, bone_name=bone_name, twist_x_degree=twist_x_degree, twist_converted_qq=twist_converted_qq))
+    output_file_logger(file_logger, "fno: {fno}, {bone_name}, twist_x_degree: {twist_x_degree}, twist_converted_qq: {twist_converted_qq}".format(fno=fno, bone_name=bone_name, twist_x_degree=twist_x_degree, twist_converted_qq=twist_converted_qq), level=logging.DEBUG)
 
     twist_result_qq = twist_qq * twist_converted_qq
     twist_result_degree = degrees(2 * acos(min(1, max(-1, twist_result_qq.scalar()))))
-    output_file_logger(file_logger, "fno: {fno}, {bone_name}, twist_result_degree: {twist_result_degree}, twist_result_qq: {twist_result_qq}".format(fno=fno, bone_name=bone_name, twist_result_degree=twist_result_degree, twist_result_qq=twist_result_qq))
+    output_file_logger(file_logger, "fno: {fno}, {bone_name}, twist_result_degree: {twist_result_degree}, twist_result_qq: {twist_result_qq}".format(fno=fno, bone_name=bone_name, twist_result_degree=twist_result_degree, twist_result_qq=twist_result_qq), level=logging.DEBUG)
 
     return twist_result_qq, twist_result_degree
 
@@ -618,7 +616,7 @@ def delegate_twist_qq(fno, bone_name, original_parent_qq, parent_qq, original_tw
     # 差分を委譲先Xの回転に変換
     twist_delegate_qq, twist_delegate_degree = convert_twist_qq(fno, bone_name, result_diff_qq, twist_result_qq, parent_x_axis, twist_x_axis, file_logger)
 
-    output_file_logger(file_logger, "fno: {fno}, {bone_name}, twist_delegate_degree: {twist_delegate_degree}, twist_delegate_qq: {twist_delegate_qq}".format(fno=fno, bone_name=bone_name, twist_delegate_degree=twist_delegate_degree, twist_delegate_qq=twist_delegate_qq))
+    output_file_logger(file_logger, "fno: {fno}, {bone_name}, twist_delegate_degree: {twist_delegate_degree}, twist_delegate_qq: {twist_delegate_qq}".format(fno=fno, bone_name=bone_name, twist_delegate_degree=twist_delegate_degree, twist_delegate_qq=twist_delegate_qq), level=logging.DEBUG)
 
     if (twist_delegate_degree < twist_result_degree < 180) or (twist_delegate_degree > twist_result_degree > 180):
         return twist_delegate_qq

@@ -143,7 +143,7 @@ def parse_exec():
     parser.add_argument('--camera_y_offset', dest='camera_y_offset', help='camera_y_offset', default=0, type=float)
     parser.add_argument('--output_path', dest='output_path', help='output_path', default="", type=str)
     parser.add_argument('--alternative_model', dest='alternative_model', help='alternative_model', default=0, type=int)
-    parser.add_argument('--no_delegate', dest='no_delegate', help='no_delegate', default=0, type=int)
+    parser.add_argument('--add_delegate', dest='add_delegate', help='add_delegate', default=0, type=int)
     parser.add_argument('--target_avoidance_rigids', dest='target_avoidance_rigids', help='target_avoidance_rigids', default="", type=str)
     parser.add_argument('--target_avoidance_bones', dest='target_avoidance_bones', help='target_avoidance_bones', default="", type=str)
     parser.add_argument('--test_param', dest='test_param', help='test_param', default="", type=str)
@@ -185,7 +185,7 @@ def parse_exec():
         is_finger_ik = True if args.finger_ik == 1 else False
 
         is_alternative_model = True if args.alternative_model == 1 else False
-        is_add_delegate = True if args.no_delegate == 1 else False
+        is_add_delegate = True if args.add_delegate == 1 else False
 
         camera_motion = None
         output_camera_vmd_path = None
@@ -199,7 +199,7 @@ def parse_exec():
         if args.camera_pmx_path:
             camera_pmx = VmdReader().read_vmd_file(args.camera_pmx_path)
 
-        is_debug = True if args.verbose > level[args.verbose] else False
+        is_debug = True if args.verbose > 2 else False
 
         main(motion, trace_model, replace_model, output_vmd_path, \
             is_avoidance, is_avoidance_finger, is_hand_ik, args.hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, args.hand_floor_distance, args.leg_floor_distance, \
