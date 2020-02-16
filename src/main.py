@@ -52,7 +52,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, \
         utils.output_file_logger(file_logger, "■　捩り分散有無: {is_add_delegate}".format(is_add_delegate=is_add_delegate))
         utils.output_file_logger(file_logger, "■　モーフ置換元: {vmd_choice_values}".format(vmd_choice_values=",".join(vmd_choice_values)))
         utils.output_file_logger(file_logger, "■　モーフ置換先: {rep_choice_values}".format(rep_choice_values=",".join(rep_choice_values)))
-        utils.output_file_logger(file_logger, "■　モーフ大きさ: {rep_rate_values}".format(rep_rate_values=",".join(rep_rate_values)))
+        utils.output_file_logger(file_logger, "■　モーフ大きさ: {rep_rate_values}".format(rep_rate_values=','.join([str(i) for i in rep_choice_values])))
         utils.output_file_logger(file_logger, "■　剛体接触回避: {is_avoidance}".format(is_avoidance=is_avoidance))
         utils.output_file_logger(file_logger, "■　剛体接触判定ボーン: {target_avoidance_rigids}".format(target_avoidance_rigids=",".join(target_avoidance_rigids)))
         utils.output_file_logger(file_logger, "■　接触回避対象剛体: {target_avoidance_bones}".format(target_avoidance_bones=",".join(target_avoidance_bones)))
