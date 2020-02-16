@@ -37,11 +37,11 @@ class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent, version_name, is_debug ):
 		self.version_name = version_name
+		self.is_debug = is_debug
 
 		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 {0}".format(self.version_name), pos = wx.DefaultPosition, size = wx.Size( 600,650 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
-		self.is_debug = is_debug
 
 		# 分割配列
 		self.slice_frame_values = []

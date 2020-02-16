@@ -50,7 +50,6 @@ def main(motion, trace_model, replace_model, output_vmd_path, \
         utils.output_file_logger(file_logger, "■　変換先モデル: {replace_model} ({model_name})".format(replace_model=os.path.basename(replace_model.path), model_name=replace_model.name))
         utils.output_file_logger(file_logger, "■　代替モデル有無: {is_alternative_model}".format(is_alternative_model=is_alternative_model))
         utils.output_file_logger(file_logger, "■　捩り分散有無: {is_add_delegate}".format(is_add_delegate=is_add_delegate))
-        utils.output_file_logger(file_logger, "■　捩り分散有無: {is_add_delegate}".format(is_add_delegate=is_add_delegate))
         utils.output_file_logger(file_logger, "■　モーフ置換元: {vmd_choice_values}".format(vmd_choice_values=",".join(vmd_choice_values)))
         utils.output_file_logger(file_logger, "■　モーフ置換先: {rep_choice_values}".format(rep_choice_values=",".join(rep_choice_values)))
         utils.output_file_logger(file_logger, "■　モーフ大きさ: {rep_rate_values}".format(rep_rate_values=','.join([str(i) for i in rep_choice_values])))
