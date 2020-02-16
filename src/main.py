@@ -34,87 +34,136 @@ def main(motion, trace_model, replace_model, output_vmd_path, \
     # print("作成元: %s" % trace_model.path)
     # print("変換先: %s" % replace_model.path)
 
-    # 変換前のオリジナルモーションを保持
-    org_motion_frames = copy.deepcopy(motion.frames)
-
     # 処理に成功しているか
     is_success = True
-    file_logger = utils.create_file_logger(motion, trace_model, replace_model, output_vmd_path.lower())
-    utils.output_file_logger(file_logger, "■■ ---------------------------")
-    utils.output_file_logger(file_logger, "モーション: {motion}".format(motion=os.path.basename(motion.path)))
-    utils.output_file_logger(file_logger, "作成元モデル: {trace_model}".format(trace_model=os.path.basename(trace_model.path)))
-    utils.output_file_logger(file_logger, "変換先モデル: {replace_model}".format(replace_model=os.path.basename(replace_model.path)))
-    utils.output_file_logger(file_logger, "---------------------------")
 
-    if is_debug:
-        file_logger.setLevel(logging.DEBUG)
+    try:
+        file_logger = utils.create_file_logger(motion, trace_model, replace_model, output_vmd_path.lower())
 
-    # 移動系ボーン縮尺処理
-    is_success = sub_move.exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, file_logger) and is_success
+        if is_debug:
+            file_logger.setLevel(logging.DEBUG)
 
-    # スタンス補正処理
-    is_success = sub_arm_stance.exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, is_alternative_model, is_add_delegate, file_logger, test_param) and is_success
+        utils.output_file_logger(file_logger, "■■■■■■■■■■■■■■■■■■■■■■■■")
+        utils.output_file_logger(file_logger, "■　モーション: {motion}".format(motion=os.path.basename(motion.path)))
+        utils.output_file_logger(file_logger, "■　作成元モデル: {trace_model}".format(trace_model=os.path.basename(trace_model.path)))
+        utils.output_file_logger(file_logger, "■　変換先モデル: {replace_model}".format(replace_model=os.path.basename(replace_model.path)))
+        utils.output_file_logger(file_logger, "■　代替モデル有無: {is_alternative_model}".format(is_alternative_model=is_alternative_model))
+        utils.output_file_logger(file_logger, "■　捩り分散有無: {is_add_delegate}".format(is_add_delegate=is_add_delegate))
+        utils.output_file_logger(file_logger, "■　捩り分散有無: {is_add_delegate}".format(is_add_delegate=is_add_delegate))
+        utils.output_file_logger(file_logger, "■　モーフ置換元: {vmd_choice_values}".format(vmd_choice_values=",".join(vmd_choice_values)))
+        utils.output_file_logger(file_logger, "■　モーフ置換先: {rep_choice_values}".format(rep_choice_values=",".join(rep_choice_values)))
+        utils.output_file_logger(file_logger, "■　モーフ大きさ: {rep_rate_values}".format(rep_rate_values=",".join(rep_rate_values)))
+        utils.output_file_logger(file_logger, "■　剛体接触回避: {is_avoidance}".format(is_avoidance=is_avoidance))
+        utils.output_file_logger(file_logger, "■　剛体接触判定ボーン: {target_avoidance_rigids}".format(target_avoidance_rigids=",".join(target_avoidance_rigids)))
+        utils.output_file_logger(file_logger, "■　接触回避対象剛体: {target_avoidance_bones}".format(target_avoidance_bones=",".join(target_avoidance_bones)))
+        utils.output_file_logger(file_logger, "■　手首位置合わせ: {is_hand_ik}".format(is_hand_ik=is_hand_ik))
+        utils.output_file_logger(file_logger, "■　指位置合わせ: {is_finger_ik}".format(is_finger_ik=is_finger_ik))
+        utils.output_file_logger(file_logger, "■　床位置合わせ: {is_floor_hand}".format(is_floor_hand=is_floor_hand))
+        utils.output_file_logger(file_logger, "■　手首間の距離: {hand_distance}".format(hand_distance=hand_distance))
+        utils.output_file_logger(file_logger, "■　指間の距離: {finger_distance}".format(finger_distance=finger_distance))
+        utils.output_file_logger(file_logger, "■　手首と床の距離: {hand_floor_distance}".format(hand_floor_distance=hand_floor_distance))
+        utils.output_file_logger(file_logger, "■　足と床の距離: {leg_floor_distance}".format(leg_floor_distance=leg_floor_distance))
 
-    # 腕IK処理
-    is_success = sub_arm_ik.exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, org_motion_frames, file_logger) and is_success
+        if camera_motion is not None:
+            utils.output_file_logger(file_logger, "■　カメラモーション: {camera_motion}".format(camera_motion=os.path.basename(camera_motion.path)))
+        else:
+            utils.output_file_logger(file_logger, "■　カメラモーション: {camera_motion}".format(camera_motion="指定なし"))
 
-    # カメラ処理
-    # カメラの元モデルは、カメラ用PMXデータ
-    is_success = sub_camera.exec(motion, camera_pmx, replace_model, output_vmd_path, org_motion_frames, camera_motion, camera_y_offset, file_logger) and is_success
+        if camera_pmx is not None:
+            utils.output_file_logger(file_logger, "■　カメラモデル: {camera_pmx}".format(camera_pmx=os.path.basename(camera_pmx.path)))
+        else:
+            utils.output_file_logger(file_logger, "■　カメラモデル: {camera_pmx}".format(camera_pmx="指定なし"))
 
-    # 頭部と腕の接触回避処理
-    is_success = sub_avoidance2.exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik, target_avoidance_rigids, target_avoidance_bones, org_motion_frames, file_logger) and is_success
+        utils.output_file_logger(file_logger, "■　カメラYオフセット: {camera_y_offset}".format(camera_y_offset=camera_y_offset))
+        utils.output_file_logger(file_logger, "■■■■■■■■■■■■■■■■■■■■■■■■")
 
-    # モーフ処理
-    is_success = sub_morph.exec(motion, trace_model, replace_model, output_vmd_path, vmd_choice_values, rep_choice_values, rep_rate_values, file_logger) and is_success
+        # 変換前のオリジナルモーションを保持
+        org_motion_frames = copy.deepcopy(motion.frames)
 
-    # ディクショナリ型の疑似二次元配列から、一次元配列に変換
-    bone_frames = []
+        # 移動系ボーン縮尺処理
+        is_success = sub_move.exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, file_logger) and is_success
 
-    # MMDのメモリ確保のため、最大フレーム番号のデータを先頭に持ってくる
-    for k,v in motion.frames.items():
-        for bf in reversed(v):
-            if bf.key == True:
-                bone_frames.append(bf)
-                break
+        # スタンス補正処理
+        is_success = sub_arm_stance.exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, is_alternative_model, is_add_delegate, file_logger, test_param) and is_success
 
-    for k,v in motion.frames.items():
-        # とりあえず最後のは登録済みなので無視
-        for bf in v[:-1]:
-            if bf.key == True:
-                bone_frames.append(bf)
-    
-    morph_frames = []
-    for k,v in motion.morphs.items():
-        for mf in v:
-            # logger.debug("k: %s, mf: %s, %s", k, mf.frame, mf.ratio)
-            morph_frames.append(mf)
+        # 腕IK処理
+        is_success = sub_arm_ik.exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, org_motion_frames, file_logger) and is_success
 
-    logger.debug("bone_frames: %s", len(bone_frames))
-    logger.debug("morph_frames: %s", len(morph_frames))
-    logger.info("bone_frames[0]: %s, %s", bone_frames[0].format_name, bone_frames[0].frame)
+        # カメラ処理
+        # カメラの元モデルは、カメラ用PMXデータ
+        is_success = sub_camera.exec(motion, camera_pmx, replace_model, output_vmd_path, org_motion_frames, camera_motion, camera_y_offset, file_logger) and is_success
 
-    writer = VmdWriter()
-    
-    # ボーンモーション生成
-    writer.write_vmd_file(output_vmd_path, replace_model.name, bone_frames, morph_frames, [], [], [], motion.showiks)
+        # 頭部と腕の接触回避処理
+        is_success = sub_avoidance2.exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_avoidance_finger, is_hand_ik, target_avoidance_rigids, target_avoidance_bones, org_motion_frames, file_logger) and is_success
 
-    camera_frames = []
-    
-    if camera_motion:
-        # カメラモーション生成
-        for cf in camera_motion.cameras:
-            camera_frames.append(cf)
+        # モーフ処理
+        is_success = sub_morph.exec(motion, trace_model, replace_model, output_vmd_path, vmd_choice_values, rep_choice_values, rep_rate_values, file_logger) and is_success
 
-        writer.write_vmd_file(output_camera_vmd_path, replace_model.name, [], [], camera_frames, motion.lights, motion.shadows, [])
+        # ディクショナリ型の疑似二次元配列から、一次元配列に変換
+        bone_frames = []
 
-    print("■■■■■■■■■■■■■■■■■")
-    print("■　変換出力完了: %s" % output_vmd_path)
+        # MMDのメモリ確保のため、最大フレーム番号のデータを先頭に持ってくる
+        for k,v in motion.frames.items():
+            for bf in reversed(v):
+                if bf.key == True:
+                    bone_frames.append(bf)
+                    break
 
-    if camera_motion:
-        print("■　カメラ変換出力完了: %s" % output_camera_vmd_path)
+        for k,v in motion.frames.items():
+            # とりあえず最後のは登録済みなので無視
+            for bf in v[:-1]:
+                if bf.key == True:
+                    bone_frames.append(bf)
+        
+        morph_frames = []
+        for k,v in motion.morphs.items():
+            for mf in v:
+                # logger.debug("k: %s, mf: %s, %s", k, mf.frame, mf.ratio)
+                morph_frames.append(mf)
 
-    print("■■■■■■■■■■■■■■■■■")
+        logger.debug("bone_frames: %s", len(bone_frames))
+        logger.debug("morph_frames: %s", len(morph_frames))
+        logger.debug("bone_frames[0]: %s, %s", bone_frames[0].format_name, bone_frames[0].frame)
+
+        writer = VmdWriter()
+        
+        # ボーンモーション生成
+        writer.write_vmd_file(output_vmd_path, replace_model.name, bone_frames, morph_frames, [], [], [], motion.showiks)
+
+        camera_frames = []
+        
+        if camera_motion:
+            # カメラモーション生成
+            for cf in camera_motion.cameras:
+                camera_frames.append(cf)
+
+            writer.write_vmd_file(output_camera_vmd_path, replace_model.name, [], [], camera_frames, motion.lights, motion.shadows, [])
+
+        utils.output_file_logger(file_logger, "■■■■■■■■■■■■■■■■■")
+        utils.output_file_logger(file_logger, "■　変換出力完了: %s" % output_vmd_path)
+
+        if camera_motion:
+            utils.output_file_logger(file_logger, "■　カメラ変換出力完了: %s" % output_camera_vmd_path)
+
+        utils.output_file_logger(file_logger, "■■■■■■■■■■■■■■■■■")
+
+    except SizingException as e:
+        utils.output_file_logger(file_logger, "■■■■■■■■■■■■■■■■■")
+        utils.output_file_logger(file_logger, "■　**ERROR**　")
+        utils.output_file_logger(file_logger, "■　VMDサイジング処理が処理できないデータで終了しました。")
+        utils.output_file_logger(file_logger, "■■■■■■■■■■■■■■■■■")
+        utils.output_file_logger(file_logger, "")
+        utils.output_file_logger(file_logger, e.message)
+
+    except Exception:
+        utils.output_file_logger(file_logger, "■■■■■■■■■■■■■■■■■")
+        utils.output_file_logger(file_logger, "■　**ERROR**　")
+        utils.output_file_logger(file_logger, "■　VMDサイジング処理が意図せぬエラーで終了しました。")
+        utils.output_file_logger(file_logger, "■■■■■■■■■■■■■■■■■")
+
+        utils.output_file_logger(file_logger, traceback.format_exc())
+    finally:
+        logging.shutdown()
 
     return is_success
 

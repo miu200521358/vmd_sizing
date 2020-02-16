@@ -352,150 +352,116 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
 
     file_logger = None
     
-    try:
-        if not output_vmd_path:
-            output_vmd_path = create_output_path(vmd_path, rep_pmx_path, is_avoidance, is_hand_ik, len(vmd_choice_values) > 0)
-            if output_vmd_path == None:
-                return False
+    if not output_vmd_path:
+        output_vmd_path = create_output_path(vmd_path, rep_pmx_path, is_avoidance, is_hand_ik, len(vmd_choice_values) > 0)
+        if output_vmd_path == None:
+            return False
 
-        if not output_camera_vmd_path:
-            output_camera_vmd_path = create_output_camera_path(camera_vmd_path, rep_pmx_path)
+    if not output_camera_vmd_path:
+        output_camera_vmd_path = create_output_camera_path(camera_vmd_path, rep_pmx_path)
 
-        # 出力ディレクトリ作っとく
-        new_dir = os.path.dirname(output_vmd_path)
+    # 出力ディレクトリ作っとく
+    new_dir = os.path.dirname(output_vmd_path)
+    if os.path.exists(new_dir) == False:
+        print("出力対象VMDファイル用フォルダ作成 %s" % new_dir)
+        os.makedirs(new_dir, exist_ok=True)
+    else:
+        if os.path.isdir(new_dir) == False:
+            print("■■■■■■■■■■■■■■■■■")
+            print("■　**ERROR**　")
+            print("■　生成予定のファイルパスのフォルダ構成が正しくないため、処理を中断します。")
+            print("■　生成予定パス: "+ output_vmd_path )
+            print("■■■■■■■■■■■■■■■■■")
+
+            return False
+
+    if output_camera_vmd_path:
+        # カメラ用出力ディレクトリ作っとく
+        new_dir = os.path.dirname(output_camera_vmd_path)
         if os.path.exists(new_dir) == False:
-            print("出力対象VMDファイル用フォルダ作成 %s" % new_dir)
+            print("出力対象カメラVMDファイル用フォルダ作成 %s" % new_dir)
             os.makedirs(new_dir, exist_ok=True)
         else:
             if os.path.isdir(new_dir) == False:
                 print("■■■■■■■■■■■■■■■■■")
                 print("■　**ERROR**　")
                 print("■　生成予定のファイルパスのフォルダ構成が正しくないため、処理を中断します。")
-                print("■　生成予定パス: "+ output_vmd_path )
+                print("■　生成予定パス: "+ output_camera_vmd_path )
                 print("■■■■■■■■■■■■■■■■■")
 
                 return False
-
-        if output_camera_vmd_path:
-            # カメラ用出力ディレクトリ作っとく
-            new_dir = os.path.dirname(output_camera_vmd_path)
-            if os.path.exists(new_dir) == False:
-                print("出力対象カメラVMDファイル用フォルダ作成 %s" % new_dir)
-                os.makedirs(new_dir, exist_ok=True)
-            else:
-                if os.path.isdir(new_dir) == False:
-                    print("■■■■■■■■■■■■■■■■■")
-                    print("■　**ERROR**　")
-                    print("■　生成予定のファイルパスのフォルダ構成が正しくないため、処理を中断します。")
-                    print("■　生成予定パス: "+ output_camera_vmd_path )
-                    print("■■■■■■■■■■■■■■■■■")
-
-                    return False
-            
-        logger.debug("フォルダ生成終了")
-
-        # VMD読み込み
-        if not motion:
-            motion = read_vmd(vmd_path)
-
-        # 作成元モデル
-        if not org_pmx:
-            org_pmx = read_pmx(org_pmx_path)
-
-        # 変換先モデル
-        if not rep_pmx:
-            rep_pmx = read_pmx(rep_pmx_path)
         
-        # カメラVMD読み込み
-        if not camera_motion and camera_vmd_path and os.path.exists(camera_vmd_path):
-            camera_motion = read_vmd(camera_vmd_path)
-        
-        # カメラPMX読み込み
-        # 前のデータが無い場合、内部的に前のモーションPMXデータを保持してしまうので、とりあえずクリア
-        if camera_pmx:
-            # カメラPMXがある場合
-            camera_pmx_data = camera_pmx
+    logger.debug("フォルダ生成終了")
+
+    # VMD読み込み
+    if not motion:
+        motion = read_vmd(vmd_path, is_print=False)
+
+    # 作成元モデル
+    if not org_pmx:
+        org_pmx = read_pmx(org_pmx_path, is_print=False)
+
+    # 変換先モデル
+    if not rep_pmx:
+        rep_pmx = read_pmx(rep_pmx_path, is_print=False)
+    
+    # カメラVMD読み込み
+    if not camera_motion and camera_vmd_path and os.path.exists(camera_vmd_path):
+        camera_motion = read_vmd(camera_vmd_path, is_print=False)
+    
+    # カメラPMX読み込み
+    # 前のデータが無い場合、内部的に前のモーションPMXデータを保持してしまうので、とりあえずクリア
+    if camera_pmx:
+        # カメラPMXがある場合
+        camera_pmx_data = camera_pmx
+    else:
+        # カメラPMXがない場合
+        if camera_pmx_path and os.path.exists(camera_pmx_path):
+            camera_pmx_data = read_pmx(camera_pmx_path, is_print=False)
         else:
-            # カメラPMXがない場合
-            if camera_pmx_path and os.path.exists(camera_pmx_path):
-                camera_pmx_data = read_pmx(camera_pmx_path)
-            else:
+            if camera_motion is not None:
                 # 未指定の場合、作成元モデルをそのまま使用
                 camera_pmx_data = org_pmx
+            else:
+                camera_pmx_data = None
 
-        if motion and org_pmx and rep_pmx:
-            # ファイル出力タイプでサイジングチェック
-            is_shortage = is_all_sizing(motion, org_pmx, rep_pmx, camera_motion, output_vmd_path)
+    if motion and org_pmx and rep_pmx:
+        # ファイル出力タイプでサイジングチェック
+        is_shortage = is_all_sizing(motion, org_pmx, rep_pmx, camera_motion, output_vmd_path)
 
-            # 実処理実行
-            # 読み込んだモーションデータそのものを弄らないよう、コピーした結果を渡す
-            is_success = main.main(copy.deepcopy(motion), org_pmx, rep_pmx, output_vmd_path, \
-                is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger, finger_distance, vmd_choice_values, rep_choice_values, rep_rate_values, \
-                copy.deepcopy(camera_motion), camera_vmd_path, camera_pmx_data, output_camera_vmd_path, camera_y_offset, is_alternative_model, is_add_delegate, target_avoidance_rigids, target_avoidance_bones, is_debug, "")
+        # 実処理実行
+        # 読み込んだモーションデータそのものを弄らないよう、コピーした結果を渡す
+        is_success = main.main(copy.deepcopy(motion), org_pmx, rep_pmx, output_vmd_path, \
+            is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger, finger_distance, vmd_choice_values, rep_choice_values, rep_rate_values, \
+            copy.deepcopy(camera_motion), camera_vmd_path, camera_pmx_data, output_camera_vmd_path, camera_y_offset, is_alternative_model, is_add_delegate, target_avoidance_rigids, target_avoidance_bones, is_debug, "")
 
-            logger.debug("is_shortage: %s, is_success: %s", is_shortage, is_success)
+        logger.debug("is_shortage: %s, is_success: %s", is_shortage, is_success)
 
-            if is_shortage or not is_success:
-                print("■■■■■■■■■■■■■■■■■")
-                print("■　サイジングに失敗している箇所があります。")
-                print("■　ログを確認してください。")
-                print("■■■■■■■■■■■■■■■■■")
-                print("")
-            
-            # 実行後、出力ファイル存在チェック
-            try:
-                Path(output_vmd_path).resolve(True)
-            except FileNotFoundError as e:
-                print("■■■■■■■■■■■■■■■■■")
-                print("■　**ERROR**　")
-                print("■　出力VMDファイルが正常に作成されなかったようです。")
-                print("■　パスを確認してください。")
-                print("■　出力VMDファイルパス: "+ output_vmd_path )
-                print("■■■■■■■■■■■■■■■■■")
-                print("")
-                print(e.with_traceback(sys.exc_info()[2]))
+        if is_shortage or not is_success:
+            print("■■■■■■■■■■■■■■■■■")
+            print("■　サイジングに失敗している箇所があります。")
+            print("■　ログを確認してください。")
+            print("■■■■■■■■■■■■■■■■■")
+            print("")
+        
+        # 実行後、出力ファイル存在チェック
+        try:
+            Path(output_vmd_path).resolve(True)
+        except FileNotFoundError as e:
+            print("■■■■■■■■■■■■■■■■■")
+            print("■　**ERROR**　")
+            print("■　出力VMDファイルが正常に作成されなかったようです。")
+            print("■　パスを確認してください。")
+            print("■　出力VMDファイルパス: "+ output_vmd_path )
+            print("■■■■■■■■■■■■■■■■■")
+            print("")
+            print(e.with_traceback(sys.exc_info()[2]))
 
-                return False
-
-        else:
-            print("ファイルデータが正しく読み込まれていないようです。\nもう一度ボタンをクリックしてみてください。")
             return False
 
-    except SizingException as e:
-        print("■■■■■■■■■■■■■■■■■")
-        print("■　**ERROR**　")
-        print("■　VMDサイジング処理が処理できないデータで終了しました。")
-        print("■■■■■■■■■■■■■■■■■")
-        print("")
-        print(e.message)
-
-        file_logger = utils.create_file_logger(motion, org_pmx, rep_pmx, output_vmd_path)
-        
-        file_logger.error("■■■■■■■■■■■■■■■■■")
-        file_logger.error("■　**ERROR**　")
-        file_logger.error("■　VMDサイジング処理が処理できないデータで終了しました。")
-        file_logger.error("■■■■■■■■■■■■■■■■■")
-
-        file_logger.error(e.message)
-
-    except Exception:
-        print("■■■■■■■■■■■■■■■■■")
-        print("■　**ERROR**　")
-        print("■　VMDサイジング処理が意図せぬエラーで終了しました。")
-        print("■■■■■■■■■■■■■■■■■")
-
-        print(traceback.format_exc())
-
-        file_logger = utils.create_file_logger(motion, org_pmx, rep_pmx, output_vmd_path)
-        
-        file_logger.error("■■■■■■■■■■■■■■■■■")
-        file_logger.error("■　**ERROR**　")
-        file_logger.error("■　VMDサイジング処理が意図せぬエラーで終了しました。")
-        file_logger.error("■■■■■■■■■■■■■■■■■")
-
-        file_logger.error(traceback.format_exc())
-    finally:
-        logging.shutdown()
+    else:
+        print("ファイルデータが正しく読み込まれていないようです。\nもう一度ボタンをクリックしてみてください。")
+        return False
 
 # モーフ組み合わせファイル用パス生成
 def create_output_morph_path(vmd_path, org_pmx_path, rep_pmx_path):

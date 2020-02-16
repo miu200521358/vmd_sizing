@@ -1368,6 +1368,10 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_radioAvoidance.Bind(wx.EVT_RADIOBUTTON, self.OnChangeArmRadio)
 		self.m_radioArmIK.Bind(wx.EVT_RADIOBUTTON, self.OnChangeArmRadio)
 
+		# 剛体選択時の切り替え
+		self.m_arm_listRigidBody.Bind(wx.EVT_LISTBOX, self.OnChangeArmAvoidanceList)
+		self.m_arm_listAvoidance.Bind(wx.EVT_LISTBOX, self.OnChangeArmAvoidanceList)
+
 		# 床位置合わせのチェックボックス切り替え
 		self.m_checkFloorArmDistance.Bind(wx.EVT_CHECKBOX, self.OnChangeFloorArmDistance)
 
@@ -1694,6 +1698,12 @@ class VmdSizingForm3 ( wx.Frame ):
 		# パス再設定
 		self.OnCreateOutputVmd(event)
 	
+	# 剛体かボーンを選択したら、親の選択有効
+	def OnChangeArmAvoidanceList(self, event):
+		self.m_radioAvoidance.SetValue(1)
+		# パス再設定
+		self.OnCreateOutputVmd(event)
+
 	# 腕IKで指にチェックを入れたら、親の選択有効
 	def OnChangeFingerDistance(self, event):
 		self.m_radioArmIK.SetValue(1)
@@ -1709,7 +1719,7 @@ class VmdSizingForm3 ( wx.Frame ):
 			# self.m_checkFloorArmDistanceDown.SetValue(0)
 			# 指も無効
 			self.m_checkFingerDistance.SetValue(0)
-
+		
 		# パス再設定
 		self.OnCreateOutputVmd(event)
 

@@ -363,37 +363,37 @@ def delegate_twist_qq_4_arm(fno, direction, arm_qq, arm_twist_qq, elbow_qq, wris
     # 腕Xを腕捻りに（くの字はズレる）
     arm_twist_result_qq, arm_twist_result_degree = utils.convert_twist_qq(fno, "{0}腕".format(direction), arm_x_qq, arm_twist_qq, arm_local_x_axis, arm_twist_local_x_axis, file_logger)
     
-    # ひじYZをひじYに（ズレっぱなし）
+    # # ひじYZをひじYに（ズレっぱなし）
 
-    # 逆肘（初期値より後ろにひじが向かっている場合）判定
-    is_reverse = utils.is_reverse_elbow(elbow_y_qq, elbow_local_x_axis, arm_local_x_axis, elbow_local_x_axis)
-    utils.output_file_logger(file_logger, "fno: {fno}, 逆ひじ: {is_reverse}".format(fno=fno, is_reverse=is_reverse), level=logging.DEBUG)
+    # # 逆肘（初期値より後ろにひじが向かっている場合）判定
+    # is_reverse = utils.is_reverse_elbow(elbow_y_qq, elbow_local_x_axis, arm_local_x_axis, elbow_local_x_axis)
+    # utils.output_file_logger(file_logger, "fno: {fno}, 逆ひじ: {is_reverse}".format(fno=fno, is_reverse=is_reverse), level=logging.DEBUG)
 
-    # 手首ローカルY軸 
-    elbow_local_y_axis = QVector3D.crossProduct(elbow_local_x_axis, QVector3D(0, 0, -1)).normalized()
+    # # 手首ローカルY軸 
+    # elbow_local_y_axis = QVector3D.crossProduct(elbow_local_x_axis, QVector3D(0, 0, -1)).normalized()
 
-    if is_reverse:
-        # 逆肘はひじボーンY回転を維持し、Z回転は腕で吸収する。
-        elbow_y_degree = math.degrees(2 * math.acos(min(1, max(-1, elbow_y_qq.scalar()))))
-        elbow_result_qq = QQuaternion.fromAxisAndAngle(elbow_local_y_axis, elbow_y_degree)
-    else:
-        # 通常はひじYZ回転をひじボーンの順回転として扱う
-        elbow_yz_degree = math.degrees(2 * math.acos(min(1, max(-1, elbow_yz_qq.scalar()))))
-        elbow_result_qq = QQuaternion.fromAxisAndAngle(elbow_local_y_axis, elbow_yz_degree)
+    # if is_reverse:
+    #     # 逆肘はひじボーンY回転を維持し、Z回転は腕で吸収する。
+    #     elbow_y_degree = math.degrees(2 * math.acos(min(1, max(-1, elbow_y_qq.scalar()))))
+    #     elbow_result_qq = QQuaternion.fromAxisAndAngle(elbow_local_y_axis, elbow_y_degree)
+    # else:
+    #     # 通常はひじYZ回転をひじボーンの順回転として扱う
+    #     elbow_yz_degree = math.degrees(2 * math.acos(min(1, max(-1, elbow_yz_qq.scalar()))))
+    #     elbow_result_qq = QQuaternion.fromAxisAndAngle(elbow_local_y_axis, elbow_yz_degree)
 
-    # ひじベクトルを腕捻りで帳尻合わせ（ここでだいたい整合するか近似する）
-    arm_twist_result_qq = utils.delegate_twist_qq(fno, "{0}腕捩".format(direction), arm_qq, arm_result_qq, arm_twist_qq, arm_twist_result_qq, elbow_qq, elbow_result_qq, \
-        arm_twist_result_degree, arm_local_x_axis, arm_twist_local_x_axis, elbow_local_x_axis, file_logger)
+    # # ひじベクトルを腕捻りで帳尻合わせ（ここでだいたい整合するか近似する）
+    # arm_twist_result_qq = utils.delegate_twist_qq(fno, "{0}腕捩".format(direction), arm_qq, arm_result_qq, arm_twist_qq, arm_twist_result_qq, elbow_qq, elbow_result_qq, \
+    #     arm_twist_result_degree, arm_local_x_axis, arm_twist_local_x_axis, elbow_local_x_axis, file_logger)
 
-    # 手首XYZ回転を手首YZにする
-    wrist_result_qq = wrist_yz_qq
+    # # 手首XYZ回転を手首YZにする
+    # wrist_result_qq = wrist_yz_qq
 
-    # 手首Xを手捻りに
-    wrist_twist_result_qq, wrist_twist_result_degree = utils.convert_twist_qq(fno, "{0}手首".format(direction), wrist_x_qq, wrist_twist_qq, wrist_local_x_axis, wrist_twist_local_x_axis, file_logger)
+    # # 手首Xを手捻りに
+    # wrist_twist_result_qq, wrist_twist_result_degree = utils.convert_twist_qq(fno, "{0}手首".format(direction), wrist_x_qq, wrist_twist_qq, wrist_local_x_axis, wrist_twist_local_x_axis, file_logger)
 
-    # 手捩りで手首ベクトル帳尻合わせ（ここでだいたい整合するか近似する）
-    wrist_twist_result_qq = utils.delegate_twist_qq(fno, "{0}手捩".format(direction), elbow_qq, elbow_result_qq, wrist_twist_qq, wrist_twist_result_qq, wrist_qq, wrist_result_qq, \
-        wrist_twist_result_degree, elbow_local_x_axis, wrist_twist_local_x_axis, wrist_local_x_axis, file_logger)
+    # # 手捩りで手首ベクトル帳尻合わせ（ここでだいたい整合するか近似する）
+    # wrist_twist_result_qq = utils.delegate_twist_qq(fno, "{0}手捩".format(direction), elbow_qq, elbow_result_qq, wrist_twist_qq, wrist_twist_result_qq, wrist_qq, wrist_result_qq, \
+    #     wrist_twist_result_degree, elbow_local_x_axis, wrist_twist_local_x_axis, wrist_local_x_axis, file_logger)
 
     return arm_result_qq, arm_twist_result_qq, elbow_result_qq, wrist_twist_result_qq, wrist_result_qq
 
@@ -1135,7 +1135,7 @@ class LowPassFilter(object):
         self.__y = self.__s = None
 
     def __setAlpha(self, alpha):
-        alpha = float(alpha)
+        alpha = max(0.000001, min(1, float(alpha)))
         if alpha<=0 or alpha>1.0:
             raise ValueError("alpha (%s) should be in (0.0, 1.0]"%alpha)
         self.__alpha = alpha

@@ -61,7 +61,7 @@ def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
             elif "右" in bone_name:
                 arm_links = {"左": [], "右": links}
 
-            sub_arm_ik.prepare(motion, arm_links, 0, False, target_bones)
+            sub_arm_ik.prepare(motion, arm_links, 0, False, target_bones, file_logger)
 
         # 剛体接触回避処理実行
         is_error_outputed = exec_avoidance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, bone_ik_links, bone_all_links, bone_all_indexes, target_avoidance_bones, target_avoidance_rigids, rigid_links, rigid_indexes, file_logger)
@@ -76,10 +76,10 @@ def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
             # sub_arm_ik.reset_activate(motion, arm_links, False)
 
             # 補間曲線再設定
-            sub_arm_ik.reset_complement(motion, arm_links, False)
+            sub_arm_ik.reset_complement(motion, arm_links, False, file_logger)
 
             # 必要なキーだけ残す
-            sub_arm_ik.leave_valid_key_frames(motion, arm_links, False)
+            sub_arm_ik.leave_valid_key_frames(motion, arm_links, False, file_logger)
 
     return not is_error_outputed
 

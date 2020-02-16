@@ -17,7 +17,7 @@ is_print1 = True
 
 def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, is_alternative_model, is_add_delegate, file_logger, test_param):
     if motion.motion_cnt > 0:        
-        logger.info("test_param: %s", test_param)
+        logger.debug("test_param: %s", test_param)
 
         if is_alternative_model == False:
             # センタースタンス補正

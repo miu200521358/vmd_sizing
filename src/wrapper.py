@@ -14,7 +14,7 @@ def resource_path(relative):
 
     
 if __name__ == '__main__':
-    if len(sys.argv) > 2 and vmd_path in sys.argv:
+    if len(sys.argv) > 2 and "--vmd_path" in sys.argv:
         # 引数指定がある場合、コマンドライン実行
         main.parse_exec()
     else:

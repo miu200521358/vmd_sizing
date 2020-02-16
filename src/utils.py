@@ -75,13 +75,13 @@ def output_file_logger(file_logger, txt, level=logging.INFO):
     if level >= logging.DEBUG:
         file_logger.debug(txt)
     
-    elif level >= logging.INFO:
+    if level >= logging.INFO:
         file_logger.info(txt)
 
-    elif level >= logging.WARNING:
+    if level >= logging.WARNING:
         file_logger.warning(txt)
     
-    elif level >= logging.ERROR:
+    if level >= logging.ERROR:
         file_logger.error(txt)
 
     # 指定が実行レベルより高い場合、メッセージ出力あり
