@@ -1956,6 +1956,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		# 新規行のイベントの追加
 		self.vmd_choices[-1].Bind(wx.EVT_CHOICE, self.OnFillAddMorphLine)
 		self.rep_choices[-1].Bind(wx.EVT_CHOICE, self.OnFillAddMorphLine)
+		self.rep_rates[-1].Bind(wx.EVT_MOUSEWHEEL, self.OnChangeMorphRate)
 
 		# self.Refresh()
 
@@ -1966,6 +1967,12 @@ class VmdSizingForm3 ( wx.Frame ):
 		# 最終行のモーフが選択されていたらモーフ行追加
 		if self.vmd_choices[-1].GetSelection() > 0 and self.rep_choices[-1].GetSelection() > 0:
 			self.AddMorphLine()
+
+	def OnChangeMorphRate(self, event):
+		if event.GetWheelRotation() > 0:
+			event.GetEventObject().SetValue(event.GetEventObject().GetValue() + 0.1)
+		else:
+			event.GetEventObject().SetValue(event.GetEventObject().GetValue() - 0.1)
 
 	def OnAddMorphLine(self, event):
 		# モーフ行追加
