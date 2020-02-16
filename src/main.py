@@ -45,8 +45,8 @@ def main(motion, trace_model, replace_model, output_vmd_path, \
 
         utils.output_file_logger(file_logger, "■■■■■■■■■■■■■■■■■■■■■■■■")
         utils.output_file_logger(file_logger, "■　モーション: {motion}".format(motion=os.path.basename(motion.path)))
-        utils.output_file_logger(file_logger, "■　作成元モデル: {trace_model}".format(trace_model=os.path.basename(trace_model.path)))
-        utils.output_file_logger(file_logger, "■　変換先モデル: {replace_model}".format(replace_model=os.path.basename(replace_model.path)))
+        utils.output_file_logger(file_logger, "■　作成元モデル: {trace_model} ({model_name})".format(trace_model=os.path.basename(trace_model.path), model_name=trace_model.name))
+        utils.output_file_logger(file_logger, "■　変換先モデル: {replace_model} ({model_name})".format(replace_model=os.path.basename(replace_model.path), model_name=replace_model.name))
         utils.output_file_logger(file_logger, "■　代替モデル有無: {is_alternative_model}".format(is_alternative_model=is_alternative_model))
         utils.output_file_logger(file_logger, "■　捩り分散有無: {is_add_delegate}".format(is_add_delegate=is_add_delegate))
         utils.output_file_logger(file_logger, "■　捩り分散有無: {is_add_delegate}".format(is_add_delegate=is_add_delegate))
@@ -140,10 +140,10 @@ def main(motion, trace_model, replace_model, output_vmd_path, \
             writer.write_vmd_file(output_camera_vmd_path, replace_model.name, [], [], camera_frames, motion.lights, motion.shadows, [])
 
         utils.output_file_logger(file_logger, "■■■■■■■■■■■■■■■■■")
-        utils.output_file_logger(file_logger, "■　変換出力完了: %s" % output_vmd_path)
+        utils.output_file_logger(file_logger, "■　変換出力完了: %s" % os.path.basename(output_vmd_path))
 
         if camera_motion:
-            utils.output_file_logger(file_logger, "■　カメラ変換出力完了: %s" % output_camera_vmd_path)
+            utils.output_file_logger(file_logger, "■　カメラ変換出力完了: %s" % os.path.basename(output_camera_vmd_path))
 
         utils.output_file_logger(file_logger, "■■■■■■■■■■■■■■■■■")
 

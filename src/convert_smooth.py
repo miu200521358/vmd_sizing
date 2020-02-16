@@ -322,6 +322,9 @@ def spread_rotation(motion, trace_model, model, is_thinning, file_logger, test_p
                 if fno // 500 > prev_fno:
                     utils.output_file_logger(file_logger, "分散完了: %s" % (fno))
                     prev_fno = fno // 500
+            
+            if fno % 500 != 0:
+                utils.output_file_logger(file_logger, "分散完了: %s" % (fno))
 
     # 有効なのだけ設定する
     for bone_name in all_frames_by_bone.keys():
@@ -355,21 +358,19 @@ def delegate_twist_qq_4_arm(fno, direction, arm_qq, arm_twist_qq, elbow_qq, wris
     wrist_x_qq, wrist_y_qq, wrist_z_qq, wrist_yz_qq = utils.split_qq_2_xyz(fno, "{0}手首".format(direction), wrist_qq, wrist_local_x_axis)
 
     # 腕YZを腕に
-    arm_result_qq = arm_y_qq * arm_z_qq
-
-    # arm_x_degree = math.degrees(2 * math.acos(min(1, max(-1, arm_x_qq.scalar()))))
-    # arm_x_qq = QQuaternion.fromAxisAndAngle(arm_local_x_axis, arm_x_degree)
+    arm_result_qq = arm_yz_qq
 
     # 腕Xを腕捻りに（くの字はズレる）
-    arm_twist_result_qq, arm_twist_result_degree = utils.convert_twist_qq(fno, "{0}腕".format(direction), arm_x_qq, arm_twist_qq, arm_local_x_axis, arm_twist_local_x_axis, file_logger)
-    
+    arm_twist_axis_qq, arm_twist_axis_degree = utils.convert_axis_qq(fno, "{0}腕".format(direction), arm_x_qq, arm_local_x_axis, arm_twist_local_x_axis, "x", file_logger)
+    arm_twist_result_qq = arm_twist_qq * arm_twist_axis_qq
+
     # ひじYZをひじYに（ズレっぱなし）
 
     # 逆肘（初期値より後ろにひじが向かっている場合）判定
     is_reverse = utils.is_reverse_elbow(elbow_y_qq, elbow_local_x_axis, arm_local_x_axis, elbow_local_x_axis)
     utils.output_file_logger(file_logger, "fno: {fno}, 逆ひじ: {is_reverse}".format(fno=fno, is_reverse=is_reverse), level=logging.DEBUG)
 
-    # 手首ローカルY軸 
+    # ひじローカルY軸 
     elbow_local_y_axis = QVector3D.crossProduct(elbow_local_x_axis, QVector3D(0, 0, -1)).normalized()
 
     if is_reverse:
@@ -383,17 +384,21 @@ def delegate_twist_qq_4_arm(fno, direction, arm_qq, arm_twist_qq, elbow_qq, wris
 
     # ひじベクトルを腕捻りで帳尻合わせ（ここでだいたい整合するか近似する）
     arm_twist_result_qq = utils.delegate_twist_qq(fno, "{0}腕捩".format(direction), arm_qq, arm_result_qq, arm_twist_qq, arm_twist_result_qq, elbow_qq, elbow_result_qq, \
-        arm_twist_result_degree, arm_local_x_axis, arm_twist_local_x_axis, elbow_local_x_axis, file_logger)
+        arm_twist_axis_degree, arm_local_x_axis, arm_twist_local_x_axis, elbow_local_x_axis, file_logger)
 
-    # 手首XYZ回転を手首YZにする
-    wrist_result_qq = wrist_yz_qq
+    # # 手首ローカル軸 
+    # wrist_local_y_axis = QVector3D.crossProduct(wrist_local_x_axis, QVector3D(0, 0, 1)).normalized()
+    # wrist_local_z_axis = QVector3D.crossProduct(wrist_local_x_axis, wrist_local_y_axis).normalized()
 
-    # 手首Xを手捻りに
-    wrist_twist_result_qq, wrist_twist_result_degree = utils.convert_twist_qq(fno, "{0}手首".format(direction), wrist_x_qq, wrist_twist_qq, wrist_local_x_axis, wrist_twist_local_x_axis, file_logger)
+    # wrist_y_axis_qq, wrist_y_axis_degree = utils.convert_axis_qq(fno, "{0}手首Y".format(direction), wrist_y_qq, wrist_local_x_axis, wrist_local_y_axis, "y", file_logger)
+    # wrist_z_axis_qq, wrist_z_axis_degree = utils.convert_axis_qq(fno, "{0}手首Z".format(direction), wrist_z_qq, wrist_local_x_axis, wrist_local_z_axis, "z", file_logger)
 
-    # 手捩りで手首ベクトル帳尻合わせ（ここでだいたい整合するか近似する）
-    wrist_twist_result_qq = utils.delegate_twist_qq(fno, "{0}手捩".format(direction), elbow_qq, elbow_result_qq, wrist_twist_qq, wrist_twist_result_qq, wrist_qq, wrist_result_qq, \
-        wrist_twist_result_degree, elbow_local_x_axis, wrist_twist_local_x_axis, wrist_local_x_axis, file_logger)
+    # # 手首XYZ回転を手首YZにする
+    # wrist_result_qq = wrist_z_axis_qq * wrist_y_axis_qq
+
+    # # 手捩りで手首ベクトル帳尻合わせ（ここでだいたい整合するか近似する）
+    # wrist_twist_result_qq = utils.delegate_twist_qq(fno, "{0}手捩".format(direction), arm_twist_qq, arm_twist_result_qq, wrist_twist_qq, QQuaternion(), wrist_qq, wrist_result_qq, \
+    #     0, arm_twist_local_x_axis, wrist_twist_local_x_axis, wrist_local_x_axis, file_logger)
 
     return arm_result_qq, arm_twist_result_qq, elbow_result_qq, wrist_twist_result_qq, wrist_result_qq
 

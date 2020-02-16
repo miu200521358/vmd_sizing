@@ -8,6 +8,11 @@ cd /d %~dp0
 
 cls
 
+
+rem set REPLACE_PMX_PATH="D:\MMD\MikuMikuDance_v926x64\UserFile\Model\VOCALOID\‰‰¹ƒ~ƒN\Tda®‰‰¹ƒ~ƒN_“‘¯‚Â‚Î‚«—¬‚lƒgƒŒ[ƒXƒ‚ƒfƒ‹”z•z v1.07\Tda®‰‰¹ƒ~ƒN_“‘¯‚Â‚Î‚«—¬MƒgƒŒ[ƒXƒ‚ƒfƒ‹v1.07.pmx"
+set REPLACE_PMX_PATH="D:\MMD\MikuMikuDance_v926x64\UserFile\Model\_VMDƒTƒCƒWƒ“ƒO\8“ªgR_Ò ”L‚Ì‚µ‚à‚×\8“ªgR_Ò3.pmx"
+rem set REPLACE_PMX_PATH="D:\MMD\MikuMikuDance_v926x64\UserFile\Model\ƒQ[ƒ€\ƒhƒ‰ƒNƒG\—³_®ƒOƒŒƒCƒO”z•z—p_1.09.3\—³_®ƒOƒŒƒCƒO_1.09.3.pmx"
+
 set VMD_PATH="E:\MMD\MikuMikuDance_v926x64\Work\202001_sizing\‚Ğ‚¶•ª—£\nac_aikotoba3_˜rŒn‚Ì‚İ_0-1000.vmd"
 rem set VMD_PATH="D:\MMD\MikuMikuDance_v926x64\UserFile\Motion\ƒ_ƒ“ƒX_1l\ˆ¤Œ¾—tIII ‚È‚Â‚«\nac_aikotoba3_0-500_‘€ì’†S.vmd"
 rem set VMD_PATH="D:\MMD\MikuMikuDance_v926x64\UserFile\Motion\ƒ_ƒ“ƒX_1l\ˆ¤Œ¾—tIII ‚È‚Â‚«\nac_aikotoba3.vmd"
@@ -17,12 +22,12 @@ set TRACE_PMX_PATH="D:\MMD\MikuMikuDance_v926x64\UserFile\Model\VOCALOID\‰‰¹ƒ~ƒ
 rem set VMD_PATH="D:\MMD\MikuMikuDance_v926x64\UserFile\Motion\ƒ_ƒ“ƒX_1l\‚¨‚Ë‚ª‚¢ƒ_[ƒŠƒ“_ƒ‚[ƒVƒ‡ƒ“v1.2 hino\‚¨‚Ë‚ª‚¢ƒ_[ƒŠƒ“_Lat®.vmd"
 rem set TRACE_PMX_PATH="D:\MMD\MikuMikuDance_v926x64\UserFile\Model\VOCALOID\‰‰¹ƒ~ƒN\Lat®ƒ~ƒNVer2.31\Lat®ƒ~ƒNVer2.31_Sailor‰Ä•_€•W€.pmx"
 
-rem set REPLACE_PMX_PATH="D:\MMD\MikuMikuDance_v926x64\UserFile\Model\VOCALOID\‰‰¹ƒ~ƒN\Tda®‰‰¹ƒ~ƒN_“‘¯‚Â‚Î‚«—¬‚lƒgƒŒ[ƒXƒ‚ƒfƒ‹”z•z v1.07\Tda®‰‰¹ƒ~ƒN_“‘¯‚Â‚Î‚«—¬MƒgƒŒ[ƒXƒ‚ƒfƒ‹v1.07.pmx"
-set REPLACE_PMX_PATH="D:\MMD\MikuMikuDance_v926x64\UserFile\Model\_VMDƒTƒCƒWƒ“ƒO\8“ªgR_Ò ”L‚Ì‚µ‚à‚×\8“ªgR_Ò3.pmx"
-rem set REPLACE_PMX_PATH="D:\MMD\MikuMikuDance_v926x64\UserFile\Model\ƒQ[ƒ€\ƒhƒ‰ƒNƒG\—³_®ƒOƒŒƒCƒO”z•z—p_1.09.3\—³_®ƒOƒŒƒCƒO_1.09.3.pmx"
+set VMD_PATH="E:\MMD\MikuMikuDance_v926x64\Work\202001_sizing\‚Ğ‚¶•ª—£\udez_less.vmd"
+set TRACE_PMX_PATH="D:\MMD\MikuMikuDance_v926x64\UserFile\Model\_VMDƒTƒCƒWƒ“ƒO\fumizuki_14th_shirt\•¶Œ14Î_ƒVƒƒƒc.pmx"
+
 set ALTERNATIVE_MODEL=0
 set ADD_DELEGATE=1
-set VERBOSE=2
+set VERBOSE=3
 
 set AVOIDANCE=0
 set AVOIDANCE_FINGER=0
