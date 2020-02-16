@@ -437,25 +437,30 @@ def split_qq_2_xyz(fno, bone_name, qq, global_x_axis):
     initial_axis = global_x_axis
     # ローカル座標系（ボーンベクトルが（1，0，0）になる空間）の向き
     local_axis = QVector3D(1, 0, 0)
-    
+
+    # グローバル座標系（Ａスタンス）からローカル座標系（ボーンベクトルが（1，0，0）になる空間）への変換
+    global2local_qq, _ = calc_match_qq(initial_axis, local_axis)
+    local2global_qq, _ = calc_match_qq(local_axis, initial_axis)
+
     # ひじからX成分を抽出する ------------
 
     mat_x1 = QMatrix4x4()
     mat_x1.rotate(qq)
+    mat_x1.translate(initial_axis)
 
-    x_vec = mat_x1 * initial_axis
-    x_vec.normalize()
+    x_vec = mat_x1 * QVector3D()
+    x_vec.normalized()
 
     # YZの回転量（自身のねじれを無視する）
     yz_qq, yz_degree = calc_match_qq(initial_axis, x_vec)
 
     # 除去されたX成分
-    x_qq = qq * yz_qq.inverted()
+    mat_x2 = QMatrix4x4()
+    mat_x2.rotate(yz_qq)
+
+    x_qq = calc_matrix2qq(mat_x2 * mat_x1.inverted()[0])
 
     #  YZ回転からZ成分を抽出する --------------
-
-    # グローバル座標系（Ａスタンス）からローカル座標系（ボーンベクトルが（1，0，0）になる空間）への変換
-    global2local_qq, _ = calc_match_qq(initial_axis, local_axis)
 
     # YZ回転からZ成分を抽出する。
     mat_z1 = QMatrix4x4()
@@ -470,8 +475,6 @@ def split_qq_2_xyz(fno, bone_name, qq, global_x_axis):
     local_z_qq, _ = calc_match_qq(local_axis, localz_vec)
 
     # ボーンローカル座標系の回転をグローバル座標系の回転に戻す
-    local2global_qq, _ = calc_match_qq(local_axis, initial_axis)
-
     mat_z4 = QMatrix4x4()
     mat_z4.rotate(local_z_qq)
 
@@ -493,17 +496,14 @@ def split_qq_2_xyz(fno, bone_name, qq, global_x_axis):
 
     # X成分だけ取り出す -----------
 
-    # # X成分の捻れが混入したので、XY回転からYZ回転を取り出すことでXキャンセルをかける。
-    # mat_x1 = QMatrix4x4()
-    # mat_x1.rotate(qq)
+    # X成分の捻れが混入したので、XY回転からYZ回転を取り出すことでXキャンセルをかける。
+    mat_x1 = QMatrix4x4()
+    mat_x1.rotate(yz_qq)
 
-    # mat_x2 = QMatrix4x4()
-    # mat_x2.rotate(y_qq)
+    mat_x2 = QMatrix4x4()
+    mat_x2.rotate(qq)
 
-    # mat_x3 = QMatrix4x4()
-    # mat_x3.rotate(z_qq)
-
-    # x_qq = calc_matrix2qq(mat_x1 * mat_x2.inverted()[0] * mat_x3.inverted()[0])
+    x_qq = calc_matrix2qq(mat_x1 * mat_x2.inverted()[0])
 
     return x_qq, y_qq, z_qq, yz_qq
 
@@ -576,7 +576,7 @@ def delegate_twist_qq(fno, bone_name, original_parent_qq, parent_qq, original_tw
 
     # 元々の委譲先回転量 ----------------
     mat_of1 = QMatrix4x4()
-    mat_of1.rotate(original_twist_qq)
+    # mat_of1.rotate(original_twist_qq)
     mat_of1.rotate(original_child_qq)
     mat_of1.rotate(child_global2local_qq)
     
@@ -588,8 +588,8 @@ def delegate_twist_qq(fno, bone_name, original_parent_qq, parent_qq, original_tw
 
     # 変換後の委譲先回転量 ----------------
     mat_af1 = QMatrix4x4()
-    mat_af1.rotate(original_twist_qq)
-    mat_af1.rotate(twist_qq)
+    # mat_af1.rotate(original_twist_qq)
+    # mat_af1.rotate(twist_qq)
     mat_af1.rotate(child_qq)
     mat_af1.rotate(child_global2local_qq)
 
@@ -613,8 +613,9 @@ def delegate_twist_qq(fno, bone_name, original_parent_qq, parent_qq, original_tw
 
     # 元々の回転結果
     mat_bf1 = QMatrix4x4()
-    mat_bf1.rotate(original_parent_qq)
-    mat_bf1.translate(parent_x_axis)
+    # mat_bf1.translate(QVector3D(1, 0, 0))
+    # mat_bf1.rotate(original_parent_qq)
+    # mat_bf1.translate(parent_x_axis)
     # mat_bf1.rotate(parent_global2twist_global_qq)
     mat_bf1.rotate(original_twist_qq)
     mat_bf1.translate(twist_x_axis)
@@ -627,8 +628,9 @@ def delegate_twist_qq(fno, bone_name, original_parent_qq, parent_qq, original_tw
     original_arm_vec.normalize()
 
     mat_cf1 = QMatrix4x4()
-    mat_cf1.rotate(parent_qq)
-    mat_cf1.translate(parent_x_axis)
+    # mat_cf1.translate(QVector3D(1, 0, 0))
+    # mat_cf1.rotate(parent_qq)
+    # mat_cf1.translate(parent_x_axis)
     # mat_cf1.rotate(parent_global2twist_global_qq)
     mat_cf1.rotate(original_twist_qq)
     mat_cf1.rotate(twist_qq)
@@ -675,8 +677,16 @@ def delegate_twist_qq(fno, bone_name, original_parent_qq, parent_qq, original_tw
     output_file_logger(file_logger, "fno: {fno}, {bone_name}, twist_delegate_degree: {twist_delegate_degree}, twist_delegate_qq: {twist_delegate_qq}".format(fno=fno, bone_name=bone_name, twist_delegate_degree=twist_delegate_degree, twist_delegate_qq=twist_delegate_qq), level=logging.DEBUG)
 
     original_twist_degree = degrees(2 * acos(min(1, max(-1, original_twist_qq.scalar()))))
-    twist_delegate_result_degree = original_twist_degree + twist_degree + twist_result_degree + twist_delegate_degree
-    twist_delegate_result_qq = original_twist_qq * twist_qq * twist_result_qq * twist_delegate_qq
+
+    result_mat = QMatrix4x4()
+    # result_mat.rotate(original_twist_qq)
+    # result_mat.rotate(twist_qq)
+    result_mat.rotate(twist_result_qq)
+    result_mat.rotate(twist_delegate_qq)
+
+    twist_delegate_result_qq = calc_matrix2qq(result_mat)
+    twist_delegate_result_degree = degrees(2 * acos(min(1, max(-1, twist_delegate_result_qq.scalar()))))
+
     output_file_logger(file_logger, "fno: {fno}, {bone_name}, twist_delegate_result_degree: {twist_delegate_result_degree}, twist_delegate_result_qq: {twist_delegate_result_qq}".format(fno=fno, bone_name=bone_name, twist_delegate_result_degree=twist_delegate_result_degree, twist_delegate_result_qq=twist_delegate_result_qq), level=logging.DEBUG)
 
     return twist_delegate_result_qq

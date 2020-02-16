@@ -37,12 +37,12 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
         #         # 腕補正
         #         adjust_arm_stance(motion, trace_model, replace_model, org_motion_frames, test_param)
 
+            adjust_arm_stance(motion, trace_model, replace_model, org_motion_frames, file_logger, test_param)
+
             if is_add_delegate == True:
                 # 捩り分散
                 convert_smooth.spread_rotation(motion, trace_model, replace_model, True, file_logger, test_param)
             
-            adjust_arm_stance(motion, trace_model, replace_model, org_motion_frames, file_logger, test_param)
-
     return True
 
 def adjust_center_stance(motion, trace_model, replace_model, org_motion_frames, file_logger):
@@ -162,7 +162,7 @@ def calc_center_offset(org_motion_frames, motion, trace_model, replace_model, ce
 
     rep_center_offset = rep_center_ik_offset - org_center_offset
     utils.set_effective_value_vec3(rep_center_offset)
-    utils.output_message("f: %s, rep_center_offset: %s" % (center_bf.frame, rep_center_offset))
+    utils.output_file_logger(file_logger, "f: %s, rep_center_offset: %s" % (center_bf.frame, rep_center_offset), level=logging.DEBUG)
 
     return rep_center_offset
 
@@ -207,9 +207,9 @@ def calc_center_trunk_offset(org_motion_frames, motion, trace_model, replace_mod
     org_front_global_normal_lower_center_pos = utils.create_direction_pos(org_normal_lower_direction_qq.inverted(), org_global_normal_center_pos)
 
     org_lower_motion_frames = {}
-    for e, l in enumerate(center_trunk_links["org_ulink"]):
+    for e, l in enumerate(center_trunk_links["org_wlink"]):
         bone = utils.calc_bone_by_complement(org_motion_frames, l.name, center_bf.frame)
-        if e == len(center_trunk_links["org_ulink"]) - 1:
+        if e == len(center_trunk_links["org_wlink"]) - 1:
             #一番親に下半身の位置を追加する
             bone.position += QVector3D(trace_model.bones["下半身"].position.x() - trace_model.bones["センター"].position.x(), 0, trace_model.bones["下半身"].position.z() - trace_model.bones["センター"].position.z())
         org_lower_motion_frames[bone.format_name] = [bone]
@@ -261,14 +261,14 @@ def calc_center_trunk_offset(org_motion_frames, motion, trace_model, replace_mod
     # ------------
 
     # 下半身正面向き
-    rep_normal_lower_direction_all_qq = utils.calc_upper_direction_qq(replace_model, center_trunk_links["rep_clink"], motion.frames, center_bf)
+    rep_normal_lower_direction_all_qq = utils.calc_upper_direction_qq(replace_model, center_trunk_links["rep_wlink"], motion.frames, center_bf)
     rep_normal_lower_direction_qq = QQuaternion.fromEulerAngles(0, rep_normal_lower_direction_all_qq.toEulerAngles().y(), 0)
     rep_front_global_normal_lower_center_pos = utils.create_direction_pos(rep_normal_lower_direction_qq.inverted(), rep_global_normal_center_pos)
 
     rep_lower_motion_frames = {}
-    for e, l in enumerate(center_trunk_links["rep_ulink"]):
+    for e, l in enumerate(center_trunk_links["rep_wlink"]):
         bone = utils.calc_bone_by_complement(motion.frames, l.name, center_bf.frame)
-        if e == len(center_trunk_links["rep_ulink"]) - 1:
+        if e == len(center_trunk_links["rep_wlink"]) - 1:
             #一番親に下半身の位置を追加する
             bone.position += QVector3D(replace_model.bones["下半身"].position.x() - replace_model.bones["センター"].position.x(), 0, replace_model.bones["下半身"].position.z() - replace_model.bones["センター"].position.z())
         rep_lower_motion_frames[bone.format_name] = [bone]
@@ -290,14 +290,14 @@ def calc_center_trunk_offset(org_motion_frames, motion, trace_model, replace_mod
         - ((org_front_global_normal_upper_center_pos - org_front_global_upper_upper_center_pos) * xz_ratio)
     utils.set_effective_value_vec3(front_center_upper_diff)
     front_center_upper_diff.setY(0)
-    utils.output_message("f: %s, front_center_upper_diff: %s" % (center_bf.frame, front_center_upper_diff))
+    utils.output_file_logger(file_logger, "f: %s, front_center_upper_diff: %s" % (center_bf.frame, front_center_upper_diff), level=logging.DEBUG)
 
     # センターの下半身回転差分
     front_center_lower_diff = (rep_front_global_normal_lower_center_pos - rep_front_global_lower_lower_center_pos) \
         - ((org_front_global_normal_lower_center_pos - org_front_global_lower_lower_center_pos) * xz_ratio)
     utils.set_effective_value_vec3(front_center_lower_diff)
     front_center_lower_diff.setY(0)
-    utils.output_message("f: %s, front_center_lower_diff: %s" % (center_bf.frame, front_center_lower_diff))
+    utils.output_file_logger(file_logger, "f: %s, front_center_lower_diff: %s" % (center_bf.frame, front_center_lower_diff), level=logging.DEBUG)
 
     # ----------
 
@@ -307,7 +307,7 @@ def calc_center_trunk_offset(org_motion_frames, motion, trace_model, replace_mod
 
     # 比率差分の平均
     center_trunk_offset = (center_upper_diff + center_lower_diff) / 2
-    utils.output_message("f: %s, center_trunk_offset: %s" % (center_bf.frame, center_trunk_offset))
+    utils.output_file_logger(file_logger, "f: %s, center_trunk_offset: %s" % (center_bf.frame, center_trunk_offset), level=logging.DEBUG)
 
     return center_trunk_offset
 
@@ -865,7 +865,7 @@ def calc_rotation_stance(org_motion_frames, motion, trace_model, org_base_links,
     target_to_bone_name = "{0}{1}".format(direction_name, to_bone_name)
     is_print = False
 
-    utils.output_message("f: %s, target_from_bone_name: %s -------------" % (bf.frame, target_from_bone_name), is_print)
+    utils.output_file_logger(file_logger, "f: %s, target_from_bone_name: %s -------------" % (bf.frame, target_from_bone_name), is_print)
 
     dot_limit = 0
     start_bf = utils.calc_bone_by_complement({}, "ルート", 0)
@@ -1005,10 +1005,10 @@ def calc_rotation_stance(org_motion_frames, motion, trace_model, org_base_links,
     logger.debug("f: %s, orientation: %s", bf.frame, from_orientation.toEulerAngles())
     logger.debug("f: %s, bf: %s", bf.frame, from_rotation.toEulerAngles())
 
-    utils.output_message("rep_base_pos(%s): %s" % (base_bone_name, rep_base_pos), is_print)
-    utils.output_message("rep_to_pos(%s): %s: 元: %s" % (target_to_bone_name, rep_to_pos, rep_to_global_3ds[len(rep_front_to_global_3ds) - rep_target_indexes[to_bone_name] - 1]), is_print)
-    utils.output_message("rep_up_from_pos: %s 元: %s" % (rep_up_from_pos, rep_up_from_initial_pos), is_print)
-    utils.output_message("rep_up_to_pos: %s 元: %s" % (rep_up_to_pos, rep_up_to_initial_pos), is_print)
+    utils.output_file_logger(file_logger, "rep_base_pos(%s): %s" % (base_bone_name, rep_base_pos), is_print)
+    utils.output_file_logger(file_logger, "rep_to_pos(%s): %s: 元: %s" % (target_to_bone_name, rep_to_pos, rep_to_global_3ds[len(rep_front_to_global_3ds) - rep_target_indexes[to_bone_name] - 1]), is_print)
+    utils.output_file_logger(file_logger, "rep_up_from_pos: %s 元: %s" % (rep_up_from_pos, rep_up_from_initial_pos), is_print)
+    utils.output_file_logger(file_logger, "rep_up_to_pos: %s 元: %s" % (rep_up_to_pos, rep_up_to_initial_pos), is_print)
 
     if define_is_rotation_no_check and define_is_rotation_no_check(rep_initial_slope_qq):
         # チェックなし条件に合致する場合、チェックなしで適用
