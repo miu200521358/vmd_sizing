@@ -37,11 +37,11 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
         #         # 腕補正
         #         adjust_arm_stance(motion, trace_model, replace_model, org_motion_frames, test_param)
 
-            adjust_arm_stance(motion, trace_model, replace_model, org_motion_frames, file_logger, test_param)
-
             if is_add_delegate == True:
                 # 捩り分散
                 convert_smooth.spread_rotation(motion, trace_model, replace_model, True, file_logger, test_param)
+
+            adjust_arm_stance(motion, trace_model, replace_model, org_motion_frames, file_logger, test_param)
             
     return True
 

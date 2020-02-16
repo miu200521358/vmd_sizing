@@ -272,6 +272,7 @@ def spread_rotation(motion, trace_model, model, is_thinning, file_logger, test_p
                 for fno in bone_framenos:
                     # まず一旦登録する
                     bf = calc_bone_by_complement_by_bone(all_frames_by_bone, b.name, fno, is_only=False, is_exist=False)
+                    # キーは登録
                     bf.key = True
                     all_frames_by_bone[b.name][fno] = bf
 
@@ -284,11 +285,11 @@ def spread_rotation(motion, trace_model, model, is_thinning, file_logger, test_p
             wrist_bone_name = "{0}手首".format(direction)
 
             # 各ボーンのローカル軸
-            arm_local_x_axis = utils.get_local_axis_4delegate_qq(trace_model, trace_model.bones[arm_bone_name])
+            arm_local_x_axis = utils.get_local_axis_4delegate_qq(model, model.bones[arm_bone_name])
             arm_twist_local_x_axis = utils.get_local_axis_4delegate_qq(model, model.bones[arm_twist_bone_name])
-            elbow_local_x_axis = utils.get_local_axis_4delegate_qq(trace_model, trace_model.bones[elbow_bone_name])
+            elbow_local_x_axis = utils.get_local_axis_4delegate_qq(model, model.bones[elbow_bone_name])
             wrist_twist_local_x_axis = utils.get_local_axis_4delegate_qq(model, model.bones[wrist_twist_bone_name])
-            wrist_local_x_axis = utils.get_local_axis_4delegate_qq(trace_model, trace_model.bones[wrist_bone_name])
+            wrist_local_x_axis = utils.get_local_axis_4delegate_qq(model, model.bones[wrist_bone_name])
 
             prev_fno = 0
             for fno in bone_framenos:
@@ -374,15 +375,9 @@ def delegate_twist_qq_4_arm(fno, direction, arm_qq, arm_twist_qq, elbow_qq, wris
     # 腕YZを腕に
     arm_result_qq = arm_yz_qq
 
-    # 腕Xを腕捻りに（くの字はズレる）
-    if arm_local_x_axis.x() < 0:
-        arm_x_qq.setScalar(-arm_x_qq.scalar())
-    
-    arm_twist_axis_degree = math.degrees(2 * math.acos(min(1, max(-1, arm_x_qq.scalar()))))
-    arm_twist_axis_qq = QQuaternion.fromAxisAndAngle(arm_local_x_axis, arm_twist_axis_degree)
+    # 腕Xを腕捻りに（くの字はズレる）    
+    arm_twist_axis_qq, arm_twist_axis_degree = utils.convert_axis_qq(fno, "{0}腕".format(direction), arm_x_qq, arm_local_x_axis, arm_twist_local_x_axis, "x", file_logger)
     arm_twist_result_qq = arm_twist_qq * arm_twist_axis_qq
-
-    # ひじYZをひじYに（ズレっぱなし）
 
     # 逆肘（初期値より後ろにひじが向かっている場合）判定
     is_reverse = utils.is_reverse_elbow(elbow_y_qq, elbow_local_x_axis, arm_local_x_axis, elbow_local_x_axis)

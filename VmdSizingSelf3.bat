@@ -10,7 +10,7 @@ cls
 
 
 set VMD_PATH="E:\MMD\MikuMikuDance_v926x64\Work\202001_sizing\ひじ分離\nac_aikotoba3_腕系のみ_0-1000.vmd"
-set VMD_PATH="D:\MMD\MikuMikuDance_v926x64\UserFile\Motion\ダンス_1人\愛言葉III なつき\nac_aikotoba3_0-500_操作中心.vmd"
+rem set VMD_PATH="D:\MMD\MikuMikuDance_v926x64\UserFile\Motion\ダンス_1人\愛言葉III なつき\nac_aikotoba3_0-500_操作中心.vmd"
 rem set VMD_PATH="D:\MMD\MikuMikuDance_v926x64\UserFile\Motion\ダンス_1人\愛言葉III なつき\nac_aikotoba3.vmd"
 rem set VMD_PATH="E:\MMD\MikuMikuDance_v926x64\Work\202001_sizing\ひじ分離\右ひじグルグル_test_20200210.vmd"
 set TRACE_PMX_PATH="D:\MMD\MikuMikuDance_v926x64\UserFile\Model\VOCALOID\初音ミク\らぶ式ミク\らぶ式ミク_準標準.pmx"
