@@ -433,38 +433,43 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
                 camera_pmx_data = None
 
     if motion and org_pmx and rep_pmx:
-        # ファイル出力タイプでサイジングチェック
-        is_shortage = is_all_sizing(motion, org_pmx, rep_pmx, camera_motion, output_vmd_path)
-
-        # 実処理実行
-        # 読み込んだモーションデータそのものを弄らないよう、コピーした結果を渡す
-        is_success = main.main(copy.deepcopy(motion), org_pmx, rep_pmx, output_vmd_path, \
-            is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger, finger_distance, vmd_choice_values, rep_choice_values, rep_rate_values, \
-            copy.deepcopy(camera_motion), camera_vmd_path, camera_pmx_data, output_camera_vmd_path, camera_y_offset, is_alternative_model, is_add_delegate, target_avoidance_rigids, target_avoidance_bones, version_name, is_debug, "")
-
-        logger.debug("is_shortage: %s, is_success: %s", is_shortage, is_success)
-
-        if is_shortage or not is_success:
-            print("■■■■■■■■■■■■■■■■■")
-            print("■　サイジングに失敗している箇所があります。")
-            print("■　ログを確認してください。")
-            print("■■■■■■■■■■■■■■■■■")
-            print("")
-        
-        # 実行後、出力ファイル存在チェック
         try:
-            Path(output_vmd_path).resolve(True)
-        except FileNotFoundError as e:
-            print("■■■■■■■■■■■■■■■■■")
-            print("■　**ERROR**　")
-            print("■　出力VMDファイルが正常に作成されなかったようです。")
-            print("■　パスを確認してください。")
-            print("■　出力VMDファイルパス: "+ output_vmd_path )
-            print("■■■■■■■■■■■■■■■■■")
-            print("")
-            print(e.with_traceback(sys.exc_info()[2]))
+            # ファイル出力タイプでサイジングチェック
+            is_shortage = is_all_sizing(motion, org_pmx, rep_pmx, camera_motion, output_vmd_path)
 
-            return False
+            # 実処理実行
+            # 読み込んだモーションデータそのものを弄らないよう、コピーした結果を渡す
+            is_success = main.main(copy.deepcopy(motion), org_pmx, rep_pmx, output_vmd_path, \
+                is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger, finger_distance, vmd_choice_values, rep_choice_values, rep_rate_values, \
+                copy.deepcopy(camera_motion), camera_vmd_path, camera_pmx_data, output_camera_vmd_path, camera_y_offset, is_alternative_model, is_add_delegate, target_avoidance_rigids, target_avoidance_bones, version_name, is_debug, "")
+
+            logger.debug("is_shortage: %s, is_success: %s", is_shortage, is_success)
+
+            if is_shortage or not is_success:
+                print("■■■■■■■■■■■■■■■■■")
+                print("■　サイジングに失敗している箇所があります。")
+                print("■　ログを確認してください。")
+                print("■■■■■■■■■■■■■■■■■")
+                print("")
+            
+            # 実行後、出力ファイル存在チェック
+            try:
+                Path(output_vmd_path).resolve(True)
+            except FileNotFoundError as e:
+                print("■■■■■■■■■■■■■■■■■")
+                print("■　**ERROR**　")
+                print("■　出力VMDファイルが正常に作成されなかったようです。")
+                print("■　パスを確認してください。")
+                print("■　出力VMDファイルパス: "+ output_vmd_path )
+                print("■■■■■■■■■■■■■■■■■")
+                print("")
+                print(e.with_traceback(sys.exc_info()[2]))
+
+                return False
+            
+            return True
+        finally:
+            logging.shutdown()
 
     else:
         print("ファイルデータが正しく読み込まれていないようです。\nもう一度ボタンをクリックしてみてください。")
