@@ -10,6 +10,7 @@ from pathlib import Path
 from PyQt5.QtGui import QQuaternion, QVector3D
 import re
 import sys
+import winsound
 
 import main
 from PmxModel import PmxModel, SizingException
@@ -274,6 +275,9 @@ def read_vmd(path, filetype="vmd", is_print=True, is_aster=False):
         
         print(traceback.format_exc())
 
+        # 終了音を鳴らす
+        winsound.PlaySound("SystemQuestion", winsound.SND_ALIAS)
+
         return None
             
     return vmd
@@ -337,6 +341,9 @@ def read_pmx(path, filetype="pmx", is_print=True):
         print("■■■■■■■■■■■■■■■■■")
         
         print(traceback.format_exc())
+
+        # 終了音を鳴らす
+        winsound.PlaySound("SystemQuestion", winsound.SND_ALIAS)
 
         return None
             

@@ -249,6 +249,14 @@ class PmxReader():
             pmx.materials[material.name]  = material
         logger.debug("len(materials): %s", len(pmx.materials))
 
+        # サイジング用ルートボーン
+        sizing_root_bone = pmx.Bone("SIZING_ROOT_BONE", "SIZING_ROOT_BONE", QVector3D(), -1, 0, 0)
+        sizing_root_bone.index = -999
+
+        pmx.bones[sizing_root_bone.name] = sizing_root_bone
+        # インデックス逆引きも登録
+        pmx.bone_indexes[sizing_root_bone.index] = sizing_root_bone.name
+
         # ボーンデータリスト
         for _ in range(self.read_int(4)):
             bone = pmx.Bone(
@@ -305,11 +313,13 @@ class PmxReader():
                     bone.ik.link.append(link)
 
             # ボーンのINDEX
-            bone.index = len(pmx.bones.keys())
+            bone.index = len(pmx.bones.keys()) - 1
 
-            pmx.bones[bone.name] = bone
-            # インデックス逆引きも登録
-            pmx.bone_indexes[bone.index] = bone.name
+            if bone.name not in pmx.bones:
+                # まだ未登録の名前のボーンの場合のみ登録
+                pmx.bones[bone.name] = bone
+                # インデックス逆引きも登録
+                pmx.bone_indexes[bone.index] = bone.name
         
         # 指先ボーンがない場合、代替で挿入
         for direction in ["左", "右"]:

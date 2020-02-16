@@ -776,9 +776,9 @@ def get_local_axis_4delegate_qq(model, bone):
             to_pos = model.bones[model.bone_indexes[bone.tail_index]].position
         else:
             # 表示先がない場合、とりあえず子ボーンのどれかを選択
-            for b in model.bones:
-                if b.parent_index == bone.index and model.bones[b.index].position != bone.position:
-                    to_pos = model.bones[b.index].position
+            for b in model.bones.values():
+                if b.parent_index == bone.index and model.bones[model.bone_indexes[b.index]].position != bone.position:
+                    to_pos = model.bones[model.bone_indexes[b.index]].position
                     break
 
         # 軸制限の指定が無い場合、子の方向

@@ -41,7 +41,7 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
 
             if is_add_delegate == True:
                 # 捩り分散
-                convert_smooth.spread_rotation(motion, replace_model, True, file_logger, test_param)
+                convert_smooth.spread_rotation(motion, trace_model, replace_model, True, file_logger, test_param)
 
     return True
 
@@ -55,15 +55,21 @@ def adjust_center_stance(motion, trace_model, replace_model, org_motion_frames, 
     center_target_bones = ["センター", "上半身", "下半身", "左足ＩＫ", "右足ＩＫ", "左足", "右足"]
 
     if set(center_target_bones).issubset(trace_model.bones) and set(center_target_bones).issubset(replace_model.bones) and "センター" in motion.frames:
-        all_org_center_links, all_org_center_indexes = trace_model.create_link_2_top_one("下半身")
+        target_org_center_name = "グルーブ" if "グルーブ" in trace_model.bones else "センター"
+        all_org_center_links, all_org_center_indexes = trace_model.create_link_2_top_one(target_org_center_name)
+
+        target_rep_center_name = "グルーブ" if "グルーブ" in replace_model.bones else "センター"
+        all_rep_center_links, all_rep_center_indexes = replace_model.create_link_2_top_one(target_rep_center_name)
+
+        all_org_lower_links, all_org_lower_indexes = trace_model.create_link_2_top_one("下半身")
         all_org_upper_links, all_org_upper_indexes = trace_model.create_link_2_top_one("上半身")
         all_org_leg_ik_links, all_org_leg_ik_indexes = trace_model.create_link_2_top_lr("足ＩＫ")
         all_org_leg_links, all_org_leg_indexes = trace_model.create_link_2_top_lr("足")
-        all_rep_center_links, all_rep_center_indexes = replace_model.create_link_2_top_one("下半身")
+        all_rep_lower_links, all_rep_lower_indexes = replace_model.create_link_2_top_one("下半身")
         all_rep_upper_links, all_rep_upper_indexes = replace_model.create_link_2_top_one("上半身")
         all_rep_leg_ik_links, all_rep_leg_ik_indexes = replace_model.create_link_2_top_lr("足ＩＫ")
         all_rep_leg_links, all_rep_leg_indexes = replace_model.create_link_2_top_lr("足")
-        
+                
         org_ik_length = (trace_model.bones["左足"].position - trace_model.bones["左足ＩＫ"].position).length
         rep_ik_length = (replace_model.bones["左足"].position - replace_model.bones["左足ＩＫ"].position).length
 
@@ -77,8 +83,10 @@ def adjust_center_stance(motion, trace_model, replace_model, org_motion_frames, 
             "org_llink": all_org_leg_links["左"], "org_lindex": all_org_leg_indexes["左"], \
             "rep_clink": all_rep_center_links, "rep_cindex": all_rep_center_indexes, \
             "rep_ulink": all_rep_upper_links, "rep_uindex": all_rep_upper_indexes, \
+            "rep_wlink": all_rep_lower_links, "rep_windex": all_rep_lower_indexes, \
             "org_clink": all_org_center_links, "org_cindex": all_org_center_indexes, \
-            "org_ulink": all_org_upper_links, "org_uindex": all_org_upper_indexes}
+            "org_ulink": all_org_upper_links, "org_uindex": all_org_upper_indexes, \
+            "org_wlink": all_org_lower_links, "org_windex": all_org_lower_indexes}
         center_ik_links = {"rep_rilink": all_rep_leg_ik_links["右"], "rep_riindex": all_rep_leg_ik_indexes["右"], \
             "rep_lilink": all_rep_leg_ik_links["左"], "rep_liindex": all_rep_leg_ik_indexes["左"], \
             "org_rilink": all_org_leg_ik_links["右"], "org_riindex": all_org_leg_ik_indexes["右"], \
@@ -89,6 +97,8 @@ def adjust_center_stance(motion, trace_model, replace_model, org_motion_frames, 
             "org_llink": all_org_leg_links["左"], "org_lindex": all_org_leg_indexes["左"], \
             "rep_clink": all_rep_center_links, "rep_cindex": all_rep_center_indexes, \
             "org_clink": all_org_center_links, "org_cindex": all_org_center_indexes, \
+            "rep_wlink": all_rep_lower_links, "rep_windex": all_rep_lower_indexes, \
+            "org_wlink": all_org_lower_links, "org_windex": all_org_lower_indexes, \
             "org_ik_rate": org_ik_length, "rep_ik_length": rep_ik_length}
 
         # 足IKのXYZの比率
@@ -97,48 +107,45 @@ def adjust_center_stance(motion, trace_model, replace_model, org_motion_frames, 
         for bf in motion.frames["センター"]:
             if bf.key == True:
                 # センターオフセット再計算
-                utils.output_message("f: %s, ** : %s" % (bf.frame, bf.position))
-                bf.position += calc_center_offset(org_motion_frames, motion, trace_model, replace_model, bf, xz_ratio, center_ik_links)
-                utils.output_message("f: %s, ** ** : %s" % (bf.frame, bf.position))
-                bf.position += calc_center_trunk_offset(org_motion_frames, motion, trace_model, replace_model, bf, xz_ratio, center_trunk_links)
-                utils.output_message("f: %s, ** ** ** : %s" % (bf.frame, bf.position))
+                utils.output_file_logger(file_logger, "f: %s, ** : %s" % (bf.frame, bf.position), level=logging.DEBUG)
+                bf.position += calc_center_offset(org_motion_frames, motion, trace_model, replace_model, bf, xz_ratio, center_ik_links, file_logger)
+                utils.output_file_logger(file_logger, "f: %s, ** ** : %s" % (bf.frame, bf.position), level=logging.DEBUG)
+                bf.position += calc_center_trunk_offset(org_motion_frames, motion, trace_model, replace_model, bf, xz_ratio, center_trunk_links, file_logger)
+                utils.output_file_logger(file_logger, "f: %s, ** ** ** : %s" % (bf.frame, bf.position), level=logging.DEBUG)
 
         utils.output_file_logger(file_logger, "センタースタンス補正終了")
 
 
-def calc_center_offset(org_motion_frames, motion, trace_model, replace_model, center_bf, xz_ratio, center_ik_links):
+def calc_center_offset(org_motion_frames, motion, trace_model, replace_model, center_bf, xz_ratio, center_ik_links, file_logger):
 
     # 元モデルのグローバル位置
     _, _, _, _, org_center_global_3ds = utils.create_matrix_global(trace_model, center_ik_links["org_clink"], org_motion_frames, center_bf, None)
-    # グルーブがある場合、こちらの方が子のはずなのでグローバル位置優先採用
-    target_org_center_name = "グルーブ" if "グルーブ" in trace_model.bones else "センター"
-    org_global_center_pos = org_center_global_3ds[len(org_center_global_3ds) - center_ik_links["org_cindex"][target_org_center_name] - 1]
-    org_global_lower_pos = org_center_global_3ds[len(org_center_global_3ds) - center_ik_links["org_cindex"]["下半身"] - 1]    
+    org_global_center_pos = org_center_global_3ds[-1]
 
     _, _, _, _, org_left_ik_global_3ds = utils.create_matrix_global(trace_model, center_ik_links["org_lilink"], org_motion_frames, center_bf, None)
     org_global_left_ik_pos = org_left_ik_global_3ds[len(org_left_ik_global_3ds) - center_ik_links["org_liindex"]["足ＩＫ"] - 1]
     _, _, _, _, org_right_ik_global_3ds = utils.create_matrix_global(trace_model, center_ik_links["org_rilink"], org_motion_frames, center_bf, None)
     org_global_right_ik_pos = org_right_ik_global_3ds[len(org_right_ik_global_3ds) - center_ik_links["org_riindex"]["足ＩＫ"] - 1]
+    utils.output_file_logger(file_logger, "f: %s, org_global_left_ik_pos: %s" % (center_bf.frame, org_global_left_ik_pos), level=logging.DEBUG)
+    utils.output_file_logger(file_logger, "f: %s, org_global_right_ik_pos: %s" % (center_bf.frame, org_global_right_ik_pos), level=logging.DEBUG)
+    utils.output_file_logger(file_logger, "f: %s, org_global_center_pos: %s" % (center_bf.frame, org_global_center_pos), level=logging.DEBUG)
 
     # 左右の足IKとセンターの差分からセンターのオフセット位置を求める
     org_center_ik_offset = ((org_global_left_ik_pos + org_global_right_ik_pos) / 2 - org_global_center_pos)
     org_center_ik_offset.setX(utils.get_effective_value(org_center_ik_offset.x()))
     org_center_ik_offset.setY(0)
     org_center_ik_offset.setZ(utils.get_effective_value(org_center_ik_offset.z()))
-    utils.output_message("f: %s, org_center_ik_offset: %s" % (center_bf.frame, org_center_ik_offset))
+    utils.output_file_logger(file_logger, "f: %s, org_center_ik_offset: %s" % (center_bf.frame, org_center_ik_offset), level=logging.DEBUG)
 
     org_center_offset = org_center_ik_offset * xz_ratio
     utils.set_effective_value_vec3(org_center_offset)
-    utils.output_message("f: %s, org_center_offset: %s" % (center_bf.frame, org_center_offset))
+    utils.output_file_logger(file_logger, "f: %s, org_center_offset: %s" % (center_bf.frame, org_center_offset), level=logging.DEBUG)
 
     # --------
 
     # 先モデルのグローバル位置
     _, _, _, _, rep_center_global_3ds = utils.create_matrix_global(replace_model, center_ik_links["rep_clink"], motion.frames, center_bf, None)
-    # グルーブがある場合、こちらの方が子のはずなのでグローバル位置優先採用
-    target_rep_center_name = "グルーブ" if "グルーブ" in replace_model.bones else "センター"
-    rep_global_center_pos = rep_center_global_3ds[len(rep_center_global_3ds) - center_ik_links["rep_cindex"][target_rep_center_name] - 1]
-    rep_global_lower_pos = rep_center_global_3ds[len(rep_center_global_3ds) - center_ik_links["rep_cindex"]["下半身"] - 1]    
+    rep_global_center_pos = rep_center_global_3ds[-1]
 
     _, _, _, _, rep_left_ik_global_3ds = utils.create_matrix_global(replace_model, center_ik_links["rep_lilink"], motion.frames, center_bf, None)
     rep_global_left_ik_pos = rep_left_ik_global_3ds[len(rep_left_ik_global_3ds) - center_ik_links["rep_liindex"]["足ＩＫ"] - 1]
@@ -151,7 +158,7 @@ def calc_center_offset(org_motion_frames, motion, trace_model, replace_model, ce
     rep_center_ik_offset = ((rep_global_left_ik_pos + rep_global_right_ik_pos) / 2 - rep_global_center_pos)
     utils.set_effective_value_vec3(rep_center_ik_offset)
     rep_center_ik_offset.setY(0)
-    utils.output_message("f: %s, rep_center_ik_offset: %s" % (center_bf.frame, rep_center_ik_offset))
+    utils.output_file_logger(file_logger, "f: %s, rep_center_ik_offset: %s" % (center_bf.frame, rep_center_ik_offset), level=logging.DEBUG)
 
     rep_center_offset = rep_center_ik_offset - org_center_offset
     utils.set_effective_value_vec3(rep_center_offset)
@@ -159,10 +166,13 @@ def calc_center_offset(org_motion_frames, motion, trace_model, replace_model, ce
 
     return rep_center_offset
 
-def calc_center_trunk_offset(org_motion_frames, motion, trace_model, replace_model, center_bf, xz_ratio, center_trunk_links):
+def calc_center_trunk_offset(org_motion_frames, motion, trace_model, replace_model, center_bf, xz_ratio, center_trunk_links, file_logger):
     # 元モデルのグローバル位置
     _, _, _, _, org_normal_center_global_3ds = utils.create_matrix_global(trace_model, center_trunk_links["org_clink"], org_motion_frames, center_bf, None)
-    org_global_normal_center_pos = org_normal_center_global_3ds[len(org_normal_center_global_3ds) - center_trunk_links["org_cindex"]["センター"] - 1]
+    org_global_normal_center_pos = org_normal_center_global_3ds[-1]
+
+    # _, _, _, _, org_lower_global_3ds = utils.create_matrix_global(trace_model, center_trunk_links["org_wlink"], org_motion_frames, center_bf, None)
+    # org_global_lower_pos = org_lower_global_3ds[len(org_lower_global_3ds) - center_trunk_links["org_windex"]["下半身"] - 1]    
 
     # --------
 
@@ -181,7 +191,7 @@ def calc_center_trunk_offset(org_motion_frames, motion, trace_model, replace_mod
 
     # 上半身位置に基づく元モデルのグローバル位置
     _, _, _, _, org_upper_center_global_3ds = utils.create_matrix_global(trace_model, center_trunk_links["org_ulink"], org_upper_motion_frames, center_bf, None)
-    org_global_upper_center_pos = org_upper_center_global_3ds[len(org_upper_center_global_3ds) - center_trunk_links["org_uindex"]["センター"] - 1]
+    org_global_upper_center_pos = org_upper_center_global_3ds[-1]
 
     # 上半身位置に基づく上半身正面向き
     org_upper_upper_direction_all_qq = utils.calc_upper_direction_qq(trace_model, center_trunk_links["org_ulink"], org_upper_motion_frames, center_bf)
@@ -192,7 +202,7 @@ def calc_center_trunk_offset(org_motion_frames, motion, trace_model, replace_mod
     # ------------
 
     # 下半身正面向き
-    org_normal_lower_direction_all_qq = utils.calc_upper_direction_qq(trace_model, center_trunk_links["org_clink"], org_motion_frames, center_bf)
+    org_normal_lower_direction_all_qq = utils.calc_upper_direction_qq(trace_model, center_trunk_links["org_wlink"], org_motion_frames, center_bf)
     org_normal_lower_direction_qq = QQuaternion.fromEulerAngles(0, org_normal_lower_direction_all_qq.toEulerAngles().y(), 0)
     org_front_global_normal_lower_center_pos = utils.create_direction_pos(org_normal_lower_direction_qq.inverted(), org_global_normal_center_pos)
 
@@ -218,7 +228,10 @@ def calc_center_trunk_offset(org_motion_frames, motion, trace_model, replace_mod
 
     # 先モデルのグローバル位置
     _, _, _, _, rep_normal_center_global_3ds = utils.create_matrix_global(replace_model, center_trunk_links["rep_clink"], motion.frames, center_bf, None)
-    rep_global_normal_center_pos = rep_normal_center_global_3ds[len(rep_normal_center_global_3ds) - center_trunk_links["rep_cindex"]["センター"] - 1]
+    rep_global_normal_center_pos = rep_normal_center_global_3ds[-1]
+
+    # _, _, _, _, rep_lower_global_3ds = utils.create_matrix_global(replace_model, center_trunk_links["rep_wlink"], motion.frames, center_bf, None)
+    # rep_global_lower_pos = rep_lower_global_3ds[len(rep_lower_global_3ds) - center_trunk_links["rep_windex"]["下半身"] - 1]    
 
     # --------
 
