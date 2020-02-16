@@ -283,11 +283,11 @@ def spread_rotation(motion, trace_model, model, is_thinning, file_logger, test_p
             wrist_bone_name = "{0}手首".format(direction)
 
             # 各ボーンのローカル軸
-            arm_local_x_axis = utils.get_local_axis_4delegate_qq(trace_model, trace_model.bones[arm_bone_name])     # トレース元の角度
+            arm_local_x_axis = utils.get_local_axis_4delegate_qq(model, model.bones[arm_bone_name])     # トレース元の角度
             arm_twist_local_x_axis = utils.get_local_axis_4delegate_qq(model, model.bones[arm_twist_bone_name])
-            elbow_local_x_axis = utils.get_local_axis_4delegate_qq(trace_model, trace_model.bones[elbow_bone_name]) # トレース元の角度
+            elbow_local_x_axis = utils.get_local_axis_4delegate_qq(model, model.bones[elbow_bone_name]) # トレース元の角度
             wrist_twist_local_x_axis = utils.get_local_axis_4delegate_qq(model, model.bones[wrist_twist_bone_name])
-            wrist_local_x_axis = utils.get_local_axis_4delegate_qq(trace_model, trace_model.bones[wrist_bone_name]) # トレース元の角度
+            wrist_local_x_axis = utils.get_local_axis_4delegate_qq(model, model.bones[wrist_bone_name]) # トレース元の角度
 
             prev_fno = 0
             for fno in bone_framenos:
