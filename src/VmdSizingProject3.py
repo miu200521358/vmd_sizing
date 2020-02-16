@@ -5,6 +5,6 @@ import VmdSizingForm3
 
 # Implementing VmdSizingForm3
 class VmdSizingProject3( VmdSizingForm3.VmdSizingForm3 ):
-	def __init__( self, parent, is_debug ):
-		VmdSizingForm3.VmdSizingForm3.__init__( self, parent, is_debug )
+	def __init__( self, parent, version_name, is_debug ):
+		VmdSizingForm3.VmdSizingForm3.__init__( self, parent, version_name, is_debug )
 

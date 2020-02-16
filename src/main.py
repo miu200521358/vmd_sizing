@@ -27,7 +27,7 @@ level = {0:logging.ERROR,
 
 def main(motion, trace_model, replace_model, output_vmd_path, \
     is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, vmd_choice_values, rep_choice_values, rep_rate_values, \
-    camera_motion, camera_vmd_path, camera_pmx, output_camera_vmd_path, camera_y_offset, is_alternative_model, is_add_delegate, target_avoidance_rigids, target_avoidance_bones, is_debug, test_param):   
+    camera_motion, camera_vmd_path, camera_pmx, output_camera_vmd_path, camera_y_offset, is_alternative_model, is_add_delegate, target_avoidance_rigids, target_avoidance_bones, version_name, is_debug, test_param):   
     # print("モーション: %s" % motion.path)
     # if camera_motion:
     #     print("カメラモーション: %s" % camera_motion.path)
@@ -44,6 +44,7 @@ def main(motion, trace_model, replace_model, output_vmd_path, \
             file_logger.setLevel(logging.DEBUG)
 
         utils.output_file_logger(file_logger, "■■■■■■■■■■■■■■■■■■■■■■■■")
+        utils.output_file_logger(file_logger, "■　exeバージョン: {version_name}".format(version_name=version_name))
         utils.output_file_logger(file_logger, "■　モーション: {motion}".format(motion=os.path.basename(motion.path)))
         utils.output_file_logger(file_logger, "■　作成元モデル: {trace_model} ({model_name})".format(trace_model=os.path.basename(trace_model.path), model_name=trace_model.name))
         utils.output_file_logger(file_logger, "■　変換先モデル: {replace_model} ({model_name})".format(replace_model=os.path.basename(replace_model.path), model_name=replace_model.name))
@@ -195,6 +196,7 @@ def parse_exec():
     parser.add_argument('--add_delegate', dest='add_delegate', help='add_delegate', default=0, type=int)
     parser.add_argument('--target_avoidance_rigids', dest='target_avoidance_rigids', help='target_avoidance_rigids', default="", type=str)
     parser.add_argument('--target_avoidance_bones', dest='target_avoidance_bones', help='target_avoidance_bones', default="", type=str)
+    parser.add_argument('--version_name', dest='version_name', help='version_name', default="", type=str)
     parser.add_argument('--test_param', dest='test_param', help='test_param', default="", type=str)
     parser.add_argument('--verbose', dest='verbose', help='verbose',default=2 , type=int)
     args = parser.parse_args()
@@ -254,7 +256,7 @@ def parse_exec():
             is_avoidance, is_avoidance_finger, is_hand_ik, args.hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, args.hand_floor_distance, args.leg_floor_distance, \
             is_finger_ik, args.finger_distance, args.vmd_choice_values.split(","), args.rep_choice_values.split(","), args.rep_rate_values.split(","), \
             camera_motion, args.camera_vmd_path, camera_pmx, output_camera_vmd_path, args.camera_y_offset, is_alternative_model, is_add_delegate, \
-            args.target_avoidance_rigids.split(","), args.target_avoidance_bones.split(","), is_debug, args.test_param.split(","))
+            args.target_avoidance_rigids.split(","), args.target_avoidance_bones.split(","), args.version_name, is_debug, args.test_param.split(","))
 
         if os.name == "nt":
             # Windows

@@ -35,8 +35,10 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 
 class VmdSizingForm3 ( wx.Frame ):
 
-	def __init__( self, parent, is_debug ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver4.05_β20", pos = wx.DefaultPosition, size = wx.Size( 600,650 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+	def __init__( self, parent, version_name, is_debug ):
+		self.version_name = version_name
+
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 {0}".format(self.version_name), pos = wx.DefaultPosition, size = wx.Size( 600,650 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		self.is_debug = is_debug
@@ -3334,6 +3336,7 @@ class ExecWorkerThread(Thread):
 				, self._notify_window.m_checkAddDelegate.GetValue()
 				, target_avoidance_rigids
 				, target_avoidance_bones
+				, self._notify_window.version_name
 				, self._notify_window.is_debug
 			)
 

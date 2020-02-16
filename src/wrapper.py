@@ -23,7 +23,7 @@ if __name__ == '__main__':
         # 引数指定がない場合、通常起動
         app = wx.App(False)
         icon=wx.Icon(resource_path('src/vmdsizing.ico'),wx.BITMAP_TYPE_ICO)
-        frame = VmdSizingProject3(None, is_debug)
+        frame = VmdSizingProject3(None, "ver4.05_β20", is_debug)
         frame.SetIcon(icon)
         frame.Show(True)
         app.MainLoop()

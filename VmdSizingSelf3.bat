@@ -19,13 +19,13 @@ rem set VMD_PATH="D:\MMD\MikuMikuDance_v926x64\UserFile\Motion\ダンス_1人\おねが
 rem set TRACE_PMX_PATH="D:\MMD\MikuMikuDance_v926x64\UserFile\Model\VOCALOID\初音ミク\Lat式ミクVer2.31\Lat式ミクVer2.31_Sailor夏服_準標準.pmx"
 
 rem set REPLACE_PMX_PATH="D:\MMD\MikuMikuDance_v926x64\UserFile\Model\VOCALOID\初音ミク\Tda式初音ミク_盗賊つばき流Ｍトレースモデル配布 v1.07\Tda式初音ミク_盗賊つばき流Mトレースモデルv1.07.pmx"
-set REPLACE_PMX_PATH="D:\MMD\MikuMikuDance_v926x64\UserFile\Model\_VMDサイジング\8頭身審神者 猫のしもべ\8頭身審神者3.pmx"
+rem set REPLACE_PMX_PATH="D:\MMD\MikuMikuDance_v926x64\UserFile\Model\_VMDサイジング\8頭身審神者 猫のしもべ\8頭身審神者3.pmx"
 rem set REPLACE_PMX_PATH="D:\MMD\MikuMikuDance_v926x64\UserFile\Model\ゲーム\ドラクエ\竜酸式グレイグ配布用_1.09.3\竜酸式グレイグ_1.09.3.pmx"
-rem set REPLACE_PMX_PATH="D:\MMD\MikuMikuDance_v926x64\UserFile\Model\_VMDサイジング\fumizuki_14th_shirt\文月14歳_シャツ.pmx"
+set REPLACE_PMX_PATH="D:\MMD\MikuMikuDance_v926x64\UserFile\Model\_VMDサイジング\fumizuki_14th_shirt\文月14歳_シャツ.pmx"
 
 rem set VMD_PATH="E:\MMD\MikuMikuDance_v926x64\Work\202001_sizing\ひじ分離\腕Xのみ.vmd"
-rem set VMD_PATH="E:\MMD\MikuMikuDance_v926x64\Work\202001_sizing\ひじ分離\udez_less.vmd"
-rem set TRACE_PMX_PATH="D:\MMD\MikuMikuDance_v926x64\UserFile\Model\_VMDサイジング\fumizuki_14th_shirt\文月14歳_シャツ.pmx"
+set VMD_PATH="E:\MMD\MikuMikuDance_v926x64\Work\202001_sizing\ひじ分離\udez_less.vmd"
+set TRACE_PMX_PATH="D:\MMD\MikuMikuDance_v926x64\UserFile\Model\_VMDサイジング\fumizuki_14th_shirt\文月14歳_シャツ.pmx"
 rem set TRACE_PMX_PATH="D:\MMD\MikuMikuDance_v926x64\UserFile\Model\_VMDサイジング\8頭身審神者 猫のしもべ\8頭身審神者3.pmx"
 
 set ALTERNATIVE_MODEL=0
