@@ -1365,6 +1365,10 @@ class VmdSizingForm3 ( wx.Frame ):
 		# タブ押下時の処理
 		self.m_note.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.OnTabChange)
 
+		# ファイルタブのチェックボックスの切り替え
+		self.m_checkAlternativeModel.Bind(wx.EVT_CHECKBOX, self.OnCreateOutputVmd)
+		self.m_checkAddDelegate.Bind(wx.EVT_CHECKBOX, self.OnCreateOutputVmd)
+
 		# 腕処理ラジオボタンの切り替え
 		self.m_radioArmNone.Bind(wx.EVT_RADIOBUTTON, self.OnChangeArmRadio)
 		self.m_radioAvoidance.Bind(wx.EVT_RADIOBUTTON, self.OnChangeArmRadio)
