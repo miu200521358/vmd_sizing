@@ -376,7 +376,7 @@ def delegate_twist_qq_4_arm(fno, direction, arm_qq, arm_twist_qq, elbow_qq, wris
     arm_result_qq = arm_yz_qq
 
     # 腕Xを腕捻りに（くの字はズレる）    
-    arm_twist_axis_qq, arm_twist_axis_degree = utils.convert_axis_qq(fno, "{0}腕".format(direction), arm_x_qq, arm_local_x_axis, arm_twist_local_x_axis, "x", file_logger)
+    arm_twist_axis_qq, arm_twist_axis_degree = utils.convert_axis_qq(fno, "{0}腕".format(direction), arm_x_qq, arm_local_x_axis, arm_twist_local_x_axis, "twist", file_logger)
     arm_twist_result_qq = arm_twist_qq * arm_twist_axis_qq
 
     # 逆肘（初期値より後ろにひじが向かっている場合）判定
