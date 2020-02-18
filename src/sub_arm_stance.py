@@ -23,9 +23,9 @@ def exec(motion, trace_model, replace_model, output_vmd_path, org_motion_frames,
             # センタースタンス補正
             adjust_center_stance(motion, trace_model, replace_model, org_motion_frames, file_logger)
 
-        # if trace_model.can_upper_sizing and replace_model.can_upper_sizing and is_alternative_model == False:
-        #     # 上半身補正
-        #     adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, file_logger, test_param)
+        if trace_model.can_upper_sizing and replace_model.can_upper_sizing and is_alternative_model == False:
+            # 上半身補正
+            adjust_upper_stance(motion, trace_model, replace_model, output_vmd_path, org_motion_frames, file_logger, test_param)
 
         if trace_model.can_arm_sizing and replace_model.can_arm_sizing:
         #     if is_alternative_model == False:

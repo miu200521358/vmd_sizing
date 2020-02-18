@@ -1424,7 +1424,51 @@ class TestSubStance(unittest.TestCase):
         print("ok_list target: %s" % prefix)
         self.assertGreater(len(ok_list), 0)
                              
+    # 上半身,上半身2,1,1,0,上半身,首,1,1,0,上半身2,頭,1-,1-,0,d3,d1,d2,01_True,False,True,False,True,True_ 0.20#-0.09# 2.07,-6.77#-0.06# 2.56,-1.52# 0.00#-2.30                             
+    def test_upper_stance_upper2_up_48(self):
 
+        # # ボーン名の組合せ
+        # rep_upper2_initial_slope_test_bone_names = [(0,"上半身"), (1,"上半身2"), (2,"首"), (3,"頭")]
+        # target_test_params_base_bone_names = list(itertools.product(rep_upper2_initial_slope_test_bone_names, repeat=2))
+        # target_test_params_list_bone_names = [(x00[1], x01[1]) for (x00, x01) in target_test_params_base_bone_names if x00[0] < x01[0]]
+        # target_test_params_base_bone_names_comb = list(itertools.combinations(target_test_params_list_bone_names, 3))
+        # target_test_params_list_bone_names_comb = [(x00, x01, x02) for (x00, x01, x02) in target_test_params_base_bone_names_comb if x00 != x01 != x02]
+        
+        target_test_params_list_bone_names_comb = [[("上半身","上半身2"), ("上半身","首"), ("上半身2","頭")]]
+
+        print("bone_names LIST: %s" % len(target_test_params_list_bone_names_comb))
+        print("bone_names LIST: %s" % target_test_params_list_bone_names_comb)
+        
+        # 数字の組合せ
+        rep_upper2_initial_slope_test_numbers = ["0","1-","1"]
+        list_target_test_params_base_numbers = list(itertools.product(rep_upper2_initial_slope_test_numbers, repeat=3))
+        list_target_test_params_list_numbers = [(x00, x01, x02) for (x00, x01, x02) in list_target_test_params_base_numbers if 0 < [x00, x01, x02].count("0") < 3 ]
+        print("numbers LIST: %s" % len(list_target_test_params_list_numbers))
+
+        # 最後の組合せ
+        rep_upper2_initial_slope_test_pairs = ["d1","d2","d3"]
+        target_test_params_list_pairs = list(itertools.permutations(rep_upper2_initial_slope_test_pairs))
+        print("pairs LIST: %s" % target_test_params_list_pairs)
+
+        [print(pairs) for pairs in target_test_params_list_pairs]
+
+        # 直積
+        target_test_params_base = list(itertools.product(target_test_params_list_bone_names_comb, list_target_test_params_list_numbers
+            , list_target_test_params_list_numbers, list_target_test_params_list_numbers, target_test_params_list_pairs))
+
+        target_test_params_list = [(names_comb[0][0], names_comb[0][1], numbers1[0], numbers1[1], numbers1[2], names_comb[1][0], names_comb[1][1], numbers2[0], numbers2[1], numbers2[2], \
+        names_comb[2][0], names_comb[2][1], numbers3[0], numbers3[1], numbers3[2], pairs[0], pairs[1], pairs[2],"01") \
+            for (names_comb, numbers1, numbers2, numbers3, pairs) in target_test_params_base]
+        random.shuffle(target_test_params_list)
+        print("targets LIST: %s" % len(target_test_params_list))
+        
+        prefix = "048-06"
+        ok_list = self.calc_stance(target_test_params_list, 0.1, False, prefix)
+
+        print("ok_list LIST: %s" % len(ok_list))
+        print("ok_list target: %s" % prefix)
+        self.assertGreater(len(ok_list), 0)
+                             
 
 
     def calc_stance(self, target_test_params, limit, exist_ok, prefix=""):
@@ -1498,7 +1542,7 @@ class TestSubStance(unittest.TestCase):
             try:
                 main.main(copy_motion, trace_model, replace_model, output_vmd_path, \
                     is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger_ik, finger_distance, vmd_choice_values, rep_choice_values, rep_rate_values, \
-                    camera_motion, camera_vmd_path, camera_pmx, output_camera_vmd_path, camera_y_offset, is_alternative_model, is_add_delegate, target_avoidance_rigids, target_avoidance_bones, False, test_param)
+                    camera_motion, camera_vmd_path, camera_pmx, output_camera_vmd_path, camera_y_offset, is_alternative_model, is_add_delegate, target_avoidance_rigids, target_avoidance_bones, prefix, False, test_param)
             except Exception as e:
                 print(traceback.format_exc())
                 continue
@@ -2159,4 +2203,4 @@ class TestSubStance(unittest.TestCase):
         return ok_list
 
 if __name__ == "__main__":
-    unittest.main(defaultTest="TestSubStance.test_upper_stance_upper2_up_47")
+    unittest.main(defaultTest="TestSubStance.test_upper_stance_upper2_up_48")

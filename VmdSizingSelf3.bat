@@ -25,8 +25,8 @@ rem set REPLACE_PMX_PATH="D:\MMD\MikuMikuDance_v926x64\UserFile\Model\_VMDサイジ
 
 rem set VMD_PATH="E:\MMD\MikuMikuDance_v926x64\Work\202001_sizing\ひじ分離\腕Xのみ.vmd"
 rem set VMD_PATH="E:\MMD\MikuMikuDance_v926x64\Work\202001_sizing\ひじ分離\udez_less.vmd"
-set VMD_PATH="E:\MMD\MikuMikuDance_v926x64\Work\202001_sizing\ひじ分離\sizing_test_01.vmd"
-set TRACE_PMX_PATH="D:\MMD\MikuMikuDance_v926x64\UserFile\Model\_VMDサイジング\fumizuki_14th_shirt\文月14歳_シャツ.pmx"
+rem set VMD_PATH="E:\MMD\MikuMikuDance_v926x64\Work\202001_sizing\ひじ分離\sizing_test_01.vmd"
+rem set TRACE_PMX_PATH="D:\MMD\MikuMikuDance_v926x64\UserFile\Model\_VMDサイジング\fumizuki_14th_shirt\文月14歳_シャツ.pmx"
 rem set TRACE_PMX_PATH="D:\MMD\MikuMikuDance_v926x64\UserFile\Model\_VMDサイジング\8頭身審神者 猫のしもべ\8頭身審神者3.pmx"
 
 set ALTERNATIVE_MODEL=0
