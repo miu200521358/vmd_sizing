@@ -279,7 +279,7 @@ def convert_twist_qq(fno, bone_name, target_qq, local_axis, file_logger):
     part_axis = ""
     part_degree = 0
     part_dot = 0
-    for deg, dot, axis in [(part_x_degree, part_x_dot, "x"), (part_y_degree, part_y_dot, "y"), (part_z_degree, part_z_dot, "z")]:
+    for deg, dot, axis in [(part_x_degree, part_x_dot, "x")]: # , (part_y_degree, part_y_dot, "y"), (part_z_degree, part_z_dot, "z")
         if dot > part_dot:
             part_axis = axis
             part_dot = dot
@@ -570,7 +570,16 @@ def convert_axis_qq(fno, bone_name, from_qq, target_axis, axis, file_logger):
             target_qq.setScalar(-target_qq.scalar())
             target_qq.setZ(-target_qq.z())
             output_file_logger(file_logger, "fno: {fno}, {bone_name}, 調整z3 target_qq: {target_qq}".format(fno=fno, bone_name=bone_name, target_qq=target_qq), level=logging.DEBUG)
-
+    elif axis == "twist":   
+        if (from_qq.normalized().x() > 0 and from_qq.scalar() < 0 and target_axis.x() < 0):
+            target_qq.setScalar(-target_qq.scalar())
+            target_qq.setX(-target_qq.x())
+            output_file_logger(file_logger, "fno: {fno}, {bone_name}, 調整t2 target_qq: {target_qq}".format(fno=fno, bone_name=bone_name, target_qq=target_qq), level=logging.DEBUG)
+        elif (from_qq.normalized().x() < 0 and from_qq.scalar() > 0 and target_axis.x() > 0):
+            target_qq.setScalar(-target_qq.scalar())
+            target_qq.setX(-target_qq.x())
+            output_file_logger(file_logger, "fno: {fno}, {bone_name}, 調整t3 target_qq: {target_qq}".format(fno=fno, bone_name=bone_name, target_qq=target_qq), level=logging.DEBUG)
+    
     target_degree = degrees(2 * acos(min(1, max(-1, target_qq.scalar()))))
  
     target_result_degree = target_degree
@@ -580,43 +589,49 @@ def convert_axis_qq(fno, bone_name, from_qq, target_axis, axis, file_logger):
     return target_result_qq, target_result_degree
 
 # 回転を委譲する
-def delegate_twist_qq(fno, bone_name, original_twist_qq, twist_qq, original_child_qq, child_qq, twist_x_axis, child_x_axis, is_elbow, file_logger):
+def delegate_twist_qq(fno, bone_name, original_twist_qq, twist_qq, original_child_qq, child_qq, twist_x_axis, child_x_axis, file_logger):
     # 委譲先ローカル座標系（ボーンベクトルが（1，0，0）になる空間）の向き
-    child_local_axis = QVector3D(1, 0, 0)
+    twist_local_axis = QVector3D(1, 0, 0)
 
     # 委譲元初期向きからローカル軸への変換
     # parent_global2twist_global_qq, _ = calc_match_qq( parent_x_axis, twist_x_axis )
-    twist_global2child_global_qq, _ = calc_match_qq( twist_x_axis, child_x_axis )
-    child_global2local_qq, _ = calc_match_qq( child_x_axis, child_local_axis )
+    twist_global2local_qq, _ = calc_match_qq( twist_x_axis, twist_local_axis )
+    twist_local2twist_global_qq, _ = calc_match_qq( twist_local_axis, twist_x_axis )
 
     # 元々の委譲先回転量 ----------------
     mat_of1 = QMatrix4x4()
     # mat_of1.translate(twist_x_axis)
-    mat_of1.rotate(original_twist_qq)
-    # mat_of1.translate(child_x_axis)
+    # mat_of1.rotate(original_twist_qq)
     mat_of1.rotate(original_child_qq)
-    # mat_of1.rotate(child_global2local_qq)
+    mat_of1.translate(child_x_axis)
+
+    mat_of2 = QMatrix4x4()
+    mat_of2.rotate(twist_global2local_qq)
     
     # 委譲元の回転を、委譲先のローカル軸に変換
     # オリジナル回転 - ローカル座標のX軸回転を算出
-    from_original_2_to_local_vec = mat_of1 * child_x_axis
-    # from_original_2_to_local_vec.setX(0)
+    from_original_2_to_local_vec = mat_of1 * mat_of2 * twist_local_axis
+    from_original_2_to_local_vec.setX(0)
     # from_original_2_to_local_vec.normalize()
 
     # 変換後の委譲先回転量 ----------------
     mat_af1 = QMatrix4x4()
     # mat_af1.translate(twist_x_axis)
-    mat_af1.rotate(original_twist_qq)
-    mat_af1.rotate(twist_qq)
-    # mat_af1.translate(child_x_axis)
+    # mat_af1.rotate(original_twist_qq)
+    # mat_af1.rotate(twist_qq)
     mat_af1.rotate(child_qq)
-    # mat_af1.rotate(child_global2local_qq)
+    mat_af1.translate(child_x_axis)
+
+    mat_af2 = QMatrix4x4()
+    mat_af2.rotate(twist_global2local_qq)
 
     # 委譲元の回転を、委譲先のローカル軸に変換
     # 変換後回転 - ローカル座標のX軸回転を算出
-    from_result_2_to_local_vec = mat_af1 * child_x_axis
-    # from_result_2_to_local_vec.setX(0)
+    from_result_2_to_local_vec = mat_af1 * mat_af2 * twist_local_axis
+    from_result_2_to_local_vec.setX(0)
     # from_result_2_to_local_vec.normalize()
+
+    # ----------------
 
     output_file_logger(file_logger, "fno: {fno}, {bone_name}, to_org: {to_org}".format(fno=fno, bone_name=bone_name, to_org=from_original_2_to_local_vec), level=logging.DEBUG)
     output_file_logger(file_logger, "fno: {fno}, {bone_name}, to_res: {to_res}".format(fno=fno, bone_name=bone_name, to_res=from_result_2_to_local_vec), level=logging.DEBUG)
@@ -624,97 +639,31 @@ def delegate_twist_qq(fno, bone_name, original_twist_qq, twist_qq, original_chil
     diff_qq, diff_degree = calc_match_qq(from_result_2_to_local_vec, from_original_2_to_local_vec)
     output_file_logger(file_logger, "fno: {fno}, {bone_name}, diff_degree: {diff_degree}, diff_qq: {diff_qq}".format(fno=fno, bone_name=bone_name, diff_degree=diff_degree, diff_qq=diff_qq), level=logging.DEBUG)
 
+    # mat_df1 = QMatrix4x4()
+    # mat_df1.rotate(diff_qq)
+    # mat_df1.rotate(twist_local2twist_global_qq)
+
+    # twist_diff_qq = calc_matrix2qq(mat_df1)
+    # twist_diff_degree = degrees(2 * acos(min(1, max(-1, twist_diff_qq.scalar()))))
+    # output_file_logger(file_logger, "fno: {fno}, {bone_name}, twist_diff_degree: {twist_diff_degree}, twist_diff_qq: {twist_diff_qq}".format(fno=fno, bone_name=bone_name, twist_diff_degree=twist_diff_degree, twist_diff_qq=twist_diff_qq), level=logging.DEBUG)
+
     # 委譲先Xの回転に変換
-    output_file_logger(file_logger, "fno: {fno}, {bone_name}, twist_result_qq ----------".format(fno=fno, bone_name=bone_name), level=logging.DEBUG)
+    twist_result_degree = diff_degree
+    twist_result_qq = QQuaternion.fromAxisAndAngle(twist_x_axis, diff_degree)
 
-    # 軸にあったqqにする
-    twist_result_qq, twist_result_degree = convert_axis_qq(fno, bone_name, diff_qq, twist_x_axis, "x", file_logger)
-    # if is_elbow:
-    # ひじの場合、捩りコンバート
-    # twist_result_qq, twist_result_degree = convert_twist_qq(fno, bone_name, diff_qq, twist_x_axis, file_logger)
-    # else:
-    #     # 手の場合、通常コンバート
-
-    # # ----------------------
-
-    # child_y_axis = QVector3D.crossProduct(child_x_axis, QVector3D(0, 0, -1))
-
-    # # 元々の回転結果
-    # mat_bf1 = QMatrix4x4()
-    # mat_bf1.rotate(original_twist_qq)
-    # mat_bf1.rotate(original_child_qq)
-
-    # original_arm_vec = mat_bf1 * child_x_axis
-
-    # mat_cf1 = QMatrix4x4()
-
-    # mat_cf1.rotate(original_twist_qq)
-    # mat_cf1.rotate(twist_qq)
-    # mat_cf1.rotate(twist_result_qq)
-    # mat_cf1.rotate(child_qq)
-
-    # result_arm_vec = mat_cf1 * child_x_axis
-
-    # output_file_logger(file_logger, "fno: {fno}, {bone_name}, original_arm_vec: {original_arm_vec}".format(fno=fno, bone_name=bone_name, original_arm_vec=original_arm_vec), level=logging.DEBUG)
-    # output_file_logger(file_logger, "fno: {fno}, {bone_name}, result_arm_vec: {result_arm_vec}".format(fno=fno, bone_name=bone_name, result_arm_vec=result_arm_vec), level=logging.DEBUG)
-
-    # 腕捩りの場合、ひじのX軸方向を合わせる
-    # if is_elbow:
-    #     result_diff_qq, result_diff_degree = calc_match_qq(result_arm_vec, original_arm_vec)
-    #     result_diff_qq, result_diff_degree = convert_axis_qq(fno, bone_name, result_diff_qq, twist_x_axis, "x", file_logger)
-    #     output_file_logger(file_logger, "fno: {fno}, {bone_name}, result_diff_degree: {result_diff_degree}, result_diff_qq: {result_diff_qq}".format(fno=fno, bone_name=bone_name, result_diff_degree=result_diff_degree, result_diff_qq=result_diff_qq), level=logging.DEBUG)
-    # else:
-    #     # 手捩りの場合、内積でチェック
-    # result_dot = QVector3D.dotProduct(original_arm_vec, result_arm_vec)
-    # result_diff_theta = result_dot / ( original_arm_vec.length() * result_arm_vec.length() )
-    # result_diff_degree = degrees(2 * acos(min(1, max(-1, result_diff_theta))))
-    # output_file_logger(file_logger, "fno: {fno}, {bone_name}, result_dot: {result_dot}, result_diff_theta: {result_diff_theta}, result_diff_degree: {result_diff_degree}".format(fno=fno, bone_name=bone_name, result_dot=result_dot, result_diff_theta=result_diff_theta, result_diff_degree=result_diff_degree), level=logging.DEBUG)
-
-    # result_diff_qq = QQuaternion.fromAxisAndAngle(twist_x_axis, result_diff_degree)
-
-    # # # result_arm_qq = parent_qq * twist_result_qq * child_qq
-
-    # # # result_arm_diff_qq = original_arm_qq * result_arm_qq.inverted()
-    # # # result_arm_diff_degree = degrees(2 * acos(min(1, max(-1, result_arm_diff_qq.scalar()))))
-    # # # output_file_logger(file_logger, "fno: {fno}, {bone_name}, result_arm_diff_degree: {result_arm_diff_degree}, result_arm_diff_qq: {result_arm_diff_qq}".format(fno=fno, bone_name=bone_name, result_arm_diff_degree=result_arm_diff_degree, result_arm_diff_qq=result_arm_diff_qq), level=logging.DEBUG)
-
-    # # # twist_dot = QQuaternion.dotProduct(original_arm_qq, result_arm_qq)
-    # # # twist_radian = twist_dot / ( original_arm_qq.length() * result_arm_qq.length() )
-    # # # twist_dot_degree = degrees(acos(min(1, max(-1, twist_radian))))
-    # # # twist_dot_qq = QQuaternion.fromAxisAndAngle(twist_x_axis, twist_dot_degree)
-    
-    # # # output_file_logger(file_logger, "fno: {fno}, {bone_name}, twist_dot: {twist_dot}, twist_radian: {twist_radian}, twist_dot_degree: {twist_dot_degree}".format(fno=fno, bone_name=bone_name, twist_dot=twist_dot, twist_radian=twist_radian, twist_dot_degree=twist_dot_degree), level=logging.DEBUG)
-
-    # result_diff_qq, result_diff_degree = calc_match_qq(result_arm_vec, original_arm_vec)
-    # output_file_logger(file_logger, "fno: {fno}, {bone_name}, result_diff_degree: {result_diff_degree}, result_diff_qq: {result_diff_qq}".format(fno=fno, bone_name=bone_name, result_diff_degree=result_diff_degree, result_diff_qq=result_diff_qq), level=logging.DEBUG)
-
-    # # # result_diff_qq, result_diff_degree = calc_match_qq(original_arm_vec, result_arm_vec)
-
-    # # # # output_file_logger(file_logger, "fno: {fno}, {bone_name}, r_vec: {r_vec}".format(fno=fno, bone_name=bone_name, r_vec=result_arm_vec))
-
-    # # # result_diff_qq, result_diff_degree = calc_match_qq(result_arm_vec, from_original_2_to_local_vec)
-    # # # # result_diff_x_qq = QQuaternion.fromAxisAndAngle(parent_x_axis, result_diff_degree)
-    # # # output_file_logger(file_logger, "fno: {fno}, {bone_name}, result_diff_degree: {result_diff_degree}, result_diff_qq: {result_diff_qq}".format(fno=fno, bone_name=bone_name, result_diff_degree=result_diff_degree, result_diff_qq=result_diff_qq), level=logging.DEBUG)
-
-    # # 差分を委譲先Xの回転に変換
-    # output_file_logger(file_logger, "fno: {fno}, {bone_name}, twist_delegate_qq ----------".format(fno=fno, bone_name=bone_name), level=logging.DEBUG)
-    # twist_delegate_qq, twist_delegate_degree = convert_axis_qq(fno, bone_name, result_diff_qq, parent_x_axis, twist_x_axis, "x", file_logger)
-    # output_file_logger(file_logger, "fno: {fno}, {bone_name}, twist_delegate_degree: {twist_delegate_degree}, twist_delegate_qq: {twist_delegate_qq}".format(fno=fno, bone_name=bone_name, twist_delegate_degree=twist_delegate_degree, twist_delegate_qq=twist_delegate_qq), level=logging.DEBUG)
-
-    # # # original_twist_degree = degrees(2 * acos(min(1, max(-1, original_twist_qq.scalar()))))
+    output_file_logger(file_logger, "fno: {fno}, {bone_name}, twist_result_degree: {twist_result_degree}, twist_result_qq: {twist_result_qq}".format(fno=fno, bone_name=bone_name, twist_result_degree=twist_result_degree, twist_result_qq=twist_result_qq), level=logging.DEBUG)
 
     # result_mat = QMatrix4x4()
-    # # result_mat.rotate(original_twist_qq)
-    # # result_mat.rotate(twist_qq)
+    # result_mat.rotate(original_twist_qq)
+    # result_mat.rotate(twist_qq)
     # result_mat.rotate(twist_result_qq)
-    # # result_mat.rotate(twist_delegate_qq)
 
-    # twist_delegate_result_qq = calc_matrix2qq(result_mat)
-    # twist_delegate_result_degree = degrees(2 * acos(min(1, max(-1, twist_delegate_result_qq.scalar()))))
+    # twist_delegate_qq = calc_matrix2qq(result_mat)
+    # twist_delegate_degree = degrees(2 * acos(min(1, max(-1, twist_delegate_qq.scalar()))))
 
-    # output_file_logger(file_logger, "fno: {fno}, {bone_name}, twist_delegate_result_degree: {twist_delegate_result_degree}, twist_delegate_result_qq: {twist_delegate_result_qq}".format(fno=fno, bone_name=bone_name, twist_delegate_result_degree=twist_delegate_result_degree, twist_delegate_result_qq=twist_delegate_result_qq), level=logging.DEBUG)
+    # output_file_logger(file_logger, "fno: {fno}, {bone_name}, twist_delegate_degree: {twist_delegate_degree}, twist_delegate_qq: {twist_delegate_qq}".format(fno=fno, bone_name=bone_name, twist_delegate_degree=twist_delegate_degree, twist_delegate_qq=twist_delegate_qq), level=logging.DEBUG)
 
-    return original_twist_qq * twist_qq * twist_result_qq #* result_diff_qq
+    return twist_result_qq # original_twist_qq * twist_qq * twist_result_qq #* result_diff_qq
 
 def get_local_axis_4delegate_qq(model, bone):
     if bone.fixed_axis != QVector3D():
