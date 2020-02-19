@@ -61,15 +61,20 @@ def main(motion, trace_model, replace_model, output_vmd_path, \
 
     # ディクショナリ型の疑似二次元配列から、一次元配列に変換
     bone_frames = []
-    for k,v in motion.frames.items():
-        for bf in v:
-            # if bf.frame == 605:
-            #     logger.debug("check: %s, %s, %s, %s, %s, %s", k, bf.name, bf.frame, bf.key, bf.position, bf.rotation)
 
+    # MMDのメモリ確保のため、最大フレーム番号のデータを先頭に持ってくる
+    for k,v in motion.frames.items():
+        for bf in reversed(v):
             if bf.key == True:
-                # logger.debug("regist: %s, %s, %s, %s, %s", k, bf.name, bf.frame, bf.position, bf.rotation)
                 bone_frames.append(bf)
-    
+                break
+
+    for k,v in motion.frames.items():
+        # とりあえず最後のは登録済みなので無視
+        for bf in v[:-1]:
+            if bf.key == True:
+                bone_frames.append(bf)
+                
     morph_frames = []
     for k,v in motion.morphs.items():
         for mf in v:

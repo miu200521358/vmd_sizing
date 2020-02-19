@@ -17,6 +17,7 @@ import re
 import csv
 import json
 import copy
+import winsound
 from pathlib import Path
 from threading import Thread, Event
 import traceback
@@ -37,7 +38,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver4.04", pos = wx.DefaultPosition, size = wx.Size( 600,650 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver4.05_speedup_β01", pos = wx.DefaultPosition, size = wx.Size( 600,650 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -899,6 +900,13 @@ class VmdSizingForm3 ( wx.Frame ):
 		# self.m_slice_fileVmd.SetDropTarget(MyFileDropTarget(self, self.m_slice_fileVmd, self.m_slice_staticText1, ".vmd"))
 		# self.m_blend_filePmx.SetDropTarget(MyFileDropTarget(self, self.m_blend_filePmx, self.m_staticText11, ".pmx"))
 
+		# 開くボタン押下時の処理
+		self.m_fileVmd.GetPickerCtrl().Bind(wx.EVT_BUTTON, lambda event: self.OnPickFile(event, self.file_hitories["vmd"], self.m_fileVmd, self.m_staticText9, ".vmd"))
+		self.m_fileOrgPmx.GetPickerCtrl().Bind(wx.EVT_BUTTON, lambda event: self.OnPickFile(event, self.file_hitories["org_pmx"], self.m_fileOrgPmx, self.m_staticText10, ".pmx"))
+		self.m_fileRepPmx.GetPickerCtrl().Bind(wx.EVT_BUTTON, lambda event: self.OnPickFile(event, self.file_hitories["rep_pmx"], self.m_fileRepPmx, self.m_staticText11, ".pmx"))
+		self.m_camera_fileVmd.GetPickerCtrl().Bind(wx.EVT_BUTTON, lambda event: self.OnPickFile(event, self.file_hitories["camera_vmd"], self.m_camera_fileVmd, self.m_camera_staticText9, ".vmd"))
+		self.m_camera_fileOrgPmx.GetPickerCtrl().Bind(wx.EVT_BUTTON, lambda event: self.OnPickFile(event, self.file_hitories["camera_pmx"], self.m_camera_fileOrgPmx, self.m_camera_staticText10, ".pmx"))
+
 		# ファイルパス変更時の処理
 		self.m_fileVmd.Bind( wx.EVT_FILEPICKER_CHANGED, lambda event: self.OnChangeFile(event, self.m_fileVmd, self.m_staticText9, ".vmd"))
 		self.m_fileOrgPmx.Bind( wx.EVT_FILEPICKER_CHANGED, lambda event: self.OnChangeFile(event, self.m_fileOrgPmx, self.m_staticText10, ".pmx"))
@@ -1106,6 +1114,15 @@ class VmdSizingForm3 ( wx.Frame ):
 			# 元に戻す
 			sys.stdout = self.m_txtConsole
 
+
+	# 履歴ボタンのあるファイルコントロールは直近のパスを開く
+	def OnPickFile(self, event, hitories, target_ctrl, label_ctrl, ext):
+		if len(target_ctrl.GetPath()) == 0 and len(hitories) > 0:
+			# パスが未指定である場合、直近のパスを設定してひらく
+			# target_ctrl.SetPath(hitories[0])
+			target_ctrl.SetInitialDirectory(os.path.dirname(hitories[0]))
+		
+		event.Skip()
 
 	def OnShowHistory(self, event, hitories, maxc, target_ctrl, label_ctrl, ext):
 		# 入力行を伸ばす
@@ -2175,6 +2192,10 @@ class VmdSizingForm3 ( wx.Frame ):
 
 	# スレッド実行結果
 	def OnResult(self, event):
+		# 終了音を鳴らす
+		if os.name == "nt":
+			# Windows
+			winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
 
 		# スレッド削除
 		self.worker = None
