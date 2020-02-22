@@ -202,10 +202,15 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_staticText102.Wrap( -1 )
 		bSizer481.Add( self.m_staticText102, 0, wx.ALL, 5 )
 
-		# 代替モデル（スタンス補正無効）
-		self.m_checkAddDelegate = wx.CheckBox( self.m_panelFile, wx.ID_ANY, u"捩り分散あり", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_checkAddDelegate = wx.CheckBox( self.m_panelFile, wx.ID_ANY, u"捩り分散追加", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_checkAddDelegate.SetToolTip( u"チェックを入れると、腕捻り等への分散処理を追加できます。" )
 		bSizer481.Add( self.m_checkAddDelegate, 0, wx.ALL, 5 )
+
+		self.m_pmxReplaceTxt = wx.TextCtrl( self.m_panelFile, wx.ID_ANY, u"（変換先PMX未設定）", wx.DefaultPosition, (300,-1), wx.TE_READONLY|wx.BORDER_NONE|wx.WANTS_CHARS )
+		self.m_pmxReplaceTxt.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_3DLIGHT ) )
+		self.m_pmxReplaceTxt.SetToolTip( u"PMXファイルに記録されているモデル名です。選択でコピペ可能です。" )
+
+		bSizer481.Add( self.m_pmxReplaceTxt, 0, wx.ALL, 5 )
 
 		bSizer4.Add( bSizer481, 0, wx.ALL, 0 )
 
@@ -1390,12 +1395,8 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		# スライダーの変更時
 		self.m_sliderHandDistance.Bind(wx.EVT_SCROLL_CHANGED, self.OnChangeArmIKHandDistance)
-
-		# スライダーの変更時
 		self.m_sliderHandFloorDistance.Bind(wx.EVT_SCROLL_CHANGED, self.OnChangeArmIKFloorDistance)
 		self.m_sliderLegFloorDistance.Bind(wx.EVT_SCROLL_CHANGED, self.OnChangeArmIKFloorDistance)
-
-		# スライダーの変更時
 		self.m_sliderFingerDistance.Bind(wx.EVT_SCROLL_CHANGED, self.OnChangeArmIKFingerDistance)
 
 		# 指位置合わせのチェックボックス切り替え
@@ -1424,6 +1425,13 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_panelEndBezier.Bind(wx.EVT_LEFT_DOWN, lambda event: self.OnPaintBezierMouseLeftDown(event, self.m_panelEndBezier))
 		self.m_panelEndBezier.Bind(wx.EVT_LEFT_UP, lambda event: self.OnPaintBezierMouseLeftUp(event, self.m_panelEndBezier))
 		self.m_panelEndBezier.Bind(wx.EVT_MOTION, lambda event: self.OnPaintBezierMouseMotion(event, self.m_panelEndBezier))
+
+		# スピンコントロールの変更時
+		self.m_camera_spinYoffset.Bind(wx.EVT_MOUSEWHEEL, self.OnChangeSpinControl)
+		self.m_smooth_spinSmoothCount.Bind(wx.EVT_MOUSEWHEEL, self.OnChangeSpinControl)
+		self.m_blend_spinMin.Bind(wx.EVT_MOUSEWHEEL, self.OnChangeSpinControl)
+		self.m_blend_spinMax.Bind(wx.EVT_MOUSEWHEEL, self.OnChangeSpinControl)
+		self.m_blend_spinInc.Bind(wx.EVT_MOUSEWHEEL, self.OnChangeSpinControl)
 
 		# 終了時の処理
 		self.Bind(wx.EVT_CLOSE, self.OnClose)
@@ -1579,7 +1587,8 @@ class VmdSizingForm3 ( wx.Frame ):
 	def OnPickFile(self, event, hitories, target_ctrl, label_ctrl, ext):
 		if len(target_ctrl.GetPath()) == 0 and len(hitories) > 0:
 			# パスが未指定である場合、直近のパスを設定してひらく
-			target_ctrl.SetPath(hitories[0])
+			# target_ctrl.SetPath(hitories[0])
+			target_ctrl.SetInitialDirectory(os.path.dirname(hitories[0]))
 		
 		event.Skip()
 
@@ -1962,7 +1971,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		# 新規行のイベントの追加
 		self.vmd_choices[-1].Bind(wx.EVT_CHOICE, self.OnFillAddMorphLine)
 		self.rep_choices[-1].Bind(wx.EVT_CHOICE, self.OnFillAddMorphLine)
-		self.rep_rates[-1].Bind(wx.EVT_MOUSEWHEEL, self.OnChangeMorphRate)
+		self.rep_rates[-1].Bind(wx.EVT_MOUSEWHEEL, self.OnChangeSpinControl)
 
 		# self.Refresh()
 
@@ -1974,8 +1983,8 @@ class VmdSizingForm3 ( wx.Frame ):
 		if self.vmd_choices[-1].GetSelection() > 0 and self.rep_choices[-1].GetSelection() > 0:
 			self.AddMorphLine()
 
-	# モーフの大きさをマウスホイールで変更
-	def OnChangeMorphRate(self, event):
+	# スピンコントロールをマウスホイールで変更
+	def OnChangeSpinControl(self, event):
 		if event.GetWheelRotation() > 0:
 			event.GetEventObject().SetValue(event.GetEventObject().GetValue() + 0.1)
 		else:
@@ -2497,8 +2506,8 @@ class VmdSizingForm3 ( wx.Frame ):
 				return True
 
 	def OnChangeFileByBlend(self, event, target_ctrl, label_ctrl, ext):
-		# まず、ファイル変更処理実行
-		self.OnChangeFile(event, target_ctrl, label_ctrl, ext)
+		# # まず、ファイル変更処理実行
+		# self.OnChangeFile(event, target_ctrl, label_ctrl, ext)
 		# その後読み込み処理実行
 		if self.LoadOneFile(target_ctrl, label_ctrl, ext, True):
 			# 読み込みが成功したら、モーフ入れ替え表示
@@ -2536,6 +2545,12 @@ class VmdSizingForm3 ( wx.Frame ):
 			self.ShowTraceModelbyPmx(event)
 		else:
 			self.m_pmxTraceTxt.SetValue("　（作成元PMX未設定）")
+
+		if self.m_fileRepPmx.GetPath() != "":
+			# 作成元PMXファイルパスが空でなければ、トレースモデル名表示
+			self.ShowReplaceModelbyPmx(event)
+		else:
+			self.m_pmxReplaceTxt.SetValue("（変換先PMX未設定）")
 
 		if target_ctrl == self.m_fileVmd:
 			self.vmd_data = None
@@ -2869,6 +2884,11 @@ class VmdSizingForm3 ( wx.Frame ):
 
 	# スレッド実行結果
 	def OnCsvResult(self, event):
+		# 終了音を鳴らす
+		if os.name == "nt":
+			# Windows
+			winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
+
 		# スレッド削除
 		self.csv_worker = None
 		# 入力有効化
@@ -2892,6 +2912,11 @@ class VmdSizingForm3 ( wx.Frame ):
 
 	# スレッド実行結果
 	def OnVmdResult(self, event):
+		# 終了音を鳴らす
+		if os.name == "nt":
+			# Windows
+			winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
+
 		# スレッド削除
 		self.vmd_worker = None
 		# 入力有効化
@@ -2936,8 +2961,8 @@ class VmdSizingForm3 ( wx.Frame ):
 		for idx in self.m_blend_listOther.GetSelections():
 			target_morphs.append(self.m_blend_listOther.GetString(idx))
 
-		if len(target_morphs) < 2 or len(target_morphs) > 100:
-			print("組み合わせる対象のモーフは2～100個の範囲内で選んで下さい。")
+		if len(target_morphs) < 1 or len(target_morphs) > 100:
+			print("組み合わせる対象のモーフは1～100個の範囲内で選んで下さい。")
 
 			self.EnableInput()
 			# プログレス非表示
@@ -2956,6 +2981,11 @@ class VmdSizingForm3 ( wx.Frame ):
 
 	# スレッド実行結果
 	def OnBlendResult(self, event):
+		# 終了音を鳴らす
+		if os.name == "nt":
+			# Windows
+			winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
+
 		# スレッド削除
 		self.blend_worker = None
 		# 入力有効化
@@ -2985,6 +3015,18 @@ class VmdSizingForm3 ( wx.Frame ):
 			self.m_pmxTraceTxt.SetValue("　（PMXモデル名取得失敗）")
 		else:
 			self.m_pmxTraceTxt.SetValue("　（PMXモデル名: "+ model_name +"）")
+
+	def ShowReplaceModelbyPmx(self, event):
+		if wrapperutils.is_valid_file(self.m_fileOrgPmx.GetPath(), "モーション変換先PMXファイル", ".pmx", False) == False:
+			logger.warn("pmxエラー")
+			return False
+		
+		# モデル名表示追加
+		model_name = wrapperutils.read_pmx_modelname(self.m_fileRepPmx.GetPath())
+		if model_name == None:
+			self.m_pmxReplaceTxt.SetValue("（PMXモデル名取得失敗）")
+		else:
+			self.m_pmxReplaceTxt.SetValue("（PMXモデル名: "+ model_name +"）")
 
 	# 出力ファイルパスの生成
 	def OnCreateOutputVmd(self, event):	
@@ -3503,7 +3545,8 @@ class BlendWorkerThread(Thread):
 			self._notify_window.m_blend_spinMin.GetValue(), \
 			self._notify_window.m_blend_spinMax.GetValue(), \
 			self._notify_window.m_blend_spinInc.GetValue(), \
-			self.target_morphs
+			self.target_morphs, \
+			self._notify_window.is_debug
 		)
 
 		# Here's where the result would be returned (this is an
@@ -3569,7 +3612,8 @@ class MyFileDropTarget(wx.FileDropTarget):
 			if self.target_ctrl == self.window.m_blend_filePmx:
 				self.window.blend_pmx_data = None
 				# ブレンドだけは読み込み
-				self.window.LoadOneFile(wx.EVT_FILEPICKER_CHANGED, self.target_ctrl, self.label_ctrl, self.ext)
+				self.window.OnChangeFileByBlend(wx.EVT_FILEPICKER_CHANGED, self.target_ctrl, self.label_ctrl, self.ext)
+				# self.window.LoadOneFile(wx.EVT_FILEPICKER_CHANGED, self.target_ctrl, self.label_ctrl, self.ext)
 				
 			# # 出力ファイル以外はデータ読み込み
 			# if self.target_ctrl != self.window.m_fileOutputVmd:

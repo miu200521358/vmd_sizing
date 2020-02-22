@@ -10,6 +10,7 @@ import sys
 import itertools
 import math
 import random
+import copy
 from datetime import datetime
 
 from PmxModel import PmxModel, SizingException
@@ -21,9 +22,7 @@ import wrapperutils, utils
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-is_print = False
-
-def main(pmx_path, min_value, max_value, iter_value, target_morphs):
+def main(pmx_path, min_value, max_value, iter_value, target_morphs, is_debug):
 
     print("処理対象PMXファイル: %s" % pmx_path)
     print("モーフ最小値: %s" % min_value)
@@ -39,9 +38,9 @@ def main(pmx_path, min_value, max_value, iter_value, target_morphs):
         logger.debug("min: %s, %s", min_value, min_value/iter_value)
         logger.debug("max: %s, %s", max_value, max_value/iter_value)
 
-        # キーを打つタイミング
-        mframe_cnt = math.ceil(max_value/iter_value - min_value/iter_value)
-        logger.debug("mframe_cnt: %s", mframe_cnt)
+        # # キーを打つタイミング
+        # mframe_cnt = math.ceil(max_value/iter_value - min_value/iter_value)
+        # logger.debug("mframe_cnt: %s", mframe_cnt)
 
         all_morphs = []
         all_morph_names = []
@@ -52,14 +51,16 @@ def main(pmx_path, min_value, max_value, iter_value, target_morphs):
                 all_morph_names.append(mk)
 
         # 変化量(少ない方のの割合を多くする)
-        ratio_values = [iter_value*x for x in range(math.ceil(min_value/iter_value),math.ceil(max_value/iter_value)+1)]
-        ratio_lower_values = [iter_value*x for x in range(math.ceil(min_value/iter_value),math.ceil(max_value/iter_value/2)+1)]
+        ratio_values = [iter_value*x for x in range(math.ceil(min_value/iter_value),math.ceil(max_value/iter_value)+1) if min_value <= iter_value*x <= max_value ]
+        ratio_lower_values = [iter_value*x for x in range(math.ceil(min_value/iter_value),math.ceil(max_value/iter_value/2)+1) if min_value <= iter_value*x <= max_value ]
         ratio_zero_values = [0 for x in range(len(target_morphs))]
 
-        ratio_values.extend(ratio_lower_values)
-        ratio_values.extend(ratio_lower_values)
-        ratio_values.extend(ratio_zero_values)
-        utils.output_message("モーフ増加量: %s" % ratio_values, is_print)
+        ratio_total_values = copy.deepcopy(ratio_values)
+        ratio_total_values.extend(ratio_lower_values)
+        ratio_total_values.extend(ratio_lower_values)
+        ratio_total_values.extend(ratio_zero_values)
+
+        utils.output_message("モーフ増加量: %s" % ratio_total_values, is_debug)
 
         brend_cnt = 0
         brend_morph_by_frames = {}
@@ -68,42 +69,73 @@ def main(pmx_path, min_value, max_value, iter_value, target_morphs):
         # モーフの組合せ数別に出力
         morph_cnt = len(all_morphs)
 
-        # # モーフの組合せ
-        # morph_comb = list(itertools.combinations(all_morphs, morph_cnt))
-        # utils.output_message("morph_comb: %s, now: %s" % (len(morph_comb), datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')), is_print)
-
-        # # 変化量の直積（同じ値を許容する）
-        # ratio_product = list(itertools.product(ratio_values, repeat=morph_cnt))
-        # utils.output_message("ratio_product: %s, now: %s" % (len(ratio_product), datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')), is_print)
-
-        # # モーフと変化量の組み合わせ
-        # brend_mr_pairs_list = list(itertools.product(morph_comb, ratio_product))
-        # utils.output_message("brend_mr_pairs_list: %s, now: %s" % (len(brend_mr_pairs_list), datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')), is_print)
+        # モーフの組合せ数
+        morph_comb_cnt = 1
+        # 変化量の組合せ数
+        ratio_product_cnt = 1
+        for n in range(len(all_morphs), 0, -1):
+            morph_comb_cnt *= n
+            ratio_product_cnt *= len(ratio_values)
+        utils.output_message("morph_comb_cnt: %s, ratio_product_cnt: %s" % (morph_comb_cnt, ratio_product_cnt), is_debug)
 
         writer = VmdWriter()
         target_morph_frames = []
 
-        for mframe in range(1000):
-            for morph_name in target_morphs:
+        if morph_comb_cnt * ratio_product_cnt <= 1000:
+            # モーフの組合せ
+            morph_comb = list(itertools.combinations(all_morphs, morph_cnt))
+            utils.output_message("morph_comb: %s" % (len(morph_comb)), is_debug)
+            
+            # 変化量の直積（同じ値を許容する）
+            ratio_product = list(itertools.product(ratio_values, repeat=morph_cnt))
+            utils.output_message("ratio_product: %s" % (len(ratio_product)), is_debug)
+
+            # 組合せが1000以下なら組合せをそのまま出力
+            brend_mr_pairs_list = list(itertools.product(morph_comb, ratio_product))
+            # random.shuffle(brend_mr_pairs_list)
+            utils.output_message("brend_mr_pairs_list: %s" % (len(brend_mr_pairs_list)), is_debug)
+
+            mframe = 0
+            for (morphs, ratios) in brend_mr_pairs_list:
                 if len(target_morph_frames) > 19000:
                     # 上限までしか登録しない
                     break
 
-                ratio = ratio_values[random.randint(0, len(ratio_values) - 1)]
+                for morph, ratio in zip(morphs, ratios):
+                    vmd_morph = VmdMorphFrame()
+                    vmd_morph.frame = mframe
+                    vmd_morph.format_name = morph.name
+                    # ～とかが出力できないので、回避策
+                    vmd_morph.name = morph.name.encode('cp932').decode('shift_jis').encode('shift_jis')
+                    vmd_morph.ratio = ratio
+                    vmd_morph.key = True
+                    
+                    target_morph_frames.append(vmd_morph)
 
-                morph = VmdMorphFrame()
-                morph.frame = mframe
-                morph.format_name = morph_name
-                # ～とかが出力できないので、回避策
-                morph.name = morph_name.encode('cp932').decode('shift_jis').encode('shift_jis')
-                morph.ratio = ratio
-                morph.key = True
-                
-                target_morph_frames.append(morph)
+                mframe += 1
+        else:
+            # 組合せが1000より多い場合、ランダム
+            for mframe in range(1000):
+                for morph in all_morphs:
+                    if len(target_morph_frames) > 19000:
+                        # 上限までしか登録しない
+                        break
 
-            if len(target_morph_frames) > 19000:
-                # 上限までしか登録しない
-                break
+                    ratio = ratio_total_values[random.randint(0, len(ratio_values) - 1)]
+
+                    vmd_morph = VmdMorphFrame()
+                    vmd_morph.frame = mframe
+                    vmd_morph.format_name = morph.name
+                    # ～とかが出力できないので、回避策
+                    vmd_morph.name = morph.name.encode('cp932').decode('shift_jis').encode('shift_jis')
+                    vmd_morph.ratio = ratio
+                    vmd_morph.key = True
+                    
+                    target_morph_frames.append(vmd_morph)
+
+                if len(target_morph_frames) > 19000:
+                    # 上限までしか登録しない
+                    break
 
         fpath = re.sub(r'\.pmx$', "_blend_{0:%Y%m%d_%H%M%S}_{1}".format(datetime.now(), ','.join([str(i) for i in target_morphs])), pmx_path)
         fpath = "{0}.vmd".format(fpath[:200])
@@ -221,9 +253,12 @@ if __name__=="__main__":
     parser.add_argument('--max_value', dest='max_value', help='max_value', type=float)
     parser.add_argument('--iter_value', dest='iter_value', help='iter_value', type=float)
     parser.add_argument('--target_morphs', dest='target_morphs', help='target_morphs', type=str)
+    parser.add_argument('--verbose', dest='verbose', help='verbose',default=2 , type=int)
     args = parser.parse_args()
 
     if wrapperutils.is_valid_file(args.pmx_path, "PMXファイル", ".pmx", True) == False:
         sys.exit(-1)
 
-    main(args.pmx_path, args.min_value, args.max_value, args.iter_value, args.target_morphs.split(","))
+    is_debug = True if args.verbose > 2 else False
+
+    main(args.pmx_path, args.min_value, args.max_value, args.iter_value, args.target_morphs.split(","), is_debug)
