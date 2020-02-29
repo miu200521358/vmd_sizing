@@ -174,8 +174,14 @@ class PmxModel():
 
     # 頭ボーンのウェイトが乗っている頂点を取得する
     def get_head_upper_vertex_position(self):
+        # 頭ボーンより上のボーンリストを生成する
+        bone_name_list = []
+        for bk, bv in self.bones.items():
+            if bv.position.y() >= self.bones["頭"].position.y():
+                bone_name_list.append(bk)
+
         # 頭の頂点位置
-        max_head_upper_pos, _, _, _, max_head_upper_vertex, _, _, _ = self.get_bone_vertex_position("頭", self.bones["頭"].position, self.define_is_target_full_vertex(), True)
+        max_head_upper_pos, _, _, _, max_head_upper_vertex, _, _, _ = self.get_bone_vertex_position(bone_name_list, self.bones["頭"].position, self.define_is_target_full_vertex(), True)
 
         return max_head_upper_pos, max_head_upper_vertex
     
@@ -232,22 +238,22 @@ class PmxModel():
         return False
 
     # 指定ボーンのウェイトの最下と最上頂点の位置を取得する
-    def get_bone_vertex_position(self, bone_name, bone_pos, is_target=None, is_only=False, is_x_target=True):
+    def get_bone_vertex_position(self, bone_name_list, bone_pos, is_target=None, is_x_target=True):
         # 指定ボーン名を含むボーンINDEXリスト
         bone_idx_list = []
         for bk, bv in self.bones.items():
-            if ((not is_only and bone_name in bk) or (is_only and bone_name == bk)) and bv.index in self.vertices :
+            if bk in bone_name_list and bv.index in self.vertices :
                 logger.debug("bk: %s, bv: %s", bk, bv.index)
                 # ボーン名が指定文字列を含んでおり、かつそのボーンにウェイトが乗っている頂点がある場合、対象
                 # 特定ボーンのみの場合、ボーン名が一致していることが条件
                 bone_idx_list.append(bv.index)
 
         if len(bone_idx_list) == 0:
-            logger.debug("bone_name: %s, ウェイト頂点がない", bone_name)
+            logger.debug("bone_name_list: %s, ウェイト頂点がない", bone_name_list)
             # ウェイトボーンがない場合、初期値
             return QVector3D(), QVector3D(), QVector3D(), QVector3D(), None, None, None, None        
 
-        logger.debug("model: %s, bone_name: %s, bone_idx_list:%s", self.name, bone_name, bone_idx_list)
+        logger.debug("model: %s, bone_name_list: %s, bone_idx_list:%s", self.name, bone_name_list, bone_idx_list)
         
         max_bone_upper_pos = QVector3D(0, -99999, 0)
         min_bone_below_pos = QVector3D(0, 99999, 0)

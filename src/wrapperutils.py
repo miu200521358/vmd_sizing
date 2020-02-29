@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os.path
+import glob
 import traceback
 import copy
 from datetime import datetime
@@ -9,32 +10,30 @@ from pathlib import Path
 from PyQt5.QtGui import QQuaternion, QVector3D
 import re
 import sys
+import winsound
 
 import main
 from PmxModel import PmxModel, SizingException
 from PmxReader import PmxReader
 from VmdReader import VmdReader
+from VpdReader import VpdReader
 import utils
 
 import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VmdSizing").getChild(__name__)
 
-def is_executable(vmd_path, org_pmx_path, rep_pmx_path):
+def is_valid_file(base_file_path, file_type, exts, is_print=True, is_aster=False):
+    logger.debug("aster: %s", is_aster)
+    if is_aster:
+        file_path_list = [p for p in glob.glob(base_file_path) if os.path.isfile(p)]
 
-    # 調整対象vmdファイル
-    is_vmd = is_valid_file(vmd_path, "調整対象VMDファイル", ".vmd")
+        if len(file_path_list) == 0:
+            return False
 
-    # モーション作成元モデルPMXファイル
-    is_org_pmx = is_valid_file(org_pmx_path, "モーション作成元モデルPMXファイル", ".pmx")
-
-    # モーション変換先モデルPMXファイル
-    is_rep_pmx = is_valid_file(rep_pmx_path, "モーション変換先モデルPMXファイル", ".pmx")
-
-    # 全ファイル一括チェック
-    return is_vmd and is_org_pmx and is_rep_pmx
-
-def is_valid_file(file_path, file_type, ext, is_print=True):
+        file_path = file_path_list[0]
+    else:
+        file_path = base_file_path
 
     if not os.path.exists(file_path):
         if is_print:
@@ -57,16 +56,16 @@ def is_valid_file(file_path, file_type, ext, is_print=True):
         return False
     
     # ボーンCSVファイル名・拡張子
-    _, test_ext = os.path.splitext(os.path.basename(file_path))
-    # logger.debug("file_name: %s, test_ext: %s", file_name, test_ext)
+    test_file_name, test_ext = os.path.splitext(os.path.basename(file_path))
+    logger.debug("file_name: %s, test_ext: %s, exts: %s", test_file_name, test_ext, exts)
 
-    if ext.lower() != test_ext.lower():
+    if test_ext.lower() not in exts:
         if is_print:
             print("■■■■■■■■■■■■■■■■■")
             print("■　**ERROR**　")
             print("■　"+ file_type +"の拡張子が正しくありません。")
             print("■　入力パス: "+ file_path )
-            print("■　設定可能拡張子: "+ ext )
+            print("■　設定可能拡張子: "+ ",".join(exts) )
             print("■■■■■■■■■■■■■■■■■")
 
         return False
@@ -226,8 +225,8 @@ def is_all_sizing(motion, org_pmx, rep_pmx, camera_motion, output_vmd_path=None)
 
     return is_shortage
 
-def read_vmd(path, filetype="vmd", is_print=True):
-    if is_valid_file(path, filetype, ".vmd", is_print) == False:
+def read_vmd(path, filetype="vmd", is_print=True, is_aster=False):
+    if is_valid_file(path, filetype, [".vmd"], is_print, is_aster) == False:
         return None
 
     reader = VmdReader()
@@ -241,32 +240,108 @@ def read_vmd(path, filetype="vmd", is_print=True):
         
         print(traceback.format_exc())
 
+        # 終了音を鳴らす
+        winsound.PlaySound("SystemQuestion", winsound.SND_ALIAS)
+
         return None
             
     return vmd
 
-def read_vmd_modelname(path):
-    if is_valid_file(path, "vmd", ".vmd", False) == False:
+def read_vmd_modelname(base_file_path):
+    if is_valid_file(base_file_path, "vmd", [".vmd"], is_print=False, is_aster=True) == False:
         return None
 
-    reader = VmdReader()
+    file_path_list = [p for p in glob.glob(base_file_path) if os.path.isfile(p)]
+
+    if len(file_path_list) > 0 and os.path.exists(file_path_list[0]):
+        
+        reader = VmdReader()
+        try:
+            model_name = reader.read_vmd_file_modelname(file_path_list[0])
+            return model_name
+        except Exception:
+            print("■■■■■■■■■■■■■■■■■")
+            print("■　**ERROR**　")
+            print("■　VMDデータの解析に失敗しました。")
+            print("■■■■■■■■■■■■■■■■■")
+            
+            print(traceback.format_exc())
+
+            return None
+    
+    return None
+
+
+def read_vpd(path, filetype="vpd", is_print=True, is_aster=False):
+    if is_valid_file(path, filetype, [".vpd"], is_print, is_aster) == False:
+        return None
+
+    reader = VpdReader()
     try:
-        model_name = reader.read_vmd_file_modelname(path)
+        vpd = reader.read_vpd_file(path)
     except Exception:
         print("■■■■■■■■■■■■■■■■■")
         print("■　**ERROR**　")
-        print("■　VMDデータの解析に失敗しました。")
+        print("■　VPDデータの解析に失敗しました。")
         print("■■■■■■■■■■■■■■■■■")
         
         print(traceback.format_exc())
 
+        # 終了音を鳴らす
+        winsound.PlaySound("SystemQuestion", winsound.SND_ALIAS)
+
         return None
             
-    return model_name
+    return vpd
+
+def read_vpd_modelname(base_file_path):
+    if is_valid_file(base_file_path, "vpd", [".vpd"], is_print=False, is_aster=True) == False:
+        return None
+
+    file_path_list = [p for p in glob.glob(base_file_path) if os.path.isfile(p)]
+
+    if len(file_path_list) > 0 and os.path.exists(file_path_list[0]):
+        
+        reader = VpdReader()
+        try:
+            model_name = reader.read_vpd_file_modelname(file_path_list[0])
+            return model_name
+        except Exception:
+            print("■■■■■■■■■■■■■■■■■")
+            print("■　**ERROR**　")
+            print("■　VPDデータの解析に失敗しました。")
+            print("■■■■■■■■■■■■■■■■■")
+            
+            print(traceback.format_exc())
+
+            return None
+    
+    return None
+
+
+def read_pmx_modelname(base_file_path):
+    if is_valid_file(base_file_path, "pmx", ".pmx", is_print=False, is_aster=True) == False:
+        return None
+
+    file_path_list = [p for p in glob.glob(base_file_path) if os.path.isfile(p)]
+
+    reader = PmxReader()
+    try:
+        model_name = reader.read_pmx_file_modelname(base_file_path)
+        return model_name
+    except Exception:
+        print("■■■■■■■■■■■■■■■■■")
+        print("■　**ERROR**　")
+        print("■　PMXデータの解析に失敗しました。")
+        print("■■■■■■■■■■■■■■■■■")
+        
+        print(traceback.format_exc())
+    
+    return None
 
 
 def read_pmx(path, filetype="pmx", is_print=True):
-    if is_valid_file(path, filetype, ".pmx", is_print) == False:
+    if is_valid_file(path, filetype, [".pmx"], is_print, is_aster=False) == False:
         return None
 
     reader = PmxReader()
@@ -279,6 +354,9 @@ def read_pmx(path, filetype="pmx", is_print=True):
         print("■■■■■■■■■■■■■■■■■")
         
         print(traceback.format_exc())
+
+        # 終了音を鳴らす
+        winsound.PlaySound("SystemQuestion", winsound.SND_ALIAS)
 
         return None
             
@@ -397,6 +475,9 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
                 print("")
                 print(e.with_traceback(sys.exc_info()[2]))
 
+                # 終了音を鳴らす
+                winsound.PlaySound("SystemQuestion", winsound.SND_ALIAS)
+
                 return False
 
         else:
@@ -420,6 +501,9 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
 
         error_file_logger.error(e.message)
 
+        # 終了音を鳴らす
+        winsound.PlaySound("SystemQuestion", winsound.SND_ALIAS)
+
     except Exception:
         print("■■■■■■■■■■■■■■■■■")
         print("■　**ERROR**　")
@@ -436,6 +520,10 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
         error_file_logger.error("■■■■■■■■■■■■■■■■■")
 
         error_file_logger.error(traceback.format_exc())
+
+        # 終了音を鳴らす
+        winsound.PlaySound("SystemQuestion", winsound.SND_ALIAS)
+
     finally:
         logging.shutdown()
 
@@ -463,14 +551,17 @@ def create_output_morph_path(vmd_path, org_pmx_path, rep_pmx_path):
     
     return output_moprh_path
 
-
-def create_output_path(vmd_path, replace_pmx_path, is_avoidance, is_arm_ik, is_morph):
+def create_output_path(vmd_base_path, replace_pmx_path, is_avoidance, is_arm_ik, is_morph):
     # print("vmd_path: %s " % vmd_path)
     # print("replace_pmx_path: %s" % replace_pmx_path)
     # print("is_morph: %s" % is_morph)
+    		
+    file_path_list = [p for p in glob.glob(vmd_base_path) if os.path.isfile(p)]
 
-    if not os.path.exists(vmd_path) or not os.path.exists(replace_pmx_path):
+    if len(file_path_list) == 0 or ( len(file_path_list) > 0 and not os.path.exists(file_path_list[0])) or not os.path.exists(replace_pmx_path):
         return None
+
+    vmd_path = file_path_list[0]
 
     # ボーンCSVファイル名・拡張子
     bone_filename, _ = os.path.splitext(os.path.basename(replace_pmx_path))
@@ -484,7 +575,10 @@ def create_output_path(vmd_path, replace_pmx_path, is_avoidance, is_arm_ik, is_m
     morph_suffix = ""
     if is_morph: morph_suffix = "M"
 
-    output_vmd_path = os.path.join(get_dir_path(vmd_path), os.path.basename(vmd_path).replace(".vmd", "_{1}{2}{3}_{0:%Y%m%d_%H%M%S}.vmd".format(datetime.now(), bone_filename, morph_suffix, arm_suffix)))
+    if ".vpd" in vmd_path:
+        output_vmd_path = os.path.join(get_dir_path(vmd_path), os.path.basename(vmd_path).replace(".vpd", "_{1}{2}{3}_{0:%Y%m%d_%H%M%S}.vmd".format(datetime.now(), bone_filename, morph_suffix, arm_suffix)))
+    else:
+        output_vmd_path = os.path.join(get_dir_path(vmd_path), os.path.basename(vmd_path).replace(".vmd", "_{1}{2}{3}_{0:%Y%m%d_%H%M%S}.vmd".format(datetime.now(), bone_filename, morph_suffix, arm_suffix)))
 
     if len(output_vmd_path) >= 255 and os.name == "nt":
         print("■■■■■■■■■■■■■■■■■")
@@ -506,7 +600,11 @@ def is_auto_output_path(output_vmd_path, vmd_path, replace_pmx_path, force=False
     bone_filename, _ = os.path.splitext(os.path.basename(replace_pmx_path))
 
     # 新しく設定賞としている自動生成出力ファイルパス
-    new_output_vmd_path = os.path.join(get_dir_path(vmd_path), os.path.basename(vmd_path).replace(".vmd", "_{0}".format(bone_filename)))
+    if ".vpd" in vmd_path:
+        new_output_vmd_path = os.path.join(get_dir_path(vmd_path), os.path.basename(vmd_path).replace(".vpd", "_{0}".format(bone_filename)))
+    else:
+        new_output_vmd_path = os.path.join(get_dir_path(vmd_path), os.path.basename(vmd_path).replace(".vmd", "_{0}".format(bone_filename)))
+
     logger.debug("new_output_vmd_path: %s", new_output_vmd_path)
     logger.debug("force: %s", force)
     logger.debug("output_vmd_path: %s", output_vmd_path)
@@ -520,7 +618,11 @@ def is_auto_output_path(output_vmd_path, vmd_path, replace_pmx_path, force=False
     new_output_vmd_path = escape_filepath(new_output_vmd_path)
     logger.debug("new_output_vmd_path: %s", new_output_vmd_path)
 
-    new_output_vmd_pattern = re.compile(r'^%s%s.vmd$' % (new_output_vmd_path, r"\w?\w?_\d{8}_\d{6}"))
+    if ".vpd" in vmd_path:
+        new_output_vmd_pattern = re.compile(r'^%s%s.vpd$' % (new_output_vmd_path, r"\w?\w?_\d{8}_\d{6}"))
+    else:
+        new_output_vmd_pattern = re.compile(r'^%s%s.vmd$' % (new_output_vmd_path, r"\w?\w?_\d{8}_\d{6}"))
+
     logger.debug("new_output_vmd_pattern: %s", new_output_vmd_pattern)
     logger.debug("re.match(new_output_vmd_pattern, output_vmd_path): %s", re.match(new_output_vmd_pattern, output_vmd_path))
 
@@ -617,16 +719,21 @@ def get_mypath(filename):
 
     return file_path
 
-def get_dir_path(filepath, is_print=True):
+def get_dir_path(base_file_path, is_print=True):
+    file_path_list = [p for p in glob.glob(base_file_path) if os.path.isfile(p)]
+
+    if len(file_path_list) == 0:
+        return ""
+
     try:
         # ファイルパスをオブジェクトとして解決し、親を取得する
-        return str(Path(filepath).resolve().parents[0])
+        return str(Path(file_path_list[0]).resolve().parents[0])
     except Exception as e:
         print("■■■■■■■■■■■■■■■■■")
         print("■　**ERROR**　")
         print("■　ファイルパスの解析に失敗しました。")
         print("■　パスに使えない文字がないか確認してください。")
-        print("■　ファイルパス: "+ filepath )
+        print("■　ファイルパス: "+ base_file_path )
         print("■■■■■■■■■■■■■■■■■")
         print("")
         print(e.with_traceback(sys.exc_info()[2]))

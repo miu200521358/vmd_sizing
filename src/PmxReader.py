@@ -26,6 +26,77 @@ class PmxReader():
         self.morph_index_size = 0
         self.rigidbody_index_size = 0
         
+
+        
+    def read_pmx_file_modelname(self, filepath):
+        # PMXファイルをバイナリ読み込み
+        self.buffer = open(filepath, "rb").read()
+        # logger.debug("hashlib.algorithms_available: %s", hashlib.algorithms_available)
+        
+        # pmx宣言
+        signature = self.unpack(4, "4s")        
+        logger.debug("signature: %s (%s)", signature, self.offset)
+        
+        # pmxバージョン
+        version = self.read_float()        
+        logger.debug("version: %s (%s)", version, self.offset)
+        
+        if signature[:3] != b"PMX" or ( version != 2.0 and version != 2.1 ):
+            # 整合性チェック
+            raise ParseException("PMX2.0/2.1形式外のデータです。signature: {0}, version: {1} ".format(signature, version))
+        
+        # flag
+        flag_bytes = self.read_int(1)
+        logger.debug("flag_bytes: %s (%s)", flag_bytes, self.offset)
+        
+        # エンコード方式
+        text_encoding = self.read_int(1)
+        logger.debug("text_encoding: %s (%s)", text_encoding, self.offset)
+        # エンコードに基づいて文字列解凍処理を定義
+        self.read_text = self.define_read_text(text_encoding)
+        
+        # 追加UV数
+        self.extended_uv = self.read_int(1)
+        logger.debug("extended_uv: %s (%s)", self.extended_uv, self.offset)
+        
+        # 頂点Indexサイズ
+        self.vertex_index_size = self.read_int(1)
+        logger.debug("vertex_index_size: %s (%s)", self.vertex_index_size, self.offset)
+        self.read_vertex_index_size = lambda : self.read_int(self.vertex_index_size)
+        
+        # テクスチャIndexサイズ
+        self.texture_index_size = self.read_int(1)
+        logger.debug("texture_index_size: %s (%s)", self.texture_index_size, self.offset)
+        self.read_texture_index_size = lambda : self.read_int(self.texture_index_size)
+        
+        # 材質Indexサイズ
+        self.material_index_size = self.read_int(1)
+        logger.debug("material_index_size: %s (%s)", self.material_index_size, self.offset)
+        self.read_material_index_size = lambda : self.read_int(self.material_index_size)
+        
+        # ボーンIndexサイズ
+        self.bone_index_size = self.read_int(1)
+        logger.debug("bone_index_size: %s (%s)", self.bone_index_size, self.offset)
+        self.read_bone_index_size = lambda : self.read_int(self.bone_index_size)
+        
+        # モーフIndexサイズ
+        self.morph_index_size = self.read_int(1)
+        logger.debug("morph_index_size: %s (%s)", self.morph_index_size, self.offset)
+        self.read_morph_index_size = lambda : self.read_int(self.morph_index_size)
+        
+        # 剛体Indexサイズ
+        self.rigidbody_index_size = self.read_int(1)
+        logger.debug("rigidbody_index_size: %s (%s)", self.rigidbody_index_size, self.offset)
+        self.read_rigidbody_index_size = lambda : self.read_int(self.rigidbody_index_size)
+        
+        # モデル名（日本語）
+        model_name = self.read_text()
+        logger.debug("name: %s (%s)", model_name, self.offset)
+
+        return model_name
+
+
+
     def read_pmx_file(self, filepath):
         # PMXファイルをバイナリ読み込み
         self.buffer = open(filepath, "rb").read()
