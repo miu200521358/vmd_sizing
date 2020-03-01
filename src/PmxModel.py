@@ -175,13 +175,24 @@ class PmxModel():
     # 頭ボーンのウェイトが乗っている頂点を取得する
     def get_head_upper_vertex_position(self):
         # 頭ボーンより上のボーンリストを生成する
-        bone_name_list = []
-        for bk, bv in self.bones.items():
-            if bv.position.y() >= self.bones["頭"].position.y():
-                bone_name_list.append(bk)
+        bone_name_list = ["頭"]
 
-        # 頭の頂点位置
-        max_head_upper_pos, _, _, _, max_head_upper_vertex, _, _, _ = self.get_bone_vertex_position(bone_name_list, self.bones["頭"].position, self.define_is_target_full_vertex(), True)
+        # 頭ボーンより上のボーンを全部見てしまうと、天使の輪のような別オブジェクトも参照してしまうので、対象外        
+        # for bk, bv in self.bones.items():
+        #     if bv.position.y() >= self.bones["頭"].position.y():
+        #         bone_name_list.append(bk)
+
+        # 頭の頂点位置（弱参照頂点も対象とする）
+        # max_head_upper_pos, _, _, _, max_head_upper_vertex, _, _, _ = self.get_bone_vertex_position(bone_name_list, self.bones["頭"].position, self.define_is_target_full_vertex(), True)
+        max_head_upper_pos, _, _, _, max_head_upper_vertex, _, _, _ = self.get_bone_vertex_position(bone_name_list, self.bones["頭"].position, None, True)
+
+        if max_head_upper_vertex == None:
+            # # 頂点がなかった場合、もっともY位置が高いボーンを対象とする
+            # max_head_upper_pos = QVector3D()
+            # for bone_name in bone_name_list:
+            #     if self.bones[bone_name].position.y() > max_head_upper_pos:
+            #         max_head_upper_pos = self.bones[bone_name].position
+            max_head_upper_pos = self.bones["頭"].position
 
         return max_head_upper_pos, max_head_upper_vertex
     
@@ -271,7 +282,7 @@ class PmxModel():
                 # X範囲を制限するか否か
                 for v in self.vertices[bone_idx]:
                     v_pos = v.position
-                    if ((is_x and v_pos.x() - 0.1 <= bone_pos.x() <= v_pos.x() + 0.1) or not is_x) and ( is_target and is_target(v) or not is_target):
+                    if ((is_x and v_pos.x() - 0.1 <= bone_pos.x() <= v_pos.x() + 0.1) or not is_x) and (is_target is None or (is_target and is_target(v))):
                         if v_pos.y() < min_bone_below_pos.y() :
                             # 指定ボーンにウェイトが乗っていて、かつ最下の頂点より下の場合、保持
                             min_bone_below_pos = v_pos

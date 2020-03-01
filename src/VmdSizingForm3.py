@@ -36,7 +36,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver4.06_β02", pos = wx.DefaultPosition, size = wx.Size( 600,650 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver4.06_β03", pos = wx.DefaultPosition, size = wx.Size( 600,650 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -542,10 +542,24 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_camera_staticline5 = wx.StaticLine( self.m_panelCamera, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
 		bSizerCamera4.Add( self.m_camera_staticline5, 0, wx.EXPAND |wx.ALL, 5 )
 
+		bSizerCamera10 = wx.BoxSizer( wx.HORIZONTAL )
+
 		self.m_camera_staticText9 = wx.StaticText( self.m_panelCamera, wx.ID_ANY, u"カメラVMDファイル", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_camera_staticText9.Wrap( -1 )
+		
+		bSizerCamera10.Add( self.m_camera_staticText9, 0, wx.ALL, 5 )
 
-		bSizerCamera4.Add( self.m_camera_staticText9, 0, wx.ALL, 5 )
+		self.m_staticTextC101 = wx.StaticText( self.m_panelCamera, wx.ID_ANY, u"　　　　　", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticTextC101.Wrap( -1 )
+		bSizerCamera10.Add( self.m_staticTextC101, 0, wx.ALL, 5 )
+
+		# self.m_vmdCameraTxt = wx.TextCtrl( self.m_panelCamera, wx.ID_ANY, u"", wx.DefaultPosition, (300,-1), wx.TE_READONLY|wx.BORDER_NONE|wx.WANTS_CHARS )
+		# self.m_vmdCameraTxt.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_3DLIGHT ) )
+		# self.m_vmdCameraTxt.SetToolTip( u"VMDファイルに記録されているモデル名です。選択でコピペ可能です。" )
+
+		# bSizerCamera10.Add( self.m_vmdCameraTxt, 0, wx.ALL, 5 )
+
+		bSizerCamera4.Add( bSizerCamera10, 0, wx.ALL, 0 )
 
 		bSizerCamera6 = wx.BoxSizer( wx.HORIZONTAL )
 
@@ -561,10 +575,24 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		bSizerCamera4.Add( bSizerCamera6, 0, wx.EXPAND, 5 )
 
+		bSizerCamera11 = wx.BoxSizer( wx.HORIZONTAL )
+
 		self.m_camera_staticText10 = wx.StaticText( self.m_panelCamera, wx.ID_ANY, u"カメラ作成元モデルPMXファイル", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_camera_staticText10.Wrap( -1 )
+		
+		bSizerCamera11.Add( self.m_camera_staticText10, 0, wx.ALL, 5 )
 
-		bSizerCamera4.Add( self.m_camera_staticText10, 0, wx.ALL, 5 )
+		self.m_staticTextC102 = wx.StaticText( self.m_panelCamera, wx.ID_ANY, u"", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticTextC102.Wrap( -1 )
+		bSizerCamera11.Add( self.m_staticTextC102, 0, wx.ALL, 5 )
+
+		self.m_pmxCameraOrgTxt = wx.TextCtrl( self.m_panelCamera, wx.ID_ANY, u"　（カメラ作成元モデルPMX未設定）", wx.DefaultPosition, (300,-1), wx.TE_READONLY|wx.BORDER_NONE|wx.WANTS_CHARS )
+		self.m_pmxCameraOrgTxt.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_3DLIGHT ) )
+		self.m_pmxCameraOrgTxt.SetToolTip( u"PMXファイルに記録されているモデル名です。選択でコピペ可能です。" )
+
+		bSizerCamera11.Add( self.m_pmxCameraOrgTxt, 0, wx.ALL, 5 )
+
+		bSizerCamera4.Add( bSizerCamera11, 0, wx.ALL, 0 )
 
 		bSizerCamera7 = wx.BoxSizer( wx.HORIZONTAL )
 
@@ -1766,6 +1794,12 @@ class VmdSizingForm3 ( wx.Frame ):
 		else:
 			self.m_pmxReplaceTxt.SetValue("　（変換先PMX未設定）")
 
+		if self.m_camera_fileOrgPmx.GetPath() != "":
+			# カメラ作成元モデルPMXファイルパスが空でなければ、トレースモデル名表示
+			self.ShowCameraModelbyPmx(event)
+		else:
+			self.m_pmxCameraOrgTxt.SetValue("　（カメラ作成元モデルPMX未設定）")
+
 		if target_ctrl == self.m_fileVmd:
 			self.vmd_data = None
 			self.camera_vmd_data = None
@@ -2229,6 +2263,29 @@ class VmdSizingForm3 ( wx.Frame ):
 		else:
 			self.m_pmxReplaceTxt.SetValue("　（PMXモデル名: "+ model_name +"）")
 
+	def ShowCameraModel(self, event):
+		if wrapperutils.is_valid_file(self.m_camera_fileVmd.GetPath(), "カメラVMDファイル", [".vmd"], False) == False:
+			return False
+		
+		# モデル名表示追加
+		model_name = wrapperutils.read_vmd_modelname(self.m_camera_fileVmd.GetPath())
+		if model_name == None:
+			self.m_vmdCameraTxt.SetValue("　（VMD登録モデル取得失敗）")
+		else:
+			self.m_vmdCameraTxt.SetValue("　（VMD登録モデル: "+ model_name +"）")
+
+	def ShowCameraModelbyPmx(self, event):
+		if wrapperutils.is_valid_file(self.m_camera_fileOrgPmx.GetPath(), "カメラ作成元モデルPMXファイル", ".pmx", False) == False:
+			logger.warn("pmxエラー")
+			return False
+		
+		# モデル名表示追加
+		model_name = wrapperutils.read_pmx_modelname(self.m_camera_fileOrgPmx.GetPath())
+		if model_name == None:
+			self.m_pmxCameraOrgTxt.SetValue("　（PMXモデル名取得失敗）")
+		else:
+			self.m_pmxCameraOrgTxt.SetValue("　（PMXモデル名: "+ model_name +"）")
+
 	# 出力ファイルパスの生成
 	def OnCreateOutputVmd(self, event):	
 		logger.debug("OnCreateOutputVmd")
@@ -2601,36 +2658,39 @@ class MyFileDropTarget(wx.FileDropTarget):
 			# 拡張子を許容してたらOK
 			self.target_ctrl.SetPath(files[0])
 
-			if self.target_ctrl == self.window.m_fileVmd or self.target_ctrl == self.window.m_fileRepPmx:
-				# 出力パス生成対象コントロールの場合、VMD生成処理を走らせる
-				self.window.OnCreateOutputVmd(wx.FileDirPickerEvent())
-				self.window.OnCreateOutputCameraVmd(wx.FileDirPickerEvent())
+			# モデルファイル変更処理	
+			self.window.OnChangeFile(wx.FileDirPickerEvent(), self.target_ctrl, self.label_ctrl, self.exts)
+
+			# if self.target_ctrl == self.window.m_fileVmd or self.target_ctrl == self.window.m_fileRepPmx:
+			# 	# 出力パス生成対象コントロールの場合、VMD生成処理を走らせる
+			# 	self.window.OnCreateOutputVmd(wx.FileDirPickerEvent())
+			# 	self.window.OnCreateOutputCameraVmd(wx.FileDirPickerEvent())
 			
-			if self.target_ctrl == self.window.m_camera_fileVmd:
-				# カメラ出力パス生成対象コントロールの場合、VMD生成処理を走らせる
-				self.window.OnCreateOutputCameraVmd(wx.FileDirPickerEvent())
+			# if self.target_ctrl == self.window.m_camera_fileVmd:
+			# 	# カメラ出力パス生成対象コントロールの場合、VMD生成処理を走らせる
+			# 	self.window.OnCreateOutputCameraVmd(wx.FileDirPickerEvent())
 			
+			# # if self.target_ctrl == self.window.m_fileVmd:
+			# # 	# VMDファイルの場合、VMD登録モデル表示
+			# # 	self.window.ShowTraceModel(wx.EVT_FILEPICKER_CHANGED)
+
+			# # オブジェクトクリア
 			# if self.target_ctrl == self.window.m_fileVmd:
-			# 	# VMDファイルの場合、VMD登録モデル表示
-			# 	self.window.ShowTraceModel(wx.EVT_FILEPICKER_CHANGED)
+			# 	self.window.vmd_data = None
 
-			# オブジェクトクリア
-			if self.target_ctrl == self.window.m_fileVmd:
-				self.window.vmd_data = None
-
-			if self.target_ctrl == self.window.m_fileOrgPmx:
-				self.window.org_pmx_data = None
-				self.window.camera_pmx_data = None
+			# if self.target_ctrl == self.window.m_fileOrgPmx:
+			# 	self.window.org_pmx_data = None
+			# 	self.window.camera_pmx_data = None
 				
-			if self.target_ctrl == self.window.m_fileRepPmx:
-				self.window.rep_pmx_data = None
+			# if self.target_ctrl == self.window.m_fileRepPmx:
+			# 	self.window.rep_pmx_data = None
 
-			if self.target_ctrl == self.window.m_camera_fileVmd:
-				self.window.camera_vmd = None
+			# if self.target_ctrl == self.window.m_camera_fileVmd:
+			# 	self.window.camera_vmd = None
 
-			if self.target_ctrl == self.window.m_camera_fileOrgPmx:
-				self.window.camera_pmx_data = None
-				
+			# if self.target_ctrl == self.window.m_camera_fileOrgPmx:
+			# 	self.window.camera_pmx_data = None
+
 			# # 出力ファイル以外はデータ読み込み
 			# if self.target_ctrl != self.window.m_fileOutputVmd:
 			# 	self.window.OnLoadFile(wx.EVT_FILEPICKER_CHANGED, self.target_ctrl, self.label_ctrl, self.ext)
