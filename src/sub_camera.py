@@ -502,7 +502,7 @@ def fit_body_links(org_body_links, org_body_indexes, org_link_names, rep_body_li
     eye_diff_ratio = ((org_left_eye_pos.x() / org_face_length) / (rep_left_eye_pos.x() / rep_face_length))
     # 基準（腕）から頭頂までの差比率
     base2top_diff_ratio = ((org_head_top_pos.y() - org_center_base_pos.y()) / (rep_head_top_pos.y() - rep_center_base_pos.y()))
-    base2top_ratio = QVector3D(face_diff_ratio, face_diff_ratio, face_diff_ratio)
+    base2top_ratio = QVector3D(face_diff_ratio, ratio_dict["body"], face_diff_ratio)
     # 基準（腕）から底辺までの差比率
     base2bottom_diff_ratio = org_center_base_pos.y() / rep_center_base_pos.y()
     base2bottom_ratio = QVector3D(base2bottom_diff_ratio, base2bottom_diff_ratio, base2bottom_diff_ratio)
@@ -779,9 +779,19 @@ def calc_nearest_bone(body_global_3ds, ratio_dict, replace_head_ratio, cf, camer
     #     bottom_project_square_pos.x(),bottom_project_square_pos.y())
 
     # TOPの方がBOTTOMより画面端に近いか（注視点よりも上であることも条件）
-    is_near_top = True if (( abs(1 - bottom_project_square_pos.y()) > abs(top_project_square_pos.y()) and top_project_square_pos.y() < 0.5 ) or top_bone_name in FACE_BONE_NAMES) else False
+    is_near_top = True if (( abs(1 - bottom_project_square_pos.y()) > abs(top_project_square_pos.y()) and top_project_square_pos.y() < 0.5 )) else False
     # BOTTOMの方がTOPより画面端に近いか（注視点よりも下であることも条件）
-    is_near_bottom = True if (( abs(1 - bottom_project_square_pos.y()) < abs(top_project_square_pos.y()) and bottom_project_square_pos.y() > 0.5 ) or bottom_bone_name in FOOT_BONE_NAMES) else False
+    is_near_bottom = True if (( abs(1 - bottom_project_square_pos.y()) < abs(top_project_square_pos.y()) and bottom_project_square_pos.y() > 0.5 )) else False
+    
+    # 上辺が顔系ボーンの場合、強制上辺調整
+    if top_bone_name in FACE_BONE_NAMES:
+        is_near_top = True
+        is_near_bottom = False
+
+    # 下辺が足底辺系ボーンの場合、強制下辺調整
+    if bottom_bone_name in FOOT_BONE_NAMES:
+        is_near_top = False
+        is_near_bottom = True
 
     # if top_bone_name is not None and top_bone_name in EYE_BONE_NAMES:
     #     # 上辺が目の場合、とりあえず頭頂に置き換え
@@ -1045,7 +1055,7 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
     # 変換先モデルの縮尺（アップ時のみ顔比率）
     # if replace_head_ratio <= 3:
 
-    if rep_top_global_pos and rep_bottom_global_pos and ( org_bottom_bone_name not in FOOT_BONE_NAMES ) :
+    if rep_top_global_pos and rep_bottom_global_pos:
         # # ボーン種別名
         # org_top_type_bone_name = org_top_bone_name if "右" not in org_top_bone_name and "左" not in org_top_bone_name else org_top_bone_name[1:]
         # org_bottom_type_bone_name = org_bottom_bone_name if "右" not in org_bottom_bone_name and "左" not in org_bottom_bone_name else org_bottom_bone_name[1:]
@@ -1115,13 +1125,22 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
                 # 揃って無くて差分が0という事は同じパーツのみが映っているということで、とりあえず全身比率
                 ratio = ratio_dict["body"]
         else:
-            # # 比率（上下全部が映る比率）
-            # ratio = (rep_top_diff + rep_bottom_diff) / (org_top_diff + org_bottom_diff)
+            if org_nearest_bone_name in FACE_BONE_NAMES and org_bottom_bone_name not in LEG_BONE_NAMES:
+                # 顔に注視点が当たっている場合、顔比率
+                ratio = ratio_dict["head"]
+                # 上辺下辺のフラグは落とす
+                is_near_top = is_near_bottom = False
+            elif org_nearest_bone_name in LEG_BONE_NAMES or org_bottom_bone_name in LEG_BONE_NAMES:
+                # 足に注視点が当たっている場合、全身比率
+                ratio = ratio_dict["body"]
+            else:
+                # 比率（上下全部が映る比率）
+                ratio = (rep_top_diff + rep_bottom_diff) / (org_top_diff + org_bottom_diff)
             
-            # 上の比率
-            top_ratio = rep_top_diff / org_top_diff
-            # 下の比率
-            bottom_ratio = rep_bottom_diff / org_bottom_diff
+            # # 上の比率
+            # top_ratio = rep_top_diff / org_top_diff
+            # # 下の比率
+            # bottom_ratio = rep_bottom_diff / org_bottom_diff
             # if replace_head_ratio <= 3 and org_nearest_bone_name in UPPER_BONE_NAMES:
             #     # 3頭身以下で頭に注視点がある場合の比率は遠い方
             #     ratio = max(top_ratio, bottom_ratio)
@@ -1131,47 +1150,56 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
             #     ratio = max(top_ratio, bottom_ratio)
             # else:
 
-            if is_near_top:
-                # 上辺のが画面端に近い場合、上辺比率
-                ratio = top_ratio
-            elif is_near_bottom:
-                # 下辺のが画面端に近い場合、下辺比率
-                ratio = bottom_ratio
-            else:
-                # 比率(上と下で小さい方（近い方）)
-                ratio = min(top_ratio, bottom_ratio)
+            # # 比率(上と下で小さい方（近い方）)
+            # ratio = min(top_ratio, bottom_ratio)
+
+            # if org_nearest_bone_name in FACE_BONE_NAMES and org_bottom_bone_name not in LEG_BONE_NAMES:
+            #     # 顔に注視点が当たっている場合、顔比率
+            #     ratio = ratio_dict["head"]
+            #     # 上辺下辺のフラグは落とす
+            #     is_near_top = is_near_bottom = False
+            # else:
+            #     if is_near_top:
+            #         # 上辺のが画面端に近い場合、上辺比率
+            #         ratio = top_ratio
+            #     elif is_near_bottom:
+            #         # 下辺のが画面端に近い場合、下辺比率
+            #         ratio = bottom_ratio
+            #     else:
+            #         # 比率(上と下で小さい方（近い方）)
+            #         ratio = min(top_ratio, bottom_ratio)
             
-            if len(camera_ratios) >= 1:
-                logger.debug("past_frame: %s(%s), past_ratio: %s, diff: %s", camera_ratios[-1]["frame"], camera_ratios[-1]["frame"] + 3, camera_ratios[-1]["ratio"], abs(camera_ratios[-1]["ratio"] - ratio))
+            # if len(camera_ratios) >= 1:
+            #     logger.debug("past_frame: %s(%s), past_ratio: %s, diff: %s", camera_ratios[-1]["frame"], camera_ratios[-1]["frame"] + 3, camera_ratios[-1]["ratio"], abs(camera_ratios[-1]["ratio"] - ratio))
 
             if len(camera_ratios) >= 1 and camera_ratios[-1]["frame"] + 3 >= cf.frame and abs(camera_ratios[-1]["ratio"] - ratio) < 0.3:
                 # 3F以内で倍率が非常に近い場合、前回倍率を維持
                 ratio = camera_ratios[-1]["ratio"]
 
-            logger.info("f: %s, top_ratio: %s, bottom_ratio: %s, ratio: %s", cf.frame, top_ratio, bottom_ratio, ratio)
+            # logger.info("f: %s, top_ratio: %s, bottom_ratio: %s, ratio: %s", cf.frame, top_ratio, bottom_ratio, ratio)
 
-            if 439 <= cf.frame <= 439:
-                # logger.debug("org_top_global_link_pos: %s", org_top_global_link_pos)
-                # logger.debug("org_bottom_global_link_pos: %s", org_bottom_global_link_pos)
-                # logger.debug("org_link_diff: %s", org_link_diff)
-                logger.debug("org_nearest_global_pos: %s", org_nearest_global_pos)
-                logger.debug("org_top_global_pos: %s", org_top_global_pos)
-                logger.debug("org_bottom_global_pos: %s", org_bottom_global_pos)
-                logger.debug("org_top_diff: %s", org_top_diff)
-                logger.debug("org_bottom_diff: %s", org_bottom_diff)
-                # logger.debug("rep_top_global_link_pos: %s", rep_top_global_link_pos)
-                # logger.debug("rep_bottom_global_link_pos: %s", rep_bottom_global_link_pos)
-                # logger.debug("rep_link_diff: %s", rep_link_diff)
-                logger.debug("rep_nearest_global_pos: %s", rep_nearest_global_pos)
-                logger.debug("rep_top_global_pos: %s", rep_top_global_pos)
-                logger.debug("rep_bottom_global_pos: %s", rep_bottom_global_pos)
-                logger.debug("rep_top_diff: %s", rep_top_diff)
-                logger.debug("rep_bottom_diff: %s", rep_bottom_diff)
-                # logger.debug("org_diff_ratio: %s", org_diff_ratio)
-                # logger.debug("rep_diff_ratio: %s", rep_diff_ratio)
-                # logger.debug("top_ratio: %s", top_ratio)
-                # logger.debug("bottom_ratio: %s", bottom_ratio)
-                logger.debug("ratio: %s", ratio)
+            # if 439 <= cf.frame <= 439:
+            #     # logger.debug("org_top_global_link_pos: %s", org_top_global_link_pos)
+            #     # logger.debug("org_bottom_global_link_pos: %s", org_bottom_global_link_pos)
+            #     # logger.debug("org_link_diff: %s", org_link_diff)
+            #     logger.debug("org_nearest_global_pos: %s", org_nearest_global_pos)
+            #     logger.debug("org_top_global_pos: %s", org_top_global_pos)
+            #     logger.debug("org_bottom_global_pos: %s", org_bottom_global_pos)
+            #     logger.debug("org_top_diff: %s", org_top_diff)
+            #     logger.debug("org_bottom_diff: %s", org_bottom_diff)
+            #     # logger.debug("rep_top_global_link_pos: %s", rep_top_global_link_pos)
+            #     # logger.debug("rep_bottom_global_link_pos: %s", rep_bottom_global_link_pos)
+            #     # logger.debug("rep_link_diff: %s", rep_link_diff)
+            #     logger.debug("rep_nearest_global_pos: %s", rep_nearest_global_pos)
+            #     logger.debug("rep_top_global_pos: %s", rep_top_global_pos)
+            #     logger.debug("rep_bottom_global_pos: %s", rep_bottom_global_pos)
+            #     logger.debug("rep_top_diff: %s", rep_top_diff)
+            #     logger.debug("rep_bottom_diff: %s", rep_bottom_diff)
+            #     # logger.debug("org_diff_ratio: %s", org_diff_ratio)
+            #     # logger.debug("rep_diff_ratio: %s", rep_diff_ratio)
+            #     # logger.debug("top_ratio: %s", top_ratio)
+            #     # logger.debug("bottom_ratio: %s", bottom_ratio)
+            #     logger.debug("ratio: %s", ratio)
 
     else:
         # それ以外の場合とりえあず全身比率（映ってないか足まで映っているため）
