@@ -680,7 +680,7 @@ def calc_nearest_bone(body_global_3ds, ratio_dict, replace_head_ratio, cf, camer
             logger.debug("dp: %s", dp)
             # logger.debug("image_coordinate_pos: %s", image_coordinate_pos)
 
-        if project_square_pos.y() > bottom_project_square_pos.y() and project_square_pos.y() <= 1.1 and -0.2 <= project_square_pos.x() <= 1.2:
+        if project_square_pos.y() > bottom_project_square_pos.y() and project_square_pos.y() <= 1.1 and -0.1 <= project_square_pos.x() <= 1.1:
             
             if k in FINGER_BONE_NAMES or (replace_head_ratio <= 3 and k in ARM_BONE_NAMES):
                 # 指系・目系はBOTTOM判定に入れない
@@ -692,7 +692,7 @@ def calc_nearest_bone(body_global_3ds, ratio_dict, replace_head_ratio, cf, camer
                 bottom_project_square_pos = project_square_pos # プロジェクション座標系の位置を保持する
                 bottom_global_pos = v # グローバル座標系の位置を保持する
 
-        if project_square_pos.y() < top_project_square_pos.y() and project_square_pos.y() >= -0.1 and -0.2 <= project_square_pos.x() <= 1.2:
+        if project_square_pos.y() < top_project_square_pos.y() and project_square_pos.y() >= -0.1 and -0.1 <= project_square_pos.x() <= 1.1:
             
             if k in FINGER_BONE_NAMES or (replace_head_ratio <= 3 and k in ARM_BONE_NAMES):
                 # 指系・目系はTOP判定に入れない
@@ -1130,7 +1130,7 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
                 # 揃って無くて差分が0という事は同じパーツのみが映っているということで、とりあえず全身比率
                 ratio = ratio_dict["body"]
         else:
-            if org_nearest_bone_name in FACE_BONE_NAMES and org_bottom_bone_name not in LEG_BONE_NAMES:
+            if org_nearest_bone_name in FACE_BONE_NAMES and org_bottom_bone_name in UPPER_BONE_NAMES:
                 # 顔に注視点が当たっている場合、顔比率
                 ratio = max(ratio_dict["head"], rep_top_diff / org_top_diff)
                 # 上辺下辺のフラグは落とす
