@@ -177,8 +177,9 @@ if __name__=="__main__":
 
         camera_pmx = None
         if args.camera_pmx_path:
-            camera_pmx = VmdReader().read_vmd_file(args.camera_pmx_path)
-
+            camera_pmx = PmxReader().read_pmx_file(args.camera_pmx_path)
+        elif not args.camera_pmx_path and args.camera_vmd_path:
+            camera_pmx = PmxReader().read_pmx_file(args.trace_pmx_path)
 
         main(motion, trace_model, replace_model, output_vmd_path, \
             is_avoidance, is_avoidance_finger, is_hand_ik, args.hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, args.hand_floor_distance, args.leg_floor_distance, \

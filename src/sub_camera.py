@@ -452,7 +452,7 @@ def create_body_links(model, camera_y_offset):
 # bodyリンクを、作成元の縮尺を変換先の縮尺に合わせる
 def fit_body_links(org_body_links, org_body_indexes, org_link_names, rep_body_links, rep_body_indexes, rep_link_names, ratio_dict, org_face_length, rep_face_length):
     
-    org_left_eye_pos = org_left_arm_pos = org_right_arm_pos = org_head_top_pos = rep_left_eye_pos = rep_left_arm_pos = rep_right_arm_pos = top_head_top_pos = None
+    org_left_eye_pos = org_left_arm_pos = org_right_arm_pos = org_head_pos = org_head_top_pos = rep_left_eye_pos = rep_left_arm_pos = rep_right_arm_pos = top_head_pos = top_head_top_pos = None
 
     # 変換元の左腕と右腕の位置
     for org_link in org_body_links:
@@ -468,6 +468,9 @@ def fit_body_links(org_body_links, org_body_indexes, org_link_names, rep_body_li
                 break
             if org_bone.name == "左目":
                 org_left_eye_pos = org_bone.position
+                break
+            if org_bone.name == "頭":
+                org_head_pos = org_bone.position
                 break
 
     # 変換先の左腕と右腕の位置
@@ -485,6 +488,9 @@ def fit_body_links(org_body_links, org_body_indexes, org_link_names, rep_body_li
             if rep_bone.name == "左目":
                 rep_left_eye_pos = rep_bone.position
                 break
+            if rep_bone.name == "頭":
+                rep_head_pos = rep_bone.position
+                break
     
     if org_left_eye_pos is None or org_left_arm_pos is None or org_right_arm_pos is None or org_head_top_pos is None \
         or rep_left_eye_pos is None or rep_left_arm_pos is None or rep_right_arm_pos is None or rep_head_top_pos is None :
@@ -498,18 +504,17 @@ def fit_body_links(org_body_links, org_body_indexes, org_link_names, rep_body_li
 
     # 顔の大きさ差
     face_diff_ratio = org_face_length / rep_face_length
-    # 目ボーンの位置の差比率(顔の大きさに対する目の位置)
-    eye_diff_ratio = ((org_left_eye_pos.x() / org_face_length) / (rep_left_eye_pos.x() / rep_face_length))
-    # 基準（腕）から頭頂までの差比率
-    base2top_diff_ratio = ((org_head_top_pos.y() - org_center_base_pos.y()) / (rep_head_top_pos.y() - rep_center_base_pos.y()))
-    base2top_ratio = QVector3D(face_diff_ratio, ratio_dict["body"], face_diff_ratio)
-    # 基準（腕）から底辺までの差比率
-    base2bottom_diff_ratio = org_center_base_pos.y() / rep_center_base_pos.y()
-    base2bottom_ratio = QVector3D(base2bottom_diff_ratio, base2bottom_diff_ratio, base2bottom_diff_ratio)
+    # 目ボーンの位置の差比率(顔の大きさに対する頭基準で目の位置)
+    eye_diff_ratio = (((rep_left_eye_pos - QVector3D(0, rep_head_pos.y(), 0)) / rep_face_length) / ((org_left_eye_pos - QVector3D(0, org_head_pos.y(), 0)) / org_face_length))
 
-    for fit_bone_name, org_base_pos, rep_base_pos, is_side, ratio in [("頭", org_center_base_pos, rep_center_base_pos, False, center_base_ratio), \
-        ("首", org_center_base_pos, rep_center_base_pos, False, center_base_ratio), ("上半身2", org_center_base_pos, rep_center_base_pos, False, center_base_ratio), \
-        ("左目", org_center_base_pos, rep_center_base_pos, True, base2top_ratio), ("右目", org_center_base_pos, rep_center_base_pos, True, base2top_ratio)]:
+    # 情報提供
+    print("カメラ補正値 目調整: x: %s, y: %s, z: %s" % (eye_diff_ratio.x(), eye_diff_ratio.y(), eye_diff_ratio.z()))
+
+    # for fit_bone_name, org_base_pos, rep_base_pos, is_side, ratio in [("上半身2", org_center_base_pos, rep_center_base_pos, False, center_base_ratio), \
+    #     ("首", org_center_base_pos, rep_center_base_pos, False, center_base_ratio), ("頭", org_center_base_pos, rep_center_base_pos, False, center_base_ratio), \
+    #     ("左目", org_head_pos, rep_head_pos, True, eye_diff_ratio), ("右目", org_head_pos, rep_head_pos, True, eye_diff_ratio)]:
+
+    for fit_bone_name, org_base_pos, rep_base_pos, is_side, ratio in [("左目", org_head_pos, rep_head_pos, True, eye_diff_ratio), ("右目", org_head_pos, rep_head_pos, True, eye_diff_ratio)]:
 
         if fit_bone_name in org_link_names and fit_bone_name in rep_link_names:
             logger.debug("fit_bone_name: %s ", fit_bone_name)
@@ -784,12 +789,12 @@ def calc_nearest_bone(body_global_3ds, ratio_dict, replace_head_ratio, cf, camer
     is_near_bottom = True if (( abs(1 - bottom_project_square_pos.y()) < abs(top_project_square_pos.y()) and bottom_project_square_pos.y() > 0.5 )) else False
     
     # 上辺が顔系ボーンの場合、強制上辺調整
-    if top_bone_name in FACE_BONE_NAMES:
+    if top_bone_name is not None and top_bone_name in FACE_BONE_NAMES:
         is_near_top = True
         is_near_bottom = False
 
     # 下辺が足底辺系ボーンの場合、強制下辺調整
-    if bottom_bone_name in FOOT_BONE_NAMES:
+    if bottom_bone_name is not None and bottom_bone_name in FOOT_BONE_NAMES:
         is_near_top = False
         is_near_bottom = True
 
@@ -1127,7 +1132,7 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
         else:
             if org_nearest_bone_name in FACE_BONE_NAMES and org_bottom_bone_name not in LEG_BONE_NAMES:
                 # 顔に注視点が当たっている場合、顔比率
-                ratio = ratio_dict["head"]
+                ratio = max(ratio_dict["head"], rep_top_diff / org_top_diff)
                 # 上辺下辺のフラグは落とす
                 is_near_top = is_near_bottom = False
             elif org_nearest_bone_name in LEG_BONE_NAMES or org_bottom_bone_name in LEG_BONE_NAMES:
@@ -1172,7 +1177,7 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
             # if len(camera_ratios) >= 1:
             #     logger.debug("past_frame: %s(%s), past_ratio: %s, diff: %s", camera_ratios[-1]["frame"], camera_ratios[-1]["frame"] + 3, camera_ratios[-1]["ratio"], abs(camera_ratios[-1]["ratio"] - ratio))
 
-            if len(camera_ratios) >= 1 and camera_ratios[-1]["frame"] + 3 >= cf.frame and abs(camera_ratios[-1]["ratio"] - ratio) < 0.3:
+            if len(camera_ratios) >= 1 and camera_ratios[-1]["frame"] + 2 <= cf.frame <= camera_ratios[-1]["frame"] + 4 and abs(camera_ratios[-1]["ratio"] - ratio) < 0.3:
                 # 3F以内で倍率が非常に近い場合、前回倍率を維持
                 ratio = camera_ratios[-1]["ratio"]
 
