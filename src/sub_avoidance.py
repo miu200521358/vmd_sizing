@@ -18,6 +18,11 @@ def exec(motion, trace_model, replace_model, output_vmd_path, is_avoidance, is_a
     # -----------------------------------------------------------------
     # 頭部と腕の接触回避処理        
     if motion.motion_cnt > 0 and is_avoidance and not is_hand_ik:
+
+        if not trace_model.can_arm_sizing or not replace_model.can_arm_sizing:
+            # 腕構造チェックがFALSEの場合、接触回避なし
+            return False
+
         print("■■ 腕接触回避処理 -----------------")
 
         # 頭までのリンク生成

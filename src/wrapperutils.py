@@ -340,13 +340,13 @@ def read_pmx_modelname(base_file_path):
     return None
 
 
-def read_pmx(path, filetype="pmx", is_print=True):
+def read_pmx(path, filetype="pmx", is_print=True, is_arm_check_skip=False):
     if is_valid_file(path, filetype, [".pmx"], is_print, is_aster=False) == False:
         return None
 
     reader = PmxReader()
     try:
-        pmx = reader.read_pmx_file(path)
+        pmx = reader.read_pmx_file(path, is_arm_check_skip)
     except Exception:
         print("■■■■■■■■■■■■■■■■■")
         print("■　**ERROR**　")
@@ -364,7 +364,8 @@ def read_pmx(path, filetype="pmx", is_print=True):
 
 
 def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_vmd_path, \
-        is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger, finger_distance, vmd_choice_values, rep_choice_values, rep_rate_values, \
+        is_avoidance, is_avoidance_finger, is_hand_ik, hand_distance, is_floor_hand, is_floor_hand_up, is_floor_hand_down, hand_floor_distance, leg_floor_distance, is_finger, finger_distance, is_arm_check_skip, \
+        vmd_choice_values, rep_choice_values, rep_rate_values, \
         camera_motion, camera_vmd_path, camera_pmx, camera_pmx_path, output_camera_vmd_path, camera_y_offset):
     print("■■■■■■■■■■■■■■■■■")
     print("■　VMDサイジング処理実行")
@@ -420,11 +421,11 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
 
         # 作成元モデル
         if not org_pmx:
-            org_pmx = read_pmx(org_pmx_path)
+            org_pmx = read_pmx(org_pmx_path, is_print=True, is_arm_check_skip=is_arm_check_skip)
 
         # 変換先モデル
         if not rep_pmx:
-            rep_pmx = read_pmx(rep_pmx_path)
+            rep_pmx = read_pmx(rep_pmx_path, is_print=True, is_arm_check_skip=is_arm_check_skip)
         
         # カメラVMD読み込み
         if not camera_motion and camera_vmd_path and os.path.exists(camera_vmd_path):
@@ -438,7 +439,7 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
         else:
             # カメラPMXがない場合
             if camera_pmx_path and os.path.exists(camera_pmx_path):
-                camera_pmx_data = read_pmx(camera_pmx_path)
+                camera_pmx_data = read_pmx(camera_pmx_path, is_print=True, is_arm_check_skip=is_arm_check_skip)
             else:
                 # 未指定の場合、作成元モデルをそのまま使用
                 camera_pmx_data = org_pmx

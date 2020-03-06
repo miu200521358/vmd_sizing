@@ -36,7 +36,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver4.06_β06", pos = wx.DefaultPosition, size = wx.Size( 600,650 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver4.06_β07", pos = wx.DefaultPosition, size = wx.Size( 600,650 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -325,6 +325,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		# 腕タブ ------------------------------------
 
+
 		self.m_panelArm = wx.Panel( self.m_note, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 
 		bSizer13 = wx.BoxSizer( wx.VERTICAL )
@@ -341,9 +342,9 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_radioArmNone = wx.RadioButton( self.m_panelArm, wx.ID_ANY, u"腕関係の処理を行わない", wx.DefaultPosition, wx.DefaultSize, style=wx.RB_GROUP )
 		self.m_radioArmNone.SetValue( True )
 
-		self.m_radioAvoidance = wx.RadioButton( self.m_panelArm, wx.ID_ANY, u"頭に腕が貫通しないよう、腕接触回避を行う", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_radioAvoidance = wx.RadioButton( self.m_panelArm, wx.ID_ANY, u"", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_radioAvoidance.SetToolTip( u"頭部に腕が貫通しないよう、腕の角度を小さくして、接触を回避する処理を行います。" )
-		self.m_radioArmIK = wx.RadioButton( self.m_panelArm, wx.ID_ANY, u"変換先モデルの体型に合わせて、手首位置を調整する", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_radioArmIK = wx.RadioButton( self.m_panelArm, wx.ID_ANY, u"", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_radioArmIK.SetToolTip( u"変換先モデルの手首を、作成元モデルの手首とほぼ同じ位置に揃えるよう、手首位置を調整します。" )
 
 		bSizer13.Add( self.m_radioArmNone, 0, wx.ALL, 5 )
@@ -351,19 +352,21 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_staticlineNone = wx.StaticLine( self.m_panelArm, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
 		bSizer13.Add( self.m_staticlineNone, 0, wx.EXPAND |wx.ALL, 5 )
 
-		self.m_staticText91 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"腕接触回避", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText91.Wrap( -1 )
+		bSizerArm7 = wx.BoxSizer( wx.HORIZONTAL )
 
+		bSizerArm7.Add( self.m_radioAvoidance, 0, wx.ALL, 5 )
+		self.m_staticText91 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"腕接触回避", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText91.SetToolTip( u"頭部に腕が貫通しないよう、腕の角度を小さくして、接触を回避する処理を行います。" )
+		self.m_staticText91.Wrap( -1 )
 		self.m_staticText91.SetFont( wx.Font( wx.NORMAL_FONT.GetPointSize(), wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, False, wx.EmptyString ) )
-		bSizer13.Add( self.m_staticText91, 0, wx.ALL, 5 )
+		bSizerArm7.Add( self.m_staticText91, 0, wx.ALL, 5 )
+
+		bSizer13.Add( bSizerArm7, 0, wx.ALL, 0 )
 
 		self.m_staticText92 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"ねんどろ風など、頭身が大幅に異なる場合に、頭部に腕が貫通してしまうのを軽減できます。", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText92.Wrap( -1 )
 
 		bSizer13.Add( self.m_staticText92, 0, wx.ALL, 5 )
-
-
-		bSizer13.Add( self.m_radioAvoidance, 0, wx.ALL, 5 )
 
 		bSizer7 = wx.BoxSizer( wx.HORIZONTAL )
 
@@ -383,25 +386,28 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_radioAvoidanceWrist.SetToolTip( u"手首が頭部と接触しないよう、接触回避を行います。\n人差し指の指定より、頭部との距離が近くなります。" )
 		bSizer7.Add( self.m_radioAvoidanceWrist, 0, wx.ALL, 5 )
 
-
 		bSizer13.Add( bSizer7, 0, wx.EXPAND, 5 )
 
 		self.m_staticline2 = wx.StaticLine( self.m_panelArm, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
 		bSizer13.Add( self.m_staticline2, 0, wx.EXPAND |wx.ALL, 5 )
 
+		bSizerArm17 = wx.BoxSizer( wx.HORIZONTAL )
+		bSizerArm17.Add( self.m_radioArmIK, 0, wx.ALL, 5 )
+
 		self.m_staticText911 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"手首位置合わせ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText911.SetToolTip( u"変換先モデルの手首を、作成元モデルの手首とほぼ同じ位置に揃えるよう、手首位置を調整します。" )
 		self.m_staticText911.Wrap( -1 )
 
 		self.m_staticText911.SetFont( wx.Font( wx.NORMAL_FONT.GetPointSize(), wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, False, wx.EmptyString ) )
+		bSizerArm17.Add( self.m_staticText911, 0, wx.ALL, 5 )
 
-		bSizer13.Add( self.m_staticText911, 0, wx.ALL, 5 )
+		bSizer13.Add( bSizerArm17, 0, wx.ALL, 0 )
 
-		self.m_staticText93 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"両手を合わせるなどのモーションを、変換先モデルの手首位置に合わせて調整します。\nそれぞれの距離を調整することで、位置合わせの適用範囲を調整することができます。\nモーションの中で、手首や足がどの辺の位置にいるかは、メッセージ欄に出力されます。", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText93 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"両手を合わせたり、床に手をついたりするモーションを、変換先モデルの手首位置に合わせて調整します。\nそれぞれの距離を調整することで、位置合わせの適用範囲を調整することができます。", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText93.Wrap( -1 )
 
 		bSizer13.Add( self.m_staticText93, 0, wx.ALL, 5 )
 
-		bSizer13.Add( self.m_radioArmIK, 0, wx.ALL, 5 )
 
 		bSizer17 = wx.BoxSizer( wx.HORIZONTAL )
 		# 指位置合わせ
@@ -409,14 +415,10 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_checkFingerDistance.SetToolTip( u"フィンガータットモーション等、指間の距離を基準に手首位置を調整したい場合にチェックを入れて下さい。" )
 		bSizer17.Add( self.m_checkFingerDistance, 0, wx.ALL, 5 )
 
-		bSizer13.Add( bSizer17, 0, wx.ALL, 5 )
-
-		bSizer16 = wx.BoxSizer( wx.HORIZONTAL )
-
 		# 床位置合わせ
 		self.m_checkFloorArmDistance = wx.CheckBox( self.m_panelArm, wx.ID_ANY, u"床との位置合わせも一緒に行う", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_checkFloorArmDistance.SetToolTip( u"手首が床に沈み込んだり浮いてたりする場合、元モデルに合わせて手首の位置を調整します。\nセンター位置も一緒に調整します。" )
-		bSizer16.Add( self.m_checkFloorArmDistance, 0, wx.ALL, 5 )
+		bSizer17.Add( self.m_checkFloorArmDistance, 0, wx.ALL, 5 )
 
 		# self.m_staticText94 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"（", wx.DefaultPosition, wx.DefaultSize, 0 )
 		# bSizer16.Add( self.m_staticText94, 0, wx.ALL, 5 )
@@ -434,7 +436,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		# self.m_staticText95 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"）", wx.DefaultPosition, wx.DefaultSize, 0 )
 		# bSizer16.Add( self.m_staticText95, 0, wx.ALL, 5 )
 
-		bSizer13.Add( bSizer16, 0, wx.ALL, 5 )
+		bSizer13.Add( bSizer17, 0, wx.ALL, 5 )
 
 		bSizer15 = wx.BoxSizer( wx.HORIZONTAL )
 
@@ -524,10 +526,24 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		# -------------
 
+		self.m_staticline_ArmCheckSkip = wx.StaticLine( self.m_panelArm, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
+		bSizer13.Add( self.m_staticline_ArmCheckSkip, 0, wx.EXPAND |wx.ALL, 5 )
+
+		self.m_check_ArmCheckSkip = wx.CheckBox( self.m_panelArm, wx.ID_ANY, u"腕～手首のサイジング可能チェックをスキップする", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_check_ArmCheckSkip.SetToolTip( u"サイジング可能チェックをスキップして、必ず処理を行うようにします。" )
+		bSizer13.Add( self.m_check_ArmCheckSkip, 0, wx.ALL, 5 )
+
+		self.m_staticText_ArmCheckSkip = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"サイジング可能チェックをスキップして、必ず腕関係処理を行うようにします。\n※サイジング結果がおかしくなる可能性がありますが、サポート対象外です。ご了承いただける場合のみチェックしてください。", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText_ArmCheckSkip.Wrap( -1 )
+		bSizer13.Add( self.m_staticText_ArmCheckSkip, 0, wx.ALL, 5 )
+
+		# -------------
+
 		self.m_panelArm.SetSizer( bSizer13 )
 		self.m_panelArm.Layout()
 		bSizer13.Fit( self.m_panelArm )
 		self.m_note.AddPage( self.m_panelArm, u"腕", False )
+
 
 		# カメラタブ ------------------------------------
 
@@ -859,6 +875,9 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		# スライダーの変更時
 		self.m_sliderFingerDistance.Bind(wx.EVT_SCROLL_CHANGED, self.OnChangeArmIKFingerDistance)
+
+		# スピンコントロールの変更時
+		self.m_camera_spinYoffset.Bind(wx.EVT_MOUSEWHEEL, self.OnChangeSpinControl)
 
 		# 終了時の処理
 		self.Bind(wx.EVT_CLOSE, self.OnClose)
@@ -1660,9 +1679,9 @@ class VmdSizingForm3 ( wx.Frame ):
 			else:
 				logger.debug("org_pmx_data 読み込み: %s", target_ctrl.GetPath())
 				# 元PMX読み込む
-				new_org_pmx_data = wrapperutils.read_pmx(target_ctrl.GetPath(), label_ctrl.GetLabel(), is_print)
+				new_org_pmx_data = wrapperutils.read_pmx(target_ctrl.GetPath(), filetype=label_ctrl.GetLabel(), is_print=is_print, is_arm_check_skip=self.m_check_ArmCheckSkip.GetValue())
 
-				if not self.org_pmx_data or not new_org_pmx_data or (self.org_pmx_data and new_org_pmx_data and self.org_pmx_data.digest != new_org_pmx_data.digest):
+				if not self.org_pmx_data or not new_org_pmx_data or (self.org_pmx_data and new_org_pmx_data and (self.org_pmx_data.digest != new_org_pmx_data.digest or self.org_pmx_data.can_arm_sizing != new_org_pmx_data.can_arm_sizing)):
 					# ハッシュが違う場合、データが違うとみなして更新
 					self.org_pmx_data = new_org_pmx_data
 
@@ -1690,14 +1709,20 @@ class VmdSizingForm3 ( wx.Frame ):
 			else:
 				logger.debug("rep_pmx_data 読み込み: %s", target_ctrl.GetPath())
 				# 先PMX読み込む
-				new_rep_pmx_data = wrapperutils.read_pmx(target_ctrl.GetPath(), label_ctrl.GetLabel(), is_print)
+				new_rep_pmx_data = wrapperutils.read_pmx(target_ctrl.GetPath(), filetype=label_ctrl.GetLabel(), is_print=is_print, is_arm_check_skip=self.m_check_ArmCheckSkip.GetValue())
 
-				if not self.rep_pmx_data or not new_rep_pmx_data or (self.rep_pmx_data and new_rep_pmx_data and self.rep_pmx_data.digest != new_rep_pmx_data.digest):
+				if not self.rep_pmx_data or not new_rep_pmx_data or (self.rep_pmx_data and new_rep_pmx_data and (self.rep_pmx_data.digest != new_rep_pmx_data.digest or self.rep_pmx_data.can_arm_sizing != new_rep_pmx_data.can_arm_sizing )):
 					# ハッシュが違う場合、データが違うとみなして更新
 					self.rep_pmx_data = new_rep_pmx_data
 
 					# 出力ファイル以外はモーフも変わるので初期化
 					self.ClearMorph()
+				
+				# logger.info("new_rep_pmx_data: %s", new_rep_pmx_data.can_arm_sizing)
+				# logger.info("self.rep_pmx_data: %s", self.rep_pmx_data.can_arm_sizing)
+				# logger.info("new_rep_pmx_data.digest: %s", new_rep_pmx_data.digest)
+				# logger.info("self.rep_pmx_data.digest: %s", self.rep_pmx_data.digest)
+				# logger.info("self.m_check_ArmCheckSkip.GetValue(): %s", self.m_check_ArmCheckSkip.GetValue())
 
 				if is_print:
 					if new_rep_pmx_data:
@@ -1724,7 +1749,7 @@ class VmdSizingForm3 ( wx.Frame ):
 				# VMD読み込む
 				new_camera_vmd_data = wrapperutils.read_vmd(target_ctrl.GetPath(), label_ctrl.GetLabel(), is_print)
 
-				if not self.camera_vmd_data or not new_camera_vmd_data or (self.camera_vmd_data and new_camera_vmd_data and self.camera_vmd_data.digest != new_camera_vmd_data.digest):
+				if not self.camera_vmd_data or not new_camera_vmd_data or (self.camera_vmd_data and new_camera_vmd_data and (self.camera_vmd_data.digest != new_camera_vmd_data.digest or self.camera_vmd_data.can_arm_sizing != new_camera_vmd_data.can_arm_sizing)):
 					# ハッシュが違う場合、データが違うとみなして更新
 					self.camera_vmd_data = new_camera_vmd_data
 
@@ -1749,7 +1774,7 @@ class VmdSizingForm3 ( wx.Frame ):
 			else:
 				logger.debug("camera_pmx_data 読み込み: %s", target_ctrl.GetPath())
 				# 元PMX読み込む
-				new_camera_pmx_data = wrapperutils.read_pmx(target_ctrl.GetPath(), label_ctrl.GetLabel(), is_print)
+				new_camera_pmx_data = wrapperutils.read_pmx(target_ctrl.GetPath(), filetype=label_ctrl.GetLabel(), is_print=is_print, is_arm_check_skip=self.m_check_ArmCheckSkip.GetValue())
 
 				if not self.camera_pmx_data or not new_camera_pmx_data or (self.camera_pmx_data and new_camera_pmx_data and self.camera_pmx_data.digest != new_camera_pmx_data.digest):
 					# ハッシュが違う場合、データが違うとみなして更新
@@ -2461,6 +2486,7 @@ class ExecWorkerThread(Thread):
 				, self._notify_window.m_sliderLegFloorDistance.GetValue()
 				, self._notify_window.m_checkFingerDistance.GetValue()
 				, self._notify_window.m_sliderFingerDistance.GetValue()
+				, self._notify_window.m_check_ArmCheckSkip.GetValue()
 				, vmd_choice_values
 				, rep_choice_values			
 				, rep_rate_values
