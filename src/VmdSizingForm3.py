@@ -36,7 +36,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver4.06_β07", pos = wx.DefaultPosition, size = wx.Size( 600,650 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver4.06_β08", pos = wx.DefaultPosition, size = wx.Size( 600,650 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -355,11 +355,11 @@ class VmdSizingForm3 ( wx.Frame ):
 		bSizerArm7 = wx.BoxSizer( wx.HORIZONTAL )
 
 		bSizerArm7.Add( self.m_radioAvoidance, 0, wx.ALL, 5 )
-		self.m_staticText91 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"腕接触回避", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText91.SetToolTip( u"頭部に腕が貫通しないよう、腕の角度を小さくして、接触を回避する処理を行います。" )
-		self.m_staticText91.Wrap( -1 )
-		self.m_staticText91.SetFont( wx.Font( wx.NORMAL_FONT.GetPointSize(), wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, False, wx.EmptyString ) )
-		bSizerArm7.Add( self.m_staticText91, 0, wx.ALL, 5 )
+		self.m_staticText_radioAvoidance = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"腕接触回避", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText_radioAvoidance.SetToolTip( u"頭部に腕が貫通しないよう、腕の角度を小さくして、接触を回避する処理を行います。" )
+		self.m_staticText_radioAvoidance.Wrap( -1 )
+		self.m_staticText_radioAvoidance.SetFont( wx.Font( wx.NORMAL_FONT.GetPointSize(), wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, False, wx.EmptyString ) )
+		bSizerArm7.Add( self.m_staticText_radioAvoidance, 0, wx.ALL, 5 )
 
 		bSizer13.Add( bSizerArm7, 0, wx.ALL, 0 )
 
@@ -394,12 +394,12 @@ class VmdSizingForm3 ( wx.Frame ):
 		bSizerArm17 = wx.BoxSizer( wx.HORIZONTAL )
 		bSizerArm17.Add( self.m_radioArmIK, 0, wx.ALL, 5 )
 
-		self.m_staticText911 = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"手首位置合わせ", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText911.SetToolTip( u"変換先モデルの手首を、作成元モデルの手首とほぼ同じ位置に揃えるよう、手首位置を調整します。" )
-		self.m_staticText911.Wrap( -1 )
+		self.m_staticText_radioArmIK = wx.StaticText( self.m_panelArm, wx.ID_ANY, u"手首位置合わせ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText_radioArmIK.SetToolTip( u"変換先モデルの手首を、作成元モデルの手首とほぼ同じ位置に揃えるよう、手首位置を調整します。" )
+		self.m_staticText_radioArmIK.Wrap( -1 )
 
-		self.m_staticText911.SetFont( wx.Font( wx.NORMAL_FONT.GetPointSize(), wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, False, wx.EmptyString ) )
-		bSizerArm17.Add( self.m_staticText911, 0, wx.ALL, 5 )
+		self.m_staticText_radioArmIK.SetFont( wx.Font( wx.NORMAL_FONT.GetPointSize(), wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, False, wx.EmptyString ) )
+		bSizerArm17.Add( self.m_staticText_radioArmIK, 0, wx.ALL, 5 )
 
 		bSizer13.Add( bSizerArm17, 0, wx.ALL, 0 )
 
@@ -856,6 +856,9 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_radioAvoidance.Bind(wx.EVT_RADIOBUTTON, self.OnChangeArmRadio)
 		self.m_radioArmIK.Bind(wx.EVT_RADIOBUTTON, self.OnChangeArmRadio)
 
+		# 手首位置合わせラジオボタン用テキストの切り替え
+		self.m_staticText_radioArmIK.Bind(wx.EVT_LEFT_DOWN, self.OnChangeFingerDistance)
+
 		# 床位置合わせのチェックボックス切り替え
 		self.m_checkFloorArmDistance.Bind(wx.EVT_CHECKBOX, self.OnChangeFloorArmDistance)
 
@@ -865,6 +868,9 @@ class VmdSizingForm3 ( wx.Frame ):
 		# 接触回避のラジオボタンの切り替え
 		self.m_radioAvoidanceFinger.Bind(wx.EVT_RADIOBUTTON, self.OnChangeAvoidanceTarget)
 		self.m_radioAvoidanceWrist.Bind(wx.EVT_RADIOBUTTON, self.OnChangeAvoidanceTarget)
+
+		# 接触回避のラジオボタン用テキストの切り替え
+		self.m_staticText_radioAvoidance.Bind(wx.EVT_LEFT_DOWN, self.OnChangeAvoidanceTarget)
 
 		# スライダーの変更時
 		self.m_sliderHandDistance.Bind(wx.EVT_SCROLL_CHANGED, self.OnChangeArmIKHandDistance)
@@ -1749,7 +1755,7 @@ class VmdSizingForm3 ( wx.Frame ):
 				# VMD読み込む
 				new_camera_vmd_data = wrapperutils.read_vmd(target_ctrl.GetPath(), label_ctrl.GetLabel(), is_print)
 
-				if not self.camera_vmd_data or not new_camera_vmd_data or (self.camera_vmd_data and new_camera_vmd_data and (self.camera_vmd_data.digest != new_camera_vmd_data.digest or self.camera_vmd_data.can_arm_sizing != new_camera_vmd_data.can_arm_sizing)):
+				if not self.camera_vmd_data or not new_camera_vmd_data or (self.camera_vmd_data and new_camera_vmd_data and (self.camera_vmd_data.digest != new_camera_vmd_data.digest)):
 					# ハッシュが違う場合、データが違うとみなして更新
 					self.camera_vmd_data = new_camera_vmd_data
 

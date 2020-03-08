@@ -534,26 +534,26 @@ def fit_body_links(org_body_links, org_body_indexes, org_link_names, rep_body_li
                         break
 
                 if org_bone is not None and rep_bone is not None and org_bone.name == fit_bone_name and rep_bone.name == fit_bone_name:
-                    logger.info("ratio: %s %s", rep_link[rep_bone_idx].name, ratio)
-                    logger.info("org_bone: %s ", org_bone.position)
-                    logger.info("rep_bone: %s ", rep_bone.position)
+                    logger.debug("ratio: %s %s", rep_link[rep_bone_idx].name, ratio)
+                    logger.debug("org_bone: %s ", org_bone.position)
+                    logger.debug("rep_bone: %s ", rep_bone.position)
 
-                    logger.info("rep_old_pos: %s %s", rep_link[rep_bone_idx].name, rep_link[rep_bone_idx].position)
+                    logger.debug("rep_old_pos: %s %s", rep_link[rep_bone_idx].name, rep_link[rep_bone_idx].position)
 
                     # 基準位置からの相対位置
                     org_relative_pos = org_bone.position - org_base_pos
-                    logger.info("org_base_pos: %s %s", rep_link[rep_bone_idx].name, org_base_pos)
-                    logger.info("org_relative_pos: %s %s", rep_link[rep_bone_idx].name, org_relative_pos)
+                    logger.debug("org_base_pos: %s %s", rep_link[rep_bone_idx].name, org_base_pos)
+                    logger.debug("org_relative_pos: %s %s", rep_link[rep_bone_idx].name, org_relative_pos)
 
                     # 相対位置に比率をかけて変換先の相対位置にする
                     rep_new_pos = org_relative_pos * ratio
-                    logger.info("rep_new_pos: %s %s", rep_link[rep_bone_idx].name, rep_new_pos)
+                    logger.debug("rep_new_pos: %s %s", rep_link[rep_bone_idx].name, rep_new_pos)
 
                     # 変換先ボーンの該当位置に適用させる
                     rep_link[rep_bone_idx].position = rep_base_pos + rep_new_pos
-                    logger.info("rep_base_pos: %s %s", rep_link[rep_bone_idx].name, rep_base_pos)
+                    logger.debug("rep_base_pos: %s %s", rep_link[rep_bone_idx].name, rep_base_pos)
 
-                    logger.info("fixed: %s %s", rep_link[rep_bone_idx].name, rep_link[rep_bone_idx].position)
+                    logger.debug("fixed: %s %s", rep_link[rep_bone_idx].name, rep_link[rep_bone_idx].position)
 
 
 # ----------------------------------
@@ -1116,8 +1116,8 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
         # 先モデルの映っている領域の下から注視点まで
         rep_bottom_diff = rep_bottom_global_pos.distanceToPoint(rep_nearest_global_pos)
 
-        logger.info("f: %s, rep_top_global_pos: %s, rep_nearest_global_pos: %s", cf.frame, rep_top_global_pos, rep_nearest_global_pos)
-        logger.info("f: %s, org_top_diff: %s, org_bottom_diff: %s, rep_top_diff: %s, rep_bottom_diff: %s", cf.frame, org_top_diff, org_bottom_diff, rep_top_diff, rep_bottom_diff)
+        logger.debug("f: %s, rep_top_global_pos: %s, rep_nearest_global_pos: %s", cf.frame, rep_top_global_pos, rep_nearest_global_pos)
+        logger.debug("f: %s, org_top_diff: %s, org_bottom_diff: %s, rep_top_diff: %s, rep_bottom_diff: %s", cf.frame, org_top_diff, org_bottom_diff, rep_top_diff, rep_bottom_diff)
 
         if org_top_diff <= 0 or org_bottom_diff <= 0 or rep_top_diff <= 0 or rep_bottom_diff <= 0:
             if rep_top_diff != 0 and org_top_diff != 0:
@@ -1181,7 +1181,7 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
                 # 3F以内で倍率が非常に近い場合、前回倍率を維持
                 ratio = camera_ratios[-1]["ratio"]
 
-            # logger.info("f: %s, top_ratio: %s, bottom_ratio: %s, ratio: %s", cf.frame, top_ratio, bottom_ratio, ratio)
+            # logger.debug("f: %s, top_ratio: %s, bottom_ratio: %s, ratio: %s", cf.frame, top_ratio, bottom_ratio, ratio)
 
             # if 439 <= cf.frame <= 439:
             #     # logger.debug("org_top_global_link_pos: %s", org_top_global_link_pos)
