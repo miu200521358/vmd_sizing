@@ -236,9 +236,12 @@ def read_vmd(path, filetype="vmd", is_print=True, is_aster=False):
         print("■■■■■■■■■■■■■■■■■")
         print("■　**ERROR**　")
         print("■　VMDデータの解析に失敗しました。")
+        print("■　フォーマットが古く、解析できなかった可能性があります。")
+        print("■　最新のMMDで保存し直したVMDで試してみてください。")
         print("■■■■■■■■■■■■■■■■■")
         
-        print(traceback.format_exc())
+        # VMDはスタックトレースを出さない
+        # print(traceback.format_exc())
 
         # 終了音を鳴らす
         winsound.PlaySound("SystemQuestion", winsound.SND_ALIAS)
@@ -263,9 +266,12 @@ def read_vmd_modelname(base_file_path):
             print("■■■■■■■■■■■■■■■■■")
             print("■　**ERROR**　")
             print("■　VMDデータの解析に失敗しました。")
+            print("■　フォーマットが古く、解析できなかった可能性があります。")
+            print("■　最新のMMDで保存し直したVMDで試してみてください。")
             print("■■■■■■■■■■■■■■■■■")
             
-            print(traceback.format_exc())
+            # VMDはスタックトレースを出さない
+            # print(traceback.format_exc())
 
             return None
     
