@@ -13,7 +13,8 @@
             "pythonPath": "${config:python.pythonPath}",
             "stopOnEntry": false,
             "args": [
-                "--vmd_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/GimmeGimme シガー/ぎみぎみっちゃん.vmd",
+                "--vmd_path", "D:/MMD/MikuMikuDance_v926x64/Work/20200115_一期一振アクション/OP/vsq/口上06.vmd",
+                // "--vmd_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/GimmeGimme シガー/ぎみぎみっちゃん.vmd",
                 // "--vmd_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/アンノウン・マザーグース【フィンガータットモーション】 しぱ/アンノウンマザーグース【フィンガータットモーション】1.00.vmd",
                 // "--vmd_path", "C:/MMD/vmd_sizing/vmd/膝丸_初期手合わせ.vmd",
                 // "--vmd_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/馬と鹿 づなうじ/馬と鹿all3.vmd",

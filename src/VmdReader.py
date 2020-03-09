@@ -5,6 +5,7 @@ import logging
 import re
 import copy
 import hashlib
+import traceback
 from PyQt5.QtGui import QQuaternion, QVector3D
 from VmdWriter import VmdBoneFrame, VmdMorphFrame, VmdCameraFrame, VmdLightFrame, VmdShadowFrame, VmdShowIkFrame, VmdInfoIk
 from PmxModel import ParseException
@@ -15,6 +16,8 @@ handler.setLevel(logging.INFO)
 logger.setLevel(logging.INFO)
 logger.addHandler(handler)
 
+# https://blog.goo.ne.jp/torisu_tetosuki/e/bc9f1c4d597341b394bd02b64597499d
+# https://w.atwiki.jp/kumiho_k/pages/15.html
 class VmdMotion():
     def __init__(self):
         self.path = ''
@@ -162,13 +165,13 @@ class VmdReader():
         for n in range(motion.morph_cnt):
             morph = VmdMorphFrame()
             
-            # ボーン ----------------------
-            # ボーン名
+            # モーフ ----------------------
+            # モーフ名
             morph_bname, morph_name = self.read_text(15)
 
             morph.name = morph_bname
             morph.format_name = morph_name
-            logger.debug("name: %s, format_name %s", morph_bname, morph_name)
+            logger.debug("name: %s, format_name %s" , morph_bname, morph_name)
             
             # フレームIDX
             morph.frame = self.read_uint(4)
@@ -199,44 +202,48 @@ class VmdReader():
         for k, v in motion.morphs.items():
             motion.morphs[k] = sorted(v, key=lambda u: u.frame)
 
-        # カメラ数
-        motion.camera_cnt = self.read_uint(4)
-        logger.debug("motion.camera_cnt %s", motion.camera_cnt)
-        
-        # 1F分のカメラ情報
-        for _ in range(motion.camera_cnt):
-            camera = VmdCameraFrame()
-                        
-            # フレームIDX
-            camera.frame = self.read_uint(4)
-            logger.debug("camera.frame %s", camera.frame)            
+        try:
+            # カメラ数
+            motion.camera_cnt = self.read_uint(4)
+            logger.debug("motion.camera_cnt %s", motion.camera_cnt)
             
-            # 距離
-            camera.length = self.read_float(4)
-            logger.debug("camera.length %s", camera.length)            
-            
-            # 位置X,Y,Z
-            camera.position = self.read_Vector3D()
-            logger.debug("camera.position %s", camera.position)
-            
-            # 角度（オイラー角）
-            camera.euler = self.read_Vector3D()
-            logger.debug("camera.euler %s", camera.euler)
-            
-            # 補間曲線
-            camera.complement = self.unpack(24, "24B", True)
-            logger.debug("camera.complement %s", camera.complement)
-            
-            # 視野角
-            camera.angle = self.read_uint(4)
-            logger.debug("camera.angle %s", camera.angle)
-            
-            # パース有無
-            camera.perspective = self.unpack(1, "B")
-            logger.debug("camera.perspective %s", camera.perspective)
+            # 1F分のカメラ情報
+            for _ in range(motion.camera_cnt):
+                camera = VmdCameraFrame()
+                            
+                # フレームIDX
+                camera.frame = self.read_uint(4)
+                logger.debug("camera.frame %s", camera.frame)            
+                
+                # 距離
+                camera.length = self.read_float(4)
+                logger.debug("camera.length %s", camera.length)            
+                
+                # 位置X,Y,Z
+                camera.position = self.read_Vector3D()
+                logger.debug("camera.position %s", camera.position)
+                
+                # 角度（オイラー角）
+                camera.euler = self.read_Vector3D()
+                logger.debug("camera.euler %s", camera.euler)
+                
+                # 補間曲線
+                camera.complement = self.unpack(24, "24B", True)
+                logger.debug("camera.complement %s", camera.complement)
+                
+                # 視野角
+                camera.angle = self.read_uint(4)
+                logger.debug("camera.angle %s", camera.angle)
+                
+                # パース有無
+                camera.perspective = self.unpack(1, "B")
+                logger.debug("camera.perspective %s", camera.perspective)
 
-            # カメラを追加
-            motion.cameras.append(camera)
+                # カメラを追加
+                motion.cameras.append(camera)
+        except Exception as e:
+            # 情報がない場合、catchして握りつぶす
+            motion.camera_cnt = 0
         
         # ソート
         motion.cameras = sorted(motion.cameras, key=lambda u: u.frame)
@@ -245,28 +252,28 @@ class VmdReader():
         try:
             motion.light_cnt = self.read_uint(4)
             logger.debug("motion.light_cnt %s", motion.light_cnt)
+        
+            # 1F分の照明情報
+            for _ in range(motion.light_cnt):
+                light = VmdLightFrame()
+                            
+                # フレームIDX
+                light.frame = self.read_uint(4)
+                logger.debug("light.frame %s", light.frame)     
+
+                # 照明色(RGBだが、下手に数値が変わるのも怖いのでV3D)
+                light.color = self.read_Vector3D()
+                logger.debug("light.color %s", light.color)            
+
+                # 照明位置
+                light.position = self.read_Vector3D()
+                logger.debug("light.position %s", light.position) 
+
+                # 追加
+                motion.lights.append(light)           
         except Exception as e:
             # 情報がない場合、catchして握りつぶす
             motion.light_cnt = 0
-        
-        # 1F分の照明情報
-        for _ in range(motion.light_cnt):
-            light = VmdLightFrame()
-                        
-            # フレームIDX
-            light.frame = self.read_uint(4)
-            logger.debug("light.frame %s", light.frame)     
-
-            # 照明色(RGBだが、下手に数値が変わるのも怖いのでV3D)
-            light.color = self.read_Vector3D()
-            logger.debug("light.color %s", light.color)            
-
-            # 照明位置
-            light.position = self.read_Vector3D()
-            logger.debug("light.position %s", light.position) 
-
-            # 追加
-            motion.lights.append(light)           
             
         # セルフシャドウ数
         try:

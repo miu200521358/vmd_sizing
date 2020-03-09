@@ -191,7 +191,7 @@ def is_all_sizing(motion, org_pmx, rep_pmx, camera_motion, output_vmd_path=None)
         
             is_shortage = True
 
-        if motion.motion_cnt == 0:
+        if motion.motion_cnt == 0 and motion.morph_cnt == 0:
             print_methods = []
             if output_vmd_path:
                 error_file_logger = utils.create_error_file_logger(motion, org_pmx, rep_pmx, output_vmd_path)
