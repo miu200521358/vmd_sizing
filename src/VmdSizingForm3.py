@@ -36,7 +36,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver4.06_β10", pos = wx.DefaultPosition, size = wx.Size( 600,650 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver4.06_β11", pos = wx.DefaultPosition, size = wx.Size( 600,650 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -64,6 +64,10 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.rep_choices = None
 		self.rep_rates = None
 		self.slice_frames = None
+
+		self.vmd_choice_values = None
+		self.rep_choice_values = None
+		self.rep_rate_values = None
 
 		# スレッド用
 		self.worker = None
@@ -1223,35 +1227,70 @@ class VmdSizingForm3 ( wx.Frame ):
 				# モーフタブ新規の場合、モーフプルダウン生成
 				if not self.vmd_morphs or not self.rep_morphs:
 
-					logger.debug("vmd_data: %s", self.vmd_data.morphs.keys())
-					logger.debug("org_pmx_data: %s", self.org_pmx_data.morphs.keys())
-					logger.debug("rep_pmx_data: %s", self.rep_pmx_data.morphs.keys())
+					all_vmd_morphs = [""]
+					all_rep_morphs = [""]
 
-					self.vmd_morphs = [""]
-					for mk, mkv in self.org_pmx_data.morphs.items():
-						if mk in self.vmd_data.morphs.keys() and (len(self.vmd_data.morphs[mk]) > 1 or self.vmd_data.morphs[mk][0].ratio != 0):
-							# モーションモーフにキーがあって、かつ初期値が0以外の場合か複数件ある場合
-							if mk in self.rep_pmx_data.morphs.keys() and self.rep_pmx_data.morphs[mk].display == True:
-								# 置換先にある場合は○
-								self.vmd_morphs.append( mkv.get_panel_name() +"○:" + mk)
-							else:
-								self.vmd_morphs.append( mkv.get_panel_name() +"▲:" + mk)
+					file_path_list = [p for p in glob.glob(self.m_fileVmd.GetPath()) if os.path.isfile(p)]
+					# 入力されたVMDパスを別保持
+					original_vmd_path = self.m_fileVmd.GetPath()
 
-					# 元モデルにないモーフ追加
-					for vmk in self.vmd_data.morphs.keys():
-						if vmk not in self.org_pmx_data.morphs.keys() and (len(self.vmd_data.morphs[vmk]) > 1 or self.vmd_data.morphs[vmk][0].ratio != 0):
-							if vmk in self.rep_pmx_data.morphs.keys() and self.rep_pmx_data.morphs[vmk].display == True:
-								# 置換先にある場合は○
-								self.vmd_morphs.append("？●:" + vmk)
-							else:
-								self.vmd_morphs.append("？▲:" + vmk)
+					for vmd_idx, vmd_path in enumerate(file_path_list):
+						self.m_fileVmd.SetPath(vmd_path)
 
-					# 変換先は表示されているモーフのみ対象とする
-					self.rep_morphs = [""]
-					for rmk, rmv in self.rep_pmx_data.morphs.items():
-						if rmv.display == True:
-							self.rep_morphs.append( rmv.get_panel_name() +":" + rmk)
-					
+						if vmd_idx > 0:
+							# 1件目以降は再読み込み
+							is_vmd = self.LoadOneFile(self.m_fileVmd, self.m_staticText9, [".vmd", ".vpd"], False)
+
+							if not is_vmd:
+								continue
+
+						logger.debug("vmd_data: %s", self.vmd_data.morphs.keys())
+						logger.debug("org_pmx_data: %s", self.org_pmx_data.morphs.keys())
+						logger.debug("rep_pmx_data: %s", self.rep_pmx_data.morphs.keys())
+						logger.debug("all_vmd_morphs: %s", all_vmd_morphs)
+						logger.debug("all_rep_morphs: %s", all_rep_morphs)
+
+						for mk, mkv in self.org_pmx_data.morphs.items():
+							if mk in self.vmd_data.morphs.keys() and (len(self.vmd_data.morphs[mk]) > 1 or self.vmd_data.morphs[mk][0].ratio != 0):
+								# モーションモーフにキーがあって、かつ初期値が0以外の場合か複数件ある場合
+								if mk in self.rep_pmx_data.morphs.keys() and self.rep_pmx_data.morphs[mk].display == True:
+									# 置換先にある場合は○
+									display_text = mkv.get_panel_name() +"○:" + mk
+									if display_text not in all_vmd_morphs:
+										all_vmd_morphs.append( display_text )
+								else:
+									display_text = mkv.get_panel_name() +"▲:" + mk
+									if display_text not in all_vmd_morphs:
+										all_vmd_morphs.append( display_text )
+
+						# 元モデルにないモーフ追加
+						for vmk in self.vmd_data.morphs.keys():
+							if vmk not in self.org_pmx_data.morphs.keys() and (len(self.vmd_data.morphs[vmk]) > 1 or self.vmd_data.morphs[vmk][0].ratio != 0):
+								if vmk in self.rep_pmx_data.morphs.keys() and self.rep_pmx_data.morphs[vmk].display == True:
+									# 置換先にある場合は○
+									display_text = "？●:" + vmk
+									if display_text not in all_vmd_morphs:
+										all_vmd_morphs.append( display_text )
+								else:
+									display_text = "？▲:" + vmk
+									if display_text not in all_vmd_morphs:
+										all_vmd_morphs.append( display_text )
+
+						# 変換先は表示されているモーフのみ対象とする
+						for rmk, rmv in self.rep_pmx_data.morphs.items():
+							if rmv.display == True:
+								all_rep_morphs.append( rmv.get_panel_name() +":" + rmk)
+						
+					# VMDパスを元の値に戻す
+					self.m_fileVmd.SetPath(original_vmd_path)
+
+					# モーフを再設定
+					self.vmd_morphs = all_vmd_morphs
+					self.rep_morphs = all_rep_morphs
+
+					logger.debug("all_vmd_morphs: %s", all_vmd_morphs)
+					logger.debug("all_rep_morphs: %s", all_rep_morphs)
+
 					# モーフ行追加
 					self.AddMorphLine()
 
@@ -1888,29 +1927,29 @@ class VmdSizingForm3 ( wx.Frame ):
 	
 	# モーフデータリスト生成
 	def create_morph_data(self):
-		logger.debug("create_morph_data")
+		logger.info("create_morph_data")
 		# モーフ置換文字列リスト生成
 		vmd_choice_values = []
 		rep_choice_values = []
 		rep_rate_values = []
 
 		morph_pair = {}
-		logger.debug("self.vmd_choices: %s", self.vmd_choices)
-		logger.debug("self.rep_choices: %s", self.rep_choices)
-		logger.debug("self.rep_rates: %s", self.rep_rates)
+		logger.info("self.vmd_choices: %s", self.vmd_choices)
+		logger.info("self.rep_choices: %s", self.rep_choices)
+		logger.info("self.rep_rates: %s", self.rep_rates)
 		if self.vmd_choices and self.rep_choices:
 			for vc, rc, rr in zip(self.vmd_choices, self.rep_choices, self.rep_rates):
 				vc_idx = vc.GetSelection()
 				rc_idx = rc.GetSelection()
-				logger.debug("vc_idx: %s, rc_idx: %s", vc_idx, rc_idx)
+				logger.info("vc_idx: %s, rc_idx: %s", vc_idx, rc_idx)
 				if vc_idx >= 0 and rc_idx >= 0 and len(vc.GetString(vc_idx)) > 0 and len(rc.GetString(rc_idx)) > 0:
 					# Prefixを除去する
 					vcv = vc.GetString(vc_idx)[3:]
 					rcv = rc.GetString(rc_idx)[2:]
 
-					if (vcv,rcv) in morph_pair.keys():
-						# 元と先が同じ場合、処理スルー
-						continue
+					# if (vcv,rcv) in morph_pair.keys():
+					# 	# 元と先が同じ場合、処理スルー
+					# 	continue
 
 					# リストに追加
 					vmd_choice_values.append(vcv)
@@ -1919,9 +1958,9 @@ class VmdSizingForm3 ( wx.Frame ):
 					# ペアとして登録する
 					morph_pair[(vcv,rcv)] = True							
 
-		logger.debug("vmd_choice_values: %s", vmd_choice_values)
-		logger.debug("rep_choice_values: %s", rep_choice_values)
-		logger.debug("rep_rate_values: %s", rep_rate_values)
+		logger.info("vmd_choice_values: %s", vmd_choice_values)
+		logger.info("rep_choice_values: %s", rep_choice_values)
+		logger.info("rep_rate_values: %s", rep_rate_values)
 		
 		return 	vmd_choice_values, rep_choice_values, rep_rate_values
 
@@ -2061,6 +2100,9 @@ class VmdSizingForm3 ( wx.Frame ):
 				self.m_Gauge.SetValue(0)
 
 				return False
+
+			# モーフデータ生成
+			self.vmd_choice_values, self.rep_choice_values, self.rep_rate_values = self.create_morph_data()
 
 			# とりあえず先頭1件で全読み込み
 			try:
@@ -2252,8 +2294,8 @@ class VmdSizingForm3 ( wx.Frame ):
 		sys.stdout = self.m_txtConsole		
 		
 	def ShowTraceModel(self, event):
-		if wrapperutils.is_valid_file(self.m_fileVmd.GetPath(), "調整対象VMD/VPDファイル", [".vmd", ".vpd"], False) == False:
-			return False
+		if wrapperutils.is_valid_file(self.m_fileVmd.GetPath(), "調整対象VMD/VPDファイル", [".vmd", ".vpd"], is_print=False, is_aster=True) == False:
+			self.m_vmdTraceTxt.SetValue("　（VMD/VPD登録モデル取得失敗）")
 		
 		if ".vpd" in self.m_fileVmd.GetPath():
 			# モデル名表示追加
@@ -2272,8 +2314,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 	def ShowTraceModelbyPmx(self, event):
 		if wrapperutils.is_valid_file(self.m_fileOrgPmx.GetPath(), "モーション作成元PMXファイル", ".pmx", False) == False:
-			logger.warn("pmxエラー")
-			return False
+			self.m_pmxTraceTxt.SetValue("　（PMXモデル名取得失敗）")
 		
 		# モデル名表示追加
 		model_name = wrapperutils.read_pmx_modelname(self.m_fileOrgPmx.GetPath())
@@ -2284,8 +2325,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 	def ShowReplaceModelbyPmx(self, event):
 		if wrapperutils.is_valid_file(self.m_fileOrgPmx.GetPath(), "モーション変換先PMXファイル", ".pmx", False) == False:
-			logger.warn("pmxエラー")
-			return False
+			self.m_pmxReplaceTxt.SetValue("　（PMXモデル名取得失敗）")
 		
 		# モデル名表示追加
 		model_name = wrapperutils.read_pmx_modelname(self.m_fileRepPmx.GetPath())
@@ -2296,7 +2336,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 	def ShowCameraModel(self, event):
 		if wrapperutils.is_valid_file(self.m_camera_fileVmd.GetPath(), "カメラVMDファイル", [".vmd"], False) == False:
-			return False
+			self.m_vmdCameraTxt.SetValue("　（VMD登録モデル取得失敗）")
 		
 		# モデル名表示追加
 		model_name = wrapperutils.read_vmd_modelname(self.m_camera_fileVmd.GetPath())
@@ -2307,8 +2347,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 	def ShowCameraModelbyPmx(self, event):
 		if wrapperutils.is_valid_file(self.m_camera_fileOrgPmx.GetPath(), "カメラ作成元モデルPMXファイル", ".pmx", False) == False:
-			logger.warn("pmxエラー")
-			return False
+			self.m_pmxCameraOrgTxt.SetValue("　（PMXモデル名取得失敗）")
 		
 		# モデル名表示追加
 		model_name = wrapperutils.read_pmx_modelname(self.m_camera_fileOrgPmx.GetPath())
@@ -2344,7 +2383,7 @@ class VmdSizingForm3 ( wx.Frame ):
 			# VMDファイルパスが空でなければ、トレースモデル名表示
 			self.ShowTraceModel(event)
 		else:
-			self.m_vmdTraceTxt.SetValue("　（調整対象VMD未設定）")
+			self.m_vmdTraceTxt.SetValue("　（調整対象VMD/VPD未設定）")
 
 	def OnCreateOutputCameraVmd(self, event):
 		logger.debug("OnCreateOutputCameraVmd")
@@ -2459,18 +2498,8 @@ class ExecWorkerThread(Thread):
 				if not is_vmd:
 					continue
 
-				# パスクリア
+				# パスクリア(自動生成パターン)
 				self._notify_window.m_fileOutputVmd.SetPath("")
-
-			# 一旦初期化
-			vmd_choice_values = []
-			rep_choice_values = []
-			rep_rate_values = []
-			
-			# モーフ生成 --------------
-			if self._notify_window.vmd_data and self._notify_window.org_pmx_data and self._notify_window.rep_pmx_data:
-				# モーフデータ生成				
-				vmd_choice_values, rep_choice_values, rep_rate_values = self._notify_window.create_morph_data()
 
 			# 処理実行
 			wrapperutils.exec(
@@ -2493,9 +2522,9 @@ class ExecWorkerThread(Thread):
 				, self._notify_window.m_checkFingerDistance.GetValue()
 				, self._notify_window.m_sliderFingerDistance.GetValue()
 				, self._notify_window.m_check_ArmCheckSkip.GetValue()
-				, vmd_choice_values
-				, rep_choice_values			
-				, rep_rate_values
+				, self._notify_window.vmd_choice_values
+				, self._notify_window.rep_choice_values			
+				, self._notify_window.rep_rate_values
 				, self._notify_window.camera_vmd_data
 				, self._notify_window.m_camera_fileVmd.GetPath()
 				, self._notify_window.camera_pmx_data

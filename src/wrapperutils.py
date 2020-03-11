@@ -23,6 +23,14 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VmdSizing").getChild(__name__)
 
+def get_first_file_path(base_file_path):
+    file_path_list = [p for p in glob.glob(base_file_path) if os.path.isfile(p)]
+
+    if len(file_path_list) == 0:
+        return ""
+
+    return file_path_list[0]
+
 def is_valid_file(base_file_path, file_type, exts, is_print=True, is_aster=False):
     logger.debug("aster: %s", is_aster)
     if is_aster:
@@ -328,8 +336,6 @@ def read_vpd_modelname(base_file_path):
 def read_pmx_modelname(base_file_path):
     if is_valid_file(base_file_path, "pmx", ".pmx", is_print=False, is_aster=True) == False:
         return None
-
-    file_path_list = [p for p in glob.glob(base_file_path) if os.path.isfile(p)]
 
     reader = PmxReader()
     try:
