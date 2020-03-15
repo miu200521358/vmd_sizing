@@ -36,7 +36,7 @@ logger = logging.getLogger("VmdSizing").getChild(__name__)
 class VmdSizingForm3 ( wx.Frame ):
 
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver4.06_β12", pos = wx.DefaultPosition, size = wx.Size( 600,650 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"VMDサイジング ローカル版 ver4.06_β13", pos = wx.DefaultPosition, size = wx.Size( 600,650 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		
 		# 初期化(クラス外の変数) -----------------------
 		# モーフ置換配列
@@ -1927,21 +1927,21 @@ class VmdSizingForm3 ( wx.Frame ):
 	
 	# モーフデータリスト生成
 	def create_morph_data(self):
-		logger.info("create_morph_data")
+		logger.debug("create_morph_data")
 		# モーフ置換文字列リスト生成
 		vmd_choice_values = []
 		rep_choice_values = []
 		rep_rate_values = []
 
 		morph_pair = {}
-		logger.info("self.vmd_choices: %s", self.vmd_choices)
-		logger.info("self.rep_choices: %s", self.rep_choices)
-		logger.info("self.rep_rates: %s", self.rep_rates)
+		logger.debug("self.vmd_choices: %s", self.vmd_choices)
+		logger.debug("self.rep_choices: %s", self.rep_choices)
+		logger.debug("self.rep_rates: %s", self.rep_rates)
 		if self.vmd_choices and self.rep_choices:
 			for vc, rc, rr in zip(self.vmd_choices, self.rep_choices, self.rep_rates):
 				vc_idx = vc.GetSelection()
 				rc_idx = rc.GetSelection()
-				logger.info("vc_idx: %s, rc_idx: %s", vc_idx, rc_idx)
+				logger.debug("vc_idx: %s, rc_idx: %s", vc_idx, rc_idx)
 				if vc_idx >= 0 and rc_idx >= 0 and len(vc.GetString(vc_idx)) > 0 and len(rc.GetString(rc_idx)) > 0:
 					# Prefixを除去する
 					vcv = vc.GetString(vc_idx)[3:]
@@ -1958,9 +1958,9 @@ class VmdSizingForm3 ( wx.Frame ):
 					# ペアとして登録する
 					morph_pair[(vcv,rcv)] = True							
 
-		logger.info("vmd_choice_values: %s", vmd_choice_values)
-		logger.info("rep_choice_values: %s", rep_choice_values)
-		logger.info("rep_rate_values: %s", rep_rate_values)
+		logger.debug("vmd_choice_values: %s", vmd_choice_values)
+		logger.debug("rep_choice_values: %s", rep_choice_values)
+		logger.debug("rep_rate_values: %s", rep_rate_values)
 		
 		return 	vmd_choice_values, rep_choice_values, rep_rate_values
 
@@ -2177,7 +2177,10 @@ class VmdSizingForm3 ( wx.Frame ):
 		# 終了音を鳴らす
 		if os.name == "nt":
 			# Windows
-			winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
+			try:
+				winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
+			except Exception as e:
+				pass
 
 		# スレッド削除
 		self.worker = None
@@ -2191,7 +2194,10 @@ class VmdSizingForm3 ( wx.Frame ):
 		# 終了音を鳴らす
 		if os.name == "nt":
 			# Windows
-			winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
+			try:
+				winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
+			except Exception as e:
+				pass
 
 		# スレッド削除
 		self.csv_worker = None
@@ -2208,7 +2214,10 @@ class VmdSizingForm3 ( wx.Frame ):
 		# 終了音を鳴らす
 		if os.name == "nt":
 			# Windows
-			winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
+			try:
+				winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
+			except Exception as e:
+				pass
 
 		# スレッド削除
 		self.vmd_worker = None

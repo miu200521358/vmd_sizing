@@ -5,7 +5,7 @@ import re
 import logging
 import copy
 import datetime
-from math import atan2, acos, cos, sin, degrees, isnan, isclose, sqrt, pi
+from math import atan2, acos, cos, sin, degrees, isnan, isinf, isclose, sqrt, pi
 from PyQt5.QtGui import QQuaternion, QVector3D, QVector2D, QMatrix4x4, QVector4D
 
 from VmdWriter import VmdWriter, VmdBoneFrame
@@ -675,3 +675,18 @@ def calc_interpolate_bezier_by_t(x1v, y1v, x2v, y2v, start, end, t):
     logger.debug(",calc_interpolate_bezier_by_t,x1v,%s, y1v,%s, x2v,%s, y2v,%s, y,%s,x,%s,t,%s,x2,%s,x3,%s",x1v, y1v, x2v, y2v, y, x, t,x2,x3)
 
     return x3, y
+
+def get_effective_value(v):
+    if isnan(v):
+        return 0
+    
+    if isinf(v):
+        return 0
+    
+    return v
+
+
+def set_effective_value_vec3(vec3):
+    vec3.setX(get_effective_value(vec3.x()))
+    vec3.setY(get_effective_value(vec3.y()))
+    vec3.setZ(get_effective_value(vec3.z()))

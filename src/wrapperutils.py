@@ -251,8 +251,10 @@ def read_vmd(path, filetype="vmd", is_print=True, is_aster=False):
         # VMDはスタックトレースを出さない
         # print(traceback.format_exc())
 
-        # 終了音を鳴らす
-        winsound.PlaySound("SystemQuestion", winsound.SND_ALIAS)
+        try:
+            winsound.PlaySound("SystemQuestion", winsound.SND_ALIAS)
+        except Exception as e:
+            pass
 
         return None
             
@@ -301,8 +303,11 @@ def read_vpd(path, filetype="vpd", is_print=True, is_aster=False):
         
         print(traceback.format_exc())
 
-        # 終了音を鳴らす
-        winsound.PlaySound("SystemQuestion", winsound.SND_ALIAS)
+        try:
+            # 終了音を鳴らす
+            winsound.PlaySound("SystemQuestion", winsound.SND_ALIAS)
+        except Exception as e:
+            pass
 
         return None
             
@@ -367,8 +372,11 @@ def read_pmx(path, filetype="pmx", is_print=True, is_arm_check_skip=False):
         
         print(traceback.format_exc())
 
-        # 終了音を鳴らす
-        winsound.PlaySound("SystemQuestion", winsound.SND_ALIAS)
+        try:
+            # 終了音を鳴らす
+            winsound.PlaySound("SystemQuestion", winsound.SND_ALIAS)
+        except Exception as e:
+            pass
 
         return None
             
@@ -488,8 +496,11 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
                 print("")
                 print(e.with_traceback(sys.exc_info()[2]))
 
-                # 終了音を鳴らす
-                winsound.PlaySound("SystemQuestion", winsound.SND_ALIAS)
+                try:
+                    # 終了音を鳴らす
+                    winsound.PlaySound("SystemQuestion", winsound.SND_ALIAS)
+                except Exception as e:
+                    pass
 
                 return False
 
@@ -514,8 +525,11 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
 
         error_file_logger.error(e.message)
 
-        # 終了音を鳴らす
-        winsound.PlaySound("SystemQuestion", winsound.SND_ALIAS)
+        try:
+            # 終了音を鳴らす
+            winsound.PlaySound("SystemQuestion", winsound.SND_ALIAS)
+        except Exception as e:
+            pass
 
     except Exception:
         print("■■■■■■■■■■■■■■■■■")
@@ -534,8 +548,11 @@ def exec(motion, org_pmx, rep_pmx, vmd_path, org_pmx_path, rep_pmx_path, output_
 
         error_file_logger.error(traceback.format_exc())
 
-        # 終了音を鳴らす
-        winsound.PlaySound("SystemQuestion", winsound.SND_ALIAS)
+        try:
+            # 終了音を鳴らす
+            winsound.PlaySound("SystemQuestion", winsound.SND_ALIAS)
+        except Exception as e:
+            pass
 
     finally:
         logging.shutdown()

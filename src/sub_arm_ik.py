@@ -594,7 +594,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
         org_back_thickness = 0
         org_back_vertex = None
         for al in (all_org_leg_links["左"] + all_org_leg_links["右"]):
-            _, _, _, back_bone_below_pos, _, _, _, back_bone_below_vertex = trace_model.get_bone_vertex_position(al.name, al.position, trace_model.define_is_target_full_vertex(), True, True)
+            _, _, _, back_bone_below_pos, _, _, _, back_bone_below_vertex = trace_model.get_bone_vertex_position([al.name], al.position, trace_model.define_is_target_full_vertex(), True)
             if org_back_thickness < back_bone_below_pos.z():
                 # より厚みのある頂点が取得できた場合、置き換え
                 org_back_thickness = back_bone_below_pos.z()
@@ -603,7 +603,7 @@ def exec_arm_ik(motion, trace_model, replace_model, output_vmd_path, hand_distan
         rep_back_thickness = 0
         rep_back_vertex = None
         for al in (all_rep_leg_links["左"] + all_rep_leg_links["右"]):
-            _, _, _, back_bone_below_pos, _, _, _, back_bone_below_vertex = replace_model.get_bone_vertex_position(al.name, al.position, replace_model.define_is_target_full_vertex(), True, True)
+            _, _, _, back_bone_below_pos, _, _, _, back_bone_below_vertex = replace_model.get_bone_vertex_position([al.name], al.position, replace_model.define_is_target_full_vertex(), True)
             if rep_back_thickness < back_bone_below_pos.z():
                 # より厚みのある頂点が取得できた場合、置き換え
                 rep_back_thickness = back_bone_below_pos.z()
