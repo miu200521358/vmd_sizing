@@ -611,6 +611,7 @@ def fit_body_links(org_body_links, org_body_indexes, org_link_names, rep_body_li
 
     # 補正値
     rep_left_eye_correction = ( rep_left_eye_diff * left_eye_diff_ratio ) - rep_left_eye_diff
+    rep_left_eye_correction.setY(0)
     utils.set_effective_value_vec3(rep_left_eye_correction)
 
     if rep_left_eye_correction.z() < 0 and rep_left_eye_pos.z() < 0:
@@ -1241,9 +1242,9 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
             if is_near_top:
                 # 上辺のが画面端に近い場合、上辺比率
                 ratio = rep_top_diff / org_top_diff
-            elif is_near_bottom and org_bottom_bone_name not in FOOT_BONE_NAMES:
-                # 下辺のが画面端に近い場合、下辺比率
-                ratio = rep_bottom_diff / org_bottom_diff
+            # elif is_near_bottom and org_bottom_bone_name not in FOOT_BONE_NAMES:
+            #     # 下辺のが画面端に近い場合、下辺比率
+            #     ratio = rep_bottom_diff / org_bottom_diff
             else:
                 if org_top_bone_name != org_bottom_bone_name:
                     # 比率（上下全部が映る比率）
@@ -1545,12 +1546,13 @@ def create_camera_frame( org_nearest_bone_name, org_nearest_global_pos, org_near
                 # 上辺ボーンの方が画面端に近い場合、上辺調整
                 vertical_type = "上"
                 offset, length_offset = adjust_project_pos(cf, org_top_project_pos, rep_top_global_pos, org_center_project_pos, rep_center_global_pos, x_offset_unit, y_offset_unit, 0)
-            elif rep_bottom_global_pos and org_bottom_project_pos and is_near_bottom:
+            elif rep_bottom_global_pos and org_bottom_project_pos and is_near_bottom and org_bottom_bone_name in FOOT_BONE_NAMES:
                 # 下辺ボーンの方が画面端に近い場合、下辺調整
                 vertical_type = "下"
                 offset, length_offset = adjust_project_pos(cf, org_bottom_project_pos, rep_bottom_global_pos, org_center_project_pos, rep_center_global_pos, x_offset_unit, y_offset_unit, 0)
             else:
                 vertical_type = "中"
+                offset, length_offset = adjust_project_pos(cf, org_nearest_project_pos, rep_nearest_global_pos, org_center_project_pos, rep_center_global_pos, x_offset_unit, y_offset_unit, 0)
 
 
 
