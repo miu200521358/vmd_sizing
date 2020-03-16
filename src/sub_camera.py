@@ -874,10 +874,10 @@ def calc_nearest_bone(body_global_3ds, ratio_dict, replace_head_ratio, cf, camer
     # BOTTOMの方がTOPより画面端に近いか（注視点よりも下であることも条件）
     is_near_bottom = True if (( abs(1 - bottom_project_square_pos.y()) < abs(top_project_square_pos.y()) and bottom_project_square_pos.y() > 0.5 ) and bottom_bone_name not in WRIST_FINGER_BONE_NAMES) else False
 
-    # 上辺が顔系ボーンの場合、強制上辺調整
-    if top_bone_name is not None and top_bone_name in FACE_BONE_NAMES:
-        is_near_top = True
-        is_near_bottom = False
+    # # 上辺が顔系ボーンの場合、強制上辺調整
+    # if top_bone_name is not None and top_bone_name in FACE_BONE_NAMES:
+    #     is_near_top = True
+    #     is_near_bottom = False
 
     # 下辺が足底辺系ボーンの場合、強制下辺調整
     if bottom_bone_name is not None and bottom_bone_name in FOOT_BONE_NAMES:
