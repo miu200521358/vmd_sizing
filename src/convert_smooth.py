@@ -26,7 +26,7 @@ is_print2 = False
 is_print3 = False
 is_print4 = False
 
-def main(vmd_path, pmx_path, smooth_cnt, is_comp_circle, is_seam_smooth, file_logger, is_debug):
+def main(vmd_path, pmx_path, smooth_cnt, is_comp_circle, is_seam_smooth, is_debug):
 
     try:
         # VMD読み込み
@@ -39,6 +39,8 @@ def main(vmd_path, pmx_path, smooth_cnt, is_comp_circle, is_seam_smooth, file_lo
         if len(motion.frames.values()) > 0:
             smooth_vmd_fpath = re.sub(r'\.vmd$', "_smooth_{0:%Y%m%d_%H%M%S}.vmd".format(datetime.now()), vmd_path)
             
+            file_logger = utils.create_file_logger(motion, model, model, smooth_vmd_fpath.lower())
+
             utils.output_file_logger(file_logger, "■■ スムージング -----------------")
 
             all_frames_by_bone = {}
@@ -112,13 +114,14 @@ def main(vmd_path, pmx_path, smooth_cnt, is_comp_circle, is_seam_smooth, file_lo
                         if cnt > 0:
                             utils.output_message("cnt>0 smooth_filter開始 %s" % (bone_name), is_print2)
 
-                            # 2回目以降はフィルタあり
-                            smooth_filter(all_frames_by_bone, model, bone_name, is_comp_circle, {"freq": 30, "mincutoff": 0.5, "beta": 0.5, "dcutoff": 1})
+                            if cnt > 1:
+                                # 3回目以降はフィルタあり
+                                smooth_filter(all_frames_by_bone, model, bone_name, is_comp_circle, {"freq": 30, "mincutoff": 0.5, "beta": 0.5, "dcutoff": 1})
 
-                            utils.output_message("cnt>0 smooth_filter完了 %s" % (bone_name), is_print2)
+                                utils.output_message("cnt>0 smooth_filter完了 %s" % (bone_name), is_print2)
 
                             # 全bfを滑らかに繋ぐ
-                            smooth_all_bf(all_frames_by_bone, model, bone_name, start_frameno, last_frameno, (cnt + 2), is_comp_circle)
+                            smooth_all_bf(all_frames_by_bone, model, bone_name, start_frameno, last_frameno, cnt, is_comp_circle)
 
                             utils.output_message("cnt>0 smooth_all_bf完了 %s" % (bone_name), is_print2)
 
@@ -420,7 +423,7 @@ def delegate_twist_qq_4_arm(fno, direction, arm_qq, arm_twist_qq, elbow_qq, wris
     elbow_result_qq = QQuaternion.fromAxisAndAngle(elbow_local_y_axis, elbow_yz_degree)
 
     # ひじベクトルを腕捻りで帳尻合わせ（ここでだいたい整合するか近似する）
-    arm_twist_result_qq = utils.delegate_twist_qq(fno, "{0}腕捩".format(direction), arm_twist_qq, arm_twist_result_qq, elbow_qq, elbow_result_qq, arm_twist_local_x_axis, elbow_local_x_axis, file_logger)
+    arm_twist_result_qq = utils.delegate_twist_qq(fno, "{0}腕捩".format(direction), arm_qq, arm_result_qq, arm_twist_qq, arm_twist_result_qq, elbow_qq, elbow_result_qq, arm_local_x_axis, arm_twist_local_x_axis, elbow_local_x_axis, arm_twist_local_y_axis, file_logger)
 
     # 手首XYZ回転を手首YZにする
     wrist_result_qq = wrist_z_qq * wrist_y_qq
@@ -430,8 +433,13 @@ def delegate_twist_qq_4_arm(fno, direction, arm_qq, arm_twist_qq, elbow_qq, wris
     wrist_twist_result_qq = QQuaternion.fromAxisAndAngle(wrist_twist_local_x_axis, elbow_x_degree)
     utils.output_file_logger(file_logger, "fno: {fno}, elbow_x_degree: {elbow_x_degree}".format(fno=fno, elbow_x_degree=elbow_x_degree), level=logging.DEBUG)
 
+    # 手首Xを手捻りに
+    wrist_x_degree = math.degrees(2 * math.acos(min(1, max(-1, wrist_x_qq.scalar()))))
+    wrist_twist_result_qq = wrist_twist_result_qq * QQuaternion.fromAxisAndAngle(wrist_twist_local_x_axis, wrist_x_degree)
+    utils.output_file_logger(file_logger, "fno: {fno}, wrist_x_degree: {wrist_x_degree}".format(fno=fno, wrist_x_degree=wrist_x_degree), level=logging.DEBUG)
+
     # 手捩りで手首ベクトル帳尻合わせ（ここでだいたい整合するか近似する）
-    wrist_twist_result_qq = utils.delegate_twist_qq(fno, "{0}手捩".format(direction), wrist_twist_qq, wrist_twist_result_qq, wrist_qq, wrist_result_qq, wrist_twist_local_x_axis, wrist_local_x_axis, file_logger)
+    wrist_twist_result_qq = utils.delegate_twist_qq(fno, "{0}手捩".format(direction), elbow_qq, elbow_result_qq, wrist_twist_qq, wrist_twist_result_qq, wrist_qq, wrist_result_qq, elbow_local_x_axis, wrist_twist_local_x_axis, wrist_local_x_axis, wrist_local_x_axis, file_logger)
 
     return arm_result_qq, arm_twist_result_qq, elbow_result_qq, wrist_twist_result_qq, wrist_result_qq
 

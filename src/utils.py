@@ -30,6 +30,7 @@ def sign(x):
 def output_message(text, is_print=False):
     if is_print == True:
         print("{0} <{1}>".format(text, datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')))
+        logger.info("{0} <{1}>".format(text, datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')))
     else:
         pass
 
@@ -600,98 +601,349 @@ def convert_axis_qq(fno, bone_name, from_qq, target_axis, axis, file_logger):
     return target_result_qq, target_result_degree
 
 # 回転を委譲する
-def delegate_twist_qq(fno, bone_name, original_twist_qq, twist_qq, original_child_qq, child_qq, twist_x_axis, child_x_axis, file_logger):
-    # 委譲先ローカル座標系（ボーンベクトルが（1，0，0）になる空間）の向き
+def delegate_twist_qq(fno, bone_name, original_parent_qq, parent_qq, original_twist_qq, twist_qq, original_child_qq, child_qq, parent_x_axis, twist_x_axis, child_x_axis, dot_check_axis, file_logger):
     twist_local_axis = QVector3D(1, 0, 0)
+    one_axis = QVector3D(0, 1, 1)
+    dot_check_axis = QVector3D(1, 0, 0)
 
-    # 委譲元初期向きからローカル軸への変換
-    # parent_global2twist_global_qq, _ = calc_match_qq( parent_x_axis, twist_x_axis )
     twist_global2local_qq, _ = calc_match_qq( twist_x_axis, twist_local_axis )
     twist_local2twist_global_qq, _ = calc_match_qq( twist_local_axis, twist_x_axis )
 
     # 元々の委譲先回転量 ----------------
     mat_of1 = QMatrix4x4()
+    mat_of1.rotate(original_parent_qq)
+    mat_of1.translate(parent_x_axis)
+    mat_of1.rotate(original_twist_qq)
+    mat_of1.translate(twist_x_axis)
     mat_of1.rotate(original_child_qq)
-    mat_of1.translate(child_x_axis)
+    mat_of1.rotate(twist_global2local_qq)
+    original_vec = (mat_of1 * dot_check_axis) * one_axis
 
-    mat_of2 = QMatrix4x4()
-    mat_of2.rotate(twist_global2local_qq)
-    
-    # 委譲元の回転を、委譲先のローカル軸に変換
-    # オリジナル回転 - ローカル座標のX軸回転を算出
-    from_original_2_to_local_vec = mat_of1 * mat_of2 * QVector3D()
-    from_original_2_to_local_vec.setX(0)
+    cnt = 0
+    save_result_degree = twist_add_degree = 0
+    save_result_dot = 0
 
-    # 変換後の委譲先回転量 ----------------
-    mat_af1 = QMatrix4x4()
-    # mat_af1.translate(twist_x_axis)
-    # mat_af1.rotate(original_twist_qq)
-    # mat_af1.rotate(twist_qq)
-    mat_af1.rotate(child_qq)
-    mat_af1.translate(child_x_axis)
+    while save_result_dot < 0.9995 and cnt < 20:
+        # まず保持している内積から角度を算出してその角度に捩る
+        output_file_logger(file_logger, "fno: {fno}, {bone_name}, test save_result_degree: {save_result_degree}, twist_add_degree: {twist_add_degree}".format(fno=fno, bone_name=bone_name, save_result_degree=save_result_degree, twist_add_degree=twist_add_degree), level=logging.DEBUG)
+        twist_local_add_qq = QQuaternion.fromAxisAndAngle(twist_x_axis, save_result_degree + twist_add_degree)
 
-    mat_af2 = QMatrix4x4()
-    mat_af2.rotate(twist_global2local_qq)
+        mat_af1 = QMatrix4x4()
+        mat_af1.rotate(parent_qq)
+        mat_af1.translate(parent_x_axis)
+        mat_af1.rotate(twist_qq)
+        mat_af1.rotate(twist_local_add_qq)
+        mat_af1.translate(twist_x_axis)
+        mat_af1.rotate(child_qq)
+        mat_af1.rotate(twist_global2local_qq)
+        result_vec = (mat_af1 * dot_check_axis) * one_axis
 
-    # 委譲元の回転を、委譲先のローカル軸に変換
-    # 変換後回転 - ローカル座標のX軸回転を算出
-    from_result_2_to_local_vec = mat_af1 * mat_af2 * QVector3D()
-    from_result_2_to_local_vec.setX(0)
+        result_dot = QVector3D.dotProduct(original_vec.normalized(), result_vec.normalized())
+        result_degree = degrees(2 * acos(min(1, max(-1, result_dot))))
 
-    # ----------------
+        twist_test_qq = QQuaternion.fromAxisAndAngle(twist_x_axis, save_result_degree + result_degree)
+        twist_test_degree = degrees(2 * acos(min(1, max(-1, twist_test_qq.scalar()))))
 
-    output_file_logger(file_logger, "fno: {fno}, {bone_name}, to_org: {to_org}".format(fno=fno, bone_name=bone_name, to_org=from_original_2_to_local_vec), level=logging.DEBUG)
-    output_file_logger(file_logger, "fno: {fno}, {bone_name}, to_res: {to_res}".format(fno=fno, bone_name=bone_name, to_res=from_result_2_to_local_vec), level=logging.DEBUG)
+        if abs(result_dot) > abs(save_result_dot):
+            # 保存済みのθより大きい場合、保持(180度超すと反転するので減算)
+            save_result_degree = twist_test_degree if twist_test_degree < 180 else twist_test_degree - 180
+            twist_add_degree = 0
+            save_result_dot = result_dot
 
-    diff_qq, diff_degree = calc_match_qq(from_result_2_to_local_vec, from_original_2_to_local_vec)
-    output_file_logger(file_logger, "fno: {fno}, {bone_name}, diff_degree: {diff_degree}, diff_qq: {diff_qq}".format(fno=fno, bone_name=bone_name, diff_degree=diff_degree, diff_qq=diff_qq), level=logging.DEBUG)
+            output_file_logger(file_logger, "fno: {fno}, {bone_name}, ○ result_dot: {result_dot}, result_degree: {result_degree}, twist_test_degree: {twist_test_degree}, save_result_degree: {save_result_degree}, twist_add_degree: {twist_add_degree}".format(fno=fno, bone_name=bone_name, save_result_degree=save_result_degree, result_dot=result_dot, result_degree=result_degree, twist_test_degree=twist_test_degree, twist_add_degree=twist_add_degree), level=logging.DEBUG)
+        else:
+            if result_dot > 0:
+                # 内積が離れた場合、別計算
+                twist_add_degree += result_degree / 2
+            else:
+                # 内積が負数の場合、反転
+                twist_add_degree = twist_add_degree - (result_degree / 2)
 
-    # 委譲先Xの回転に変換
-    twist_result_degree = diff_degree
-    twist_result_qq = QQuaternion.fromAxisAndAngle(twist_x_axis, diff_degree)
+            output_file_logger(file_logger, "fno: {fno}, {bone_name}, × result_dot: {result_dot}, result_degree: {result_degree}, twist_test_degree: {twist_test_degree}, save_result_degree: {save_result_degree}, twist_add_degree: {twist_add_degree}".format(fno=fno, bone_name=bone_name, save_result_degree=save_result_degree, result_dot=result_dot, result_degree=result_degree, twist_test_degree=twist_test_degree, twist_add_degree=twist_add_degree), level=logging.DEBUG)
 
-    output_file_logger(file_logger, "fno: {fno}, {bone_name}, twist_result_degree: {twist_result_degree}, twist_result_qq: {twist_result_qq}".format(fno=fno, bone_name=bone_name, twist_result_degree=twist_result_degree, twist_result_qq=twist_result_qq), level=logging.DEBUG)
+        if 1 > result_dot > 0.9995:
+            # ほぼ一致している場合、抜ける
+            output_file_logger(file_logger, "fno: {fno}, {bone_name}, break-0".format(fno=fno, bone_name=bone_name), level=logging.DEBUG)
+            break
 
-    # 設定後のひじベクトル
+        cnt += 1
 
-    # 元々の委譲先回転量 ----------------
-    mat_bf1 = QMatrix4x4()
-    mat_bf1.translate(twist_x_axis)
-    mat_bf1.rotate(original_child_qq)
-    mat_bf1.translate(child_x_axis)    
-    original_vec = mat_bf1 * QVector3D()
-    original_vec.normalize()
+    # 最終的な角度
+    output_file_logger(file_logger, "fno: {fno}, {bone_name}, [final] save_result_dot: {save_result_dot}, save_result_degree: {save_result_degree}".format(fno=fno, bone_name=bone_name, save_result_dot=save_result_dot, save_result_degree=save_result_degree), level=logging.DEBUG)    
 
-    # 変換後の委譲先回転量 ----------------
-    mat_af1 = QMatrix4x4()
-    mat_af1.rotate(twist_result_qq)
-    mat_af1.translate(twist_x_axis)
-    mat_af1.rotate(child_qq)
-    mat_af1.translate(child_x_axis)
-    result_vec = mat_af1 * QVector3D()
-    result_vec.normalize()
+    twist_result_global_qq = QQuaternion.fromAxisAndAngle(twist_x_axis, save_result_degree)
+    twist_result_global_degree = degrees(2 * acos(min(1, max(-1, twist_result_global_qq.scalar()))))
 
-    result_dot = QVector3D.dotProduct(original_vec, result_vec)
-    output_file_logger(file_logger, "fno: {fno}, {bone_name}, result_dot: {result_dot}".format(fno=fno, bone_name=bone_name, result_dot=result_dot), level=logging.DEBUG)
+    output_file_logger(file_logger, "fno: {fno}, {bone_name}, [final] twist_result_global_degree: {twist_result_global_degree}, twist_result_global_qq: {twist_result_global_qq}".format(fno=fno, bone_name=bone_name, twist_result_global_degree=twist_result_global_degree, twist_result_global_qq=twist_result_global_qq), level=logging.DEBUG)    
 
-    if abs(result_dot) < 0.5:
-        # 向きが反転している場合、180度加算
-        twist_add_qq = QQuaternion.fromAxisAndAngle(twist_x_axis, 180)
-        twist_result_qq = twist_result_qq * twist_add_qq
-        output_file_logger(file_logger, "fno: {fno}, {bone_name}, [reverse] twist_result_degree: {twist_result_degree}, twist_result_qq: {twist_result_qq}".format(fno=fno, bone_name=bone_name, twist_result_degree=twist_result_degree, twist_result_qq=twist_result_qq), level=logging.DEBUG)
+    return twist_qq * twist_result_global_qq
+
+    # for test_local_axis, one_axis in [(QVector3D(0, 1, 0), QVector3D(0, 1, 1))]: # , (QVector3D(0, 1, 0), QVector3D(1, 0, 1)), (QVector3D(0, 1, 0), QVector3D(1, 1, 0)
+    #     # 委譲元初期向きからローカル軸への変換
+    #     test_twist_global2local_qq, _ = calc_match_qq( twist_x_axis, twist_local_axis )
+    #     test_twist_local2twist_global_qq, _ = calc_match_qq( twist_local_axis, twist_x_axis )
+
+    #     mat_of2 = copy.deepcopy(mat_of1)
+    #     mat_of2.rotate(test_twist_global2local_qq)
+
+    #     # 変換後の委譲先回転量 ----------------
+    #     mat_af2 = copy.deepcopy(mat_af1)
+    #     mat_af2.rotate(test_twist_global2local_qq)
+
+    #     original_vec = (mat_of2 * test_local_axis) * one_axis
+    #     result_vec = (mat_af2 * test_local_axis) * one_axis
+
+    #     # output_file_logger(file_logger, "fno: {fno}, {bone_name}, original_vec: {original_vec}".format(fno=fno, bone_name=bone_name, original_vec=original_vec), level=logging.DEBUG)
+    #     # output_file_logger(file_logger, "fno: {fno}, {bone_name}, result_vec: {result_vec}".format(fno=fno, bone_name=bone_name, result_vec=result_vec), level=logging.DEBUG)
+
+    #     result_dot = QVector3D.dotProduct(original_vec.normalized(), result_vec.normalized())
+    #     result_radian = 2 * acos(min(1, max(-1, result_dot)))
+    #     result_degree = degrees(result_radian)
+    #     output_file_logger(file_logger, "fno: {fno}, {bone_name}, result_dot: {result_dot}, result_degree: {result_degree}".format(fno=fno, bone_name=bone_name, result_dot=result_dot, result_degree=result_degree), level=logging.DEBUG)
+
+    #     if abs(result_dot) > abs(save_result_dot):
+    #         # 保存済みのθより大きい場合、保持
+    #         save_result_degree = result_degree
+    #         save_result_dot = result_dot
+        
+    #         # if 1 > abs(save_result_dot) > 0.9995:
+    #         #     # ほぼ一致している場合、抜ける
+    #         #     output_file_logger(file_logger, "fno: {fno}, {bone_name}, break-0".format(fno=fno, bone_name=bone_name), level=logging.DEBUG)
+    #         #     break
+        
+    # output_file_logger(file_logger, "fno: {fno}, {bone_name}, [test] save_result_degree: {save_result_degree}, save_result_dot: {save_result_dot}".format(fno=fno, bone_name=bone_name, save_result_degree=save_result_degree, save_result_dot=save_result_dot), level=logging.DEBUG)
+
+    # last_result_degree = save_result_degree
+    # last_result_dot = save_result_dot
 
 
-    # result_mat = QMatrix4x4()
-    # result_mat.rotate(original_twist_qq)
-    # result_mat.rotate(twist_qq)
-    # result_mat.rotate(twist_result_qq)
+    # if abs(save_result_dot) < 0.9995:
+    #     # 合致度が低い場合、内部ループ
 
-    # twist_delegate_qq = calc_matrix2qq(result_mat)
-    # twist_delegate_degree = degrees(2 * acos(min(1, max(-1, twist_delegate_qq.scalar()))))
+    #     # オリジナルのベクトル        
+    #     mat_of2 = copy.deepcopy(mat_of1)
+    #     original_vec = mat_of1 * child_x_axis
 
-    # output_file_logger(file_logger, "fno: {fno}, {bone_name}, twist_delegate_degree: {twist_delegate_degree}, twist_delegate_qq: {twist_delegate_qq}".format(fno=fno, bone_name=bone_name, twist_delegate_degree=twist_delegate_degree, twist_delegate_qq=twist_delegate_qq), level=logging.DEBUG)
+    #     cnt = 1
+    #     last_add_degree = 0
 
-    return twist_result_qq # original_twist_qq * twist_qq * twist_result_qq #* result_diff_qq
+    #     while abs(last_result_dot) < 0.9995 and cnt < 10:
+
+    #         add_degree_unit = 45 / cnt
+    #         add_degree = last_add_degree + add_degree_unit
+    #         in_cnt = 0
+
+    #         while in_cnt < 10:
+    #             for sign_flg in [1, -1]:
+    #                 test_add_degree = (add_degree * sign_flg)
+    #                 result_add_degree = save_result_degree + test_add_degree
+    #                 twist_local_add_qq = QQuaternion.fromAxisAndAngle(twist_x_axis, result_add_degree)
+
+    #                 # 捩り後のベクトル
+    #                 mat_af1 = QMatrix4x4()
+    #                 mat_af1.rotate(parent_qq)
+    #                 mat_af1.translate(parent_x_axis)
+    #                 mat_af1.rotate(twist_local_add_qq)
+    #                 mat_af1.translate(twist_x_axis)
+    #                 mat_af1.rotate(child_qq)
+    #                 result_vec = mat_af1 * child_x_axis
+
+    #                 # 内積で近似度を算出
+    #                 result_add_dot = QVector3D.dotProduct(original_vec.normalized(), result_vec.normalized())
+    #                 output_file_logger(file_logger, "fno: {fno}, {bone_name}, [in-loop2({cnt}:{in_cnt})] test_add_degree: {test_add_degree}, result_add_degree: {result_add_degree}, result_add_dot: {result_add_dot}".format(fno=fno, bone_name=bone_name, cnt=cnt, in_cnt=in_cnt, test_add_degree=test_add_degree, result_add_dot=result_add_dot, result_add_degree=result_add_degree), level=logging.DEBUG)
+
+    #                 if abs(result_add_dot) > abs(last_result_dot):
+    #                     # 保存済みのθより大きい場合、保持
+    #                     last_result_degree = result_add_degree
+    #                     last_result_dot = result_add_dot
+    #                     last_add_degree = add_degree
+
+    #                     if 1 > abs(last_result_dot) > 0.9995:
+    #                         # ほぼ一致している場合、抜ける
+    #                         output_file_logger(file_logger, "fno: {fno}, {bone_name}, break-1".format(fno=fno, bone_name=bone_name), level=logging.DEBUG)
+    #                         break
+
+    #             add_degree += add_degree_unit
+    #             in_cnt += 1
+
+    #             if 1 > abs(last_result_dot) > 0.9995:
+    #                 # ほぼ一致している場合、抜ける
+    #                 output_file_logger(file_logger, "fno: {fno}, {bone_name}, break-2".format(fno=fno, bone_name=bone_name), level=logging.DEBUG)
+    #                 break
+
+    #             save_result_degree = last_result_degree
+    #             save_result_dot = last_result_dot
+            
+    #         if 1 > abs(last_result_dot) > 0.9995:
+    #             # ほぼ一致している場合、終了
+    #             output_file_logger(file_logger, "fno: {fno}, {bone_name}, break-3".format(fno=fno, bone_name=bone_name), level=logging.DEBUG)
+    #             break
+
+    #         cnt += 1
+
+
+                # # 現時点の近似値から角度を求める
+                # twist_local_add_qq = QQuaternion.fromAxisAndAngle(twist_x_axis, last_result_degree)
+
+                # # 捩り後のベクトル
+                # mat_af1 = QMatrix4x4()
+                # mat_af1.rotate(parent_qq)
+                # mat_af1.translate(parent_x_axis)
+                # mat_af1.rotate(twist_local_add_qq)
+                # mat_af1.translate(twist_x_axis)
+                # mat_af1.rotate(child_qq)
+                # result_vec = mat_af1 * child_x_axis
+
+                # result_add_dot = QVector3D.dotProduct(original_vec, result_vec)
+                # result_add_dot = (result_add_dot / (original_vec.length() * result_vec.length()))
+
+                # if cnt == 0:
+                #     # 初回にはθを保持
+                #     last_result_dot = result_add_dot
+
+                # # 残りの角度から近似値を求める
+                # result_remain_radian = 1 - result_add_dot
+                # result_remain_degree = degrees(result_remain_radian)
+
+    # if abs(save_result_cos_theta) < 0.9995:
+    #     # 一致してるが合致度が低い場合、内部ループ
+    #     output_file_logger(file_logger, "fno: {fno}, {bone_name}, [in-loop] save_result_degree: {save_result_degree}, save_result_cos_theta: {save_result_cos_theta}".format(fno=fno, bone_name=bone_name, save_result_degree=save_result_degree, save_result_cos_theta=save_result_cos_theta), level=logging.DEBUG)
+
+    #     # オリジナルのベクトル        
+    #     mat_of2 = copy.deepcopy(mat_of1)
+    #     original_vec = mat_of1 * child_x_axis
+
+    #     # 残りの角度から近似値を求める
+    #     result_remain_radian = 2 * acos(min(1, max(-1, (1 - save_result_cos_theta))))
+    #     result_remain_degree = degrees(result_remain_radian)
+    #     test_degrees = [x * (result_remain_degree / 10) for x in range(-10, 10)]
+        
+    #     cnt = 1
+    #     # cnt = 1 if abs(save_result_cos_theta) < 0.9 else 100
+    #     # unit = 3 if abs(save_result_cos_theta) < 0.9 else 300
+    #     # cnt = (1 / (1 - abs(save_result_cos_theta)))
+    #     # unit = (3 / (1 - abs(save_result_cos_theta)))
+    #     output_file_logger(file_logger, "fno: {fno}, {bone_name}, [in-loop] test_degrees: {test_degrees}, result_remain_degree={result_remain_degree}".format(fno=fno, bone_name=bone_name, test_degrees=test_degrees, result_remain_degree=result_remain_degree), level=logging.DEBUG)
+
+    #     while abs(save_result_cos_theta) < 0.9995 and cnt < 5:
+    #         for sign_flg in [1, -1]:
+    #             for idx, add_degree in enumerate(test_degrees):
+    #                 test_add_degree = (add_degree / cnt * sign_flg)
+    #                 result_add_degree = save_result_degree + test_add_degree
+    #                 twist_local_add_qq = QQuaternion.fromAxisAndAngle(twist_x_axis, result_add_degree)
+
+    #                 # 捩り後のベクトル
+    #                 mat_af1 = QMatrix4x4()
+    #                 mat_af1.rotate(parent_qq)
+    #                 mat_af1.translate(parent_x_axis)
+    #                 # mat_af1.rotate(twist_qq)
+    #                 mat_af1.rotate(twist_local_add_qq)
+    #                 mat_af1.translate(twist_x_axis)
+    #                 mat_af1.rotate(child_qq)
+    #                 result_vec = mat_af1 * child_x_axis
+
+    #                 # 内積で近似度を算出
+    #                 result_add_dot = QVector3D.dotProduct(original_vec, result_vec)
+    #                 result_add_cos_theta = (result_add_dot / (original_vec.length() * result_vec.length()))
+    #                 output_file_logger(file_logger, "fno: {fno}, {bone_name}, result_add_dot: {result_add_dot}, result_add_cos_theta: {result_add_cos_theta}, result_add_degree: {result_add_degree}, test_add_degree: {test_add_degree}".format(fno=fno, bone_name=bone_name, result_add_dot=result_add_dot, result_add_degree=result_add_degree, result_add_cos_theta=result_add_cos_theta, test_add_degree=test_add_degree), level=logging.DEBUG)
+
+    #                 if abs(result_add_cos_theta) > abs(last_result_cos_theta):
+    #                     # 保存済みのθより大きい場合、保持
+    #                     last_result_degree = result_add_degree
+    #                     last_result_cos_theta = result_add_cos_theta
+
+    #                     if 1 > abs(last_result_cos_theta) > 0.9995:
+    #                         # ほぼ一致している場合、抜ける
+    #                         save_result_degree = last_result_degree
+    #                         save_result_cos_theta = last_result_cos_theta
+    #                         output_file_logger(file_logger, "fno: {fno}, {bone_name}, break-1".format(fno=fno, bone_name=bone_name), level=logging.DEBUG)
+    #                         break
+                
+    #             save_result_degree = last_result_degree
+    #             save_result_cos_theta = last_result_cos_theta
+
+    #             if 1 > abs(last_result_cos_theta) > 0.9995:
+    #                 # ほぼ一致している場合、終了
+    #                 output_file_logger(file_logger, "fno: {fno}, {bone_name}, break-2".format(fno=fno, bone_name=bone_name), level=logging.DEBUG)
+    #                 break
+
+    #         if 1 > abs(last_result_cos_theta) > 0.9995:
+    #             # ほぼ一致している場合、終了
+    #             output_file_logger(file_logger, "fno: {fno}, {bone_name}, break-2".format(fno=fno, bone_name=bone_name), level=logging.DEBUG)
+    #             break
+
+    #         cnt += 1
+
+        # # 全体のチェック角度
+        # test_total_degree = 360
+        # cnt = 1
+        # in_rng = 3
+        # test_in_rng = [0]
+        # total_test_in_rng = []
+
+        # while abs(save_result_cos_theta) < 0.9995 and cnt < 10:
+        #     # 角度を等分に分割
+        #     test_in_rng = [y for y in range(-in_rng, in_rng+1) if y not in total_test_in_rng]
+        #     # 既にチェックした角度は対象外とする
+        #     test_degrees = [(test_total_degree / x) + save_result_degree for x in test_in_rng if x != 0]
+        #     total_test_in_rng = total_test_in_rng + test_in_rng
+
+        #     output_file_logger(file_logger, "fno: {fno}, {bone_name}, in_rng: {in_rng}, save_result_degree: {save_result_degree}, test_degrees: {test_degrees}".format(fno=fno, bone_name=bone_name, in_rng=in_rng, test_degrees=test_degrees, save_result_degree=save_result_degree), level=logging.DEBUG)
+
+        #     for result_add_degree in test_degrees:
+        #         twist_local_add_qq = QQuaternion.fromAxisAndAngle(twist_x_axis, result_add_degree)
+
+        #         # 捩り後のベクトル
+        #         mat_af1 = QMatrix4x4()
+        #         mat_af1.rotate(parent_qq)
+        #         mat_af1.translate(parent_x_axis)
+        #         mat_af1.rotate(twist_local_add_qq)
+        #         mat_af1.translate(twist_x_axis)
+        #         mat_af1.rotate(child_qq)
+        #         result_vec = mat_af1 * child_x_axis
+
+        #         # 内積で近似度を算出
+        #         result_add_dot = QVector3D.dotProduct(original_vec, result_vec)
+        #         result_add_cos_theta = (result_add_dot / (original_vec.length() * result_vec.length()))
+        #         output_file_logger(file_logger, "fno: {fno}, {bone_name}, result_add_dot: {result_add_dot}, result_add_cos_theta: {result_add_cos_theta}, result_add_degree: {result_add_degree}".format(fno=fno, bone_name=bone_name, result_add_dot=result_add_dot, result_add_degree=result_add_degree, result_add_cos_theta=result_add_cos_theta), level=logging.DEBUG)
+
+        #         if abs(result_add_cos_theta) > abs(last_result_cos_theta):
+        #             # 保存済みのθより大きい場合、保持
+        #             last_result_degree = result_add_degree
+        #             last_result_cos_theta = result_add_cos_theta
+
+        #             if 1 > abs(last_result_cos_theta) > 0.99:
+        #                 # ほぼ一致している場合、抜ける
+        #                 save_result_degree = last_result_degree
+        #                 save_result_cos_theta = last_result_cos_theta
+        #                 output_file_logger(file_logger, "fno: {fno}, {bone_name}, break-1".format(fno=fno, bone_name=bone_name), level=logging.DEBUG)
+        #                 break
+                
+        #         if save_result_degree != last_result_degree:
+        #             # 違う値が候補になっている場合、保持
+        #             save_result_degree = last_result_degree
+        #             save_result_cos_theta = last_result_cos_theta
+        #             # 全体のチェック角度を減らす
+        #             test_total_degree /= 2
+        #             # 分岐は元に戻す
+        #             in_rng = 2
+
+        #         if 1 > abs(last_result_cos_theta) > 0.999:
+        #             # 分岐は元に戻す
+        #             in_rng = 2
+        #             # ほぼ一致している場合、抜ける
+        #             output_file_logger(file_logger, "fno: {fno}, {bone_name}, break-2".format(fno=fno, bone_name=bone_name), level=logging.DEBUG)
+        #             break
+
+        #     if 1 > abs(last_result_cos_theta) > 0.9995:
+        #         # ほぼ一致している場合、終了
+        #         output_file_logger(file_logger, "fno: {fno}, {bone_name}, break-3".format(fno=fno, bone_name=bone_name), level=logging.DEBUG)
+        #         break
+        #     else:
+        #         # 分岐を増やす
+        #         in_rng += 1
+
+        #     cnt += 1
 
 def get_local_axis_4delegate_qq(model, bone):
     if bone.fixed_axis != QVector3D():
@@ -1194,6 +1446,19 @@ def get_effective_value(v):
     
     return v
 
+def set_almost_zero_value(v):
+    if get_effective_value(v) == 0:
+        return 0
+        
+    if abs(v) < 0.001:
+        return 0
+
+    return v
+
+def set_almost_zero_vec3(vec3):
+    vec3.setX(set_almost_zero_value(vec3.x()))
+    vec3.setY(set_almost_zero_value(vec3.y()))
+    vec3.setZ(set_almost_zero_value(vec3.z()))
 
 def set_effective_value_vec3(vec3):
     vec3.setX(get_effective_value(vec3.x()))
@@ -1504,7 +1769,7 @@ def calc_smooth_bezier_pos(x1, y1v, x2, y2v, x3, y3v, offset, is_comp_circle):
     ty3 = (y3 - y1) / diffy
 
     # # 交点を制御点とする三次ベジェ曲線
-    # bz = calc_quadratic_bezier_curve(x1, y1, cx1, cy1, cx2, cy2, x3, y3, t)
+    # bz = calc_quadratic_bezier_curve(tx1, ty1, tcx1, tcy1, tcx2, tcy2, tx3, ty3, t)
 
     # 中間フレームで繋いだ開始フレームと終端フレームの三次ベジェ曲線
     bz = calc_cubic_bezier_4point(tx1, ty1, tcx1, tcy1, tcx2, tcy2, tx3, ty3, t)
@@ -1539,7 +1804,7 @@ def calc_quadratic_bezier_curve_b2(t):
 def calc_quadratic_bezier_curve_b3(t):
     return pow(t, 3)
 
-# 指定された2点（x1, x3）と制御点（cx1, cx2）を通過点（x2）を通過する三次ベジェ曲線
+# 指定された2点（x1, x3）と通過点（x4, x5）を三次ベジェ曲線
 # https://stackoverflow.com/questions/2315432/how-to-find-control-points-for-a-beziersegment-given-start-end-and-2-intersect/2316440#2316440
 def calc_quadratic_bezier_curve(x0, y0, x4, y4, x5, y5, x3, y3, t):
     # find chord lengths

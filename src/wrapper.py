@@ -7,7 +7,7 @@ import os
 import main
 from VmdSizingProject3 import VmdSizingProject3
 
-VERSION_NAME = "ver4.05_β23"
+VERSION_NAME = "ver5.00_β25"
 
 def resource_path(relative):
     if hasattr(sys, '_MEIPASS'):
@@ -24,7 +24,7 @@ if __name__ == '__main__':
         is_debug = True if len(sys.argv) > 1 and "--is_debug" in sys.argv else False
         # 引数指定がない場合、通常起動
         app = wx.App(False)
-        icon=wx.Icon(resource_path('src/vmdsizing.ico'),wx.BITMAP_TYPE_ICO)
+        icon=wx.Icon(resource_path('src/vmdsizing.ico'), wx.BITMAP_TYPE_ICO)
         frame = VmdSizingProject3(None, VERSION_NAME, is_debug)
         frame.SetIcon(icon)
         frame.Show(True)

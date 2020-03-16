@@ -143,7 +143,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 		self.m_fileVmd = wx.FilePickerCtrl( self.m_panelFile, wx.ID_ANY, wx.EmptyString, u"調整対象モーションVMDファイルを開く", u"VMDファイル (*.vmd)|*.vmd|すべてのファイル (*.*)|*.*", wx.DefaultPosition, wx.DefaultSize, wx.FLP_DEFAULT_STYLE )
 		self.m_fileVmd.GetPickerCtrl().SetLabel("開く")
-		self.m_fileVmd.SetToolTip( u"調整したいモーションのVMDパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。\nファイル名にアスタリスク（*）を使用すると複数件のモーションを一度に調整できます。" )
+		self.m_fileVmd.SetToolTip( u"調整したいモーションのVMDパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。\nファイル名にアスタリスク（*）を使用すると複数件のデータを一度にサイジングできます。" )
 
 		bSizer6.Add( self.m_fileVmd, 1, wx.ALL|wx.EXPAND, 5 )
 
@@ -1399,7 +1399,7 @@ class VmdSizingForm3 ( wx.Frame ):
 		self.m_sliderLegFloorDistance.Bind(wx.EVT_SCROLL_CHANGED, self.OnChangeArmIKFloorDistance)
 		self.m_sliderFingerDistance.Bind(wx.EVT_SCROLL_CHANGED, self.OnChangeArmIKFingerDistance)
 
-		# 指位置合わせのチェックボックス切り替え
+		# スムージングの選択肢切り替え
 		self.m_smooth_choiceSmoothingComp.Bind(wx.EVT_CHOICE, self.OnChangeSmoothComp)
 
 		# 補間曲線パネルの描画(オリジナル)
@@ -2871,6 +2871,7 @@ class VmdSizingForm3 ( wx.Frame ):
 
 	# スレッド実行結果
 	def OnResult(self, event):
+		# 終了音を鳴らす
 		if os.name == "nt":
 			# Windows
 			winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
