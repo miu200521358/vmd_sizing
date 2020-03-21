@@ -1,4 +1,5 @@
 *        text=auto
 *.bat    text eol=crlf
 *.csv    text eol=crlf
-*.spec   text encoding=shift-jis
+*.txt    text eol=crlf
+*.spec   text encoding=shift-jis eol=crlf

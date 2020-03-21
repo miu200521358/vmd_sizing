@@ -12,6 +12,7 @@ build/
 __pycache__/
 
 vmd/
+.vscode/
 
 VmdSizingSelf.bat
 VmdSizingSelfAll.bat
@@ -41,3 +42,4 @@ leg_fk.vmd
 leg_fk_bone.csv
 leg_fk_camera.csv
 leg_fk_morph.csv
+src/VmdSizingForm3.py.bak
