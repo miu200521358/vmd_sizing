@@ -685,7 +685,7 @@ class MQuaternion():
         factor2 = t
 
         if (1.0 - dot) > 0.0000001:
-            angle = math.acos(dot)
+            angle = math.acos(max(0, min(1, dot)))
             sinOfAngle = math.sin(angle)
             if sinOfAngle > 0.0000001:
                 factor1 = math.sin((1.0 - t) * angle) / sinOfAngle

@@ -10,7 +10,7 @@ logger = MLogger(__name__)
 
 
 # VMD出力ファイルパス生成
-def create_output_vmd_path(form):
+def set_output_vmd_path(form):
     # モーションVMDパス(アスタリスク込み)
     motion_vmd_all_path = form.file_panel_ctrl.motion_vmd_file_ctrl.file_ctrl.GetPath()
     # モーションVMDパスの拡張子リスト

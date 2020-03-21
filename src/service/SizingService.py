@@ -30,7 +30,7 @@ class SizingService():
                 + "モーション: {motion}\n".format(motion=os.path.basename(self.options.motion_vmd_data.path)) \
                 + "作成元モデル: {trace_model} ({model_name})\n".format(trace_model=os.path.basename(self.options.org_model_data.path), model_name=self.options.org_model_data.name) \
                 + "変換先モデル: {replace_model} ({model_name})\n".format(replace_model=os.path.basename(self.options.rep_model_data.path), model_name=self.options.rep_model_data.name) \
-                + "代替モデル有無: {alternative_model_flg}\n".format(alternative_model_flg=self.options.alternative_model_flg) \
+                + "代替モデル有無: {substitute_model_flg}\n".format(substitute_model_flg=self.options.substitute_model_flg) \
                 + "捩り分散有無: {twist_flg}".format(twist_flg=self.options.twist_flg), decoration=MLogger.DECORATION_BOX) # noqa
 
             # 変換前のオリジナルモーションを保持
@@ -62,9 +62,9 @@ class SizingService():
 
             return result
         except SizingException as se:
-            logger.error("VMDサイジング処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
+            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
         except Exception:
-            logger.critical("VMDサイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc(), decoration=MLogger.DECORATION_BOX)
+            logger.critical("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc(), decoration=MLogger.DECORATION_BOX)
         finally:
             logging.shutdown()
 

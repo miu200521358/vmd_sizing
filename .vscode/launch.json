@@ -80,7 +80,7 @@
                 "--camera_vmd_path", "",
                 "--camera_pmx_path", "",
                 "--camera_y_offset", "0",
-                "--alternative_model", "0",
+                "--substitute_model", "0",
                 "--add_delegate", "0",
                 "--target_avoidance_bones", "左手首,右手首",
                 "--target_avoidance_rigids", "上半身2test",

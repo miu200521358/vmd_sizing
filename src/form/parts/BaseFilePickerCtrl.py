@@ -116,7 +116,7 @@ class BaseFilePickerCtrl():
         
         # 出力ファイル変更対象の場合、出力ファイル更新
         if self.is_change_output:
-            MFormUtils.create_output_vmd_path(self.form)
+            MFormUtils.set_output_vmd_path(self.form)
     
     def disable(self):
         self.file_ctrl.GetPickerCtrl().Disable()

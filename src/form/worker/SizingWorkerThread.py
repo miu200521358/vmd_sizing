@@ -35,7 +35,7 @@ class SizingWorkerThread(BaseWorkerThread):
                         org_model_data=self.form.file_panel_ctrl.org_model_file_ctrl.data, \
                         rep_model_data=self.form.file_panel_ctrl.rep_model_file_ctrl.data, \
                         output_vmd_path=self.form.file_panel_ctrl.output_vmd_file_ctrl.file_ctrl.GetPath(), \
-                        alternative_model_flg=self.form.file_panel_ctrl.org_model_file_ctrl.title_parts_ctrl.GetValue(), \
+                        substitute_model_flg=self.form.file_panel_ctrl.org_model_file_ctrl.title_parts_ctrl.GetValue(), \
                         twist_flg=self.form.file_panel_ctrl.rep_model_file_ctrl.title_parts_ctrl.GetValue())
                     
                     self.result = SizingService(options).execute() and self.result

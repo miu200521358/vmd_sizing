@@ -39,13 +39,13 @@ class FilePanel(BasePanel):
         self.sizer.Add(self.motion_vmd_file_ctrl.sizer, 0, wx.EXPAND, 0)
 
         # 作成元の代替モデルFLG
-        alternative_model_flg_ctrl = wx.CheckBox(self, wx.ID_ANY, u"代替モデル", wx.DefaultPosition, wx.DefaultSize, 0)
-        alternative_model_flg_ctrl.SetToolTip(u"チェックを入れると、センターや上半身などの細かいスタンス補正をスキップできます。")
+        substitute_model_flg_ctrl = wx.CheckBox(self, wx.ID_ANY, u"代替モデル", wx.DefaultPosition, wx.DefaultSize, 0)
+        substitute_model_flg_ctrl.SetToolTip(u"チェックを入れると、センターや上半身などの細かいスタンス補正をスキップできます。")
 
         # 作成元PMXファイルコントロール
         self.org_model_file_ctrl = HistoryFilePickerCtrl(form, self, u"モーション作成元モデルPMXファイル", u"モーション作成元モデルPMXファイルを開く", ("pmx"), wx.FLP_DEFAULT_STYLE, \
                                                          u"モーション作成に使用されたモデルのPMXパスを指定してください。\n精度は落ちますが、類似したサイズ・ボーン構造のモデルでも代用できます。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。", \
-                                                         file_model_spacer=2, title_parts_ctrl=alternative_model_flg_ctrl, file_hitories=self.file_hitories["org_pmx"], \
+                                                         file_model_spacer=2, title_parts_ctrl=substitute_model_flg_ctrl, file_hitories=self.file_hitories["org_pmx"], \
                                                          history_max=self.file_hitories["max"], is_change_output=False, is_aster=False, is_save=False)
         self.sizer.Add(self.org_model_file_ctrl.sizer, 0, wx.EXPAND, 0)
 
