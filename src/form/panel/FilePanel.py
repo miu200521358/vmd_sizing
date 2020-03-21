@@ -41,6 +41,7 @@ class FilePanel(BasePanel):
         # 作成元の代替モデルFLG
         substitute_model_flg_ctrl = wx.CheckBox(self, wx.ID_ANY, u"代替モデル", wx.DefaultPosition, wx.DefaultSize, 0)
         substitute_model_flg_ctrl.SetToolTip(u"チェックを入れると、センターや上半身などの細かいスタンス補正をスキップできます。")
+        substitute_model_flg_ctrl.Bind(wx.EVT_CHECKBOX, self.on_replace_output_vmd_path)
 
         # 作成元PMXファイルコントロール
         self.org_model_file_ctrl = HistoryFilePickerCtrl(form, self, u"モーション作成元モデルPMXファイル", u"モーション作成元モデルPMXファイルを開く", ("pmx"), wx.FLP_DEFAULT_STYLE, \
@@ -52,6 +53,7 @@ class FilePanel(BasePanel):
         # 捩り分散追加FLG
         twist_flg_ctrl = wx.CheckBox(self, wx.ID_ANY, u"捩り分散追加", wx.DefaultPosition, wx.DefaultSize, 0)
         twist_flg_ctrl.SetToolTip(u"チェックを入れると、腕捻り等への分散処理を追加できます。")
+        twist_flg_ctrl.Bind(wx.EVT_CHECKBOX, self.on_replace_output_vmd_path)
 
         # 変換先PMXファイルコントロール
         self.rep_model_file_ctrl = HistoryFilePickerCtrl(form, self, u"モーション変換先モデルPMXファイル", u"モーション変換先モデルPMXファイルを開く", ("pmx"), wx.FLP_DEFAULT_STYLE, \
@@ -97,6 +99,10 @@ class FilePanel(BasePanel):
         self.form.Bind(EVT_LOAD_THREAD, self.on_load_result)
 
         self.fit()
+
+    # 出力ファイルパス置き換え処理
+    def on_replace_output_vmd_path(self, event):
+        MFormUtils.set_output_vmd_path(self.form)
 
     # 実行前チェック
     def on_check(self, event):
@@ -220,6 +226,9 @@ class FilePanel(BasePanel):
 
         if event.is_exec:
             # そのまま実行する場合、サイジング実行処理に遷移
+
+            # 念のため出力ファイルパス自動生成（空の場合設定）
+            MFormUtils.set_output_vmd_path(self.form)
 
             # フォーム無効化
             self.disable()

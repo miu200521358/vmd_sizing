@@ -74,24 +74,3 @@ def get_dir_path(base_file_path, is_print=True):
         logger.error("ファイルパスの解析に失敗しました。\nパスに使えない文字がないか確認してください。\nファイルパス: {0}\n\n{1}".format(base_file_path, e.with_traceback(sys.exc_info()[2])), decoration=MLogger.DECORATION_SIMPLE)
         raise e
 
-
-def escape_filepath(path):
-    path = path.replace("\\", r"\\")
-    path = path.replace("*", "\\*")
-    path = path.replace("+", "\\+")
-    path = path.replace(".", "\\.")
-    path = path.replace("?", "\\?")
-    path = path.replace("{", "\\{")
-    path = path.replace("}", "\\}")
-    path = path.replace("(", "\\(")
-    path = path.replace(")", "\\)")
-    path = path.replace("[", "\\[")
-    path = path.replace("]", "\\]")
-    path = path.replace("{", "\\{")
-    path = path.replace("^", "\\^")
-    path = path.replace("$", "\\$")
-    path = path.replace("-", "\\-")
-    path = path.replace("|", "\\|")
-    path = path.replace("/", "\\/")
-
-    return path
