@@ -96,7 +96,7 @@ class PmxModel():
         if len(bone_idx_list) == 0:
             logger.test("bone_name: %s, ウェイト頂点がない", bone_name_list)
             # ウェイトボーンがない場合、初期値
-            return MVector3D(), None, MVector3D(), None, MVector3D(), None, MVector3D(), None
+            return MVector3D(), None, MVector3D(), None, MVector3D(), None, MVector3D(), None, MVector3D(), None, MVector3D(), None
 
         logger.test("model: %s, bone_name: %s, bone_idx_list:%s", self.name, bone_name_list, bone_idx_list)
 

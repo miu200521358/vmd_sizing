@@ -11,7 +11,7 @@ from mmd.VpdReader import VpdReader
 from utils import MFormUtils, MFileutils
 from utils.MLogger import MLogger # noqa
 
-logger = MLogger(__name__)
+logger = MLogger(__name__, level=1)
 
 
 class BaseFilePickerCtrl():
@@ -214,8 +214,6 @@ class BaseFilePickerCtrl():
 
             file_name, input_ext = os.path.splitext(os.path.basename(file_path))
 
-            logger.test("input_ext: %s", input_ext)
-
             # 拡張子別にリーダー生成
             if input_ext.lower() == ".vmd":
                 reader = VmdReader(file_path)
@@ -278,8 +276,6 @@ class FileModelCtrl():
                 file_path = self.picker.file_ctrl.GetPath()
 
             file_name, input_ext = os.path.splitext(os.path.basename(file_path))
-
-            logger.test("input_ext: %s", input_ext)
 
             model_name = "未設定"
             if input_ext.lower() == ".vmd":

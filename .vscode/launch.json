@@ -146,7 +146,7 @@
             "pythonPath": "${config:python.pythonPath}",
             "stopOnEntry": false,
             "args": [
-                "--verbose", "10",
+                "--verbose", "1",
                 // "--out_log",
             ]
         },

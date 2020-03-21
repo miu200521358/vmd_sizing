@@ -42,3 +42,11 @@ def create_output_vmd_path(form):
 
     if len(output_vmd_path) >= 255 and os.name == "nt":
         logger.error("生成予定のファイルパスがWindowsの制限を超えています。\n生成予定パス: {0}".format(output_vmd_path), decoration=MLogger.DECORATION_BOX)
+
+
+def on_select_all(event, target_ctrl):
+    keyInput = event.GetKeyCode()
+    if keyInput == 1:  # 1 stands for 'ctrl+a'
+        target_ctrl.SelectAll()
+    event.Skip()
+        

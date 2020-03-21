@@ -85,7 +85,7 @@ class FilePanel(BasePanel):
         self.console_ctrl = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), \
                                         wx.TE_MULTILINE | wx.TE_READONLY | wx.BORDER_NONE | wx.HSCROLL | wx.VSCROLL | wx.WANTS_CHARS)
         self.console_ctrl.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DLIGHT))
-        self.console_ctrl.Bind(wx.EVT_CHAR, lambda event: self.form.on_select_all(event, self.console_ctrl))
+        self.console_ctrl.Bind(wx.EVT_CHAR, lambda event: MFormUtils.on_select_all(event, self.console_ctrl))
         self.sizer.Add(self.console_ctrl, 1, wx.ALL | wx.EXPAND, 5)
 
         # ゲージ
@@ -260,6 +260,8 @@ class FilePanel(BasePanel):
     
     # スレッド実行結果
     def on_exec_result(self, event):
+        logger.info("処理時間: %s分", event.elapsed_time / 60, decoration=MLogger.DECORATION_SIMPLE)
+
         # 終了音を鳴らす
         if os.name == "nt":
             # Windows

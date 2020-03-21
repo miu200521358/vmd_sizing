@@ -508,7 +508,7 @@ class MQuaternion():
             zz /= lengthSquared
             zw /= lengthSquared
 
-        pitch = math.asin(-2.0 * (yz - xw))
+        pitch = math.asin(max(-1, min(1, -2.0 * (yz - xw))))
         
         if pitch < (math.pi / 2):
             if pitch > -(math.pi / 2):

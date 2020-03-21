@@ -8,7 +8,7 @@ from form import MainFrame
 from utils import MFileutils, MLogger
 
 logger = MLogger(__name__)
-VERSION_NAME = "ver5.00_β25"
+VERSION_NAME = "ver5.00_β28"
 
 
 if __name__ == '__main__':
@@ -30,9 +30,9 @@ if __name__ == '__main__':
             except Exception:
                 logging_level = logging.INFO
 
-        MLogger.initialize(logging_level)
-
         is_out_log = True if "--out_log" in sys.argv else False
+        
+        MLogger.initialize(logging_level)
 
         # 引数指定がない場合、通常起動
         app = wx.App(False)

@@ -24,7 +24,7 @@ exe = EXE(pyz,
           a.zipfiles,
           a.datas,
           [],
-          name='VmdSizing_5.00_β26_64bit',
+          name='VmdSizing_5.00_β28_64bit',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
@@ -32,3 +32,4 @@ exe = EXE(pyz,
           runtime_tmpdir=None,
           console=False,
           icon='.\\src\\vmdsizing.ico')
+

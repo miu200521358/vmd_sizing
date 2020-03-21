@@ -12,7 +12,7 @@ class MLogger():
 
     def __init__(self, module_name, level=logging.INFO):
         self.module_name = module_name
-        self.level = level
+        self.default_level = level
         self.logger = logging.getLogger("VmdSizing").getChild(module_name)
     
     def test(self, msg, *args, **kwargs):
@@ -59,17 +59,17 @@ class MLogger():
 
     # 実際に出力する実態
     def print_logger(self, msg, *args, **kwargs):
-        target_level = kwargs.pop("level", 0)
-        if self.level <= target_level and (target_level == 1 or self.logger.isEnabledFor(target_level)):
-            log_msg = logging.LogRecord('name', target_level, "(unknown file)", 0, msg, args, exc_info=None, func=None).getMessage()
+        target_level = kwargs.pop("level", logging.INFO)
+        if self.logger.isEnabledFor(target_level) and self.default_level <= target_level:
+            if args and isinstance(args[0], Exception):
+                log_msg = logging.LogRecord('name', target_level, "(unknown file)", 0, "{0}\n\n{1}".format(msg, traceback.format_exc()), None, exc_info=None, func=None).getMessage()
+            else:
+                log_msg = logging.LogRecord('name', target_level, "(unknown file)", 0, msg, args, exc_info=None, func=None).getMessage()
 
             extra_args = {}
             extra_args["module_name"] = self.module_name
 
-            if args and isinstance(args, Exception):
-                self.logger._log(target_level, "{0}\n\n{1}".format(log_msg, traceback.format_exc()), None, extra=extra_args)
-            else:
-                self.logger._log(target_level, log_msg, None, extra=extra_args)
+            self.logger._log(target_level, log_msg, None, extra=extra_args)
     
             target_decoration = kwargs.pop("decoration", None)
             title = kwargs.pop("title", None)
@@ -77,12 +77,12 @@ class MLogger():
             if target_decoration:
                 if target_decoration == MLogger.DECORATION_BOX:
                     print(self.create_box_message(log_msg, target_level, title))
-
-                if target_decoration == MLogger.DECORATION_LINE:
+                elif target_decoration == MLogger.DECORATION_LINE:
                     print(self.create_line_message(log_msg, target_level, title))
-
-                if target_decoration == MLogger.DECORATION_SIMPLE:
+                else:
                     print(self.create_simple_message(log_msg, target_level, title))
+            else:
+                print(self.create_simple_message(log_msg, target_level, title))
 
     def create_box_message(self, msg, level, title=None):
         msg_block = []

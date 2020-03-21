@@ -43,9 +43,9 @@ class StanceService():
                             else:
                                 bf.rotation = arm_diff_qq_dic[bone_name]["from"].inverted() * bf.rotation * arm_diff_qq_dic[bone_name]["to"]
                     
-                    logger.info("%sスタンス補正終了", bone_name, decoration=MLogger.DECORATION_SIMPLE)
-                    logger.test("from: %s", arm_diff_qq_dic[bone_name]["from"].toEulerAngles(), decoration=MLogger.DECORATION_SIMPLE)
-                    logger.test("to: %s", arm_diff_qq_dic[bone_name]["to"].toEulerAngles(), decoration=MLogger.DECORATION_SIMPLE)
+                    logger.info("スタンス補正: %s", bone_name, decoration=MLogger.DECORATION_SIMPLE)
+                    logger.test("from: %s", arm_diff_qq_dic[bone_name]["from"].toEulerAngles())
+                    logger.test("to: %s", arm_diff_qq_dic[bone_name]["to"].toEulerAngles())
 
     def calc_arm_stance(self):
         arm_diff_qq_dic = {}
