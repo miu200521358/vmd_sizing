@@ -2,7 +2,12 @@
 #
 
 
-class MParseException(Exception):
+class SizingException(Exception):
+    def __init__(self, message):
+        self.message = message
+
+
+class MParseException(SizingException):
     def __init__(self, message):
         self.message = message
 

@@ -16,23 +16,23 @@ class VmdMotion():
         self.model_name = ''
         self.last_motion_frame = 0
         self.motion_cnt = 0
-        # ボーン名：VmdBoneFrameの配列
+        # ボーン名：VmdBoneFrameの辞書(key:ボーン名)
         self.frames = {}
         self.morph_cnt = 0
-        # モーフ名：VmdMorphFrameの配列
+        # モーフ名：VmdMorphFrameの辞書(key:モーフ名)
         self.morphs = {}
         self.camera_cnt = 0
         # カメラ：VmdCameraFrameの配列
-        self.cameras = {}
+        self.cameras = []
         self.light_cnt = 0
         # 照明：VmdLightFrameの配列
-        self.lights = {}
+        self.lights = []
         self.shadow_cnt = 0
         # セルフ影：VmdShadowFrameの配列
-        self.shadows = {}
+        self.shadows = []
         self.ik_cnt = 0
         # モデル表示・IK on/off：VmdShowIkFrameの配列
-        self.showiks = {}
+        self.showiks = []
         # ハッシュ値
         self.digest = None
 
@@ -40,13 +40,37 @@ class VmdMotion():
         if not self.frames or self.motion_cnt == 0 or bone_name not in self.frames:
             return []
         
-        return [fno for fno in self.frames[bone_name].keys()]
+        return sorted([fno for fno in self.frames[bone_name].keys()])
 
     def get_morph_frame_nos(self, morph_name):
         if not self.morphs or self.morph_cnt == 0 or morph_name not in self.morphs:
             return []
         
-        return [fno for fno in self.morphs[morph_name].keys()]
+        return sorted([fno for fno in self.morphs[morph_name].keys()])
+    
+    def get_bone_frames(self):
+        total_bone_frames = []
+
+        for bone_name, bone_frames in self.frames.items():
+            # キーフレを逆順で取得
+            fnos = reversed(self.get_bone_frame_nos(bone_name))
+
+            for fno in fnos:
+                total_bone_frames.append(bone_frames[fno])
+        
+        return total_bone_frames
+
+    def get_morph_frames(self):
+        total_morph_frames = []
+
+        for morph_name, morph_frames in self.frames.items():
+            # キーフレを逆順で取得
+            fnos = reversed(self.get_morph_frame_nos(morph_name))
+
+            for fno in fnos:
+                total_morph_frames.append(morph_frames[fno])
+        
+        return total_morph_frames
 
     class VmdMorphFrame():
         def __init__(self, frame=0):
@@ -98,6 +122,7 @@ class VmdMotion():
             fout.write(struct.pack('<f', v.y()))
             fout.write(struct.pack('<f', v.z()))
             fout.write(struct.pack('<f', v.w()))
+            fout.write(bytearray([int(x) for x in self.interpolation]))
 
     class VmdCameraFrame():
         def __init__(self):
@@ -118,7 +143,7 @@ class VmdMotion():
             fout.write(struct.pack('<f', self.euler.x()))
             fout.write(struct.pack('<f', self.euler.y()))
             fout.write(struct.pack('<f', self.euler.z()))
-            fout.write(bytearray(self.interpolation))
+            fout.write(bytearray([int(x) for x in self.interpolation]))
             fout.write(struct.pack('<L', self.angle))
             fout.write(struct.pack('b', self.perspective))
 

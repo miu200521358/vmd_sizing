@@ -89,11 +89,11 @@ class VmdReader():
             frame.org_rotation = copy.deepcopy(frame.rotation)
 
             # 補間曲線
-            frame.complement = list(self.unpack(64, "64B", True))
-            logger.test("complement %s", frame.complement)
+            frame.interpolation = list(self.unpack(64, "64B", True))
+            logger.test("interpolation %s", frame.interpolation)
             # オリジナルの補間曲線を保持しておく
-            frame.org_complement = copy.deepcopy(frame.complement)
-            logger.test("org_complement %s", frame.org_complement)
+            frame.org_interpolation = copy.deepcopy(frame.interpolation)
+            logger.test("org_interpolation %s", frame.org_interpolation)
 
             if bone_name not in motion.frames:
                 # まだ辞書にない場合、配列追加
@@ -175,8 +175,8 @@ class VmdReader():
             logger.test("camera.euler %s", camera.euler)
 
             # 補間曲線
-            camera.complement = self.unpack(24, "24B", True)
-            logger.test("camera.complement %s", camera.complement)
+            camera.interpolation = self.unpack(24, "24B", True)
+            logger.test("camera.interpolation %s", camera.interpolation)
 
             # 視野角
             camera.angle = self.read_uint(4)

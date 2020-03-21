@@ -86,17 +86,18 @@ class MLogger():
                 target_logger(msg, *args, extra=extra_args)
     
             target_decoration = kwargs.pop("decoration", None)
+            title = kwargs.pop("title", None)
 
             if target_decoration:
                 log_msg = logging.LogRecord('name', target_level, "(unknown file)", 0, msg, args, exc_info=None, func=None).getMessage()
                 if target_decoration == MLogger.DECORATION_BOX:
-                    print(self.create_box_message(log_msg, target_level))
+                    print(self.create_box_message(log_msg, target_level, title))
 
                 if target_decoration == MLogger.DECORATION_LINE:
-                    print(self.create_line_message(log_msg, target_level))
+                    print(self.create_line_message(log_msg, target_level, title))
 
                 if target_decoration == MLogger.DECORATION_SIMPLE:
-                    print(log_msg)
+                    print(self.create_simple_message(log_msg, target_level, title))
 
     def create_box_message(self, msg, level, title=None):
         msg_block = []
@@ -125,8 +126,17 @@ class MLogger():
         msg_block = []
 
         for msg_line in msg.split("\n"):
-            msg_block.append("{0} --------------------".format(msg_line))
+            msg_block.append("■■ {0} --------------------".format(msg_line))
 
+        return "\n".join(msg_block)
+
+    def create_simple_message(self, msg, level, title=None):
+        msg_block = []
+        
+        for msg_line in msg.split("\n"):
+            # msg_block.append("[{0}] {1}".format(logging.getLevelName(level)[0], msg_line))
+            msg_block.append(msg_line)
+        
         return "\n".join(msg_block)
 
     @classmethod

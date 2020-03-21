@@ -4,6 +4,9 @@ from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 import math
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
+from utils import MLogger # noqa
+
+logger = MLogger(__name__)
 
 
 class PmxModel():
@@ -41,6 +44,112 @@ class PmxModel():
         self.can_upper_sizing = True
         # 腕がサイジング可能（標準・準標準ボーン構造）か
         self.can_arm_sizing = True
+    
+    # つま先の頂点を取得
+    def get_toe_vertex_position(self):
+        bone_name_list = []
+
+        # 足首より下で、指ではないボーン
+        for bk, bv in self.bones.items():
+            if bv.position.y() <= self.bones["左足首"].position.y() and "指" not in bk:
+                bone_name_list.append(bk)
+        
+        if len(bone_name_list) == 0:
+            # ウェイトボーンがない場合、つま先ボーン系の位置
+            if "左つま先" in self.bones:
+                return self.bones["左つま先"].position
+            elif "左つま先ＩＫ" in self.bones:
+                return self.bones["左つま先ＩＫ"].position
+            elif "左足首" in self.bones:
+                return self.bones["左足首"].position
+            else:
+                return MVector3D()
+
+        up_max_pos, up_max_vertex, down_max_pos, down_max_vertex, right_max_pos, right_max_vertex, left_max_pos, left_max_vertex, \
+            back_max_pos, back_max_vertex, front_max_pos, front_max_vertex = self.get_bone_end_vertex(bone_name_list, self.def_calc_vertex_pos_original, None)
+
+        if not front_max_vertex:
+            # つま先頂点が取れなかった場合
+            if "左つま先" in self.bones:
+                return self.bones["左つま先"].position
+            elif "左つま先ＩＫ" in self.bones:
+                return self.bones["左つま先ＩＫ"].position
+            elif "左足首" in self.bones:
+                return self.bones["左足首"].position
+            else:
+                return MVector3D()
+        
+        return front_max_pos
+
+    # 頂点位置を返す（オリジナルそのまま）
+    def def_calc_vertex_pos_original(self, v):
+        return v.position
+
+    # 指定ボーンにウェイトが乗っている頂点とそのINDEX
+    def get_bone_end_vertex(self, bone_name_list, def_calc_vertex_pos, def_is_target=None):
+        # 指定ボーンにウェイトが乗っているボーンINDEXリスト
+        bone_idx_list = []
+        for bk, bv in self.bones.items():
+            if bk in bone_name_list and bv.index in self.vertices:
+                bone_idx_list.append(bv.index)
+
+        if len(bone_idx_list) == 0:
+            logger.test("bone_name: %s, ウェイト頂点がない", bone_name_list)
+            # ウェイトボーンがない場合、初期値
+            return MVector3D(), None, MVector3D(), None, MVector3D(), None, MVector3D(), None
+
+        logger.test("model: %s, bone_name: %s, bone_idx_list:%s", self.name, bone_name_list, bone_idx_list)
+
+        up_max_pos = MVector3D(0, -99999, 0)
+        up_max_vertex = None
+        down_max_pos = MVector3D(0, 99999, 0)
+        down_max_vertex = None
+        right_max_pos = MVector3D(-99999, 0, 0)
+        right_max_vertex = None
+        left_max_pos = MVector3D(99999, 0, 0)
+        left_max_vertex = None
+        back_max_pos = MVector3D(0, 0, -99999)
+        back_max_vertex = None
+        front_max_pos = MVector3D(0, 0, 99999)
+        front_max_vertex = None
+
+        for bone_idx in bone_idx_list:
+            for v in self.vertices[bone_idx]:
+                v_pos = def_calc_vertex_pos(v)
+
+                if def_is_target and def_is_target(v) or not def_is_target:
+                    if v_pos.y() < down_max_pos.y():
+                        # 指定ボーンにウェイトが乗っていて、かつ最下の頂点より下の場合、保持
+                        down_max_pos = v_pos
+                        down_max_vertex = v
+
+                    if v_pos.y() > up_max_pos.y():
+                        # 指定ボーンにウェイトが乗っていて、かつ最上の頂点より上の場合、保持
+                        up_max_pos = v_pos
+                        up_max_vertex = v
+
+                    if v_pos.x() < right_max_pos.x():
+                        # 指定ボーンにウェイトが乗っていて、かつ最下の頂点より下の場合、保持
+                        right_max_pos = v_pos
+                        right_max_vertex = v
+
+                    if v_pos.x() > right_max_pos.x():
+                        # 指定ボーンにウェイトが乗っていて、かつ最上の頂点より上の場合、保持
+                        left_max_pos = v_pos
+                        left_max_vertex = v
+
+                    if v_pos.z() < right_max_pos.z():
+                        # 指定ボーンにウェイトが乗っていて、かつ最下の頂点より下の場合、保持
+                        back_max_pos = v_pos
+                        back_max_vertex = v
+
+                    if v_pos.z() > right_max_pos.z():
+                        # 指定ボーンにウェイトが乗っていて、かつ最上の頂点より上の場合、保持
+                        front_max_pos = v_pos
+                        front_max_vertex = v
+
+        return up_max_pos, up_max_vertex, down_max_pos, down_max_vertex, right_max_pos, right_max_vertex, left_max_pos, left_max_vertex, \
+            back_max_pos, back_max_vertex, front_max_pos, front_max_vertex
 
     # 頂点構造 ----------------------------
     class Vertex():

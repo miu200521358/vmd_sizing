@@ -3,7 +3,6 @@
 import math
 import numpy as np
 import quaternion
-from utils import MUtils
 
 
 class MRect():
@@ -66,7 +65,7 @@ class MVector3D():
     def project(self, modelView, projection, viewport):
         tmp = MVector4D(self.x(), self.y(), self.z(), 1)
         tmp = projection * modelView * tmp
-        if MUtils.is_almost_null(tmp.w()):
+        if is_almost_null(tmp.w()):
             tmp.setW(1)
 
         tmp /= tmp.w()
@@ -85,7 +84,7 @@ class MVector3D():
         tmp = tmp * 2 - MVector4D(1, 1, 1, 1)
 
         obj = inverse * tmp
-        if MUtils.is_almost_null(obj.w()):
+        if is_almost_null(obj.w()):
             obj.setW(1)
 
         obj /= obj.w()
@@ -96,7 +95,7 @@ class MVector3D():
         return MVector4D(self.__data[0], self.__data[1], self.__data[2], 0)
 
     def is_almost_null(self):
-        return (MUtils.is_almost_null(self.__data[0]) and MUtils.is_almost_null(self.__data[1]) and MUtils.is_almost_null(self.__data[2]))
+        return (is_almost_null(self.__data[0]) and is_almost_null(self.__data[1]) and is_almost_null(self.__data[2]))
                 
     @classmethod
     def crossProduct(cls, v1, v2):
@@ -269,7 +268,7 @@ class MVector4D():
         return MVector3D(self.__data[0], self.__data[1], self.__data[2])
 
     def is_almost_null(self):
-        return (MUtils.is_almost_null(self.__data[0]) and MUtils.is_almost_null(self.__data[1]) and MUtils.is_almost_null(self.__data[2]) and MUtils.is_almost_null(self.__data[3]))
+        return (is_almost_null(self.__data[0]) and is_almost_null(self.__data[1]) and is_almost_null(self.__data[2]) and is_almost_null(self.__data[3]))
                                 
     @classmethod
     def dotProduct(cls, v1, v2):
@@ -498,7 +497,7 @@ class MQuaternion():
         zw = zp * wp
         lengthSquared = xx + yy + zz + wp * wp
 
-        if not MUtils.is_almost_null(lengthSquared - 1.0) and not MUtils.is_almost_null(lengthSquared):
+        if not is_almost_null(lengthSquared - 1.0) and not is_almost_null(lengthSquared):
             xx /= lengthSquared
             xy /= lengthSquared  # same as (xp / length) * (yp / length)
             xz /= lengthSquared
@@ -540,7 +539,7 @@ class MQuaternion():
     def fromAxisAndAngle(cls, x, y, z, angle):
         length = math.sqrt(x * x + y * y + z * z)
 
-        if not MUtils.is_almost_null(length - 1.0) and not MUtils.is_almost_null(length):
+        if not is_almost_null(length - 1.0) and not is_almost_null(length):
             x /= length
             y /= length
             z /= length
@@ -557,7 +556,7 @@ class MQuaternion():
 
         zAxis = direction.normalized()
         xAxis = MVector3D.crossProduct(up, zAxis)
-        if (MUtils.is_almost_null(xAxis.lengthSquared())):
+        if (is_almost_null(xAxis.lengthSquared())):
             # collinear or invalid up vector derive shortest arc to new direction
             return MQuaternion.rotationTo(MVector3D(0.0, 0.0, 1.0), zAxis)
         
@@ -609,9 +608,9 @@ class MQuaternion():
         d = MVector3D.dotProduct(v0, v1) + 1.0
 
         # if dest vector is close to the inverse of source vector, ANY axis of rotation is valid
-        if MUtils.is_almost_null(d):
+        if is_almost_null(d):
             axis = MVector3D.crossProduct(MVector3D(1.0, 0.0, 0.0), v0)
-            if MUtils.is_almost_null(axis.lengthSquared()):
+            if is_almost_null(axis.lengthSquared()):
                 axis = MVector3D.crossProduct(MVector3D(0.0, 1.0, 0.0), v0)
             axis.normalize()
             # same as MQuaternion.fromAxisAndAngle(axis, 180.0)
@@ -1009,4 +1008,6 @@ class MMatrix4x4():
         return self
 
 
+def is_almost_null(v):
+    return abs(v) < 0.00001
         

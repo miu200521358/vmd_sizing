@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 
-from mmd.VmdModel import VmdMotion
+from mmd.VmdMotion import VmdMotion
 from mmd.VmdReader import VmdReader
 from mmd.VpdReader import VpdReader
 # from mmd.VmdWriter import VmdWriter
