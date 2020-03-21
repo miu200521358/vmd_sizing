@@ -25,7 +25,7 @@ class MoveService():
         xz_ratio, y_ratio = MServiceUtils.calc_leg_ik_ratio(self.options)
         
         # センターのZ軸オフセットを計算
-        self.cal_center_z_offset()
+        self.set_center_z_offset()
 
         for k in ["右足ＩＫ", "左足ＩＫ", "右つま先ＩＫ", "左つま先ＩＫ", "右足ＩＫ親", "左足ＩＫ親", "右足IK親", "左足IK親", "センター", "グルーブ", "全ての親"]:
             if k in self.options.motion_vmd_data.frames and k in self.options.rep_model_data.bones:
@@ -35,9 +35,8 @@ class MoveService():
                     bf.position.setY(bf.position.y() * y_ratio)
                     bf.position.setZ(bf.position.z() * xz_ratio)
 
-                    if self.options.rep_model_data.bones[k].local_offset != MVector3D():
-                        # ローカルZオフセットが入っている場合、オフセット調整
-                        bf.position += self.options.rep_model_data.bones[k].local_offset
+                    # オフセット調整
+                    bf.position += self.options.rep_model_data.bones[k].local_offset
 
                 if len(self.options.motion_vmd_data.frames[k].keys()) > 0:
                     logger.info("移動補正: %s", k, decoration=MLogger.DECORATION_SIMPLE)
@@ -45,7 +44,7 @@ class MoveService():
         return True
 
     # センターZオフセット計算
-    def cal_center_z_offset(self):
+    def set_center_z_offset(self):
         target_bones = ["左つま先ＩＫ", "左足", "左足首", "センター"]
 
         if set(target_bones).issubset(self.options.org_model_data.bones) and set(target_bones).issubset(self.options.rep_model_data.bones):

@@ -77,4 +77,9 @@ class MainFrame(wx.Frame):
             event.Skip()
             return
 
-
+    def on_select_all(self, event, target_ctrl):
+        keyInput = event.GetKeyCode()
+        if keyInput == 1:  # 1 stands for 'ctrl+a'
+            target_ctrl.SelectAll()
+        event.Skip()
+        

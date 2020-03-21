@@ -85,6 +85,7 @@ class FilePanel(BasePanel):
         self.console_ctrl = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), \
                                         wx.TE_MULTILINE | wx.TE_READONLY | wx.BORDER_NONE | wx.HSCROLL | wx.VSCROLL | wx.WANTS_CHARS)
         self.console_ctrl.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DLIGHT))
+        self.console_ctrl.Bind(wx.EVT_CHAR, lambda event: self.form.on_select_all(event, self.console_ctrl))
         self.sizer.Add(self.console_ctrl, 1, wx.ALL | wx.EXPAND, 5)
 
         # ゲージ
