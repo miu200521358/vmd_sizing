@@ -2,6 +2,7 @@
 #
 
 import os
+import re
 import wx
 import wx.lib.newevent
 import winsound
@@ -156,6 +157,8 @@ class FilePanel(BasePanel):
         self.gauge_ctrl.SetValue(0)
 
         if not event.result:
+            logger.error("ファイル読み込み処理に失敗したため、処理を中断します。", decoration=MLogger.DECORATION_BOX)
+            
             event.Skip()
             return False
 
@@ -263,7 +266,17 @@ class FilePanel(BasePanel):
                 winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
             except Exception:
                 pass
-        
+
+        if not event.result or self.form.is_out_log:
+            # 何か失敗している場合かログ明示出力の場合、ログファイル出力
+
+            # ログパス生成
+            output_vmd_path = self.output_vmd_file_ctrl.file_ctrl.GetPath()
+            output_log_path = re.sub(r'\.vmd$', '.log', output_vmd_path)
+
+            with open(output_log_path, mode='w') as f:
+                f.write(self.console_ctrl.GetValue())
+
         # ワーカー終了
         self.worker = None
         # タブ移動可

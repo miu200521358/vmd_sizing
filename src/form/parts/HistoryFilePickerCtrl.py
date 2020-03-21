@@ -29,7 +29,7 @@ class HistoryFilePickerCtrl(BaseFilePickerCtrl):
         self.histroy_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_show_history)
     
     def save(self):
-        if len(self.file_ctrl.GetPath()) > 0 and self.file_hitories and len(self.file_hitories) > 0:
+        if len(self.file_ctrl.GetPath()) > 0 and self.file_hitories and len(self.file_hitories) > 0 and self.file_ctrl.GetPath in self.file_hitories:
             # 既に登録されている場合、一旦削除
             self.file_hitories.remove(self.file_ctrl.GetPath())
         

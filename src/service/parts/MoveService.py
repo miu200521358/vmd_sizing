@@ -7,7 +7,7 @@ import module.MOptions as MOptions
 from utils import MUtils, MServiceUtils # noqa
 import utils.MLogger as MLogger # noqa
 
-logger = MLogger(__name__)
+logger = MLogger(__name__, level=1)
 
 
 class MoveService():
@@ -35,9 +35,12 @@ class MoveService():
                     bf.position.setY(bf.position.y() * y_ratio)
                     bf.position.setZ(bf.position.z() * xz_ratio)
 
-                if self.options.rep_model_data.bones[k].local_offset != MVector3D():
-                    # ローカルZオフセットが入っている場合、オフセット調整
-                    bf.position += self.options.rep_model_data.bones[k].local_offset
+                    if self.options.rep_model_data.bones[k].local_offset != MVector3D():
+                        # ローカルZオフセットが入っている場合、オフセット調整
+                        bf.position += self.options.rep_model_data.bones[k].local_offset
+
+                if len(self.options.motion_vmd_data.frames[k].keys()) > 0:
+                    logger.info("移動補正: %s", k, decoration=MLogger.DECORATION_SIMPLE)
 
         return True
 
@@ -86,9 +89,15 @@ class MoveService():
             rep_center_gravity = (rep_ankle_z - rep_leg_z) / (rep_ankle_z - rep_toe_z)
             logger.test("rep_center_gravity %s, rep_leg_zlength: %s", rep_center_gravity, rep_leg_zlength)
 
-            self.options.rep_model_data.bones["センター"].local_offset = MVector3D(0, 0, (rep_center_gravity - org_center_gravity) * (rep_leg_zlength / org_leg_zlength))
+            local_offset = MVector3D(0, 0, (rep_center_gravity - org_center_gravity) * (rep_leg_zlength / org_leg_zlength))
+            self.options.rep_model_data.bones["センター"].local_offset = local_offset
             logger.test("local_offset %s", self.options.rep_model_data.bones["センター"].local_offset)
 
+            logger.info("Zオフセット: %s: %s", "センター", local_offset.z(), decoration=MLogger.DECORATION_SIMPLE)
+
+            return
+
+        logger.info("Zオフセットなし", decoration=MLogger.DECORATION_SIMPLE)
 
 
 

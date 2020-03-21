@@ -10,9 +10,10 @@ from utils import MFileutils
 
 class MainFrame(wx.Frame):
 
-    def __init__(self, parent, version_name, logging_level, mydir_path):
+    def __init__(self, parent, mydir_path, version_name, logging_level, is_out_log):
         self.version_name = version_name
         self.logging_level = logging_level
+        self.is_out_log = is_out_log
         self.mydir_path = mydir_path
 
         wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"VMDサイジング ローカル版 {0}".format(self.version_name), \

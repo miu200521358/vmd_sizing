@@ -138,18 +138,34 @@ class PmxModel():
                         left_max_pos = v_pos
                         left_max_vertex = v
 
-                    if v_pos.z() < right_max_pos.z():
+                    if v_pos.z() < back_max_pos.z():
                         # 指定ボーンにウェイトが乗っていて、かつ最下の頂点より下の場合、保持
                         back_max_pos = v_pos
                         back_max_vertex = v
 
-                    if v_pos.z() > right_max_pos.z():
+                    if v_pos.z() > front_max_pos.z():
                         # 指定ボーンにウェイトが乗っていて、かつ最上の頂点より上の場合、保持
                         front_max_pos = v_pos
                         front_max_vertex = v
 
         return up_max_pos, up_max_vertex, down_max_pos, down_max_vertex, right_max_pos, right_max_vertex, left_max_pos, left_max_vertex, \
             back_max_pos, back_max_vertex, front_max_pos, front_max_vertex
+
+    @classmethod
+    def get_effective_value(cls, v):
+        if math.isnan(v):
+            return 0
+        
+        if math.isinf(v):
+            return 0
+        
+        return v
+
+    @classmethod
+    def set_effective_value_vec3(cls, vec3):
+        vec3.setX(cls.get_effective_value(vec3.x()))
+        vec3.setY(cls.get_effective_value(vec3.y()))
+        vec3.setZ(cls.get_effective_value(vec3.z()))
 
     # 頂点構造 ----------------------------
     class Vertex():
@@ -779,19 +795,3 @@ class PmxModel():
                        self.name, self.english_name, self.joint_type, self.rigidbody_index_a, self.rigidbody_index_b,
                        self.position, self.rotation, self.translation_limit_min, self.translation_limit_max,
                        self.spring_constant_translation, self.spring_constant_rotation)
-
-    @classmethod
-    def get_effective_value(cls, v):
-        if math.isnan(v):
-            return 0
-        
-        if math.isinf(v):
-            return 0
-        
-        return v
-
-    @classmethod
-    def set_effective_value_vec3(cls, vec3):
-        vec3.setX(cls.get_effective_value(vec3.x()))
-        vec3.setY(cls.get_effective_value(vec3.y()))
-        vec3.setZ(cls.get_effective_value(vec3.z()))

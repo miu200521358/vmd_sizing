@@ -10,6 +10,7 @@ from mmd.VmdWriter import VmdWriter
 from module.MOptions import MOptions
 from utils.MLogger import MLogger # noqa
 from service.parts.MoveService import MoveService
+from service.parts.StanceService import StanceService
 from utils.MException import SizingException
 
 logger = MLogger(__name__)
@@ -37,8 +38,11 @@ class SizingService():
             # 処理に成功しているか
             result = True
 
-            # 移動系ボーン縮尺処理
+            # 移動補正
             result = MoveService(self.options).execute(org_motion_frames) and result
+
+            # スタンス補正
+            result = StanceService(self.options).execute(org_motion_frames) and result
 
             # 出力
             VmdWriter(self.options).write()

@@ -32,10 +32,12 @@ if __name__ == '__main__':
 
         MLogger.initialize(logging_level)
 
+        is_out_log = True if "--out_log" in sys.argv else False
+
         # 引数指定がない場合、通常起動
         app = wx.App(False)
         icon = wx.Icon(MFileutils.resource_path('src/vmdsizing.ico'), wx.BITMAP_TYPE_ICO)
-        frame = MainFrame(None, VERSION_NAME, logging_level, mydir_path)
+        frame = MainFrame(None, mydir_path, VERSION_NAME, logging_level, is_out_log)
         frame.SetIcon(icon)
         frame.Show(True)
         app.MainLoop()
