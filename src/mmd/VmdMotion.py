@@ -63,7 +63,7 @@ class VmdMotion():
     def get_morph_frames(self):
         total_morph_frames = []
 
-        for morph_name, morph_frames in self.frames.items():
+        for morph_name, morph_frames in self.morphs.items():
             # キーフレを逆順で取得
             fnos = reversed(self.get_morph_frame_nos(morph_name))
 

@@ -64,8 +64,10 @@ def calc_leg_ik_ratio(options: MOptions):
 
     if set(target_bones).issubset(options.org_model_data.bones) and set(target_bones).issubset(options.rep_model_data.bones):
         # XZ比率(足の長さ)
-        org_leg_length = ((options.org_model_data.bones["左足首"].position - options.org_model_data.bones["左ひざ"].position) + (options.org_model_data.bones["左ひざ"].position - options.org_model_data.bones["左足"].position)).length()
-        rep_leg_length = ((options.rep_model_data.bones["左足首"].position - options.rep_model_data.bones["左ひざ"].position) + (options.rep_model_data.bones["左ひざ"].position - options.rep_model_data.bones["左足"].position)).length()
+        org_leg_length = ((options.org_model_data.bones["左足首"].position - options.org_model_data.bones["左ひざ"].position) \
+                          + (options.org_model_data.bones["左ひざ"].position - options.org_model_data.bones["左足"].position)).length()
+        rep_leg_length = ((options.rep_model_data.bones["左足首"].position - options.rep_model_data.bones["左ひざ"].position) \
+                          + (options.rep_model_data.bones["左ひざ"].position - options.rep_model_data.bones["左足"].position)).length()
         logger.test("xz_ratio rep_leg_length: %s, org_leg_length: %s", rep_leg_length, org_leg_length)
         xz_ratio = 1 if org_leg_length == 0 else (rep_leg_length / org_leg_length)
 
