@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 #
 
+from mmd.VmdData import VmdMotion
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
-import module.MOptions as MOptions
-
+from module.MOptions import MOptions
 from utils import MUtils, MServiceUtils # noqa
-import utils.MLogger as MLogger # noqa
+from utils.MLogger import MLogger # noqa
 
 logger = MLogger(__name__, level=1)
 
@@ -14,7 +14,7 @@ class MoveService():
     def __init__(self, options: MOptions):
         self.options = options
 
-    def execute(self, org_motion_frames):
+    def execute(self, org_motion: VmdMotion):
         if self.options.motion_vmd_data.motion_cnt <= 0:
             # モーションデータが無い場合、処理スキップ
             return True
@@ -58,8 +58,7 @@ class MoveService():
             org_leg_z = self.options.org_model_data.bones["左足"].position.z()
             logger.test("org_leg_z: %s", org_leg_z)
             # 作成元つま先のZ位置
-            org_toe_z = self.options.org_model_data.get_toe_vertex_position().z()
-            # org_toe_z = self.options.org_model_data.bones["左つま先ＩＫ"].position.z()
+            org_toe_z = self.options.org_model_data.left_toe_vertex.position.z()
             logger.test("org_toe_z: %s", org_toe_z)
 
             # 変換先センターのZ位置
@@ -72,8 +71,7 @@ class MoveService():
             rep_leg_z = self.options.rep_model_data.bones["左足"].position.z()
             logger.test("rep_leg_z: %s", rep_leg_z)
             # 変換先つま先のZ位置
-            rep_toe_z = self.options.rep_model_data.get_toe_vertex_position().z()
-            # rep_toe_z = self.options.rep_model_data.bones["左つま先ＩＫ"].position.z()
+            rep_toe_z = self.options.rep_model_data.left_toe_vertex.position.z()
             logger.test("rep_toe_z: %s", rep_toe_z)
 
             # 作成元の足の長さ

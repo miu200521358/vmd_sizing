@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 #
-import mmd.VmdMotion as VmdMotion
-import mmd.PmxModel as PmxModel
 
 
 class MOptions():
 
-    def __init__(self, version_name, logging_level, motion_vmd_data: VmdMotion, org_model_data: PmxModel, rep_model_data: PmxModel, output_vmd_path, substitute_model_flg, twist_flg):
+    def __init__(self, version_name, logging_level, motion_vmd_data, org_model_data, rep_model_data, output_vmd_path, substitute_model_flg, twist_flg):
         self.version_name = version_name
         self.logging_level = logging_level
         self.motion_vmd_data = motion_vmd_data

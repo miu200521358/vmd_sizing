@@ -3,8 +3,10 @@
 import struct
 import hashlib
 import logging
+import copy
 from collections import OrderedDict
-from mmd.PmxModel import PmxModel
+
+from mmd.PmxData import PmxModel, Vertex, Material, Bone, Morph, DisplaySlot, RigidBody, Joint
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from utils.MException import MParseException # noqa
 from utils.MLogger import MLogger # noqa
@@ -192,7 +194,7 @@ class PmxReader():
             vidx += 1
 
             # 頂点をウェイトボーンごとに分けて保持する
-            vertex = pmx.Vertex(vindex, position, normal, uv, extended_uvs, deform, edge_factor)
+            vertex = Vertex(vindex, position, normal, uv, extended_uvs, deform, edge_factor)
             for bone_idx in vertex.deform.get_idx_list():
                 if bone_idx not in pmx.vertices:
                     pmx.vertices[bone_idx] = []
@@ -217,7 +219,7 @@ class PmxReader():
 
         # 材質データリスト
         for _ in range(self.read_int(4)):
-            material = pmx.Material(
+            material = Material(
                 name=self.read_text(),
                 english_name=self.read_text(),
                 diffuse_color=self.read_RGB(),
@@ -256,7 +258,7 @@ class PmxReader():
 
         # ボーンデータリスト
         for _ in range(self.read_int(4)):
-            bone = pmx.Bone(
+            bone = Bone(
                 name=self.read_text(),
                 english_name=self.read_text(),
                 position=self.read_Vector3D(),
@@ -287,7 +289,7 @@ class PmxReader():
                 bone.external_key = self.read_int(4)
 
             if bone.getIkFlag():
-                bone.ik = pmx.Ik(
+                bone.ik = Bone.Ik(
                     target_index=self.read_bone_index_size(),
                     loop=self.read_int(4),
                     limit_radian=self.read_float()
@@ -296,7 +298,7 @@ class PmxReader():
                 # IKリンク取得
                 for _ in range(self.read_int(4)):
 
-                    link = pmx.IkLink(
+                    link = Bone.IkLink(
                         self.read_bone_index_size(),
                         self.read_int(1)
                     )
@@ -319,6 +321,49 @@ class PmxReader():
                 pmx.bones[bone.name] = bone
                 # インデックス逆引きも登録
                 pmx.bone_indexes[bone.index] = bone.name
+            
+            # サイジング用ボーン ---------
+            # 頭頂ボーン
+            head_top_vertex = pmx.get_head_top_vertex()
+            pmx.head_top_vertex = head_top_vertex
+            head_top_bone = pmx.Bone("頭頂", "head_top", copy.deepcopy(head_top_vertex.position), -1, 0, 0)
+            head_top_bone.index = len(pmx.bones.keys()) - 1
+            pmx.bones[head_top_bone.name] = head_top_bone
+            pmx.bone_indexes[head_top_bone.index] = head_top_bone.name
+
+            # 右つま先ボーン
+            right_toe_vertex = pmx.get_toe_vertex("右")
+            pmx.right_toe_vertex = right_toe_vertex
+            right_toe_bone = pmx.Bone("右つま先実体", "right toe entity", copy.deepcopy(right_toe_vertex.position), -1, 0, 0)
+            right_toe_bone.index = len(pmx.bones.keys()) - 1
+            pmx.bones[right_toe_bone.name] = right_toe_bone
+            pmx.bone_indexes[right_toe_bone.index] = right_toe_bone.name
+
+            # 左つま先ボーン
+            left_toe_vertex = pmx.get_toe_vertex("左")
+            pmx.left_toe_vertex = left_toe_vertex
+            left_toe_bone = pmx.Bone("左つま先実体", "left toe entity", copy.deepcopy(left_toe_vertex.position), -1, 0, 0)
+            left_toe_bone.index = len(pmx.bones.keys()) - 1
+            pmx.bones[left_toe_bone.name] = left_toe_bone
+            pmx.bone_indexes[left_toe_bone.index] = left_toe_bone.name
+
+            if "右足ＩＫ" in pmx.bones:
+                # 右足底辺ボーン
+                right_leg_bottom_vertex = MVector3D(pmx.bones["右足ＩＫ"].position.x(), 0, pmx.bones["右足ＩＫ"].position.z())
+                pmx.right_leg_bottom_vertex = right_leg_bottom_vertex
+                right_leg_bottom_bone = pmx.Bone("右足底辺", "right toe entity", right_leg_bottom_vertex, -1, 0, 0)
+                right_leg_bottom_bone.index = len(pmx.bones.keys()) - 1
+                pmx.bones[right_leg_bottom_bone.name] = right_leg_bottom_bone
+                pmx.bone_indexes[right_leg_bottom_bone.index] = right_leg_bottom_bone.name
+
+            # 左足底辺ボーン
+            if "左足ＩＫ" in pmx.bones:
+                left_leg_bottom_vertex = MVector3D(pmx.bones["左足ＩＫ"].position.x(), 0, pmx.bones["左足ＩＫ"].position.z())
+                pmx.left_leg_bottom_vertex = left_leg_bottom_vertex
+                left_leg_bottom_bone = pmx.Bone("左足底辺", "left toe entity", left_leg_bottom_vertex, -1, 0, 0)
+                left_leg_bottom_bone.index = len(pmx.bones.keys()) - 1
+                pmx.bones[left_leg_bottom_bone.name] = left_leg_bottom_bone
+                pmx.bone_indexes[left_leg_bottom_bone.index] = left_leg_bottom_bone.name
 
         # 指先ボーンがない場合、代替で挿入
         for direction in ["左", "右"]:
@@ -352,7 +397,7 @@ class PmxReader():
         morph_idx = 0
         # モーフデータリスト
         for _ in range(self.read_int(4)):
-            morph = PmxModel.Morph(
+            morph = Morph(
                 name=self.read_text(),
                 english_name=self.read_text(),
                 panel=self.read_int(1),
@@ -410,7 +455,7 @@ class PmxReader():
 
         # 表示枠データリスト
         for _ in range(self.read_int(4)):
-            display_slot = PmxModel.DisplaySlot(
+            display_slot = DisplaySlot(
                 name=self.read_text(),
                 english_name=self.read_text(),
                 special_flag=self.read_int(1)
@@ -444,7 +489,7 @@ class PmxReader():
 
         # 剛体データリスト
         for _ in range(self.read_int(4)):
-            rigidbody = PmxModel.RigidBody(
+            rigidbody = RigidBody(
                 name=self.read_text(),
                 english_name=self.read_text(),
                 bone_index=self.read_bone_index_size(),
@@ -473,7 +518,7 @@ class PmxReader():
 
         # ジョイントデータリスト
         for _ in range(self.read_int(4)):
-            joint = PmxModel.Joint(
+            joint = Joint(
                 name=self.read_text(),
                 english_name=self.read_text(),
                 joint_type=self.read_int(1),
@@ -572,31 +617,31 @@ class PmxReader():
                     logger.test("bone: %s, len_3d: %s", v.name, v.len_3d)
 
     def read_group_morph_data(self):
-        return PmxModel.Morph.GroupMorphData(
+        return Morph.GroupMorphData(
             self.read_morph_index_size(),
             self.read_float()
         )
 
     def read_vertex_position_morph_offset(self):
-        return PmxModel.Morph.VertexMorphOffset(
+        return Morph.VertexMorphOffset(
             self.read_vertex_index_size(), self.read_Vector3D())
 
     def read_bone_morph_data(self):
-        return PmxModel.Morph.BoneMorphData(
+        return Morph.BoneMorphData(
             self.read_bone_index_size(),
             self.read_Vector3D(),
             self.read_Quaternion()
         )
 
     def read_uv_morph_data(self):
-        return PmxModel.Morph.UVMorphData(
+        return Morph.UVMorphData(
             self.read_vertex_index_size(),
             self.read_Vector4D(),
         )
 
     def read_material_morph_data(self):
         # 材質モーフはRGB(A)に負数が入る場合があるので、Vector型で保持
-        return PmxModel.Morph.MaterialMorphData(
+        return Morph.MaterialMorphData(
             self.read_material_index_size(),
             self.read_int(1),
             self.read_Vector4D(),
@@ -637,17 +682,17 @@ class PmxReader():
 
         if deform_type == 0:
             # BDEF1
-            return PmxModel.Vertex.Bdef1(self.read_bone_index_size())
+            return Vertex.Bdef1(self.read_bone_index_size())
         elif deform_type == 1:
             # BDEF2
-            return PmxModel.Vertex.Bdef2(
+            return Vertex.Bdef2(
                 self.read_bone_index_size(),
                 self.read_bone_index_size(),
                 self.read_float()
             )
         elif deform_type == 2:
             # BDEF4
-            return PmxModel.Vertex.Bdef4(
+            return Vertex.Bdef4(
                 self.read_bone_index_size(),
                 self.read_bone_index_size(),
                 self.read_bone_index_size(),
@@ -659,7 +704,7 @@ class PmxReader():
             )
         elif deform_type == 3:
             # SDEF
-            return PmxModel.Vertex.Sdef(
+            return Vertex.Sdef(
                 self.read_bone_index_size(),
                 self.read_bone_index_size(),
                 self.read_float(),
@@ -669,7 +714,7 @@ class PmxReader():
             )
         elif deform_type == 4:
             # QDEF
-            return PmxModel.Vertex.Qdef(
+            return Vertex.Qdef(
                 self.read_bone_index_size(),
                 self.read_bone_index_size(),
                 self.read_float(),

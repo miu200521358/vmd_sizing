@@ -29,6 +29,160 @@ class MRect():
         return "MRect({0}, {1}, {2}, {3})".format(self.__x, self.__y, self.__width, self.__height)
 
 
+class MVector2D():
+
+    def __init__(self, x=0, y=0, z=0):
+        if isinstance(x, MVector2D):
+            # クラスの場合
+            self.__data = x.__data
+        elif isinstance(x, np.ndarray):
+            # arrayそのものの場合
+            self.__data = np.array([x[0], x[1]])
+        else:
+            self.__data = np.array([x, y], dtype=np.float64)
+
+    def length(self):
+        return float(np.linalg.norm(self.__data, ord=2))
+
+    def lengthSquared(self):
+        return float(np.linalg.norm(self.__data, ord=2)**2)
+
+    def normalized(self):
+        l2 = np.linalg.norm(self.__data, ord=2, axis=-1, keepdims=True)
+        l2[l2 == 0] = 1
+        normv = self.__data / l2
+        return MVector2D(normv[0], normv[1])
+
+    def normalize(self):
+        l2 = np.linalg.norm(self.__data, ord=2, axis=-1, keepdims=True)
+        l2[l2 == 0] = 1
+        normv = self.__data / l2
+        self.__data = normv
+    
+    def effective(self):
+        return MVector2D(get_almost_zero_value(self.__data[0]), get_almost_zero_value(self.__data[1]))
+            
+    def data(self):
+        return self.__data
+
+    def __str__(self):
+        return "MVector2D({0}, {1})".format(self.__data[0], self.__data[1])
+
+    def __lt__(self, other):
+        return np.all(self.__data < other.__data)
+
+    def __le__(self, other):
+        return np.all(self.__data <= other.__data)
+
+    def __eq__(self, other):
+        return np.all(self.__data == other.__data)
+
+    def __ne__(self, other):
+        return np.all(self.__data != other.__data)
+
+    def __gt__(self, other):
+        return np.all(self.__data > other.__data)
+
+    def __ge__(self, other):
+        return np.all(self.__data >= other.__data)
+
+    def __add__(self, other):
+        if isinstance(other, MVector2D):
+            v = self.__data + other.__data
+        else:
+            v = self.__data + other
+        return self.__class__(v)
+
+    def __sub__(self, other):
+        if isinstance(other, MVector2D):
+            v = self.__data - other.__data
+        else:
+            v = self.__data - other
+        return self.__class__(v)
+
+    def __mul__(self, other):
+        if isinstance(other, MVector2D):
+            v = self.__data * other.__data
+        else:
+            v = self.__data * other
+        return self.__class__(v)
+
+    def __truediv__(self, other):
+        if isinstance(other, MVector2D):
+            v = self.__data / other.__data
+        else:
+            v = self.__data / other
+        return self.__class__(v)
+
+    def __floordiv__(self, other):
+        if isinstance(other, MVector2D):
+            v = self.__data // other.__data
+        else:
+            v = self.__data // other
+        return self.__class__(v)
+
+    def __mod__(self, other):
+        if isinstance(other, MVector2D):
+            v = self.__data % other.__data
+        else:
+            v = self.__data % other
+        return self.__class__(v)
+
+    def __pow__(self, other):
+        if isinstance(other, MVector2D):
+            v = self.__data ** other.__data
+        else:
+            v = self.__data ** other
+        return self.__class__(v)
+
+    def __lshift__(self, other):
+        if isinstance(other, MVector2D):
+            v = self.__data << other.__data
+        else:
+            v = self.__data << other
+        return self.__class__(v)
+
+    def __rshift__(self, other):
+        if isinstance(other, MVector2D):
+            v = self.__data >> other.__data
+        else:
+            v = self.__data >> other
+        return self.__class__(v)
+
+    def __and__(self, other):
+        v = self.__data & other.__data
+        return self.__class__(v)
+
+    def __dataor__(self, other):
+        v = self.__data ^ other.__data
+        return self.__class__(v)
+
+    def __or__(self, other):
+        v = self.__data | other.__data
+        return self.__class__(v)
+
+    def __neg__(self):
+        return self.__class__(-self.__data[0], -self.__data[1])
+
+    def __pos__(self):
+        return self.__class__(+self.__data[0], +self.__data[1])
+
+    def __invert__(self):
+        return self.__class__(~self.__data[0], ~self.__data[1])
+    
+    def x(self):
+        return float(self.__data[0])
+
+    def y(self):
+        return float(self.__data[1])
+    
+    def setX(self, x):
+        self.__data[0] = x
+
+    def setY(self, y):
+        self.__data[1] = y
+
+
 class MVector3D():
 
     def __init__(self, x=0, y=0, z=0):
@@ -96,6 +250,9 @@ class MVector3D():
 
     def is_almost_null(self):
         return (is_almost_null(self.__data[0]) and is_almost_null(self.__data[1]) and is_almost_null(self.__data[2]))
+    
+    def effective(self):
+        return MVector3D(get_almost_zero_value(self.__data[0]), get_almost_zero_value(self.__data[1]), get_almost_zero_value(self.__data[2]))
                 
     @classmethod
     def crossProduct(cls, v1, v2):
@@ -756,9 +913,13 @@ class MQuaternion():
     def __mul__(self, other):
         if isinstance(other, MQuaternion):
             v = self.__data * other.__data
+            return self.__class__(v.w, v.x, v.y, v.z)
+        elif isinstance(other, MVector3D):
+            v = self.__data.toMatrix4x4() * other.__data
+            return v
         else:
             v = self.__data * other
-        return self.__class__(v.w, v.x, v.y, v.z)
+            return self.__class__(v.w, v.x, v.y, v.z)
 
     def __truediv__(self, other):
         if isinstance(other, MQuaternion):
@@ -900,6 +1061,14 @@ class MMatrix4x4():
         m.__data[3, 2] = -1
 
         self *= m
+    
+    def mapVector(self, vector):
+        vec_mat = np.array([vector.x(), vector.y(), vector.z()])
+        x = np.sum(vec_mat * self.__data[:3, 0], axis=1)
+        y = np.sum(vec_mat * self.__data[:3, 1], axis=1)
+        z = np.sum(vec_mat * self.__data[:3, 2], axis=1)
+
+        return MVector3D(x, y, z)
 
     def __str__(self):
         return "MMatrix4x4({0})".format(self.__data)
@@ -1010,4 +1179,23 @@ class MMatrix4x4():
 
 def is_almost_null(v):
     return abs(v) < 0.00001
+
+
+def get_effective_value(v):
+    if math.isnan(v):
+        return 0
+    
+    if math.isinf(v):
+        return 0
+    
+    return v
+
+
+def get_almost_zero_value(v):
+    if get_effective_value(v) == 0:
+        return 0
         
+    if is_almost_null(v):
+        return 0
+
+    return v

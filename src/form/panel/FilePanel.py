@@ -6,13 +6,14 @@ import re
 import wx
 import wx.lib.newevent
 import winsound
+
 from form.panel.BasePanel import BasePanel
 from form.parts.BaseFilePickerCtrl import BaseFilePickerCtrl
 from form.parts.HistoryFilePickerCtrl import HistoryFilePickerCtrl
 from form.worker.SizingWorkerThread import SizingWorkerThread
 from form.worker.LoadWorkerThread import LoadWorkerThread
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
-from utils import MFormUtils, MFileutils # noqa
+from utils import MFormUtils, MFileUtils # noqa
 from utils.MLogger import MLogger # noqa
 
 logger = MLogger(__name__)
@@ -239,7 +240,7 @@ class FilePanel(BasePanel):
             self.motion_vmd_file_ctrl.save()
             self.org_model_file_ctrl.save()
             self.rep_model_file_ctrl.save()
-            MFileutils.save_history(self.form.mydir_path, self.file_hitories)
+            MFileUtils.save_history(self.form.mydir_path, self.file_hitories)
 
             if self.worker:
                 logger.error("まだ処理が実行中です。終了してから再度実行してください。", decoration=MLogger.DECORATION_BOX)

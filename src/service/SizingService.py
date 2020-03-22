@@ -6,12 +6,13 @@ import os
 import traceback
 import _pickle as cPickle
 from pathlib import Path
+
 from mmd.VmdWriter import VmdWriter
 from module.MOptions import MOptions
-from utils.MLogger import MLogger # noqa
 from service.parts.MoveService import MoveService
 from service.parts.StanceService import StanceService
 from utils.MException import SizingException
+from utils.MLogger import MLogger # noqa
 
 logger = MLogger(__name__)
 
@@ -34,16 +35,16 @@ class SizingService():
                 + "捩り分散有無: {twist_flg}".format(twist_flg=self.options.twist_flg), decoration=MLogger.DECORATION_BOX) # noqa
 
             # 変換前のオリジナルモーションを保持
-            org_motion_frames = cPickle.loads(cPickle.dumps(self.options.motion_vmd_data.frames, -1))
+            org_motion = cPickle.loads(cPickle.dumps(self.options.motion_vmd_data, -1))
 
             # 処理に成功しているか
             result = True
 
             # 移動補正
-            result = MoveService(self.options).execute(org_motion_frames) and result
+            result = MoveService(self.options).execute(org_motion) and result
 
             # スタンス補正
-            result = StanceService(self.options).execute(org_motion_frames) and result
+            result = StanceService(self.options).execute(org_motion) and result
 
             # 出力
             VmdWriter(self.options).write()

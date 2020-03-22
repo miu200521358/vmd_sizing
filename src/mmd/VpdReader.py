@@ -2,10 +2,11 @@
 #
 import hashlib
 import re
-from mmd import VmdMotion
+
+from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
+from utils.MException import MParseException # noqa
 from utils.MLogger import MLogger # noqa
-from utils import MParseException # noqa
 
 logger = MLogger(__name__)
 
@@ -78,14 +79,9 @@ class VpdReader():
                 bone_name = result_values[0]
                 
                 # キーフレ生成
-                frame = VmdMotion.VmdBoneFrame()
+                frame = VmdBoneFrame(frame=0, name=bone_name)
                 frame.key = True
                 frame.read = True
-
-                # ボーン名のエンコード値
-                frame.name = bone_name.encode('cp932').decode('shift_jis').encode('shift_jis')
-                # ボーン名
-                frame.format_name = bone_name
 
                 continue
             

@@ -7,6 +7,7 @@ import glob
 import time
 import wx
 import _pickle as cPickle
+
 from form.worker.BaseWorkerThread import BaseWorkerThread
 from module.MOptions import MOptions
 from service.SizingService import SizingService

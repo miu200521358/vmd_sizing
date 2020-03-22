@@ -3,7 +3,7 @@
 import wx
 import copy
 from form.parts.BaseFilePickerCtrl import BaseFilePickerCtrl
-from utils import MFileutils
+from utils import MFileUtils
 from utils.MLogger import MLogger
 
 logger = MLogger(__name__)
@@ -45,7 +45,7 @@ class HistoryFilePickerCtrl(BaseFilePickerCtrl):
 
         if len(self.file_ctrl.GetPath()) == 0 and self.file_hitories and len(self.file_hitories) > 0:
             # パスが未指定である場合、直近のパスを設定してひらく
-            self.file_ctrl.SetInitialDirectory(MFileutils.get_dir_path(self.file_hitories[0]))
+            self.file_ctrl.SetInitialDirectory(MFileUtils.get_dir_path(self.file_hitories[0]))
 
         event.Skip()
     
@@ -66,7 +66,7 @@ class HistoryFilePickerCtrl(BaseFilePickerCtrl):
             # ファイルピッカーに選択したパスを設定
             self.file_ctrl.SetPath(choiceDialog.GetStringSelection())
             self.file_ctrl.UpdatePickerFromTextCtrl()
-            self.file_ctrl.SetInitialDirectory(MFileutils.get_dir_path(choiceDialog.GetStringSelection()))
+            self.file_ctrl.SetInitialDirectory(MFileUtils.get_dir_path(choiceDialog.GetStringSelection()))
 
             # ファイル変更処理
             self.on_change_file(wx.FileDirPickerEvent())

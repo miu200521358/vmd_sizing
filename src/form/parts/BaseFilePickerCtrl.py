@@ -8,7 +8,7 @@ import glob
 from mmd.PmxReader import PmxReader
 from mmd.VmdReader import VmdReader
 from mmd.VpdReader import VpdReader
-from utils import MFormUtils, MFileutils
+from utils import MFormUtils, MFileUtils
 from utils.MLogger import MLogger # noqa
 
 logger = MLogger(__name__, level=1)
@@ -171,7 +171,7 @@ class BaseFilePickerCtrl():
             dir_path = os.path.dirname(self.file_ctrl.GetPath())
         else:
             # 読み取りは解析する
-            dir_path = MFileutils.get_dir_path(self.file_ctrl.GetPath())
+            dir_path = MFileUtils.get_dir_path(self.file_ctrl.GetPath())
 
         if not os.path.exists(dir_path):
             logger.error("{0}が見つかりませんでした。\n入力パス: {1}".format(self.title, dir_path), decoration=MLogger.DECORATION_BOX)

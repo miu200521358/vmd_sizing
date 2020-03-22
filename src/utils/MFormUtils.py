@@ -4,7 +4,8 @@ import os
 import glob
 import re
 from datetime import datetime
-from utils import MFileutils
+
+from utils import MFileUtils
 from utils.MLogger import MLogger # noqa
 
 logger = MLogger(__name__)
@@ -24,7 +25,7 @@ def set_output_vmd_path(form):
         return
 
     # モーションVMDディレクトリパス
-    motion_vmd_dir_path = MFileutils.get_dir_path(file_path_list[0])
+    motion_vmd_dir_path = MFileUtils.get_dir_path(file_path_list[0])
     # モーションVMDファイル名・拡張子
     motion_vmd_file_name, motion_vmd_ext = os.path.splitext(os.path.basename(file_path_list[0]))
     # 変換先モデルファイル名・拡張子

@@ -4,6 +4,7 @@ import wx
 import wx.xrc
 from abc import ABCMeta, abstractmethod
 from threading import Thread, Event
+
 from utils import MFormUtils # noqa
 from utils.MLogger import MLogger # noqa
 

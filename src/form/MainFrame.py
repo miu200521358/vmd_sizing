@@ -3,9 +3,10 @@
 
 import wx
 import sys
+
 from form.panel.FilePanel import FilePanel
 from form.panel.MorphPanel import MorphPanel
-from utils import MFileutils
+from utils import MFileUtils
 
 
 class MainFrame(wx.Frame):
@@ -20,7 +21,7 @@ class MainFrame(wx.Frame):
                           pos=wx.DefaultPosition, size=wx.Size(600, 650), style=wx.DEFAULT_FRAME_STYLE | wx.TAB_TRAVERSAL)
 
         # ファイル履歴読み込み
-        self.file_hitories = MFileutils.read_history(self.mydir_path)
+        self.file_hitories = MFileUtils.read_history(self.mydir_path)
 
         # ---------------------------------------------
 

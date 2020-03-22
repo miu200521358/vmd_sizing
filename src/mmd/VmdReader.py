@@ -5,10 +5,11 @@ import hashlib
 import copy
 import re
 import logging
-from mmd import VmdMotion
+
+from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
+from utils.MException import MParseException # noqa
 from utils.MLogger import MLogger # noqa
-from utils import MParseException # noqa
 
 logger = MLogger(__name__, level=logging.ERROR)
 
@@ -59,7 +60,7 @@ class VmdReader():
 
         # 1F分のモーション情報
         for n in range(motion.motion_cnt):
-            frame = VmdMotion.VmdBoneFrame()
+            frame = VmdBoneFrame()
             frame.key = True
             frame.read = True
 
@@ -67,9 +68,9 @@ class VmdReader():
             # ボーン名
             bone_bname, bone_name = self.read_text(15)
 
-            frame.name = bone_bname
-            frame.format_name = bone_name
-            logger.test("name: %s, format_name %s", bone_bname, bone_name)
+            frame.name = bone_name
+            frame.bname = bone_bname
+            logger.test("name: %s, bname %s", bone_name, bone_bname)
 
             # フレームIDX
             frame.frame = self.read_uint(4)
@@ -116,15 +117,15 @@ class VmdReader():
 
         # 1F分のモーフ情報
         for n in range(motion.morph_cnt):
-            morph = VmdMotion.VmdMorphFrame()
+            morph = VmdMorphFrame()
 
             # モーフ ----------------------
             # モーフ名
             morph_bname, morph_name = self.read_text(15)
 
-            morph.name = morph_bname
-            morph.format_name = morph_name
-            logger.test("name: %s, format_name %s", morph_bname, morph_name)
+            morph.name = morph_name
+            morph.bname = morph_bname
+            logger.test("name: %s, bname %s", morph_name, morph_bname)
 
             # フレームIDX
             morph.frame = self.read_uint(4)
@@ -156,7 +157,7 @@ class VmdReader():
 
         # 1F分のカメラ情報
         for _ in range(motion.camera_cnt):
-            camera = VmdMotion.VmdCameraFrame()
+            camera = VmdCameraFrame()
 
             # フレームIDX
             camera.frame = self.read_uint(4)
@@ -199,7 +200,7 @@ class VmdReader():
 
         # 1F分の照明情報
         for _ in range(motion.light_cnt):
-            light = VmdMotion.VmdLightFrame()
+            light = VmdLightFrame()
 
             # フレームIDX
             light.frame = self.read_uint(4)
@@ -223,7 +224,7 @@ class VmdReader():
 
             # 1F分のシャドウ情報
             for _ in range(motion.shadow_cnt):
-                shadow = VmdMotion.VmdShadowFrame()
+                shadow = VmdShadowFrame()
 
                 # フレームIDX
                 shadow.frame = self.read_uint(4)
@@ -251,7 +252,7 @@ class VmdReader():
 
             # 1F分のIK情報
             for _ in range(motion.ik_cnt):
-                ik = VmdMotion.VmdShowIkFrame()
+                ik = VmdShowIkFrame()
 
                 # フレームIDX
                 ik.frame = self.read_uint(4)
@@ -266,7 +267,7 @@ class VmdReader():
                 logger.test("ik.ik_count %s", ik.ik_count)
 
                 for _ in range(ik.ik_count):
-                    ik_info = VmdMotion.VmdInfoIk()
+                    ik_info = VmdInfoIk()
 
                     # IK名
                     ik_bname, ik_name = self.read_text(20)

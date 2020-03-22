@@ -1,26 +1,166 @@
 # -*- coding: utf-8 -*-
 #
 
-import mmd.PmxModel as PmxModel # noqa
-import mmd.VmdMotion as VmdMotion # noqa
-from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
-import module.MOptions as MOptions
+import copy
+import math
+from collections import OrderedDict
+
+from mmd.PmxData import PmxModel, Vertex, Material, Bone, Morph, DisplaySlot, RigidBody, Joint # noqa
+from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
+from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
+from module.MOptions import MOptions
+from module.MParams import BoneLinks
+from utils import MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
 
 logger = MLogger(__name__)
 
 
+# グローバル位置算出
+def calc_global_pos_dic(model, links: BoneLinks, motion: VmdMotion, bf: VmdBoneFrame):
+    trans_vs = calc_relative_position(model, links, motion, bf)
+    add_qs = calc_relative_rotation(model, links, motion, bf)
+
+    # 行列
+    matrixs = [MMatrix4x4() for i in range(links.size())]
+
+    for n, l in enumerate(zip(trans_vs, add_qs)):
+        # 行列を生成
+        matrixs[n] = MMatrix4x4()
+        # 移動
+        matrixs[n].translate(trans_vs[n])
+        # 回転
+        matrixs[n].rotate(add_qs[n])
+
+    global_3ds = [MVector3D() for i in range(links.size())]
+    global_3ds_dic = OrderedDict()
+
+    for n, l in enumerate(links.reversed()):
+        for m in range(n):
+            # 最後のひとつ手前までループ
+            if m == 0:
+                # 0番目の位置を初期値とする
+                global_3ds[n] = copy.deepcopy(matrixs[0])
+            else:
+                # 自分より前の行列結果を掛け算する
+                global_3ds[n] *= copy.deepcopy(matrixs[m])
+        
+        # 自分は、位置だけ掛ける
+        global_3ds[n] *= trans_vs[n]
+
+        # ボーン名に該当するボーン位置として保持
+        global_3ds_dic[l.name] = global_3ds[n]
+
+    return global_3ds_dic
+
+
+# 各ボーンの相対位置情報
+def calc_relative_position(model, links: BoneLinks, motion: VmdMotion, bf: VmdBoneFrame):
+    trans_vs = []
+
+    for link_idx, link_bone in enumerate(links.reversed()):
+        # 存在するキー情報を取得
+        calc_bone = motion.calc_bone_by_interpolation(link_bone.name, bf.frame, is_only=True, is_exist=True, is_key=False, is_read=False)
+
+        # 位置
+        if link_idx == 0:
+            # 一番親は、グローバル座標を考慮
+            trans_vs.append(link_bone.position + calc_bone.position)
+        else:
+            # 位置：自身から親の位置を引いた相対位置
+            trans_vs.append(link_bone.position + calc_bone.position - links[links.size() - link_idx].position)
+
+    return trans_vs
+
+
+# 指定された方向に向いた場合の位置情報を返す
+def calc_global_position_by_direction(direction_qq: MQuaternion, target_pos_3ds_dic):
+    direction_pos_dic = OrderedDict()
+
+    for bone_name, target_pos in target_pos_3ds_dic.items():
+        mat = MMatrix4x4()
+        mat.rotate(direction_qq)
+
+        direction_pos_dic[bone_name] = mat.mapVector(target_pos)
+    
+    return direction_pos_dic
+
+
+# 各ボーンの相対回転情報
+def calc_relative_rotation(model: PmxModel, links: BoneLinks, motion: VmdMotion, bf: VmdBoneFrame):
+    add_qs = []
+
+    for link_idx, link_bone in enumerate(links.reversed()):
+        # 存在するキー情報を取得
+        calc_bone = motion.calc_bone_by_interpolation(link_bone.name, bf.frame, is_only=True, is_exist=True, is_key=False, is_read=False)
+        
+        # 回転量
+        rot = calc_bone.rotation
+
+        if link_bone.fixed_axis != MVector3D():
+            # 回転角度を求める
+            if rot == MQuaternion():
+                # 回転なしの場合、角度なし
+                degree = 0
+            else:
+                # 回転補正
+                if "右" in link_bone.name and rot.x() > 0 and link_bone.fixed_axis.x() <= 0:
+                    rot.setX(rot.x() * -1)
+                    rot.setScalar(rot.scalar() * -1)
+                elif "左" in link_bone.name and rot.x() < 0 and link_bone.fixed_axis.x() >= 0:
+                    rot.setX(rot.x() * -1)
+                    rot.setScalar(rot.scalar() * -1)
+                # 回転補正（コロン式ミクさん等軸反転パターン）
+                elif "右" in link_bone.name and rot.x() < 0 and link_bone.fixed_axis.x() > 0:
+                    rot.setX(rot.x() * -1)
+                    rot.setScalar(rot.scalar() * -1)
+                elif "左" in link_bone.name and rot.x() > 0 and link_bone.fixed_axis.x() < 0:
+                    rot.setX(rot.x() * -1)
+                    rot.setScalar(rot.scalar() * -1)
+                
+                rot.normalize()
+
+                degree = math.degrees(2 * math.acos(min(1, max(0, rot.scalar()))))
+            
+            # 軸固定の場合、回転を制限する
+            rot = MQuaternion.fromAxisAndAngle(link_bone.fixed_axis, degree)
+        
+        if link_bone.getExternalRotationFlag() and link_bone.effect_index in model.bone_indexes:
+            # 該当する付与親の回転を取得する
+            effect_bone = motion.calc_bone_by_interpolation(model.bone_indexes[link_bone.effect_index], bf.frame, is_only=True, is_exist=True, is_key=False, is_read=False)
+
+            # 自身の回転量に付与親の回転量を付与率を加味して付与する
+            rot = rot * effect_bone.rotation
+            rot.setX(rot.x() * link_bone.effect_factor)
+            rot.setY(rot.y() * link_bone.effect_factor)
+            rot.setZ(rot.z() * link_bone.effect_factor)
+
+        add_qs.append(rot)
+
+    return add_qs
+
+
+# 指定されたボーンまでの回転量
+def calc_direction_qq(model: PmxModel, links: BoneLinks, motion: VmdMotion, bf: VmdBoneFrame):
+    add_qs = calc_relative_rotation(model, links, motion, bf)
+
+    total_qq = MQuaternion()
+    for qq in add_qs:
+        total_qq *= qq
+
+
 # 上半身のスタンスの違い
-def calc_upper_stance_diff(model, from_bone_name, to_bone_name=None):
+def calc_upper_stance_diff(model: PmxModel, from_bone_name, to_bone_name=None):
     return calc_stance_diff(model, from_bone_name, to_bone_name, MVector3D(0, 1, 0))
 
 
 # 腕のスタンスの違い
-def calc_arm_stance_diff(model, from_bone_name, to_bone_name=None):
+def calc_arm_stance_diff(model: PmxModel, from_bone_name, to_bone_name=None):
     default_pos = MVector3D(1, 0, 0) if "左" in from_bone_name else MVector3D(-1, 0, 0)
     return calc_stance_diff(model, from_bone_name, to_bone_name, default_pos)
 
 
+# 指定ボーンのスタンスの違い
 def calc_stance_diff(model: PmxModel, from_bone_name, to_bone_name, default_pos):
     from_pos = MVector3D()
     to_pos = MVector3D()
@@ -59,6 +199,7 @@ def calc_stance_diff(model: PmxModel, from_bone_name, to_bone_name, default_pos)
     return diff_pos, from_qq
 
 
+# 足IKに基づく身体比率
 def calc_leg_ik_ratio(options: MOptions):
     target_bones = ["左足", "左ひざ", "左足首", "センター"]
 
@@ -84,4 +225,5 @@ def calc_leg_ik_ratio(options: MOptions):
     logger.warning("「左足」「左ひざ」「左足首」「センター」のいずれかのボーンが不足しているため、足の長さの比率が測れませんでした。", decoration=MLogger.DECORATION_BOX)
 
     return 1, 1
+
 

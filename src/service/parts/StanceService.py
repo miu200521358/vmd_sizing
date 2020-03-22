@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
 #
 
-from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
-import module.MOptions as MOptions
+import copy
 
-from utils import MUtils, MServiceUtils # noqa
-import utils.MLogger as MLogger # noqa
+from mmd.PmxData import PmxModel # noqa
+from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
+from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
+from module.MOptions import MOptions
+from module.MParams import BoneLinks
+from utils import MUtils, MServiceUtils, MBezierUtils # noqa
+from utils.MLogger import MLogger # noqa
 
 logger = MLogger(__name__, level=1)
 
@@ -14,16 +18,305 @@ class StanceService():
     def __init__(self, options: MOptions):
         self.options = options
 
-    def execute(self, org_motion_frames):
+    def execute(self, org_motion):
         if self.options.motion_vmd_data.motion_cnt <= 0:
             # モーションデータが無い場合、処理スキップ
             return True
+        
+        # 代替モデルでない場合、上半身スタンス補正
+        if not self.options.substitute_model_flg:
+            self.adjust_upper_stance(org_motion)
 
         # 腕スタンス補正
         self.adjust_arm_stance()
 
         return True
     
+    # 上半身スタンス補正
+    def adjust_upper_stance(self, org_motion):
+        logger.info("上半身スタンス補正", decoration=MLogger.DECORATION_LINE)
+        motion = self.options.motion_vmd_data
+
+        # 上半身調整に必要なボーン群
+        upper_target_bones = ["上半身", "頭", "首", "左腕", "右腕"]
+
+        # 上半身2調整に必要なボーン群
+        upper2_target_bones = ["上半身", "上半身2", "頭", "首", "左腕", "右腕"]
+
+        # モデルとモーション全部に上半身2がある場合、TRUE
+        is_upper2_existed = set(upper2_target_bones).issubset(self.options.org_model_data.bones) and set(upper2_target_bones).issubset(self.options.rep_model_data.bones) \
+            and "上半身2" in self.options.motion_vmd_data.frames and len(self.options.motion_vmd_data.frames["上半身2"]) > 1
+
+        if set(upper_target_bones).issubset(self.options.org_model_data.bones) and set(upper_target_bones).issubset(self.options.rep_model_data.bones) and "上半身" in motion.frames:
+            # TOボーン名
+            to_bone_name = "上半身2" if is_upper2_existed else "頭"
+
+            # 元モデルのリンク生成
+            org_head_links = self.options.org_model_data.create_link_2_top_one(to_bone_name)
+            org_upper_links = self.options.org_model_data.create_link_2_top_one("上半身")
+            org_neck_links = self.options.org_model_data.create_link_2_top_one("首")
+            org_arm_links = self.options.org_model_data.create_link_2_top_lr("腕")
+
+            # 変換先モデルのリンク生成
+            rep_head_links = self.options.rep_model_data.create_link_2_top_one(to_bone_name)
+            rep_upper_links = self.options.rep_model_data.create_link_2_top_one("上半身")
+            rep_neck_links = self.options.rep_model_data.create_link_2_top_one("首")
+            rep_arm_links = self.options.rep_model_data.create_link_2_top_lr("腕")
+
+            # 上半身からTO_BONEへの傾き
+            rep_upper_slope = (self.options.rep_model_data.bones[to_bone_name].position - self.options.rep_model_data.bones["上半身"].position).normalized()
+            rep_upper_slope_up = MVector3D(-1, 0, 0)
+            rep_upper_slope_cross = MVector3D.crossProduct(rep_upper_slope, rep_upper_slope_up).normalized()
+            
+            logger.test("上半身 slope: %s", rep_upper_slope)
+            logger.test("上半身 cross: %s", rep_upper_slope_cross)
+
+            rep_upper_initial_slope_qq = MQuaternion.fromDirection(rep_upper_slope, rep_upper_slope_cross)
+
+            # 準備（細分化）
+            self.prepare_split_stance("上半身")
+
+            logger.info("上半身スタンス準備終了", decoration=MLogger.DECORATION_SIMPLE)
+
+            for bf in self.options.motion_vmd_data.frames["上半身"]:
+                if bf.key:
+                    self.calc_rotation_stance(bf, org_motion, motion, org_upper_links, org_head_links, org_neck_links, org_arm_links, \
+                                              rep_upper_links, rep_head_links, rep_neck_links, rep_arm_links, \
+                                              "", "上半身", "上半身", to_bone_name, "上半身", rep_upper_initial_slope_qq, self.def_is_rotation_no_check_upper, self.def_calc_up_upper, 0.9)
+
+            # # 子の角度調整
+            # adjust_rotation_by_parent(org_motion, motion, self.options.org_model_data, self.options.rep_model_data, "首", "上半身", test_param)
+            # adjust_rotation_by_parent(org_motion, motion, self.options.org_model_data, self.options.rep_model_data, "左腕", "上半身", test_param)
+            # adjust_rotation_by_parent(org_motion, motion, self.options.org_model_data, self.options.rep_model_data, "右腕", "上半身", test_param)
+
+            # utils.output_file_logger(file_logger, "上半身スタンス補正終了")
+
+            # if set(upper2_target_bones).issubset(self.options.org_model_data.bones) and set(upper2_target_bones).issubset(self.options.rep_model_data.bones) and "上半身2" in motion.frames:
+            #     # 元モデルのリンク生成
+            #     org_head_links, org_head_indexes = self.options.org_model_data.create_link_2_top_one("頭")
+            #     org_upper2_links, org_upper2_indexes = self.options.org_model_data.create_link_2_top_one("上半身2")
+            #     org_arm_links, org_arm_indexes = self.options.org_model_data.create_link_2_top_lr("腕")
+            #     # 変換先モデルのリンク生成
+            #     rep_head_links, rep_head_indexes = self.options.rep_model_data.create_link_2_top_one("頭")
+            #     rep_upper2_links, rep_upper2_indexes = self.options.rep_model_data.create_link_2_top_one("上半身2")
+            #     rep_arm_links, rep_arm_indexes = self.options.rep_model_data.create_link_2_top_lr("腕")
+
+            #     # 上半身2から頭への傾き
+            #     rep_upper2_slope = (self.options.rep_model_data.bones["頭"].position - self.options.rep_model_data.bones["上半身2"].position).normalized()
+            #     rep_upper2_slope_up = MVector3D(-1, 0, 0)
+            #     rep_upper2_slope_cross = MVector3D.crossProduct(rep_upper2_slope, rep_upper2_slope_up).normalized()
+                
+            #     logger.debug("上半身2 slope: %s", rep_upper2_slope)
+            #     logger.debug("上半身2 cross: %s", rep_upper2_slope_cross)
+
+            #     rep_upper2_initial_slope_qq = QQuaternion.fromDirection(rep_upper2_slope, rep_upper2_slope_cross)
+
+            #     # 準備（細分化）
+            #     prepare_split_stance(motion, "上半身2", file_logger)
+
+            #     utils.output_file_logger(file_logger, "上半身2スタンス準備終了")
+
+            #     for bf in motion.frames["上半身2"]:
+            #         if bf.key == True:
+            #             calc_rotation_stance(org_motion, motion, self.options.org_model_data, org_upper2_links, org_upper2_indexes, org_head_links, org_head_indexes, org_arm_links, org_arm_indexes, \
+            #                 self.options.rep_model_data, rep_upper2_links, rep_upper2_indexes, rep_head_links, rep_head_indexes, rep_arm_links, rep_arm_indexes, "", "上半身2", "上半身2", "頭", "上半身2", \
+            #                 rep_upper2_initial_slope_qq, is_error_outputed, file_logger, output_vmd_path, bf, define_is_rotation_no_check_upper, \
+            #                 define_calc_up_from_upper2, define_calc_up_to_upper2, 0.9, MVector3D(), True)
+
+            #     # 子の角度調整
+            #     adjust_rotation_by_parent(org_motion, motion, self.options.org_model_data, self.options.rep_model_data, "首", "上半身2", test_param)
+            #     adjust_rotation_by_parent(org_motion, motion, self.options.org_model_data, self.options.rep_model_data, "左腕", "上半身2", test_param)
+            #     adjust_rotation_by_parent(org_motion, motion, self.options.org_model_data, self.options.rep_model_data, "右腕", "上半身2", test_param)
+
+            #     utils.output_file_logger(file_logger, "上半身2スタンス補正終了")
+    
+    # 定義: 回転チェック不要条件（上半身）
+    def def_is_rotation_no_check_upper(self, qq):
+        return False
+    
+    # 定義: 傾きを求める方向の位置計算（上半身）
+    def def_calc_up_upper(self, bf, rep_motion_frames, rep_neck_links, rep_arm_links):
+
+        # 左腕ボーンまでの位置
+        rep_left_arm_global_3ds = MServiceUtils.calc_global_pos_dic(self.options.rep_model_data, rep_arm_links["左"]["腕"], rep_motion_frames, bf)
+        rep_left_arm_pos = rep_left_arm_global_3ds["左腕"]
+
+        # 右腕ボーンまでの位置
+        rep_right_arm_global_3ds = MServiceUtils.calc_global_pos_dic(self.options.rep_model_data, rep_arm_links["右"]["腕"], rep_motion_frames, bf)
+        rep_right_arm_pos = rep_right_arm_global_3ds["右腕"]
+        
+        return rep_left_arm_pos - rep_right_arm_pos
+
+    # スタンス補正
+    def calc_rotation_stance(self, bf: VmdBoneFrame, org_motion: VmdMotion, motion: VmdMotion, \
+                             org_base_links: BoneLinks, org_to_links: BoneLinks, org_neck_links: BoneLinks, org_arm_links, \
+                             rep_base_links: BoneLinks, rep_to_links: BoneLinks, rep_neck_links: BoneLinks, rep_arm_links, \
+                             direction_name, base_bone_name, from_bone_name, to_bone_name, rot_bone_name, rep_initial_slope_qq: MQuaternion, \
+                             def_is_rotation_no_check, def_calc_up, dot_limit):
+
+        target_base_bone_name = "{0}{1}".format(direction_name, base_bone_name)
+        target_from_bone_name = "{0}{1}".format(direction_name, from_bone_name)
+        target_to_bone_name = "{0}{1}".format(direction_name, to_bone_name)
+
+        # 基準の親ボーン
+        base_parent_bone_name = [(lidx, lbone.name) for lidx, lbone in enumerate(org_to_links.links) if org_to_links.index(target_base_bone_name) < lidx]
+        # 基準より親の回転量
+        parent_qq = MServiceUtils.calc_direction_qq(self.options.rep_model_data, rep_base_links.from_links(base_parent_bone_name), motion.frames, bf)
+
+        # -------------
+
+        # 処理対象までのモーション情報(処理対象以上のモーション情報を含まない)
+        org_base_motion_frames = org_to_links.take_out_frames(org_motion, base_parent_bone_name, bf.frame)
+        rep_base_motion_frames = rep_to_links.take_out_frames(motion.frames, base_parent_bone_name, bf.frame)
+
+        # -------------
+
+        # TO位置の再計算
+        new_rep_to_pos, rep_to_pos, rep_base_pos = self.recalc_to_pos(bf, org_base_motion_frames, rep_base_motion_frames, org_to_links, org_arm_links, \
+                                                                      rep_to_links, rep_arm_links, target_base_bone_name, target_to_bone_name)
+
+        # UP方向の再計算
+        up_pos = self.def_calc_up(bf, motion.frames, rep_neck_links, rep_arm_links)
+
+        # ---------------
+        # FROMの回転量を再計算する
+        direction = rep_to_pos - rep_base_pos
+        up = MVector3D.crossProduct(direction.normalized(), up_pos.normalized())
+        from_orientation = MQuaternion.fromDirection(direction, up)
+        initial = rep_initial_slope_qq
+        from_rotation = parent_qq.inverted() * from_orientation * initial.inverted()
+        logger.test("f: %s, parent: %s", bf.frame, parent_qq.toEulerAngles())
+        logger.test("f: %s, initial: %s", bf.frame, initial.toEulerAngles())
+        logger.test("f: %s, orientation: %s", bf.frame, from_orientation.toEulerAngles())
+        logger.test("f: %s, bf: %s", bf.frame, from_rotation.toEulerAngles())
+
+        logger.debug("f: %s, rep_base_pos(%s): %s", bf.frame, base_bone_name, rep_base_pos, decoration=MLogger.DECORATION_SIMPLE)
+        logger.debug("f: %s, rep_to_pos(%s): %s: 元: %s", bf.frame, target_to_bone_name, new_rep_to_pos, rep_to_pos, decoration=MLogger.DECORATION_SIMPLE)
+        logger.debug("f: %s, rep_up_pos: %s", bf.frame, up_pos, decoration=MLogger.DECORATION_SIMPLE)
+
+        if def_is_rotation_no_check and def_is_rotation_no_check(rep_initial_slope_qq):
+            # チェックなし条件に合致する場合、チェックなしで適用
+            bf.rotation = from_rotation
+        else:
+            if bf.frame in motion.frames[target_from_bone_name]:
+                # 元にもあるキーである場合、内積チェック
+                uad = abs(MQuaternion.dotProduct(from_rotation, motion.frames[target_from_bone_name][bf.frame].rotation))
+                if uad < dot_limit:
+                    logger.warning("%sフレーム目%sスタンス補正失敗: 角度:%s, uad: %s", bf.frame, target_from_bone_name, from_rotation.toEulerAngles(), uad)
+                else:
+                    # 内積の差が小さい場合、回転適用
+                    bf.rotation = from_rotation
+            else:
+                # 元にもない場合（ないはず）、はそのまま設定
+                bf.rotation = from_rotation
+
+    # TO位置の再計算処理
+    def recalc_to_pos(self, bf, org_base_motion_frames, rep_base_motion_frames, org_to_motion_frames, rep_to_motion_frames, \
+                      org_to_links: BoneLinks, org_base_links: BoneLinks, org_arm_links: BoneLinks, \
+                      rep_to_links: BoneLinks, rep_base_links: BoneLinks, rep_arm_links: BoneLinks, base_bone_name, to_bone_name):
+
+        # 基準ボーンまでの位置
+        # org_base_global_3ds = MServiceUtils.calc_global_pos_dic(self.options.org_model_data, org_to_links.from_links(base_bone_name), org_base_motion_frames, bf)
+        rep_base_global_3ds = MServiceUtils.calc_global_pos_dic(self.options.rep_model_data, rep_to_links.from_links(base_bone_name), rep_base_motion_frames, bf)
+
+        # 基準ボーンまでの向いている回転量
+        # org_base_direction_qq = MServiceUtils.calc_direction_qq(self.options.org_model_data, org_to_links.from_links(base_bone_name), org_base_motion_frames, bf)
+        rep_base_direction_qq = MServiceUtils.calc_direction_qq(self.options.rep_model_data, rep_to_links.from_links(base_bone_name), rep_base_motion_frames, bf)
+
+        # # 基準ボーンの位置
+        # org_base_pos = org_base_global_3ds[base_bone_name]
+        rep_base_pos = rep_base_global_3ds[base_bone_name]
+
+        # 正面向きの基準ボーンまでの位置
+        # org_front_base_global_3ds = MServiceUtils.calc_global_position_by_direction(org_base_direction_qq.inverted(), org_base_global_3ds)
+        rep_front_base_global_3ds = MServiceUtils.calc_global_position_by_direction(rep_base_direction_qq.inverted(), rep_base_global_3ds)
+
+        # 正面向きの基準ボーンの位置
+        # org_front_base_pos = org_front_base_global_3ds[base_bone_name]
+        rep_front_base_pos = rep_front_base_global_3ds[base_bone_name]
+
+        # -------------
+
+        # TOボーンまでの位置（フレームはFROMまでで、TO自身は初期値として求める）
+        org_to_global_3ds = MServiceUtils.calc_global_pos_dic(self.options.org_model_data, org_to_links.from_links(to_bone_name), org_to_motion_frames, bf)
+        rep_to_global_3ds = MServiceUtils.calc_global_pos_dic(self.options.rep_model_data, rep_to_links.from_links(to_bone_name), rep_to_motion_frames, bf)
+
+        # TOボーンまでの向いている回転量
+        org_to_direction_qq = MServiceUtils.calc_direction_qq(self.options.org_model_data, org_to_links.from_links(to_bone_name), org_to_motion_frames, bf)
+        rep_to_direction_qq = MServiceUtils.calc_direction_qq(self.options.rep_model_data, rep_to_links.from_links(to_bone_name), rep_to_motion_frames, bf)
+
+        # 正面向きのTOボーンまでの位置
+        org_front_to_global_3ds = MServiceUtils.calc_global_position_by_direction(org_to_direction_qq.inverted(), org_to_global_3ds)
+        rep_front_to_global_3ds = MServiceUtils.calc_global_position_by_direction(rep_to_direction_qq.inverted(), rep_to_global_3ds)
+
+        # 体幹指定ボーンの位置
+        org_front_to_pos = org_front_to_global_3ds[to_bone_name]
+        rep_front_to_pos = rep_front_to_global_3ds[to_bone_name]
+
+        # -------------
+
+        # 肩幅比率
+        org_arm_diff = (org_arm_links["左"]["腕"].position - org_arm_links["右"]["腕"].position)
+        rep_arm_diff = (rep_arm_links["左"]["腕"].position - rep_arm_links["右"]["腕"].position)
+        arm_diff_length = rep_arm_diff.length() / org_arm_diff.length()
+
+        # TOの長さ比率
+        org_to_diff = (org_to_links[to_bone_name].position - org_base_links[base_bone_name].position)
+        org_to_diff.effective()
+        rep_to_diff = (rep_to_links[to_bone_name].position - rep_base_links[base_bone_name].position)
+        rep_to_diff.effective()
+        to_diff_length = rep_to_diff.length() / org_to_diff.length()
+        to_diff = rep_to_diff / org_to_diff
+        to_diff.effective()
+
+        # ---------------
+        
+        rep_front_to_x = rep_front_base_pos.x() + ((org_front_to_pos.x() - org_to_diff.x()) * arm_diff_length)
+        rep_front_to_y = rep_front_base_pos.y() + ((org_front_to_pos.y() - org_to_diff.y()) * to_diff_length)
+        rep_front_to_z = rep_front_base_pos.z() + ((org_front_to_pos.z() - org_to_diff.z()) * arm_diff_length)
+
+        new_rep_front_to_pos = MVector3D(rep_front_to_x, rep_front_to_y, rep_front_to_z)
+        logger.test("f: %s, new_rep_front_to_pos: %s", bf.frame, new_rep_front_to_pos)
+        logger.test("f: %s, rep_to_pos: %s", bf.frame, rep_front_to_pos)
+
+        # 正面向きの新しいTO位置
+        new_rep_front_to_global_3ds = copy.deepcopy(rep_front_to_global_3ds)
+        new_rep_front_to_global_3ds[to_bone_name] = new_rep_front_to_pos
+
+        # 回転を元に戻した位置
+        rotated_to_3ds = MServiceUtils.calc_global_position_by_direction(rep_to_direction_qq, new_rep_front_to_global_3ds)
+
+        return rotated_to_3ds[to_bone_name], rep_to_global_3ds[to_bone_name], rep_base_pos
+
+    # スタンス用細分化
+    def prepare_split_stance(self, target_bone_name):
+        motion = self.options.motion_vmd_data
+        fnos = motion.get_bone_frame_nos(target_bone_name)
+
+        for fidx, fno in enumerate(fnos):
+            if fidx == 0:
+                continue
+
+            prev_bf = motion.frames[target_bone_name][fnos[fidx - 1]]
+            bf = motion.frames[target_bone_name][fno]
+
+            rot_diff_euler = (prev_bf.rotation * bf.rotation.inverted()).toEulerAngles()
+            if abs(rot_diff_euler.x()) > 170 or abs(rot_diff_euler.y()) > 170 or abs(rot_diff_euler.z()) > 170:
+                # 回転量が半分近い場合、半分に分割しておく
+                half_fno = prev_bf.frame + round((bf.frame - prev_bf.frame) / 2)
+
+                if bf.frame < half_fno < prev_bf.frame:
+                    # キーが追加できる状態であれば、追加
+                    # 補間曲線込みでキーフレーム生成
+                    fillbf = motion.calc_bone_by_complement(target_bone_name, half_fno, is_only=False, is_exist=False)
+                    fillbf.key = True
+
+                    motion.frames[target_bone_name][half_fno] = fillbf
+        
+                    # モーション再設定
+                    MBezierUtils.reset_interpolation_by_rot(motion, target_bone_name, prev_bf, fillbf, bf)
+    
+    # 腕スタンス補正
     def adjust_arm_stance(self):
         logger.info("腕スタンス補正", decoration=MLogger.DECORATION_LINE)
         
