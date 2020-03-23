@@ -20,7 +20,7 @@ class FilePanel(BasePanel):
 
         # ファイルセット
         self.file_set = SizingFileSet(frame, self, self.file_hitories)
-        self.sizer.Add(self.file_set.set_sizer, 0, wx.ALL, 0)
+        self.sizer.Add(self.file_set.set_sizer, 1, wx.ALL, 0)
 
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -65,7 +65,7 @@ class FilePanel(BasePanel):
         self.exec_btn_ctrl.Enable()
 
     # 実行前チェック
-    def on_check(self, event):
+    def on_check(self, event: wx.Event):
         # フォーム無効化
         self.disable()
         # タブ固定
@@ -77,8 +77,10 @@ class FilePanel(BasePanel):
         # 一旦読み込み
         self.frame.load()
 
+        event.Skip()
+
     # サイジング実行
-    def on_exec(self, event):
+    def on_exec(self, event: wx.Event):
         # フォーム無効化
         self.disable()
         # タブ固定
@@ -89,4 +91,8 @@ class FilePanel(BasePanel):
 
         # サイジング可否チェックの後に実行
         self.frame.load(is_exec=True)
-    
+
+        event.Skip()
+
+    def set_output_vmd_path(self):
+        self.file_set.set_output_vmd_path()

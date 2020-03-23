@@ -8,6 +8,7 @@ import winsound
 
 from form.panel.FilePanel import FilePanel
 from form.panel.MorphPanel import MorphPanel
+from form.panel.MultiPanel import MultiPanel
 from form.worker.SizingWorkerThread import SizingWorkerThread
 from form.worker.LoadWorkerThread import LoadWorkerThread
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
@@ -59,6 +60,14 @@ class MainFrame(wx.Frame):
         self.morph_panel_ctrl = MorphPanel(self, self.note_ctrl, 1)
         self.note_ctrl.AddPage(self.morph_panel_ctrl, u"モーフ", False)
 
+        # # 腕タブ
+        # self.arm_panel_ctrl = ArmPanel(self, self.note_ctrl, 2)
+        # self.note_ctrl.AddPage(self.arm_panel_ctrl, u"腕", False)
+    
+        # 複数タブ
+        self.multi_panel_ctrl = MultiPanel(self, self.note_ctrl, 3, self.file_hitories)
+        self.note_ctrl.AddPage(self.multi_panel_ctrl, u"複数", False)
+
         # ---------------------------------------------
 
         # タブ押下時の処理
@@ -97,9 +106,6 @@ class MainFrame(wx.Frame):
             self.note_ctrl.ChangeSelection(self.morph_panel_ctrl.tab_idx)
             event.Skip()
             return
-    
-    def set_output_vmd_path(self):
-        self.file_panel_ctrl.file_set.set_output_vmd_path()
 
     # スレッド実行結果
     def on_exec_result(self, event: wx.Event):

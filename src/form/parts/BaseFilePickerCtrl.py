@@ -24,7 +24,7 @@ class BaseFilePickerCtrl():
     }
 
     def __init__(self, frame, parent, title, message, file_type, style, tooltip, file_model_spacer=0, \
-                 title_parts_ctrl=None, file_parts_ctrl=None, is_change_output=False, is_aster=False, is_save=False):
+                 title_parts_ctrl=None, file_parts_ctrl=None, is_change_output=False, is_aster=False, is_save=False, set_no=0):
         super().__init__()
 
         self.frame = frame
@@ -59,11 +59,11 @@ class BaseFilePickerCtrl():
 
         # ファイルモデル
         if file_model_spacer > 0:
-            self.file_model_ctrl = FileModelCtrl(parent, self, title, file_model_spacer)
+            self.file_model_ctrl = FileModelCtrl(parent, self, title, file_model_spacer, set_no)
             self.title_sizer.Add(self.file_model_ctrl.spacer_ctrl, 0, wx.ALL, 5)
             self.title_sizer.Add(self.file_model_ctrl.txt_ctrl, 0, wx.ALL, 5)
 
-        self.sizer.Add(self.title_sizer, 0, wx.EXPAND, 5)
+        self.sizer.Add(self.title_sizer, 1, wx.EXPAND, 0)
 
         # ------------------------
         # ファイルコントロール
@@ -116,7 +116,7 @@ class BaseFilePickerCtrl():
         
         # 出力ファイル変更対象の場合、出力ファイル更新
         if self.is_change_output:
-            self.frame.set_output_vmd_path()
+            self.parent.set_output_vmd_path()
 
     def disable(self):
         self.file_ctrl.GetPickerCtrl().Disable()
@@ -247,7 +247,7 @@ class BaseFilePickerCtrl():
 
 class FileModelCtrl():
 
-    def __init__(self, parent, picker, title, spacer_cnt):
+    def __init__(self, parent, picker, title, spacer_cnt, set_no):
         super().__init__()
 
         self.parent = parent
@@ -255,7 +255,9 @@ class FileModelCtrl():
         self.title = title
         self.spacer_ctrl = wx.StaticText(parent, wx.ID_ANY, "".join(["　" for n in range(spacer_cnt)]))
 
-        self.txt_ctrl = wx.TextCtrl(parent, wx.ID_ANY, "（未設定）", wx.DefaultPosition, (350, -1), wx.TE_READONLY | wx.BORDER_NONE | wx.WANTS_CHARS)
+        width = 350 if set_no == 0 else 220
+
+        self.txt_ctrl = wx.TextCtrl(parent, wx.ID_ANY, "（未設定）", wx.DefaultPosition, (width, -1), wx.TE_READONLY | wx.BORDER_NONE | wx.WANTS_CHARS)
         self.txt_ctrl.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DLIGHT))
         self.txt_ctrl.SetToolTip(u"{0}に記録されているモデル名です。\n文字列は選択＆コピー可能です。".format(title))
 

@@ -18,17 +18,23 @@ logger = MLogger(__name__)
 
 class SizingFileSet():
 
-    def __init__(self, frame: wx.Frame, panel: wx.Panel, file_hitories: dict):
+    def __init__(self, frame: wx.Frame, panel: wx.Panel, file_hitories: dict, set_no=0):
         self.file_hitories = file_hitories
+        self.panel = panel
+        self.set_no = set_no
 
-        self.set_sizer = wx.BoxSizer(wx.VERTICAL)
+        if set_no == 0:
+            # ファイルパネルのはそのまま追加
+            self.set_sizer = wx.BoxSizer(wx.VERTICAL)
+        else:
+            self.set_sizer = wx.StaticBoxSizer(wx.StaticBox(self.panel, wx.ID_ANY, "【No.{0}】".format(set_no)), orient=wx.VERTICAL)
 
         # VMD/VPDファイルコントロール
         self.motion_vmd_file_ctrl = HistoryFilePickerCtrl(frame, panel, u"調整対象モーションVMD/VPDファイル", u"調整対象モーションVMD/VPDファイルを開く", ("vmd", "vpd"), wx.FLP_DEFAULT_STYLE, \
                                                           u"調整したいモーションのVMD/VPDパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。\nファイル名にアスタリスク（*）を使用すると複数件のデータを一度にサイジングできます。", \
                                                           file_model_spacer=8, title_parts_ctrl=None, file_hitories=self.file_hitories["vmd"], history_max=self.file_hitories["max"], \
-                                                          is_change_output=True, is_aster=True, is_save=False)
-        self.set_sizer.Add(self.motion_vmd_file_ctrl.sizer, 0, wx.EXPAND, 0)
+                                                          is_change_output=True, is_aster=True, is_save=False, set_no=set_no)
+        self.set_sizer.Add(self.motion_vmd_file_ctrl.sizer, 1, wx.EXPAND, 0)
 
         # 作成元の代替モデルFLG
         substitute_model_flg_ctrl = wx.CheckBox(panel, wx.ID_ANY, u"代替モデル", wx.DefaultPosition, wx.DefaultSize, 0)
@@ -39,8 +45,8 @@ class SizingFileSet():
         self.org_model_file_ctrl = HistoryFilePickerCtrl(frame, panel, u"モーション作成元モデルPMXファイル", u"モーション作成元モデルPMXファイルを開く", ("pmx"), wx.FLP_DEFAULT_STYLE, \
                                                          u"モーション作成に使用されたモデルのPMXパスを指定してください。\n精度は落ちますが、類似したサイズ・ボーン構造のモデルでも代用できます。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。", \
                                                          file_model_spacer=2, title_parts_ctrl=substitute_model_flg_ctrl, file_hitories=self.file_hitories["org_pmx"], \
-                                                         history_max=self.file_hitories["max"], is_change_output=False, is_aster=False, is_save=False)
-        self.set_sizer.Add(self.org_model_file_ctrl.sizer, 0, wx.EXPAND, 0)
+                                                         history_max=self.file_hitories["max"], is_change_output=False, is_aster=False, is_save=False, set_no=set_no)
+        self.set_sizer.Add(self.org_model_file_ctrl.sizer, 1, wx.EXPAND, 0)
 
         # 捩り分散追加FLG
         twist_flg_ctrl = wx.CheckBox(panel, wx.ID_ANY, u"捩り分散追加", wx.DefaultPosition, wx.DefaultSize, 0)
@@ -51,13 +57,14 @@ class SizingFileSet():
         self.rep_model_file_ctrl = HistoryFilePickerCtrl(frame, panel, u"モーション変換先モデルPMXファイル", u"モーション変換先モデルPMXファイルを開く", ("pmx"), wx.FLP_DEFAULT_STYLE, \
                                                          u"実際にモーションを読み込ませたいモデルのPMXパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。", \
                                                          file_model_spacer=1, title_parts_ctrl=twist_flg_ctrl, file_hitories=self.file_hitories["rep_pmx"], history_max=self.file_hitories["max"], \
-                                                         is_change_output=True, is_aster=False, is_save=False)
-        self.set_sizer.Add(self.rep_model_file_ctrl.sizer, 0, wx.EXPAND, 0)
+                                                         is_change_output=True, is_aster=False, is_save=False, set_no=set_no)
+        self.set_sizer.Add(self.rep_model_file_ctrl.sizer, 1, wx.EXPAND, 0)
 
         # 出力先VMDファイルコントロール
         self.output_vmd_file_ctrl = BaseFilePickerCtrl(frame, panel, u"出力VMDファイル", u"出力VMDファイルを開く", ("vmd"), wx.FLP_OVERWRITE_PROMPT | wx.FLP_SAVE | wx.FLP_USE_TEXTCTRL, \
-                                                       u"調整結果のVMD出力パスを指定してください。\nVMDファイルと変換先PMXのファイル名に基づいて自動生成されますが、任意のパスに変更することも可能です。", is_aster=False, is_save=True)
-        self.set_sizer.Add(self.output_vmd_file_ctrl.sizer, 0, wx.EXPAND, 0)
+                                                       u"調整結果のVMD出力パスを指定してください。\nVMDファイルと変換先PMXのファイル名に基づいて自動生成されますが、任意のパスに変更することも可能です。", \
+                                                       is_aster=False, is_save=True, set_no=set_no)
+        self.set_sizer.Add(self.output_vmd_file_ctrl.sizer, 1, wx.EXPAND, 0)
 
     def save(self):
         self.motion_vmd_file_ctrl.save()
