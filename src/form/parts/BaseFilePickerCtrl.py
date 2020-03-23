@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 #
 
-import re
-import os
-import wx
 import glob
+import os
+import re
+import wx
 from mmd.PmxReader import PmxReader
 from mmd.VmdReader import VmdReader
 from mmd.VpdReader import VpdReader
-from utils import MFormUtils, MFileUtils
+from utils import MFileUtils
 from utils.MLogger import MLogger # noqa
 
 logger = MLogger(__name__, level=1)
@@ -23,11 +23,11 @@ class BaseFilePickerCtrl():
         ("vmd"): u"VMDファイル (*.vmd)|*.vmd|すべてのファイル (*.*)|*.*",
     }
 
-    def __init__(self, form, parent, title, message, file_type, style, tooltip, file_model_spacer=0, \
+    def __init__(self, frame, parent, title, message, file_type, style, tooltip, file_model_spacer=0, \
                  title_parts_ctrl=None, file_parts_ctrl=None, is_change_output=False, is_aster=False, is_save=False):
         super().__init__()
 
-        self.form = form
+        self.frame = frame
         self.parent = parent
         self.title = title
         self.message = message
@@ -116,8 +116,8 @@ class BaseFilePickerCtrl():
         
         # 出力ファイル変更対象の場合、出力ファイル更新
         if self.is_change_output:
-            MFormUtils.set_output_vmd_path(self.form)
-    
+            self.frame.set_output_vmd_path()
+
     def disable(self):
         self.file_ctrl.GetPickerCtrl().Disable()
         self.file_ctrl.GetTextCtrl().Disable()

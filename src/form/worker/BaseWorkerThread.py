@@ -17,10 +17,10 @@ logger = MLogger(__name__)
 class BaseWorkerThread(Thread, metaclass=ABCMeta):
 
     """Worker Thread Class."""
-    def __init__(self, form, result_event):
+    def __init__(self, frame, result_event):
         """Init Worker Thread Class."""
         Thread.__init__(self)
-        self.form = form
+        self.frame = frame
         self._want_abort = 0
         self.event_id = wx.NewId()
         self.stop_event = Event()
@@ -40,7 +40,7 @@ class BaseWorkerThread(Thread, metaclass=ABCMeta):
         self.post_event()
     
     def post_event(self):
-        wx.PostEvent(self.form, self.result_event(result=self.result))
+        wx.PostEvent(self.frame, self.result_event(result=self.result))
 
     def abort(self):
         self._want_abort = 1

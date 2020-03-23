@@ -25,7 +25,7 @@ class VmdMotion():
         self.morphs = {}
         self.camera_cnt = 0
         # カメラ：VmdCameraFrameの配列
-        self.cameras = []
+        self.cameras = {}
         self.light_cnt = 0
         # 照明：VmdLightFrameの配列
         self.lights = []

@@ -249,7 +249,7 @@ class PmxReader():
         logger.test("len(materials): %s", len(pmx.materials))
 
         # サイジング用ルートボーン
-        sizing_root_bone = pmx.Bone("SIZING_ROOT_BONE", "SIZING_ROOT_BONE", MVector3D(), -1, 0, 0)
+        sizing_root_bone = Bone("SIZING_ROOT_BONE", "SIZING_ROOT_BONE", MVector3D(), -1, 0, 0)
         sizing_root_bone.index = -999
 
         pmx.bones[sizing_root_bone.name] = sizing_root_bone
@@ -326,7 +326,7 @@ class PmxReader():
             # 頭頂ボーン
             head_top_vertex = pmx.get_head_top_vertex()
             pmx.head_top_vertex = head_top_vertex
-            head_top_bone = pmx.Bone("頭頂", "head_top", copy.deepcopy(head_top_vertex.position), -1, 0, 0)
+            head_top_bone = Bone("頭頂", "head_top", copy.deepcopy(head_top_vertex.position), -1, 0, 0)
             head_top_bone.index = len(pmx.bones.keys()) - 1
             pmx.bones[head_top_bone.name] = head_top_bone
             pmx.bone_indexes[head_top_bone.index] = head_top_bone.name
@@ -334,7 +334,7 @@ class PmxReader():
             # 右つま先ボーン
             right_toe_vertex = pmx.get_toe_vertex("右")
             pmx.right_toe_vertex = right_toe_vertex
-            right_toe_bone = pmx.Bone("右つま先実体", "right toe entity", copy.deepcopy(right_toe_vertex.position), -1, 0, 0)
+            right_toe_bone = Bone("右つま先実体", "right toe entity", copy.deepcopy(right_toe_vertex.position), -1, 0, 0)
             right_toe_bone.index = len(pmx.bones.keys()) - 1
             pmx.bones[right_toe_bone.name] = right_toe_bone
             pmx.bone_indexes[right_toe_bone.index] = right_toe_bone.name
@@ -342,7 +342,7 @@ class PmxReader():
             # 左つま先ボーン
             left_toe_vertex = pmx.get_toe_vertex("左")
             pmx.left_toe_vertex = left_toe_vertex
-            left_toe_bone = pmx.Bone("左つま先実体", "left toe entity", copy.deepcopy(left_toe_vertex.position), -1, 0, 0)
+            left_toe_bone = Bone("左つま先実体", "left toe entity", copy.deepcopy(left_toe_vertex.position), -1, 0, 0)
             left_toe_bone.index = len(pmx.bones.keys()) - 1
             pmx.bones[left_toe_bone.name] = left_toe_bone
             pmx.bone_indexes[left_toe_bone.index] = left_toe_bone.name
@@ -351,7 +351,7 @@ class PmxReader():
                 # 右足底辺ボーン
                 right_leg_bottom_vertex = MVector3D(pmx.bones["右足ＩＫ"].position.x(), 0, pmx.bones["右足ＩＫ"].position.z())
                 pmx.right_leg_bottom_vertex = right_leg_bottom_vertex
-                right_leg_bottom_bone = pmx.Bone("右足底辺", "right toe entity", right_leg_bottom_vertex, -1, 0, 0)
+                right_leg_bottom_bone = Bone("右足底辺", "right toe entity", right_leg_bottom_vertex, -1, 0, 0)
                 right_leg_bottom_bone.index = len(pmx.bones.keys()) - 1
                 pmx.bones[right_leg_bottom_bone.name] = right_leg_bottom_bone
                 pmx.bone_indexes[right_leg_bottom_bone.index] = right_leg_bottom_bone.name
@@ -360,7 +360,7 @@ class PmxReader():
             if "左足ＩＫ" in pmx.bones:
                 left_leg_bottom_vertex = MVector3D(pmx.bones["左足ＩＫ"].position.x(), 0, pmx.bones["左足ＩＫ"].position.z())
                 pmx.left_leg_bottom_vertex = left_leg_bottom_vertex
-                left_leg_bottom_bone = pmx.Bone("左足底辺", "left toe entity", left_leg_bottom_vertex, -1, 0, 0)
+                left_leg_bottom_bone = Bone("左足底辺", "left toe entity", left_leg_bottom_vertex, -1, 0, 0)
                 left_leg_bottom_bone.index = len(pmx.bones.keys()) - 1
                 pmx.bones[left_leg_bottom_bone.name] = left_leg_bottom_bone
                 pmx.bone_indexes[left_leg_bottom_bone.index] = left_leg_bottom_bone.name
@@ -373,7 +373,7 @@ class PmxReader():
 
                 if to_joint_name not in pmx.bones:
                     _, to_pos = self.calc_tail_pos(pmx, end_joint_name)
-                    to_bone = pmx.Bone(to_joint_name, None, to_pos, -1, 0, 0)
+                    to_bone = Bone(to_joint_name, None, to_pos, -1, 0, 0)
 
                     # ボーンのINDEX
                     to_bone.index = len(pmx.bones.keys())

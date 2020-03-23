@@ -8,7 +8,7 @@ from utils import MFormUtils
 
 class MorphPanel(BasePanel):
     
-    def __init__(self, form, parent, tab_idx):
-        super().__init__(form, parent, tab_idx)
+    def __init__(self, frame, parent, tab_idx):
+        super().__init__(frame, parent, tab_idx)
 
         self.fit()

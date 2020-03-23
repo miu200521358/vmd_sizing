@@ -215,7 +215,7 @@ class VmdReader():
             logger.test("light.position %s", light.position)
 
             # 追加
-            motion.lights[light.frame] = light
+            motion.lights.append(light)
 
         # セルフシャドウ数
         try:
@@ -239,7 +239,7 @@ class VmdReader():
                 logger.test("shadow.distance %s", shadow.distance)
 
                 # 追加
-                motion.shadows[shadow.frame] = shadow
+                motion.shadows.append(shadow)
 
         except Exception:
             # 情報がない場合、catchして握りつぶす
@@ -281,7 +281,7 @@ class VmdReader():
                     ik.ik.append(ik_info)
 
                 # 追加
-                motion.showiks[ik.frame] = ik
+                motion.showiks.append(ik)
 
         except Exception:
             # 昔のMMD（MMDv7.39.x64以前）はIK情報がないため、catchして握りつぶす

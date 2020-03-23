@@ -2,7 +2,10 @@
 #
 import math
 import numpy as np
-import quaternion
+import quaternion # noqa
+from utils.MLogger import MLogger # noqa
+
+logger = MLogger(__name__, level=0)
 
 
 class MRect():
@@ -37,9 +40,9 @@ class MVector2D():
             self.__data = x.__data
         elif isinstance(x, np.ndarray):
             # arrayそのものの場合
-            self.__data = np.array([x[0], x[1]])
+            self.__data = np.nan_to_num(np.array([x[0], x[1]]))
         else:
-            self.__data = np.array([x, y], dtype=np.float64)
+            self.__data = np.nan_to_num(np.array([x, y], dtype=np.float64))
 
     def length(self):
         return float(np.linalg.norm(self.__data, ord=2))
@@ -56,14 +59,14 @@ class MVector2D():
     def normalize(self):
         l2 = np.linalg.norm(self.__data, ord=2, axis=-1, keepdims=True)
         l2[l2 == 0] = 1
-        normv = self.__data / l2
+        normv = np.nan_to_num(self.__data / l2)
         self.__data = normv
     
     def effective(self):
         return MVector2D(get_almost_zero_value(self.__data[0]), get_almost_zero_value(self.__data[1]))
             
     def data(self):
-        return self.__data
+        return np.nan_to_num(self.__data)
 
     def __str__(self):
         return "MVector2D({0}, {1})".format(self.__data[0], self.__data[1])
@@ -191,9 +194,9 @@ class MVector3D():
             self.__data = x.__data
         elif isinstance(x, np.ndarray):
             # arrayそのものの場合
-            self.__data = np.array([x[0], x[1], x[2]])
+            self.__data = np.nan_to_num(np.array([x[0], x[1], x[2]]))
         else:
-            self.__data = np.array([x, y, z], dtype=np.float64)
+            self.__data = np.nan_to_num(np.array([x, y, z], dtype=np.float64))
 
     def length(self):
         return float(np.linalg.norm(self.__data, ord=2))
@@ -211,7 +214,7 @@ class MVector3D():
         l2 = np.linalg.norm(self.__data, ord=2, axis=-1, keepdims=True)
         l2[l2 == 0] = 1
         normv = self.__data / l2
-        self.__data = normv
+        self.__data = np.nan_to_num(normv)
     
     def distanceToPoint(self, v):
         return MVector3D(self.__data - v.__data).length()
@@ -265,7 +268,7 @@ class MVector3D():
         return dotv
     
     def data(self):
-        return self.__data
+        return np.nan_to_num(self.__data)
 
     def __str__(self):
         return "MVector3D({0}, {1}, {2})".format(self.__data[0], self.__data[1], self.__data[2])
@@ -399,9 +402,9 @@ class MVector4D():
             self.__data = x.__data
         elif isinstance(x, np.ndarray):
             # 行列そのものの場合
-            self.__data = np.array([x[0], x[1], x[2], x[3]])
+            self.__data = np.nan_to_num(np.array([x[0], x[1], x[2], x[3]]))
         else:
-            self.__data = np.array([x, y, z, w], dtype=np.float64)
+            self.__data = np.nan_to_num(np.array([x, y, z, w], dtype=np.float64))
 
     def length(self):
         return np.linalg.norm(self.__data, ord=2)
@@ -419,7 +422,7 @@ class MVector4D():
         l2 = np.linalg.norm(self.__data, ord=2, axis=-1, keepdims=True)
         l2[l2 == 0] = 1
         normv = self.__data / l2
-        self.__data = normv
+        self.__data = np.nan_to_num(normv)
 
     def toVector3D(self):
         return MVector3D(self.__data[0], self.__data[1], self.__data[2])
@@ -624,12 +627,10 @@ class MQuaternion():
         m[3, 2] = 0.0
         m[3, 3] = q2[3] * q2[3] + q2[0] * q2[0] + q2[1] * q2[1] + q2[2] * q2[2]
 
-        k = m[3, 3]
-        for i in range(3):
-            for j in range(3):
-                m[i, j] /= k
-
+        m /= m[3, 3]
         m[3, 3] = 1.0
+
+        m = np.nan_to_num(m)
 
         return mat
     
@@ -680,10 +681,7 @@ class MQuaternion():
             roll = 0.0
             yaw = math.atan2(-2.0 * (xy - zw), 1.0 - 2.0 * (yy + zz))
 
-        v = MVector3D()
-        v.setX(math.degrees(pitch))
-        v.setY(math.degrees(yaw))
-        v.setZ(math.degrees(roll))
+        v = MVector3D(math.degrees(pitch), math.degrees(yaw), math.degrees(roll))
 
         return v
         
@@ -990,16 +988,16 @@ class MMatrix4x4():
     def __init__(self, m11=0, m12=0, m13=0, m14=0, m21=0, m22=0, m23=0, m24=0, m31=0, m32=0, m33=0, m34=0, m41=0, m42=0, m43=0, m44=0):
         if isinstance(m11, MMatrix4x4):
             # 行列クラスの場合
-            self.__data = m11.__data
+            self.__data = np.nan_to_num(m11.__data)
         elif isinstance(m11, np.ndarray):
             # 行列そのものの場合
-            self.__data = m11
+            self.__data = np.nan_to_num(m11)
         else:
             # べた値の場合
-            self.__data = np.array([[m11, m12, m13, m14], [m21, m22, m23, m24], [m31, m32, m33, m34], [m41, m42, m43, m44]], dtype=np.float64)
+            self.__data = np.nan_to_num(np.array([[m11, m12, m13, m14], [m21, m22, m23, m24], [m31, m32, m33, m34], [m41, m42, m43, m44]], dtype=np.float64))
 
     def data(self):
-        return self.__data
+        return np.nan_to_num(self.__data)
     
     # 逆行列
     def inverted(self):
@@ -1009,13 +1007,13 @@ class MMatrix4x4():
     # 回転行列
     def rotate(self, qq):
         qq_mat = qq.toMatrix4x4()
-        self.__data = self.__data.dot(qq_mat.__data)
+        self.__data = np.nan_to_num(self.__data.dot(qq_mat.__data))
 
     # 平行移動行列
     def translate(self, vec3):
         vec_mat = np.tile(np.array([vec3.x(), vec3.y(), vec3.z()]), (4, 1))
         data_mat = self.__data[:, :3] * vec_mat
-        self.__data[:, 3] += np.sum(data_mat, axis=1)
+        self.__data[:, 3] += np.nan_to_num(np.sum(data_mat, axis=1))
     
     # 単位行列
     def setToIdentity(self):
@@ -1064,11 +1062,9 @@ class MMatrix4x4():
     
     def mapVector(self, vector):
         vec_mat = np.array([vector.x(), vector.y(), vector.z()])
-        x = np.sum(vec_mat * self.__data[:3, 0], axis=1)
-        y = np.sum(vec_mat * self.__data[:3, 1], axis=1)
-        z = np.sum(vec_mat * self.__data[:3, 2], axis=1)
+        xyz = np.sum(vec_mat * self.__data[:3, :3], axis=1)
 
-        return MVector3D(x, y, z)
+        return MVector3D(xyz)
 
     def __str__(self):
         return "MMatrix4x4({0})".format(self.__data)
@@ -1168,7 +1164,7 @@ class MMatrix4x4():
         v.__data[3, 2] = np.sum(self.__data[3, :] * other.__data[:, 2])
         v.__data[3, 3] = np.sum(self.__data[3, :] * other.__data[:, 3])
                 
-        self.__data = v.__data
+        self.__data = np.nan_to_num(v.__data)
 
         return self
 

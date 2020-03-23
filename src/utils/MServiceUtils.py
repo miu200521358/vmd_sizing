@@ -32,24 +32,21 @@ def calc_global_pos_dic(model, links: BoneLinks, motion: VmdMotion, bf: VmdBoneF
         # 回転
         matrixs[n].rotate(add_qs[n])
 
-    global_3ds = [MVector3D() for i in range(links.size())]
+    total_mat = [MMatrix4x4() for i in range(links.size())]
     global_3ds_dic = OrderedDict()
 
-    for n, l in enumerate(links.reversed()):
+    for n, lname in enumerate(links.reversed()):
         for m in range(n):
             # 最後のひとつ手前までループ
             if m == 0:
                 # 0番目の位置を初期値とする
-                global_3ds[n] = copy.deepcopy(matrixs[0])
+                total_mat[n] = copy.deepcopy(matrixs[0])
             else:
                 # 自分より前の行列結果を掛け算する
-                global_3ds[n] *= copy.deepcopy(matrixs[m])
+                total_mat[n] *= copy.deepcopy(matrixs[m])
         
         # 自分は、位置だけ掛ける
-        global_3ds[n] *= trans_vs[n]
-
-        # ボーン名に該当するボーン位置として保持
-        global_3ds_dic[l.name] = global_3ds[n]
+        global_3ds_dic[lname] = total_mat[n] * trans_vs[n]
 
     return global_3ds_dic
 
@@ -58,17 +55,19 @@ def calc_global_pos_dic(model, links: BoneLinks, motion: VmdMotion, bf: VmdBoneF
 def calc_relative_position(model, links: BoneLinks, motion: VmdMotion, bf: VmdBoneFrame):
     trans_vs = []
 
-    for link_idx, link_bone in enumerate(links.reversed()):
-        # 存在するキー情報を取得
-        calc_bone = motion.calc_bone_by_interpolation(link_bone.name, bf.frame, is_only=True, is_exist=True, is_key=False, is_read=False)
+    for link_idx, link_bone_name in enumerate(links.reversed()):
+        link_bone = links.get(link_bone_name)
+
+        # キー情報を取得
+        calc_bone = motion.calc_bone_by_interpolation(link_bone.name, bf.frame, is_only=False, is_exist=False, is_key=False, is_read=False)
 
         # 位置
         if link_idx == 0:
             # 一番親は、グローバル座標を考慮
             trans_vs.append(link_bone.position + calc_bone.position)
         else:
-            # 位置：自身から親の位置を引いた相対位置
-            trans_vs.append(link_bone.position + calc_bone.position - links[links.size() - link_idx].position)
+            # 位置：自身から親の位置を引いた相対位置(リンクは子から親の順なので、＋1)
+            trans_vs.append(link_bone.position + calc_bone.position - links.get(link_bone_name, offset=1).position)
 
     return trans_vs
 
@@ -90,9 +89,11 @@ def calc_global_position_by_direction(direction_qq: MQuaternion, target_pos_3ds_
 def calc_relative_rotation(model: PmxModel, links: BoneLinks, motion: VmdMotion, bf: VmdBoneFrame):
     add_qs = []
 
-    for link_idx, link_bone in enumerate(links.reversed()):
-        # 存在するキー情報を取得
-        calc_bone = motion.calc_bone_by_interpolation(link_bone.name, bf.frame, is_only=True, is_exist=True, is_key=False, is_read=False)
+    for link_idx, link_bone_name in enumerate(links.reversed()):
+        link_bone = links.get(link_bone_name)
+
+        # キー情報を取得
+        calc_bone = motion.calc_bone_by_interpolation(link_bone.name, bf.frame, is_only=False, is_exist=False, is_key=False, is_read=False)
         
         # 回転量
         rot = calc_bone.rotation
@@ -127,7 +128,7 @@ def calc_relative_rotation(model: PmxModel, links: BoneLinks, motion: VmdMotion,
         
         if link_bone.getExternalRotationFlag() and link_bone.effect_index in model.bone_indexes:
             # 該当する付与親の回転を取得する
-            effect_bone = motion.calc_bone_by_interpolation(model.bone_indexes[link_bone.effect_index], bf.frame, is_only=True, is_exist=True, is_key=False, is_read=False)
+            effect_bone = motion.calc_bone_by_interpolation(model.bone_indexes[link_bone.effect_index], bf.frame, is_only=False, is_exist=False, is_key=False, is_read=False)
 
             # 自身の回転量に付与親の回転量を付与率を加味して付与する
             rot = rot * effect_bone.rotation
@@ -147,6 +148,8 @@ def calc_direction_qq(model: PmxModel, links: BoneLinks, motion: VmdMotion, bf: 
     total_qq = MQuaternion()
     for qq in add_qs:
         total_qq *= qq
+
+    return total_qq
 
 
 # 上半身のスタンスの違い

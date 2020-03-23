@@ -232,9 +232,9 @@ class PmxModel():
         if not up_max_vertex:
             # 頭頂頂点が取れなかった場合
             if "頭" in self.bones:
-                return PmxModel.Vertex(-1, self.bones["頭"].position, MVector3D(), [], [], PmxModel.Vertex.Bdef1(-1), -1)
+                return Vertex(-1, self.bones["頭"].position, MVector3D(), [], [], Vertex.Bdef1(-1), -1)
             else:
-                return PmxModel.Vertex(-1, MVector3D(), MVector3D(), [], [], PmxModel.Vertex.Bdef1(-1), -1)
+                return Vertex(-1, MVector3D(), MVector3D(), [], [], Vertex.Bdef1(-1), -1)
         
         return up_max_vertex
 
@@ -251,13 +251,13 @@ class PmxModel():
         if len(bone_name_list) == 0:
             # ウェイトボーンがない場合、つま先ボーン系の位置
             if "{0}つま先".format(direction) in self.bones:
-                return PmxModel.Vertex(-1, self.bones["{0}つま先".format(direction)].position, MVector3D(), [], [], PmxModel.Vertex.Bdef1(-1), -1)
+                return Vertex(-1, self.bones["{0}つま先".format(direction)].position, MVector3D(), [], [], Vertex.Bdef1(-1), -1)
             elif "{0}つま先ＩＫ".format(direction) in self.bones:
-                return PmxModel.Vertex(-1, self.bones["{0}つま先ＩＫ".format(direction)].position, MVector3D(), [], [], PmxModel.Vertex.Bdef1(-1), -1)
+                return Vertex(-1, self.bones["{0}つま先ＩＫ".format(direction)].position, MVector3D(), [], [], Vertex.Bdef1(-1), -1)
             elif "{0}足首".format(direction) in self.bones:
-                return PmxModel.Vertex(-1, self.bones["{0}足首".format(direction)].position, MVector3D(), [], [], PmxModel.Vertex.Bdef1(-1), -1)
+                return Vertex(-1, self.bones["{0}足首".format(direction)].position, MVector3D(), [], [], Vertex.Bdef1(-1), -1)
             else:
-                return PmxModel.Vertex(-1, MVector3D(), MVector3D(), [], [], PmxModel.Vertex.Bdef1(-1), -1)
+                return Vertex(-1, MVector3D(), MVector3D(), [], [], Vertex.Bdef1(-1), -1)
 
         up_max_pos, up_max_vertex, down_max_pos, down_max_vertex, right_max_pos, right_max_vertex, left_max_pos, left_max_vertex, \
             back_max_pos, back_max_vertex, front_max_pos, front_max_vertex = self.get_bone_end_vertex(bone_name_list, self.def_calc_vertex_pos_original, None)
@@ -265,13 +265,13 @@ class PmxModel():
         if not front_max_vertex:
             # つま先頂点が取れなかった場合
             if "{0}つま先".format(direction) in self.bones:
-                return PmxModel.Vertex(-1, self.bones["{0}つま先".format(direction)].position, MVector3D(), [], [], PmxModel.Vertex.Bdef1(-1), -1)
+                return Vertex(-1, self.bones["{0}つま先".format(direction)].position, MVector3D(), [], [], Vertex.Bdef1(-1), -1)
             elif "{0}つま先ＩＫ".format(direction) in self.bones:
-                return PmxModel.Vertex(-1, self.bones["{0}つま先ＩＫ".format(direction)].position, MVector3D(), [], [], PmxModel.Vertex.Bdef1(-1), -1)
+                return Vertex(-1, self.bones["{0}つま先ＩＫ".format(direction)].position, MVector3D(), [], [], Vertex.Bdef1(-1), -1)
             elif "{0}足首".format(direction) in self.bones:
-                return PmxModel.Vertex(-1, self.bones["{0}足首".format(direction)].position, MVector3D(), [], [], PmxModel.Vertex.Bdef1(-1), -1)
+                return Vertex(-1, self.bones["{0}足首".format(direction)].position, MVector3D(), [], [], Vertex.Bdef1(-1), -1)
             else:
-                return PmxModel.Vertex(-1, MVector3D(), MVector3D(), [], [], PmxModel.Vertex.Bdef1(-1), -1)
+                return Vertex(-1, MVector3D(), MVector3D(), [], [], Vertex.Bdef1(-1), -1)
         
         return front_max_vertex
 
@@ -394,7 +394,7 @@ class Vertex():
     
     # 最もウェイトが乗っているボーンINDEX
     def get_max_deform_index(self, head_links_indexes):
-        if type(self.deform) is PmxModel.Vertex.Bdef2 or type(self.deform) is PmxModel.Vertex.Sdef or type(self.deform) is PmxModel.Vertex.Qdef:
+        if type(self.deform) is Vertex.Bdef2 or type(self.deform) is Vertex.Sdef or type(self.deform) is Vertex.Qdef:
             if self.deform.weight0 >= 0.5 and self.deform.index0 in head_links_indexes.keys():
                 return self.deform.index0
             else:
@@ -403,7 +403,7 @@ class Vertex():
                 else:
                     return self.deform.index0
 
-        elif type(self.deform) is PmxModel.Vertex.Bdef4:
+        elif type(self.deform) is Vertex.Bdef4:
             
             # 上半身系INDEXにウェイトが乗っているボーンのみ対象
             target_weights = []
@@ -744,7 +744,7 @@ class RigidBody():
         self.shape_size = shape_size
         self.shape_position = shape_position
         self.shape_rotation = shape_rotation
-        self.param = PmxModel.RigidBodyParam(mass, linear_damping, angular_damping, restitution, friction)
+        self.param = RigidBody.RigidBodyParam(mass, linear_damping, angular_damping, restitution, friction)
         self.mode = mode
         self.index = -1
 

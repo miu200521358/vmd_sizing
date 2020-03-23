@@ -18,26 +18,26 @@ logger = MLogger(__name__)
 
 class SizingWorkerThread(BaseWorkerThread):
 
-    def __init__(self, form, result_event):
+    def __init__(self, frame: wx.Frame, result_event: wx.Event):
         self.elapsed_time = 0
-        super().__init__(form, result_event)
+        super().__init__(frame, result_event)
 
     def thread_event(self):
         try:
             start = time.time()
-            file_path_list = [p for p in sorted(glob.glob(self.form.file_panel_ctrl.motion_vmd_file_ctrl.file_ctrl.GetPath())) if os.path.isfile(p)]
+            file_path_list = [p for p in sorted(glob.glob(self.frame.file_panel_ctrl.file_set.motion_vmd_file_ctrl.file_ctrl.GetPath())) if os.path.isfile(p)]
 
             for file_idx in range(len(file_path_list)):
-                if self.form.file_panel_ctrl.motion_vmd_file_ctrl.load(file_idx):
+                if self.frame.file_panel_ctrl.file_set.motion_vmd_file_ctrl.load(file_idx):
                     options = MOptions(\
-                        version_name=self.form.version_name, \
-                        logging_level=self.form.logging_level, \
-                        motion_vmd_data=cPickle.loads(cPickle.dumps(self.form.file_panel_ctrl.motion_vmd_file_ctrl.data, -1)), \
-                        org_model_data=self.form.file_panel_ctrl.org_model_file_ctrl.data, \
-                        rep_model_data=self.form.file_panel_ctrl.rep_model_file_ctrl.data, \
-                        output_vmd_path=self.form.file_panel_ctrl.output_vmd_file_ctrl.file_ctrl.GetPath(), \
-                        substitute_model_flg=self.form.file_panel_ctrl.org_model_file_ctrl.title_parts_ctrl.GetValue(), \
-                        twist_flg=self.form.file_panel_ctrl.rep_model_file_ctrl.title_parts_ctrl.GetValue())
+                        version_name=self.frame.version_name, \
+                        logging_level=self.frame.logging_level, \
+                        motion_vmd_data=cPickle.loads(cPickle.dumps(self.frame.file_panel_ctrl.file_set.motion_vmd_file_ctrl.data, -1)), \
+                        org_model_data=self.frame.file_panel_ctrl.file_set.org_model_file_ctrl.data, \
+                        rep_model_data=self.frame.file_panel_ctrl.file_set.rep_model_file_ctrl.data, \
+                        output_vmd_path=self.frame.file_panel_ctrl.file_set.output_vmd_file_ctrl.file_ctrl.GetPath(), \
+                        substitute_model_flg=self.frame.file_panel_ctrl.file_set.org_model_file_ctrl.title_parts_ctrl.GetValue(), \
+                        twist_flg=self.frame.file_panel_ctrl.file_set.rep_model_file_ctrl.title_parts_ctrl.GetValue())
                     
                     self.result = SizingService(options).execute() and self.result
 
@@ -48,5 +48,5 @@ class SizingWorkerThread(BaseWorkerThread):
             logging.shutdown()
 
     def post_event(self):
-        wx.PostEvent(self.form, self.result_event(result=self.result, elapsed_time=self.elapsed_time))
+        wx.PostEvent(self.frame, self.result_event(result=self.result, elapsed_time=self.elapsed_time))
 
