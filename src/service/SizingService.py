@@ -28,7 +28,7 @@ class SizingService():
             service_data_txt = "VMDサイジング処理実行\n------------------------\nexeバージョン: {version_name}\n".format(version_name=self.options.version_name) \
 
             for data_set_idx, data_set in enumerate(self.options.data_set_list):
-                service_data_txt = "{service_data_txt}【No.{no}】 ***** \n".format(service_data_txt=service_data_txt, no=(data_set_idx+1)) # noqa
+                service_data_txt = "{service_data_txt}\n【No.{no}】 --------- \n".format(service_data_txt=service_data_txt, no=(data_set_idx+1)) # noqa
                 service_data_txt = "{service_data_txt}　　モーション: {motion}\n".format(service_data_txt=service_data_txt,
                                         motion=os.path.basename(data_set.motion_vmd_data.path)) # noqa
                 service_data_txt = "{service_data_txt}　　作成元モデル: {trace_model} ({model_name})\n".format(service_data_txt=service_data_txt,

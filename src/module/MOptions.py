@@ -37,15 +37,15 @@ class MOptions():
         for n, data_set in enumerate(self.data_set_list):
             if min_xz_ratio == data_set.original_xz_ratio:
                 # 比率が最小の場合、補正比率をかける
-                data_set.xz_ratio = data_set.original_xz_ratio * xz_ratio_diff
+                data_set.xz_ratio = data_set.original_xz_ratio
             else:
-                # 最小のXZ比率 × 補正比率 / 対象のXZ比率
-                data_set.xz_ratio = (min_xz_ratio * xz_ratio_diff) / data_set.original_xz_ratio
+                # 対象のXZ比率 × 補正比率 / 最小のXZ比率
+                data_set.xz_ratio = (data_set.original_xz_ratio * xz_ratio_diff) / max_xz_ratio
             data_set.y_ratio = data_set.original_y_ratio
 
             log_txt = "{0}【No.{1}】　xz: {2}, y: {3} (元: xz: {4})\n".format(log_txt, (n + 1), data_set.xz_ratio, data_set.y_ratio, data_set.original_xz_ratio)
 
-        logger.info(log_txt, decoration=MLogger.DECORATION_BOX)
+        logger.info(log_txt, decoration=MLogger.DECORATION_SIMPLE)
 
 
 class MOptionsDataSet():
