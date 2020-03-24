@@ -26,22 +26,23 @@ class MOptions():
             if data_set.original_xz_ratio > max_xz_ratio:
                 max_xz_ratio = data_set.original_xz_ratio
         
-        # XZ比率の差(最大1.2とする)
-        xz_ratio_diff = min(1.2, max_xz_ratio / min_xz_ratio)
-        logger.test("xz_ratio_diff: %s", xz_ratio_diff)
+        # XZ比率の差(差分の1.2倍をリミットとする)
+        total_xz_ratio = min((min_xz_ratio + ((max_xz_ratio - min_xz_ratio) / 2)), 1.2)
+        logger.test("total_xz_ratio: %s", total_xz_ratio)
 
         logger.info("")
 
         log_txt = "足の長さの比率 ---------\n"
 
         for n, data_set in enumerate(self.data_set_list):
-            if min_xz_ratio == data_set.original_xz_ratio:
-                # 比率が最小の場合、補正比率をかける
-                data_set.xz_ratio = data_set.original_xz_ratio
+            if len(self.data_set_list) > 1:
+                # XZ比率は合計から導き出した比率
+                data_set.xz_ratio = total_xz_ratio
+                data_set.y_ratio = data_set.original_y_ratio
             else:
-                # 対象のXZ比率 × 補正比率 / 最小のXZ比率
-                data_set.xz_ratio = (data_set.original_xz_ratio * xz_ratio_diff) / max_xz_ratio
-            data_set.y_ratio = data_set.original_y_ratio
+                # セットが1件（一人モーションの場合はそのまま）
+                data_set.xz_ratio = data_set.original_xz_ratio
+                data_set.y_ratio = data_set.original_y_ratio
 
             log_txt = "{0}【No.{1}】　xz: {2}, y: {3} (元: xz: {4})\n".format(log_txt, (n + 1), data_set.xz_ratio, data_set.y_ratio, data_set.original_xz_ratio)
 

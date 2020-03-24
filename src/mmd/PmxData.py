@@ -61,36 +61,38 @@ class PmxModel():
     # ボーンリンク生成
     def create_link_2_top_lr(self, *target_bone_types):
         for target_bone_type in target_bone_types:
-            left_links = self.create_link_2_top("左{0}".format(target_bone_type), None)
-            right_links = self.create_link_2_top("右{0}".format(target_bone_type), None)
+            left_links = self.create_link_2_top_one("左{0}".format(target_bone_type))
+            right_links = self.create_link_2_top_one("右{0}".format(target_bone_type))
 
             if left_links and right_links:
                 # IKリンクがある場合、そのまま返す
                 return {"左": left_links, "右": right_links}
-        
-        # 最後まで回しても取れなかった場合、エラー
-        raise SizingException("ボーンリンクの生成に失敗しました。モデル「%s」に「%s」のボーンがあるか確認してください。" % (self.name, ",".join(target_bone_types)))
 
     # ボーンリンク生成
     def create_link_2_top_one(self, *target_bone_names):
         for target_bone_name in target_bone_names:
-            ik_links = self.create_link_2_top(target_bone_name, None)
+            links = self.create_link_2_top(target_bone_name, None)
 
-            if ik_links:
-                # IKリンクがある場合、そのまま返す
-                return ik_links
+            if links and target_bone_name in links.all():
+                reversed_links = BoneLinks()
+                
+                # リンクがある場合、反転させて返す
+                for lname in reversed(links.all()):
+                    reversed_links.append(links.get(lname))
+
+                return reversed_links
         
         # 最後まで回しても取れなかった場合、エラー
         raise SizingException("ボーンリンクの生成に失敗しました。モデル「%s」に「%s」のボーンがあるか確認してください。" % (self.name, ",".join(target_bone_names)))
 
-    def create_link_2_top(self, target_bone_name, ik_links):
-        if not ik_links:
+    def create_link_2_top(self, target_bone_name, links):
+        if not links:
             # まだリンクが生成されていない場合、順序保持辞書生成
-            ik_links = BoneLinks()
+            links = BoneLinks()
         
         if target_bone_name not in self.bones or target_bone_name not in self.PARENT_BORN_PAIR:
             # 開始ボーン名がなければ終了
-            return ik_links
+            return links
 
         start_type_bone = target_bone_name
         if target_bone_name.startswith("右") or target_bone_name.startswith("左"):
@@ -98,7 +100,7 @@ class PmxModel():
             start_type_bone = target_bone_name[1:]
 
         # 自分をリンクに登録
-        ik_links.append(self.bones[target_bone_name])
+        links.append(self.bones[target_bone_name])
 
         parent_name = None
         for pname in self.PARENT_BORN_PAIR[target_bone_name]:
@@ -109,13 +111,13 @@ class PmxModel():
 
         if not parent_name:
             # 親ボーンがボーンインデックスリストになければ終了
-            return ik_links
+            return links
         
         logger.test("target_bone_name: %s. parent_name: %s, start_type_bone: %s", target_bone_name, parent_name, start_type_bone)
         
         # 親をたどる
         try:
-            return self.create_link_2_top(parent_name, ik_links)
+            return self.create_link_2_top(parent_name, links)
         except RecursionError:
             raise SizingException("ボーンリンクの生成に失敗しました。\nモデル「{0}」の「{1}」ボーンで以下を確認してください。\n" \
                                   + "・同じ名前のボーンが複数ないか（ボーンのINDEXがズレるため、サイジングに失敗します）\n" \

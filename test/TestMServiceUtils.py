@@ -15,12 +15,12 @@ from utils.MLogger import MLogger # noqa
 logger = MLogger(__name__)
 
 
-class TestMServiceUtils(unittest.TestCase):
+class MServiceUtilsTest(unittest.TestCase):
 
     def test_calc_global_pos_dic01(self):
-        PmxReader()
+        self.assertTrue(True)
 
 
 if __name__ == "__main__":
-    unittest.main(exit=False, verbosity=1, defaultTest="TestMServiceUtils.test_calc_global_pos_dic01")
+    unittest.main()
 

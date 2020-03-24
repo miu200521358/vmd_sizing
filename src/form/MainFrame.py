@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 import os
-import re
+import time
 import sys
 import wx
 import winsound
@@ -30,6 +30,7 @@ class MainFrame(wx.Frame):
         self.logging_level = logging_level
         self.is_out_log = is_out_log
         self.mydir_path = mydir_path
+        self.elapsed_time = 0
         
         self.worker = None
         self.load_worker = None
@@ -107,37 +108,6 @@ class MainFrame(wx.Frame):
             event.Skip()
             return
 
-    # スレッド実行結果
-    def on_exec_result(self, event: wx.Event):
-        logger.info("処理時間: %s分", event.elapsed_time / 60, decoration=MLogger.DECORATION_SIMPLE)
-
-        # 終了音を鳴らす
-        if os.name == "nt":
-            # Windows
-            try:
-                winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
-            except Exception:
-                pass
-
-        if not event.result or self.is_out_log:
-            # 何か失敗している場合かログ明示出力の場合、ログファイル出力
-
-            # ログパス生成
-            output_vmd_path = self.file_panel_ctrl.file_set.output_vmd_file_ctrl.file_ctrl.GetPath()
-            output_log_path = re.sub(r'\.vmd$', '.log', output_vmd_path)
-
-            with open(output_log_path, mode='w') as f:
-                f.write(self.file_panel_ctrl.console_ctrl.GetValue())
-
-        # ワーカー終了
-        self.worker = None
-        # タブ移動可
-        self.release_tab()
-        # フォーム有効化
-        self.enable()
-        # プログレス非表示
-        self.file_panel_ctrl.gauge_ctrl.SetValue(0)
-
     # タブ移動可
     def release_tab(self):
         self.file_panel_ctrl.release_tab()
@@ -169,9 +139,21 @@ class MainFrame(wx.Frame):
             result = file_set.is_loaded_valid() and result
 
         return result
-        
+    
+    def show_worked_time(self):
+        # 経過秒数を時分秒に変換
+        td_m, td_s = divmod(self.elapsed_time, 60)
+
+        if td_m == 0:
+            worked_time = "{0:02d}秒".format(int(td_s))
+        else:
+            worked_time = "{0:02d}分{1:02d}秒".format(int(td_m), int(td_s))
+
+        return worked_time
+
     # 読み込み
     def load(self, is_exec=False):
+        self.elapsed_time = 0
         result = True
         result = self.is_valid() and result
 
@@ -196,6 +178,8 @@ class MainFrame(wx.Frame):
 
     # 読み込み完了処理
     def on_load_result(self, event: wx.Event):
+        self.elapsed_time = event.elapsed_time
+
         # タブ移動可
         self.release_tab()
         # フォーム有効化
@@ -230,6 +214,10 @@ class MainFrame(wx.Frame):
             # 念のため出力ファイルパス自動生成（空の場合設定）
             self.file_panel_ctrl.file_set.set_output_vmd_path()
 
+            # multiのも出力ファイルパス自動生成（空の場合設定）
+            for file_set in self.multi_panel_ctrl.file_set_list:
+                file_set.set_output_vmd_path()
+
             # フォーム無効化
             self.file_panel_ctrl.disable()
             # タブ固定
@@ -249,11 +237,37 @@ class MainFrame(wx.Frame):
                 logger.error("まだ処理が実行中です。終了してから再度実行してください。", decoration=MLogger.DECORATION_BOX)
             else:
                 # 別スレッドで実行
-                self.worker = SizingWorkerThread(self, SizingThreadEvent)
+                self.worker = SizingWorkerThread(self, SizingThreadEvent, self.is_out_log)
                 self.worker.start()
                 self.worker.stop_event.set()
 
             event.Skip()
             return True
+        else:
+            logger.info("処理時間: %s", self.show_worked_time(), decoration=MLogger.DECORATION_SIMPLE)
         
         event.Skip()
+
+    # スレッド実行結果
+    def on_exec_result(self, event: wx.Event):
+        self.elapsed_time += event.elapsed_time
+        logger.info("処理時間: %s", self.show_worked_time(), decoration=MLogger.DECORATION_SIMPLE)
+
+        # 終了音を鳴らす
+        if os.name == "nt":
+            # Windows
+            try:
+                winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
+            except Exception:
+                pass
+
+        # ワーカー終了
+        self.worker = None
+        # タブ移動可
+        self.release_tab()
+        # フォーム有効化
+        self.enable()
+        # プログレス非表示
+        self.file_panel_ctrl.gauge_ctrl.SetValue(0)
+
+

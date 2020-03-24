@@ -33,32 +33,29 @@ class SizingFileSet():
         # VMD/VPDファイルコントロール
         self.motion_vmd_file_ctrl = HistoryFilePickerCtrl(frame, panel, u"調整対象モーションVMD/VPDファイル", u"調整対象モーションVMD/VPDファイルを開く", ("vmd", "vpd"), wx.FLP_DEFAULT_STYLE, \
                                                           u"調整したいモーションのVMD/VPDパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。\n{0}".format(able_aster_toottip), \
-                                                          file_model_spacer=8, title_parts_ctrl=None, file_hitories=self.file_hitories["vmd"], history_max=self.file_hitories["max"], \
-                                                          is_change_output=True, is_aster=True, is_save=False, set_no=set_no)
+                                                          file_model_spacer=8, title_parts_ctrl=None, file_histories_key="vmd", is_change_output=True, is_aster=True, is_save=False, set_no=set_no)
         self.set_sizer.Add(self.motion_vmd_file_ctrl.sizer, 1, wx.EXPAND, 0)
 
         # 作成元の代替モデルFLG
         substitute_model_flg_ctrl = wx.CheckBox(panel, wx.ID_ANY, u"代替モデル", wx.DefaultPosition, wx.DefaultSize, 0)
         substitute_model_flg_ctrl.SetToolTip(u"チェックを入れると、センターや上半身などの細かいスタンス補正をスキップできます。")
-        substitute_model_flg_ctrl.Bind(wx.EVT_CHECKBOX, self.on_replace_output_vmd_path)
+        substitute_model_flg_ctrl.Bind(wx.EVT_CHECKBOX, self.set_output_vmd_path)
 
         # 作成元PMXファイルコントロール
         self.org_model_file_ctrl = HistoryFilePickerCtrl(frame, panel, u"モーション作成元モデルPMXファイル", u"モーション作成元モデルPMXファイルを開く", ("pmx"), wx.FLP_DEFAULT_STYLE, \
                                                          u"モーション作成に使用されたモデルのPMXパスを指定してください。\n精度は落ちますが、類似したサイズ・ボーン構造のモデルでも代用できます。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。", \
-                                                         file_model_spacer=2, title_parts_ctrl=substitute_model_flg_ctrl, file_hitories=self.file_hitories["org_pmx"], \
-                                                         history_max=self.file_hitories["max"], is_change_output=False, is_aster=False, is_save=False, set_no=set_no)
+                                                         file_model_spacer=2, title_parts_ctrl=substitute_model_flg_ctrl, file_histories_key="org_pmx", is_change_output=False, is_aster=False, is_save=False, set_no=set_no)
         self.set_sizer.Add(self.org_model_file_ctrl.sizer, 1, wx.EXPAND, 0)
 
         # 捩り分散追加FLG
         twist_flg_ctrl = wx.CheckBox(panel, wx.ID_ANY, u"捩り分散追加", wx.DefaultPosition, wx.DefaultSize, 0)
         twist_flg_ctrl.SetToolTip(u"チェックを入れると、腕捻り等への分散処理を追加できます。")
-        twist_flg_ctrl.Bind(wx.EVT_CHECKBOX, self.on_replace_output_vmd_path)
+        twist_flg_ctrl.Bind(wx.EVT_CHECKBOX, self.set_output_vmd_path)
 
         # 変換先PMXファイルコントロール
         self.rep_model_file_ctrl = HistoryFilePickerCtrl(frame, panel, u"モーション変換先モデルPMXファイル", u"モーション変換先モデルPMXファイルを開く", ("pmx"), wx.FLP_DEFAULT_STYLE, \
                                                          u"実際にモーションを読み込ませたいモデルのPMXパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。", \
-                                                         file_model_spacer=1, title_parts_ctrl=twist_flg_ctrl, file_hitories=self.file_hitories["rep_pmx"], history_max=self.file_hitories["max"], \
-                                                         is_change_output=True, is_aster=False, is_save=False, set_no=set_no)
+                                                         file_model_spacer=1, title_parts_ctrl=twist_flg_ctrl, file_histories_key="rep_pmx", is_change_output=True, is_aster=False, is_save=False, set_no=set_no)
         self.set_sizer.Add(self.rep_model_file_ctrl.sizer, 1, wx.EXPAND, 0)
 
         # 出力先VMDファイルコントロール
@@ -71,10 +68,6 @@ class SizingFileSet():
         self.motion_vmd_file_ctrl.save()
         self.org_model_file_ctrl.save()
         self.rep_model_file_ctrl.save()
-
-    # 出力ファイルパス置き換え処理
-    def on_replace_output_vmd_path(self, event):
-        self.set_output_vmd_path(self.frame)
 
     # フォーム無効化
     def disable(self):
@@ -128,15 +121,19 @@ class SizingFileSet():
         org_pmx = self.org_model_file_ctrl.data
         rep_pmx = self.rep_model_file_ctrl.data
 
+        if not motion or not org_pmx or not rep_pmx:
+            # どれか読めてなければそのまま終了
+            return True
+
         if motion.motion_cnt == 0:
             logger.warning("%sボーンモーションデータにキーフレームが登録されていません。", display_set_no, decoration=MLogger.DECORATION_BOX)
-            return False
+            return True
 
         result = True
 
         # ボーン
         for k in motion.frames.keys():
-            bone_fnos = motion.get_bone_frame_nos(k)
+            bone_fnos = motion.get_bone_fnos(k)
             if len(bone_fnos) > 1 and (motion.frames[k][bone_fnos[0]].position != MVector3D() or motion.frames[k][bone_fnos[0]].rotation != MQuaternion()):
                 # キーが存在しており、かつ初期値ではない値が入っている場合、警告対象
                 if k not in org_pmx.bones:
@@ -145,7 +142,7 @@ class SizingFileSet():
                 if k not in rep_pmx.bones:
                     not_rep_bones.append(k)
 
-            morph_fnos = motion.get_morph_frame_nos(k)
+            morph_fnos = motion.get_morph_fnos(k)
             if len(morph_fnos) > 1 and (motion.frames[k][morph_fnos[0]].ratio != 0):
                 # キーが存在しており、かつ初期値ではない値が入っている場合、警告対象
                 if k not in org_pmx.morphs:
@@ -187,7 +184,7 @@ class SizingFileSet():
         return result
 
     # VMD出力ファイルパス生成
-    def set_output_vmd_path(self):
+    def set_output_vmd_path(self, is_force=False):
         # モーションVMDパス(アスタリスク込み)
         motion_vmd_all_path = self.motion_vmd_file_ctrl.file_ctrl.GetPath()
         # モーションVMDパスの拡張子リスト
@@ -222,8 +219,8 @@ class SizingFileSet():
         # 出力ファイルパス生成
         output_vmd_path = os.path.join(motion_vmd_dir_path, "{0}_{1}{2}_{3:%Y%m%d_%H%M%S}{4}".format(motion_vmd_file_name, rep_pmx_file_name, suffix, datetime.now(), motion_vmd_ext))
 
-        # 自動生成ルールに則っている場合、ファイルパス変更
-        if self.is_auto_vmd_output_path(self.output_vmd_file_ctrl.file_ctrl.GetPath(), motion_vmd_dir_path, motion_vmd_file_name, motion_vmd_ext, rep_pmx_file_name):
+        # ファイルパス自体が変更されたか、自動生成ルールに則っている場合、ファイルパス変更
+        if is_force or self.is_auto_vmd_output_path(self.output_vmd_file_ctrl.file_ctrl.GetPath(), motion_vmd_dir_path, motion_vmd_file_name, motion_vmd_ext, rep_pmx_file_name):
             self.output_vmd_file_ctrl.file_ctrl.SetPath(output_vmd_path)
 
         if len(output_vmd_path) >= 255 and os.name == "nt":

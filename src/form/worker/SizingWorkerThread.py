@@ -6,6 +6,7 @@ import os
 import glob
 import time
 import wx
+import re
 import _pickle as cPickle
 
 from form.worker.BaseWorkerThread import BaseWorkerThread
@@ -18,8 +19,9 @@ logger = MLogger(__name__)
 
 class SizingWorkerThread(BaseWorkerThread):
 
-    def __init__(self, frame: wx.Frame, result_event: wx.Event):
+    def __init__(self, frame: wx.Frame, result_event: wx.Event, is_out_log: bool):
         self.elapsed_time = 0
+        self.is_out_log = is_out_log
         super().__init__(frame, result_event)
 
     def thread_event(self):
@@ -65,8 +67,21 @@ class SizingWorkerThread(BaseWorkerThread):
 
             self.elapsed_time = time.time() - start
         except Exception as e:
-            logger.critical("VMDサイジング処理が意図せぬエラーで終了しました。\n\n%s", e, decoration=MLogger.DECORATION_BOX)
+            logger.critical("VMDサイジング処理が意図せぬエラーで終了しました。", e, decoration=MLogger.DECORATION_BOX)
         finally:
+            try:
+                if self.is_out_log or not self.result:
+                    # ログパス生成
+                    output_vmd_path = self.frame.file_panel_ctrl.file_set.output_vmd_file_ctrl.file_ctrl.GetPath()
+                    output_log_path = re.sub(r'\.vmd$', '.log', output_vmd_path)
+
+                    with open(output_log_path, mode='w') as f:
+                        # 出力されたメッセージを全部出力
+                        f.write(self.frame.file_panel_ctrl.console_ctrl.GetValue())
+
+            except Exception:
+                pass
+
             logging.shutdown()
 
     def post_event(self):

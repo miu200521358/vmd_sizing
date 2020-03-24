@@ -42,7 +42,7 @@ class MVector2D():
             # arrayそのものの場合
             self.__data = np.nan_to_num(np.array([x[0], x[1]]))
         else:
-            self.__data = np.nan_to_num(np.array([x, y], dtype=np.float64))
+            self.__data = np.nan_to_num(np.array([x, y]))
 
     def length(self):
         return float(np.linalg.norm(self.__data, ord=2))
@@ -174,10 +174,10 @@ class MVector2D():
         return self.__class__(~self.__data[0], ~self.__data[1])
     
     def x(self):
-        return float(self.__data[0])
+        return self.__data[0]
 
     def y(self):
-        return float(self.__data[1])
+        return self.__data[1]
     
     def setX(self, x):
         self.__data[0] = x
@@ -196,13 +196,13 @@ class MVector3D():
             # arrayそのものの場合
             self.__data = np.nan_to_num(np.array([x[0], x[1], x[2]]))
         else:
-            self.__data = np.nan_to_num(np.array([x, y, z], dtype=np.float64))
+            self.__data = np.nan_to_num(np.array([x, y, z]))
 
     def length(self):
-        return float(np.linalg.norm(self.__data, ord=2))
+        return np.linalg.norm(self.__data, ord=2)
 
     def lengthSquared(self):
-        return float(np.linalg.norm(self.__data, ord=2)**2)
+        return np.linalg.norm(self.__data, ord=2)**2
 
     def normalized(self):
         l2 = np.linalg.norm(self.__data, ord=2, axis=-1, keepdims=True)
@@ -376,13 +376,13 @@ class MVector3D():
         return self.__class__(~self.__data[0], ~self.__data[1], ~self.__data[2])
     
     def x(self):
-        return float(self.__data[0])
+        return self.__data[0]
 
     def y(self):
-        return float(self.__data[1])
+        return self.__data[1]
 
     def z(self):
-        return float(self.__data[2])
+        return self.__data[2]
     
     def setX(self, x):
         self.__data[0] = x
@@ -404,7 +404,7 @@ class MVector4D():
             # 行列そのものの場合
             self.__data = np.nan_to_num(np.array([x[0], x[1], x[2], x[3]]))
         else:
-            self.__data = np.nan_to_num(np.array([x, y, z, w], dtype=np.float64))
+            self.__data = np.nan_to_num(np.array([x, y, z, w]))
 
     def length(self):
         return np.linalg.norm(self.__data, ord=2)
@@ -544,16 +544,16 @@ class MVector4D():
         return self.__class__(~self.__data[0], ~self.__data[1], ~self.__data[2], ~self.__data[3])
     
     def x(self):
-        return float(self.__data[0])
+        return self.__data[0]
 
     def y(self):
-        return float(self.__data[1])
+        return self.__data[1]
 
     def z(self):
-        return float(self.__data[2])
+        return self.__data[2]
     
     def w(self):
-        return float(self.__data[3])
+        return self.__data[3]
     
     def setX(self, x):
         self.__data[0] = x
@@ -850,16 +850,16 @@ class MQuaternion():
         return q1 * factor1 + q2b * factor2
                 
     def x(self):
-        return float(self.__data.x)
+        return self.__data.x
 
     def y(self):
-        return float(self.__data.y)
+        return self.__data.y
 
     def z(self):
-        return float(self.__data.z)
+        return self.__data.z
 
     def scalar(self):
-        return float(self.__data.w)
+        return self.__data.w
     
     def setX(self, x):
         self.__data.x = x
@@ -994,7 +994,7 @@ class MMatrix4x4():
             self.__data = np.nan_to_num(m11)
         else:
             # べた値の場合
-            self.__data = np.nan_to_num(np.array([[m11, m12, m13, m14], [m21, m22, m23, m24], [m31, m32, m33, m34], [m41, m42, m43, m44]], dtype=np.float64))
+            self.__data = np.nan_to_num(np.array([[m11, m12, m13, m14], [m21, m22, m23, m24], [m31, m32, m33, m34], [m41, m42, m43, m44]]))
 
     def data(self):
         return np.nan_to_num(self.__data)
@@ -1017,7 +1017,7 @@ class MMatrix4x4():
     
     # 単位行列
     def setToIdentity(self):
-        self.__data = np.identity(4, dtype=np.float64)
+        self.__data = np.identity(4)
     
     def lookAt(self, eye, center, up):
         forward = center - eye

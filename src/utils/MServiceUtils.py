@@ -17,9 +17,9 @@ logger = MLogger(__name__)
 
 
 # グローバル位置算出
-def calc_global_pos_dic(model, links: BoneLinks, motion: VmdMotion, bf: VmdBoneFrame):
-    trans_vs = calc_relative_position(model, links, motion, bf)
-    add_qs = calc_relative_rotation(model, links, motion, bf)
+def calc_global_pos_dic(model, links: BoneLinks, motion: VmdMotion, fno: int):
+    trans_vs = calc_relative_position(model, links, motion, fno)
+    add_qs = calc_relative_rotation(model, links, motion, fno)
 
     # 行列
     matrixs = [MMatrix4x4() for i in range(links.size())]
@@ -52,22 +52,22 @@ def calc_global_pos_dic(model, links: BoneLinks, motion: VmdMotion, bf: VmdBoneF
 
 
 # 各ボーンの相対位置情報
-def calc_relative_position(model, links: BoneLinks, motion: VmdMotion, bf: VmdBoneFrame):
+def calc_relative_position(model, links: BoneLinks, motion: VmdMotion, fno: int):
     trans_vs = []
 
     for link_idx, link_bone_name in enumerate(links.reversed()):
         link_bone = links.get(link_bone_name)
 
         # キー情報を取得
-        calc_bone = motion.calc_bone_by_interpolation(link_bone.name, bf.frame, is_only=False, is_exist=False, is_key=False, is_read=False)
+        fill_bf = motion.fill_bf_by_interpolation(link_bone.name, fno)
 
         # 位置
         if link_idx == 0:
             # 一番親は、グローバル座標を考慮
-            trans_vs.append(link_bone.position + calc_bone.position)
+            trans_vs.append(link_bone.position + fill_bf.position)
         else:
-            # 位置：自身から親の位置を引いた相対位置(リンクは子から親の順なので、＋1)
-            trans_vs.append(link_bone.position + calc_bone.position - links.get(link_bone_name, offset=1).position)
+            # 位置：自身から親の位置を引いた相対位置
+            trans_vs.append(link_bone.position + fill_bf.position - links.get(link_bone_name, offset=-1).position)
 
     return trans_vs
 
@@ -86,17 +86,17 @@ def calc_global_position_by_direction(direction_qq: MQuaternion, target_pos_3ds_
 
 
 # 各ボーンの相対回転情報
-def calc_relative_rotation(model: PmxModel, links: BoneLinks, motion: VmdMotion, bf: VmdBoneFrame):
+def calc_relative_rotation(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int):
     add_qs = []
 
     for link_idx, link_bone_name in enumerate(links.reversed()):
         link_bone = links.get(link_bone_name)
 
         # キー情報を取得
-        calc_bone = motion.calc_bone_by_interpolation(link_bone.name, bf.frame, is_only=False, is_exist=False, is_key=False, is_read=False)
+        fill_bf = motion.fill_bf_by_interpolation(link_bone.name, fno)
         
         # 回転量
-        rot = calc_bone.rotation
+        rot = fill_bf.rotation
 
         if link_bone.fixed_axis != MVector3D():
             # 回転角度を求める
@@ -128,7 +128,7 @@ def calc_relative_rotation(model: PmxModel, links: BoneLinks, motion: VmdMotion,
         
         if link_bone.getExternalRotationFlag() and link_bone.effect_index in model.bone_indexes:
             # 該当する付与親の回転を取得する
-            effect_bone = motion.calc_bone_by_interpolation(model.bone_indexes[link_bone.effect_index], bf.frame, is_only=False, is_exist=False, is_key=False, is_read=False)
+            effect_bone = motion.fill_bf_by_interpolation(model.bone_indexes[link_bone.effect_index], fno)
 
             # 自身の回転量に付与親の回転量を付与率を加味して付与する
             rot = rot * effect_bone.rotation
@@ -142,8 +142,8 @@ def calc_relative_rotation(model: PmxModel, links: BoneLinks, motion: VmdMotion,
 
 
 # 指定されたボーンまでの回転量
-def calc_direction_qq(model: PmxModel, links: BoneLinks, motion: VmdMotion, bf: VmdBoneFrame):
-    add_qs = calc_relative_rotation(model, links, motion, bf)
+def calc_direction_qq(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int):
+    add_qs = calc_relative_rotation(model, links, motion, fno)
 
     total_qq = MQuaternion()
     for qq in add_qs:

@@ -79,7 +79,7 @@ class StanceService():
 
             logger.info("上半身スタンス準備終了", decoration=MLogger.DECORATION_SIMPLE)
 
-            for fno in motion.get_bone_frame_nos("上半身"):
+            for fno in motion.get_bone_fnos("上半身"):
                 bf = motion.frames["上半身"][fno]
                 if bf.key:
                     self.calc_rotation_stance(bf, org_motion, motion, org_upper_links, org_head_links, org_neck_links, org_arm_links, \
@@ -295,7 +295,7 @@ class StanceService():
     # スタンス用細分化
     def prepare_split_stance(self, target_bone_name):
         motion = self.options.motion_vmd_data
-        fnos = motion.get_bone_frame_nos(target_bone_name)
+        fnos = motion.get_bone_fnos(target_bone_name)
 
         for fidx, fno in enumerate(fnos):
             if fidx == 0:

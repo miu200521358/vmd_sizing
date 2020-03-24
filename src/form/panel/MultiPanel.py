@@ -21,6 +21,11 @@ class MultiPanel(BasePanel):
         self.header_panel = wx.Panel(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL)
         self.header_sizer = wx.BoxSizer(wx.VERTICAL)
 
+        self.description_txt = wx.StaticText(self.header_panel, wx.ID_ANY, "複数人数モーションなどを比率を合わせてサイジングする事ができます。" \
+                                             + "\n縮尺を強制的に変えてますので、足などが元モーションからズレる場合があります。"
+                                             + "\n間違えてファイルセットを追加してしまった場合は、４つのファイル欄をすべて空にしてください。", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.header_sizer.Add(self.description_txt, 0, wx.ALL, 5)
+
         self.btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
         # 変換前チェックボタン
@@ -78,8 +83,8 @@ class MultiFileSetScrolledWindow(wx.ScrolledWindow):
     def set_file_set_list(self, file_set_list):
         self.file_set_list = file_set_list
 
-    def set_output_vmd_path(self):
+    def set_output_vmd_path(self, is_force=False):
         for file_set in self.file_set_list:
-            file_set.set_output_vmd_path()
+            file_set.set_output_vmd_path(is_force)
 
         

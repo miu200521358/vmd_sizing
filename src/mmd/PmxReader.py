@@ -27,516 +27,518 @@ class PmxReader():
         self.rigidbody_index_size = 0
 
     def read_model_name(self):
-        # PMXファイルをバイナリ読み込み
-        self.buffer = open(self.file_path, "rb").read()
-        # logger.test("hashlib.algorithms_available: %s", hashlib.algorithms_available)
+        with open(self.file_path, "rb") as f:
+            # PMXファイルをバイナリ読み込み
+            self.buffer = f.read()
+            # logger.test("hashlib.algorithms_available: %s", hashlib.algorithms_available)
 
-        # pmx宣言
-        signature = self.unpack(4, "4s")
-        logger.test("signature: %s (%s)", signature, self.offset)
+            # pmx宣言
+            signature = self.unpack(4, "4s")
+            logger.test("signature: %s (%s)", signature, self.offset)
 
-        # pmxバージョン
-        version = self.read_float()
-        logger.test("version: %s (%s)", version, self.offset)
+            # pmxバージョン
+            version = self.read_float()
+            logger.test("version: %s (%s)", version, self.offset)
 
-        if signature[:3] != b"PMX" or (version != 2.0 and version != 2.1):
-            # 整合性チェック
-            raise MParseException("PMX2.0/2.1形式外のデータです。signature: {0}, version: {1} ".format(signature, version))
+            if signature[:3] != b"PMX" or (version != 2.0 and version != 2.1):
+                # 整合性チェック
+                raise MParseException("PMX2.0/2.1形式外のデータです。signature: {0}, version: {1} ".format(signature, version))
 
-        # flag
-        flag_bytes = self.read_int(1)
-        logger.test("flag_bytes: %s (%s)", flag_bytes, self.offset)
+            # flag
+            flag_bytes = self.read_int(1)
+            logger.test("flag_bytes: %s (%s)", flag_bytes, self.offset)
 
-        # エンコード方式
-        text_encoding = self.read_int(1)
-        logger.test("text_encoding: %s (%s)", text_encoding, self.offset)
-        # エンコードに基づいて文字列解凍処理を定義
-        self.read_text = self.define_read_text(text_encoding)
+            # エンコード方式
+            text_encoding = self.read_int(1)
+            logger.test("text_encoding: %s (%s)", text_encoding, self.offset)
+            # エンコードに基づいて文字列解凍処理を定義
+            self.read_text = self.define_read_text(text_encoding)
 
-        # 追加UV数
-        self.extended_uv = self.read_int(1)
-        logger.test("extended_uv: %s (%s)", self.extended_uv, self.offset)
+            # 追加UV数
+            self.extended_uv = self.read_int(1)
+            logger.test("extended_uv: %s (%s)", self.extended_uv, self.offset)
 
-        # 頂点Indexサイズ
-        self.vertex_index_size = self.read_int(1)
-        logger.test("vertex_index_size: %s (%s)", self.vertex_index_size, self.offset)
-        self.read_vertex_index_size = lambda: self.read_int(self.vertex_index_size)
+            # 頂点Indexサイズ
+            self.vertex_index_size = self.read_int(1)
+            logger.test("vertex_index_size: %s (%s)", self.vertex_index_size, self.offset)
+            self.read_vertex_index_size = lambda: self.read_int(self.vertex_index_size)
 
-        # テクスチャIndexサイズ
-        self.texture_index_size = self.read_int(1)
-        logger.test("texture_index_size: %s (%s)", self.texture_index_size, self.offset)
-        self.read_texture_index_size = lambda: self.read_int(self.texture_index_size)
+            # テクスチャIndexサイズ
+            self.texture_index_size = self.read_int(1)
+            logger.test("texture_index_size: %s (%s)", self.texture_index_size, self.offset)
+            self.read_texture_index_size = lambda: self.read_int(self.texture_index_size)
 
-        # 材質Indexサイズ
-        self.material_index_size = self.read_int(1)
-        logger.test("material_index_size: %s (%s)", self.material_index_size, self.offset)
-        self.read_material_index_size = lambda: self.read_int(self.material_index_size)
+            # 材質Indexサイズ
+            self.material_index_size = self.read_int(1)
+            logger.test("material_index_size: %s (%s)", self.material_index_size, self.offset)
+            self.read_material_index_size = lambda: self.read_int(self.material_index_size)
 
-        # ボーンIndexサイズ
-        self.bone_index_size = self.read_int(1)
-        logger.test("bone_index_size: %s (%s)", self.bone_index_size, self.offset)
-        self.read_bone_index_size = lambda: self.read_int(self.bone_index_size)
+            # ボーンIndexサイズ
+            self.bone_index_size = self.read_int(1)
+            logger.test("bone_index_size: %s (%s)", self.bone_index_size, self.offset)
+            self.read_bone_index_size = lambda: self.read_int(self.bone_index_size)
 
-        # モーフIndexサイズ
-        self.morph_index_size = self.read_int(1)
-        logger.test("morph_index_size: %s (%s)", self.morph_index_size, self.offset)
-        self.read_morph_index_size = lambda: self.read_int(self.morph_index_size)
+            # モーフIndexサイズ
+            self.morph_index_size = self.read_int(1)
+            logger.test("morph_index_size: %s (%s)", self.morph_index_size, self.offset)
+            self.read_morph_index_size = lambda: self.read_int(self.morph_index_size)
 
-        # 剛体Indexサイズ
-        self.rigidbody_index_size = self.read_int(1)
-        logger.test("rigidbody_index_size: %s (%s)", self.rigidbody_index_size, self.offset)
-        self.read_rigidbody_index_size = lambda: self.read_int(self.rigidbody_index_size)
+            # 剛体Indexサイズ
+            self.rigidbody_index_size = self.read_int(1)
+            logger.test("rigidbody_index_size: %s (%s)", self.rigidbody_index_size, self.offset)
+            self.read_rigidbody_index_size = lambda: self.read_int(self.rigidbody_index_size)
 
-        # モデル名（日本語）
-        model_name = self.read_text()
-        logger.test("name: %s (%s)", model_name, self.offset)
+            # モデル名（日本語）
+            model_name = self.read_text()
+            logger.test("name: %s (%s)", model_name, self.offset)
 
         return model_name
 
     def read_data(self):
         # PMXファイルをバイナリ読み込み
-        self.buffer = open(self.file_path, "rb").read()
-        # logger.test("hashlib.algorithms_available: %s", hashlib.algorithms_available)
+        with open(self.file_path, "rb") as f:
+            self.buffer = f.read()
+            # logger.test("hashlib.algorithms_available: %s", hashlib.algorithms_available)
 
-        # pmx宣言
-        signature = self.unpack(4, "4s")
-        logger.test("signature: %s (%s)", signature, self.offset)
+            # pmx宣言
+            signature = self.unpack(4, "4s")
+            logger.test("signature: %s (%s)", signature, self.offset)
 
-        # pmxバージョン
-        version = self.read_float()
-        logger.test("version: %s (%s)", version, self.offset)
+            # pmxバージョン
+            version = self.read_float()
+            logger.test("version: %s (%s)", version, self.offset)
 
-        if signature[:3] != b"PMX" or (version != 2.0 and version != 2.1):
-            # 整合性チェック
-            raise MParseException("PMX2.0/2.1形式外のデータです。signature: {0}, version: {1} ".format(signature, version))
+            if signature[:3] != b"PMX" or (version != 2.0 and version != 2.1):
+                # 整合性チェック
+                raise MParseException("PMX2.0/2.1形式外のデータです。signature: {0}, version: {1} ".format(signature, version))
 
-        # flag
-        flag_bytes = self.read_int(1)
-        logger.test("flag_bytes: %s (%s)", flag_bytes, self.offset)
+            # flag
+            flag_bytes = self.read_int(1)
+            logger.test("flag_bytes: %s (%s)", flag_bytes, self.offset)
 
-        # エンコード方式
-        text_encoding = self.read_int(1)
-        logger.test("text_encoding: %s (%s)", text_encoding, self.offset)
-        # エンコードに基づいて文字列解凍処理を定義
-        self.read_text = self.define_read_text(text_encoding)
+            # エンコード方式
+            text_encoding = self.read_int(1)
+            logger.test("text_encoding: %s (%s)", text_encoding, self.offset)
+            # エンコードに基づいて文字列解凍処理を定義
+            self.read_text = self.define_read_text(text_encoding)
 
-        # 追加UV数
-        self.extended_uv = self.read_int(1)
-        logger.test("extended_uv: %s (%s)", self.extended_uv, self.offset)
+            # 追加UV数
+            self.extended_uv = self.read_int(1)
+            logger.test("extended_uv: %s (%s)", self.extended_uv, self.offset)
 
-        # 頂点Indexサイズ
-        self.vertex_index_size = self.read_int(1)
-        logger.test("vertex_index_size: %s (%s)", self.vertex_index_size, self.offset)
-        self.read_vertex_index_size = lambda: self.read_int(self.vertex_index_size)
+            # 頂点Indexサイズ
+            self.vertex_index_size = self.read_int(1)
+            logger.test("vertex_index_size: %s (%s)", self.vertex_index_size, self.offset)
+            self.read_vertex_index_size = lambda: self.read_int(self.vertex_index_size)
 
-        # テクスチャIndexサイズ
-        self.texture_index_size = self.read_int(1)
-        logger.test("texture_index_size: %s (%s)", self.texture_index_size, self.offset)
-        self.read_texture_index_size = lambda: self.read_int(self.texture_index_size)
+            # テクスチャIndexサイズ
+            self.texture_index_size = self.read_int(1)
+            logger.test("texture_index_size: %s (%s)", self.texture_index_size, self.offset)
+            self.read_texture_index_size = lambda: self.read_int(self.texture_index_size)
 
-        # 材質Indexサイズ
-        self.material_index_size = self.read_int(1)
-        logger.test("material_index_size: %s (%s)", self.material_index_size, self.offset)
-        self.read_material_index_size = lambda: self.read_int(self.material_index_size)
+            # 材質Indexサイズ
+            self.material_index_size = self.read_int(1)
+            logger.test("material_index_size: %s (%s)", self.material_index_size, self.offset)
+            self.read_material_index_size = lambda: self.read_int(self.material_index_size)
 
-        # ボーンIndexサイズ
-        self.bone_index_size = self.read_int(1)
-        logger.test("bone_index_size: %s (%s)", self.bone_index_size, self.offset)
-        self.read_bone_index_size = lambda: self.read_int(self.bone_index_size)
+            # ボーンIndexサイズ
+            self.bone_index_size = self.read_int(1)
+            logger.test("bone_index_size: %s (%s)", self.bone_index_size, self.offset)
+            self.read_bone_index_size = lambda: self.read_int(self.bone_index_size)
 
-        # モーフIndexサイズ
-        self.morph_index_size = self.read_int(1)
-        logger.test("morph_index_size: %s (%s)", self.morph_index_size, self.offset)
-        self.read_morph_index_size = lambda: self.read_int(self.morph_index_size)
+            # モーフIndexサイズ
+            self.morph_index_size = self.read_int(1)
+            logger.test("morph_index_size: %s (%s)", self.morph_index_size, self.offset)
+            self.read_morph_index_size = lambda: self.read_int(self.morph_index_size)
 
-        # 剛体Indexサイズ
-        self.rigidbody_index_size = self.read_int(1)
-        logger.test("rigidbody_index_size: %s (%s)", self.rigidbody_index_size, self.offset)
-        self.read_rigidbody_index_size = lambda: self.read_int(self.rigidbody_index_size)
+            # 剛体Indexサイズ
+            self.rigidbody_index_size = self.read_int(1)
+            logger.test("rigidbody_index_size: %s (%s)", self.rigidbody_index_size, self.offset)
+            self.read_rigidbody_index_size = lambda: self.read_int(self.rigidbody_index_size)
 
-        # Pmxモデル生成
-        pmx = PmxModel()
-        pmx.path = self.file_path
+            # Pmxモデル生成
+            pmx = PmxModel()
+            pmx.path = self.file_path
 
-        # モデル名（日本語）
-        pmx.name = self.read_text()
-        logger.test("name: %s (%s)", pmx.name, self.offset)
+            # モデル名（日本語）
+            pmx.name = self.read_text()
+            logger.test("name: %s (%s)", pmx.name, self.offset)
 
-        # モデル名（英語）
-        pmx.english_name = self.read_text()
-        logger.test("english_name: %s (%s)", pmx.english_name, self.offset)
+            # モデル名（英語）
+            pmx.english_name = self.read_text()
+            logger.test("english_name: %s (%s)", pmx.english_name, self.offset)
 
-        # コメント（日本語）
-        pmx.comment = self.read_text()
-        logger.test("comment: %s (%s)", pmx.comment, self.offset)
+            # コメント（日本語）
+            pmx.comment = self.read_text()
+            logger.test("comment: %s (%s)", pmx.comment, self.offset)
 
-        # コメント（英語）
-        pmx.english_comment = self.read_text()
-        logger.test("english_comment: %s (%s)", pmx.english_comment, self.offset)
+            # コメント（英語）
+            pmx.english_comment = self.read_text()
+            logger.test("english_comment: %s (%s)", pmx.english_comment, self.offset)
 
-        # 頂点データリスト
-        vidx = 0
-        for _ in range(self.read_int(4)):
-            position = self.read_Vector3D()
-            normal = self.read_Vector3D()
-            uv = self.read_Vector2D()
+            # 頂点データリスト
+            vidx = 0
+            for _ in range(self.read_int(4)):
+                position = self.read_Vector3D()
+                normal = self.read_Vector3D()
+                uv = self.read_Vector2D()
 
-            extended_uvs = []
-            if self.extended_uv > 0:
-                # 追加UVがある場合
-                for _ in range(self.extended_uv):
-                    extended_uvs.append(self.read_Vector4D())
+                extended_uvs = []
+                if self.extended_uv > 0:
+                    # 追加UVがある場合
+                    for _ in range(self.extended_uv):
+                        extended_uvs.append(self.read_Vector4D())
 
-            deform = self.read_deform()
-            edge_factor = self.read_float()
+                deform = self.read_deform()
+                edge_factor = self.read_float()
 
-            vindex = vidx
-            vidx += 1
+                vindex = vidx
+                vidx += 1
 
-            # 頂点をウェイトボーンごとに分けて保持する
-            vertex = Vertex(vindex, position, normal, uv, extended_uvs, deform, edge_factor)
-            for bone_idx in vertex.deform.get_idx_list():
-                if bone_idx not in pmx.vertices:
-                    pmx.vertices[bone_idx] = []
-                pmx.vertices[bone_idx].append(vertex)
+                # 頂点をウェイトボーンごとに分けて保持する
+                vertex = Vertex(vindex, position, normal, uv, extended_uvs, deform, edge_factor)
+                for bone_idx in vertex.deform.get_idx_list():
+                    if bone_idx not in pmx.vertices:
+                        pmx.vertices[bone_idx] = []
+                    pmx.vertices[bone_idx].append(vertex)
 
-        logger.test("len(vertices): %s", len(pmx.vertices))
-        logger.test("vertices.keys: %s", pmx.vertices.keys())
+            logger.test("len(vertices): %s", len(pmx.vertices))
+            logger.test("vertices.keys: %s", pmx.vertices.keys())
 
-        # 面データリスト
-        for _ in range(self.read_int(4)):
-            if self.vertex_index_size <= 2:
-                # 頂点サイズが2以下の場合、符号なし
-                pmx.indices.append(self.read_uint(self.vertex_index_size))
-            else:
-                pmx.indices.append(self.read_int(self.vertex_index_size))
-        logger.test("len(indices): %s", len(pmx.indices))
+            # 面データリスト
+            for _ in range(self.read_int(4)):
+                if self.vertex_index_size <= 2:
+                    # 頂点サイズが2以下の場合、符号なし
+                    pmx.indices.append(self.read_uint(self.vertex_index_size))
+                else:
+                    pmx.indices.append(self.read_int(self.vertex_index_size))
+            logger.test("len(indices): %s", len(pmx.indices))
 
-        # テクスチャデータリスト
-        for _ in range(self.read_int(4)):
-            pmx.textures.append(self.read_text())
-        logger.test("len(textures): %s", len(pmx.textures))
+            # テクスチャデータリスト
+            for _ in range(self.read_int(4)):
+                pmx.textures.append(self.read_text())
+            logger.test("len(textures): %s", len(pmx.textures))
 
-        # 材質データリスト
-        for _ in range(self.read_int(4)):
-            material = Material(
-                name=self.read_text(),
-                english_name=self.read_text(),
-                diffuse_color=self.read_RGB(),
-                alpha=self.read_float(),
-                specular_color=self.read_RGB(),
-                specular_factor=self.read_float(),
-                ambient_color=self.read_RGB(),
-                flag=self.read_int(1),
-                edge_color=self.read_RGBA(),
-                edge_size=self.read_float(),
-                texture_index=self.read_texture_index_size(),
-                sphere_texture_index=self.read_texture_index_size(),
-                sphere_mode=self.read_int(1),
-                toon_sharing_flag=self.read_int(1)
-            )
-
-            if material.toon_sharing_flag == 0:
-                material.toon_texture_index = self.read_texture_index_size()
-            elif material.toon_sharing_flag == 1:
-                material.toon_texture_index = self.read_int(1)
-            else:
-                raise MParseException("unknown toon_sharing_flag {0}".format(material.toon_sharing_flag))
-            material.comment = self.read_text()
-            material.vertex_count = self.read_int(4)
-
-            pmx.materials[material.name] = material
-        logger.test("len(materials): %s", len(pmx.materials))
-
-        # サイジング用ルートボーン
-        sizing_root_bone = Bone("SIZING_ROOT_BONE", "SIZING_ROOT_BONE", MVector3D(), -1, 0, 0)
-        sizing_root_bone.index = -999
-
-        pmx.bones[sizing_root_bone.name] = sizing_root_bone
-        # インデックス逆引きも登録
-        pmx.bone_indexes[sizing_root_bone.index] = sizing_root_bone.name
-
-        # ボーンデータリスト
-        for _ in range(self.read_int(4)):
-            bone = Bone(
-                name=self.read_text(),
-                english_name=self.read_text(),
-                position=self.read_Vector3D(),
-                parent_index=self.read_bone_index_size(),
-                layer=self.read_int(4),
-                flag=self.read_int(2)
-            )
-
-            if not bone.getConnectionFlag():
-                bone.tail_position = self.read_Vector3D()
-            elif bone.getConnectionFlag():
-                bone.tail_index = self.read_bone_index_size()
-            else:
-                raise MParseException("unknown bone conenction flag: {0}".format(bone.getConnectionFlag()))
-
-            if bone.getExternalRotationFlag() or bone.getExternalTranslationFlag():
-                bone.effect_index = self.read_bone_index_size()
-                bone.effect_factor = self.read_float()
-
-            if bone.getFixedAxisFlag():
-                bone.fixed_axis = self.read_Vector3D()
-
-            if bone.getLocalCoordinateFlag():
-                bone.local_x_vector = self.read_Vector3D()
-                bone.local_z_vector = self.read_Vector3D()
-
-            if bone.getExternalParentDeformFlag():
-                bone.external_key = self.read_int(4)
-
-            if bone.getIkFlag():
-                bone.ik = Bone.Ik(
-                    target_index=self.read_bone_index_size(),
-                    loop=self.read_int(4),
-                    limit_radian=self.read_float()
+            # 材質データリスト
+            for _ in range(self.read_int(4)):
+                material = Material(
+                    name=self.read_text(),
+                    english_name=self.read_text(),
+                    diffuse_color=self.read_RGB(),
+                    alpha=self.read_float(),
+                    specular_color=self.read_RGB(),
+                    specular_factor=self.read_float(),
+                    ambient_color=self.read_RGB(),
+                    flag=self.read_int(1),
+                    edge_color=self.read_RGBA(),
+                    edge_size=self.read_float(),
+                    texture_index=self.read_texture_index_size(),
+                    sphere_texture_index=self.read_texture_index_size(),
+                    sphere_mode=self.read_int(1),
+                    toon_sharing_flag=self.read_int(1)
                 )
 
-                # IKリンク取得
-                for _ in range(self.read_int(4)):
+                if material.toon_sharing_flag == 0:
+                    material.toon_texture_index = self.read_texture_index_size()
+                elif material.toon_sharing_flag == 1:
+                    material.toon_texture_index = self.read_int(1)
+                else:
+                    raise MParseException("unknown toon_sharing_flag {0}".format(material.toon_sharing_flag))
+                material.comment = self.read_text()
+                material.vertex_count = self.read_int(4)
 
-                    link = Bone.IkLink(
-                        self.read_bone_index_size(),
-                        self.read_int(1)
+                pmx.materials[material.name] = material
+            logger.test("len(materials): %s", len(pmx.materials))
+
+            # サイジング用ルートボーン
+            sizing_root_bone = Bone("SIZING_ROOT_BONE", "SIZING_ROOT_BONE", MVector3D(), -1, 0, 0)
+            sizing_root_bone.index = -999
+
+            pmx.bones[sizing_root_bone.name] = sizing_root_bone
+            # インデックス逆引きも登録
+            pmx.bone_indexes[sizing_root_bone.index] = sizing_root_bone.name
+
+            # ボーンデータリスト
+            for _ in range(self.read_int(4)):
+                bone = Bone(
+                    name=self.read_text(),
+                    english_name=self.read_text(),
+                    position=self.read_Vector3D(),
+                    parent_index=self.read_bone_index_size(),
+                    layer=self.read_int(4),
+                    flag=self.read_int(2)
+                )
+
+                if not bone.getConnectionFlag():
+                    bone.tail_position = self.read_Vector3D()
+                elif bone.getConnectionFlag():
+                    bone.tail_index = self.read_bone_index_size()
+                else:
+                    raise MParseException("unknown bone conenction flag: {0}".format(bone.getConnectionFlag()))
+
+                if bone.getExternalRotationFlag() or bone.getExternalTranslationFlag():
+                    bone.effect_index = self.read_bone_index_size()
+                    bone.effect_factor = self.read_float()
+
+                if bone.getFixedAxisFlag():
+                    bone.fixed_axis = self.read_Vector3D()
+
+                if bone.getLocalCoordinateFlag():
+                    bone.local_x_vector = self.read_Vector3D()
+                    bone.local_z_vector = self.read_Vector3D()
+
+                if bone.getExternalParentDeformFlag():
+                    bone.external_key = self.read_int(4)
+
+                if bone.getIkFlag():
+                    bone.ik = Bone.Ik(
+                        target_index=self.read_bone_index_size(),
+                        loop=self.read_int(4),
+                        limit_radian=self.read_float()
                     )
 
-                    if link.limit_angle == 0:
-                        pass
-                    elif link.limit_angle == 1:
-                        link.limit_min = self.read_Vector3D()
-                        link.limit_max = self.read_Vector3D()
-                    else:
-                        raise MParseException("invalid ik link limit_angle: {0}".format(link.limit_angle))
+                    # IKリンク取得
+                    for _ in range(self.read_int(4)):
 
-                    bone.ik.link.append(link)
+                        link = Bone.IkLink(
+                            self.read_bone_index_size(),
+                            self.read_int(1)
+                        )
 
-            # ボーンのINDEX
-            bone.index = len(pmx.bones.keys()) - 1
+                        if link.limit_angle == 0:
+                            pass
+                        elif link.limit_angle == 1:
+                            link.limit_min = self.read_Vector3D()
+                            link.limit_max = self.read_Vector3D()
+                        else:
+                            raise MParseException("invalid ik link limit_angle: {0}".format(link.limit_angle))
 
-            if bone.name not in pmx.bones:
-                # まだ未登録の名前のボーンの場合のみ登録
-                pmx.bones[bone.name] = bone
-                # インデックス逆引きも登録
-                pmx.bone_indexes[bone.index] = bone.name
-            
-            # サイジング用ボーン ---------
-            # 頭頂ボーン
-            head_top_vertex = pmx.get_head_top_vertex()
-            pmx.head_top_vertex = head_top_vertex
-            head_top_bone = Bone("頭頂", "head_top", copy.deepcopy(head_top_vertex.position), -1, 0, 0)
-            head_top_bone.index = len(pmx.bones.keys()) - 1
-            pmx.bones[head_top_bone.name] = head_top_bone
-            pmx.bone_indexes[head_top_bone.index] = head_top_bone.name
+                        bone.ik.link.append(link)
 
-            # 右つま先ボーン
-            right_toe_vertex = pmx.get_toe_vertex("右")
-            pmx.right_toe_vertex = right_toe_vertex
-            right_toe_bone = Bone("右つま先実体", "right toe entity", copy.deepcopy(right_toe_vertex.position), -1, 0, 0)
-            right_toe_bone.index = len(pmx.bones.keys()) - 1
-            pmx.bones[right_toe_bone.name] = right_toe_bone
-            pmx.bone_indexes[right_toe_bone.index] = right_toe_bone.name
+                # ボーンのINDEX
+                bone.index = len(pmx.bones.keys()) - 1
 
-            # 左つま先ボーン
-            left_toe_vertex = pmx.get_toe_vertex("左")
-            pmx.left_toe_vertex = left_toe_vertex
-            left_toe_bone = Bone("左つま先実体", "left toe entity", copy.deepcopy(left_toe_vertex.position), -1, 0, 0)
-            left_toe_bone.index = len(pmx.bones.keys()) - 1
-            pmx.bones[left_toe_bone.name] = left_toe_bone
-            pmx.bone_indexes[left_toe_bone.index] = left_toe_bone.name
-
-            if "右足ＩＫ" in pmx.bones:
-                # 右足底辺ボーン
-                right_leg_bottom_vertex = MVector3D(pmx.bones["右足ＩＫ"].position.x(), 0, pmx.bones["右足ＩＫ"].position.z())
-                pmx.right_leg_bottom_vertex = right_leg_bottom_vertex
-                right_leg_bottom_bone = Bone("右足底辺", "right toe entity", right_leg_bottom_vertex, -1, 0, 0)
-                right_leg_bottom_bone.index = len(pmx.bones.keys()) - 1
-                pmx.bones[right_leg_bottom_bone.name] = right_leg_bottom_bone
-                pmx.bone_indexes[right_leg_bottom_bone.index] = right_leg_bottom_bone.name
-
-            # 左足底辺ボーン
-            if "左足ＩＫ" in pmx.bones:
-                left_leg_bottom_vertex = MVector3D(pmx.bones["左足ＩＫ"].position.x(), 0, pmx.bones["左足ＩＫ"].position.z())
-                pmx.left_leg_bottom_vertex = left_leg_bottom_vertex
-                left_leg_bottom_bone = Bone("左足底辺", "left toe entity", left_leg_bottom_vertex, -1, 0, 0)
-                left_leg_bottom_bone.index = len(pmx.bones.keys()) - 1
-                pmx.bones[left_leg_bottom_bone.name] = left_leg_bottom_bone
-                pmx.bone_indexes[left_leg_bottom_bone.index] = left_leg_bottom_bone.name
-
-        # 指先ボーンがない場合、代替で挿入
-        for direction in ["左", "右"]:
-            for (finger_name, end_joint_name) in [("親指", "２"), ("人指", "３"), ("中指", "３"), ("薬指", "３"), ("小指", "３")]:
-                end_joint_name = "{0}{1}{2}".format(direction, finger_name, end_joint_name)
-                to_joint_name = "{0}{1}{2}".format(direction, finger_name, "先")
-
-                if to_joint_name not in pmx.bones:
-                    _, to_pos = self.calc_tail_pos(pmx, end_joint_name)
-                    to_bone = Bone(to_joint_name, None, to_pos, -1, 0, 0)
-
-                    # ボーンのINDEX
-                    to_bone.index = len(pmx.bones.keys())
-                    pmx.bones[to_bone.name] = to_bone
+                if bone.name not in pmx.bones:
+                    # まだ未登録の名前のボーンの場合のみ登録
+                    pmx.bones[bone.name] = bone
                     # インデックス逆引きも登録
-                    pmx.bone_indexes[to_bone.index] = to_bone.name
+                    pmx.bone_indexes[bone.index] = bone.name
+                
+                # サイジング用ボーン ---------
+                # 頭頂ボーン
+                head_top_vertex = pmx.get_head_top_vertex()
+                pmx.head_top_vertex = head_top_vertex
+                head_top_bone = Bone("頭頂", "head_top", copy.deepcopy(head_top_vertex.position), -1, 0, 0)
+                head_top_bone.index = len(pmx.bones.keys()) - 1
+                pmx.bones[head_top_bone.name] = head_top_bone
+                pmx.bone_indexes[head_top_bone.index] = head_top_bone.name
 
-        logger.test("len(bones): %s", len(pmx.bones))
+                # 右つま先ボーン
+                right_toe_vertex = pmx.get_toe_vertex("右")
+                pmx.right_toe_vertex = right_toe_vertex
+                right_toe_bone = Bone("右つま先実体", "right toe entity", copy.deepcopy(right_toe_vertex.position), -1, 0, 0)
+                right_toe_bone.index = len(pmx.bones.keys()) - 1
+                pmx.bones[right_toe_bone.name] = right_toe_bone
+                pmx.bone_indexes[right_toe_bone.index] = right_toe_bone.name
 
-        # ボーンの長さを計算する
-        self.calc_bone_length(pmx.bones, pmx.bone_indexes)
+                # 左つま先ボーン
+                left_toe_vertex = pmx.get_toe_vertex("左")
+                pmx.left_toe_vertex = left_toe_vertex
+                left_toe_bone = Bone("左つま先実体", "left toe entity", copy.deepcopy(left_toe_vertex.position), -1, 0, 0)
+                left_toe_bone.index = len(pmx.bones.keys()) - 1
+                pmx.bones[left_toe_bone.name] = left_toe_bone
+                pmx.bone_indexes[left_toe_bone.index] = left_toe_bone.name
 
-        # 操作パネル (PMD:カテゴリ) 1:眉(左下) 2:目(左上) 3:口(右上) 4:その他(右下)
-        morphs_by_panel = OrderedDict()
-        morphs_by_panel[2] = []  # 目
-        morphs_by_panel[1] = []  # 眉
-        morphs_by_panel[3] = []  # 口
-        morphs_by_panel[4] = []  # 他
-        morphs_by_panel[0] = []  # システム予約
+                if "右足ＩＫ" in pmx.bones:
+                    # 右足底辺ボーン
+                    right_leg_bottom_vertex = MVector3D(pmx.bones["右足ＩＫ"].position.x(), 0, pmx.bones["右足ＩＫ"].position.z())
+                    pmx.right_leg_bottom_vertex = right_leg_bottom_vertex
+                    right_leg_bottom_bone = Bone("右足底辺", "right toe entity", right_leg_bottom_vertex, -1, 0, 0)
+                    right_leg_bottom_bone.index = len(pmx.bones.keys()) - 1
+                    pmx.bones[right_leg_bottom_bone.name] = right_leg_bottom_bone
+                    pmx.bone_indexes[right_leg_bottom_bone.index] = right_leg_bottom_bone.name
 
-        morph_idx = 0
-        # モーフデータリスト
-        for _ in range(self.read_int(4)):
-            morph = Morph(
-                name=self.read_text(),
-                english_name=self.read_text(),
-                panel=self.read_int(1),
-                morph_type=self.read_int(1)
-            )
+                # 左足底辺ボーン
+                if "左足ＩＫ" in pmx.bones:
+                    left_leg_bottom_vertex = MVector3D(pmx.bones["左足ＩＫ"].position.x(), 0, pmx.bones["左足ＩＫ"].position.z())
+                    pmx.left_leg_bottom_vertex = left_leg_bottom_vertex
+                    left_leg_bottom_bone = Bone("左足底辺", "left toe entity", left_leg_bottom_vertex, -1, 0, 0)
+                    left_leg_bottom_bone.index = len(pmx.bones.keys()) - 1
+                    pmx.bones[left_leg_bottom_bone.name] = left_leg_bottom_bone
+                    pmx.bone_indexes[left_leg_bottom_bone.index] = left_leg_bottom_bone.name
 
-            offset_size = self.read_int(4)
+            # 指先ボーンがない場合、代替で挿入
+            for direction in ["左", "右"]:
+                for (finger_name, end_joint_name) in [("親指", "２"), ("人指", "３"), ("中指", "３"), ("薬指", "３"), ("小指", "３")]:
+                    end_joint_name = "{0}{1}{2}".format(direction, finger_name, end_joint_name)
+                    to_joint_name = "{0}{1}{2}".format(direction, finger_name, "先")
 
-            if morph.morph_type == 0:
-                # group
-                morph.offsets = [self.read_group_morph_data() for _ in range(offset_size)]
-            elif morph.morph_type == 1:
-                # vertex
-                morph.offsets = [self.read_vertex_position_morph_offset() for _ in range(offset_size)]
-            elif morph.morph_type == 2:
-                # bone
-                morph.offsets = [self.read_bone_morph_data() for _ in range(offset_size)]
-            elif morph.morph_type == 3:
-                # uv
-                morph.offsets = [self.read_uv_morph_data() for _ in range(offset_size)]
-            elif morph.morph_type == 4:
-                # uv extended1
-                morph.offsets = [self.read_uv_morph_data() for _ in range(offset_size)]
-            elif morph.morph_type == 5:
-                # uv extended2
-                morph.offsets = [self.read_uv_morph_data() for _ in range(offset_size)]
-            elif morph.morph_type == 6:
-                # uv extended3
-                morph.offsets = [self.read_uv_morph_data() for _ in range(offset_size)]
-            elif morph.morph_type == 7:
-                # uv extended4
-                morph.offsets = [self.read_uv_morph_data() for _ in range(offset_size)]
-            elif morph.morph_type == 8:
-                # material
-                morph.data = [self.read_material_morph_data() for _ in range(offset_size)]
-            else:
-                raise MParseException("unknown morph type: {0}".format(morph.morph_type))
+                    if to_joint_name not in pmx.bones:
+                        _, to_pos = self.calc_tail_pos(pmx, end_joint_name)
+                        to_bone = Bone(to_joint_name, None, to_pos, -1, 0, 0)
 
-            # モーフのINDEXは、先頭から順番に設定
-            morph.index = morph_idx
-            morph_idx += 1
+                        # ボーンのINDEX
+                        to_bone.index = len(pmx.bones.keys())
+                        pmx.bones[to_bone.name] = to_bone
+                        # インデックス逆引きも登録
+                        pmx.bone_indexes[to_bone.index] = to_bone.name
 
-            if morph.panel not in morphs_by_panel.keys():
-                # ないと思うが念のためパネル情報がなければ追加
-                morphs_by_panel[morph.panel] = 0
+            logger.test("len(bones): %s", len(pmx.bones))
 
-            morphs_by_panel[morph.panel].append(morph)
+            # ボーンの長さを計算する
+            self.calc_bone_length(pmx.bones, pmx.bone_indexes)
 
-        # モーフのパネル順に並び替えてモーフを登録していく
-        for _, mlist in morphs_by_panel.items():
-            for m in mlist:
-                pmx.morphs[m.name] = m
+            # 操作パネル (PMD:カテゴリ) 1:眉(左下) 2:目(左上) 3:口(右上) 4:その他(右下)
+            morphs_by_panel = OrderedDict()
+            morphs_by_panel[2] = []  # 目
+            morphs_by_panel[1] = []  # 眉
+            morphs_by_panel[3] = []  # 口
+            morphs_by_panel[4] = []  # 他
+            morphs_by_panel[0] = []  # システム予約
 
-        logger.test("len(morphs): %s", len(pmx.morphs))
+            morph_idx = 0
+            # モーフデータリスト
+            for _ in range(self.read_int(4)):
+                morph = Morph(
+                    name=self.read_text(),
+                    english_name=self.read_text(),
+                    panel=self.read_int(1),
+                    morph_type=self.read_int(1)
+                )
 
-        # 表示枠データリスト
-        for _ in range(self.read_int(4)):
-            display_slot = DisplaySlot(
-                name=self.read_text(),
-                english_name=self.read_text(),
-                special_flag=self.read_int(1)
-            )
+                offset_size = self.read_int(4)
 
-            display_count = self.read_int(4)
-
-            for _ in range(display_count):
-                display_type = self.read_int(1)
-                if display_type == 0:
-                    born_idx = self.read_bone_index_size()
-                    display_slot.references.append((display_type, born_idx))
-                    # ボーン表示ON
-                    for v in pmx.bones.values():
-                        if v.index == born_idx:
-                            v.display = True
-                elif display_type == 1:
-                    morph_idx = self.read_morph_index_size()
-                    display_slot.references.append((display_type, morph_idx))
-                    # モーフ表示ON
-                    for v in pmx.morphs.values():
-                        if v.index == morph_idx:
-                            v.display = True
-                        # logger.test("v: %s, display: %s", v.name, v.display)
+                if morph.morph_type == 0:
+                    # group
+                    morph.offsets = [self.read_group_morph_data() for _ in range(offset_size)]
+                elif morph.morph_type == 1:
+                    # vertex
+                    morph.offsets = [self.read_vertex_position_morph_offset() for _ in range(offset_size)]
+                elif morph.morph_type == 2:
+                    # bone
+                    morph.offsets = [self.read_bone_morph_data() for _ in range(offset_size)]
+                elif morph.morph_type == 3:
+                    # uv
+                    morph.offsets = [self.read_uv_morph_data() for _ in range(offset_size)]
+                elif morph.morph_type == 4:
+                    # uv extended1
+                    morph.offsets = [self.read_uv_morph_data() for _ in range(offset_size)]
+                elif morph.morph_type == 5:
+                    # uv extended2
+                    morph.offsets = [self.read_uv_morph_data() for _ in range(offset_size)]
+                elif morph.morph_type == 6:
+                    # uv extended3
+                    morph.offsets = [self.read_uv_morph_data() for _ in range(offset_size)]
+                elif morph.morph_type == 7:
+                    # uv extended4
+                    morph.offsets = [self.read_uv_morph_data() for _ in range(offset_size)]
+                elif morph.morph_type == 8:
+                    # material
+                    morph.data = [self.read_material_morph_data() for _ in range(offset_size)]
                 else:
-                    raise MParseException("unknown display_type: {0}".format(display_type))
+                    raise MParseException("unknown morph type: {0}".format(morph.morph_type))
 
-            pmx.display_slots[display_slot.name] = display_slot
+                # モーフのINDEXは、先頭から順番に設定
+                morph.index = morph_idx
+                morph_idx += 1
 
-        logger.test("len(display_slots): %s", len(pmx.display_slots))
+                if morph.panel not in morphs_by_panel.keys():
+                    # ないと思うが念のためパネル情報がなければ追加
+                    morphs_by_panel[morph.panel] = 0
 
-        # 剛体データリスト
-        for _ in range(self.read_int(4)):
-            rigidbody = RigidBody(
-                name=self.read_text(),
-                english_name=self.read_text(),
-                bone_index=self.read_bone_index_size(),
-                collision_group=self.read_int(1),
-                no_collision_group=self.read_int(2),
-                shape_type=self.read_int(1),
-                shape_size=self.read_Vector3D(),
-                shape_position=self.read_Vector3D(),
-                shape_rotation=self.read_Vector3D(),
-                mass=self.read_float(),
-                linear_damping=self.read_float(),
-                angular_damping=self.read_float(),
-                restitution=self.read_float(),
-                friction=self.read_float(),
-                mode=self.read_int(1)
-            )
+                morphs_by_panel[morph.panel].append(morph)
 
-            # ボーンのINDEX
-            rigidbody.index = len(pmx.rigidbodies.keys())
+            # モーフのパネル順に並び替えてモーフを登録していく
+            for _, mlist in morphs_by_panel.items():
+                for m in mlist:
+                    pmx.morphs[m.name] = m
 
-            pmx.rigidbodies[rigidbody.name] = rigidbody
-            # インデックス逆引きも登録
-            pmx.rigidbody_indexes[rigidbody.index] = rigidbody.name
+            logger.test("len(morphs): %s", len(pmx.morphs))
 
-        logger.test("len(rigidbodies): %s", len(pmx.rigidbodies))
+            # 表示枠データリスト
+            for _ in range(self.read_int(4)):
+                display_slot = DisplaySlot(
+                    name=self.read_text(),
+                    english_name=self.read_text(),
+                    special_flag=self.read_int(1)
+                )
 
-        # ジョイントデータリスト
-        for _ in range(self.read_int(4)):
-            joint = Joint(
-                name=self.read_text(),
-                english_name=self.read_text(),
-                joint_type=self.read_int(1),
-                rigidbody_index_a=self.read_rigidbody_index_size(),
-                rigidbody_index_b=self.read_rigidbody_index_size(),
-                position=self.read_Vector3D(),
-                rotation=self.read_Vector3D(),
-                translation_limit_min=self.read_Vector3D(),
-                translation_limit_max=self.read_Vector3D(),
-                rotation_limit_min=self.read_Vector3D(),
-                rotation_limit_max=self.read_Vector3D(),
-                spring_constant_translation=self.read_Vector3D(),
-                spring_constant_rotation=self.read_Vector3D()
-            )
+                display_count = self.read_int(4)
 
-            pmx.joints[joint.name] = joint
+                for _ in range(display_count):
+                    display_type = self.read_int(1)
+                    if display_type == 0:
+                        born_idx = self.read_bone_index_size()
+                        display_slot.references.append((display_type, born_idx))
+                        # ボーン表示ON
+                        for v in pmx.bones.values():
+                            if v.index == born_idx:
+                                v.display = True
+                    elif display_type == 1:
+                        morph_idx = self.read_morph_index_size()
+                        display_slot.references.append((display_type, morph_idx))
+                        # モーフ表示ON
+                        for v in pmx.morphs.values():
+                            if v.index == morph_idx:
+                                v.display = True
+                            # logger.test("v: %s, display: %s", v.name, v.display)
+                    else:
+                        raise MParseException("unknown display_type: {0}".format(display_type))
 
-        logger.test("len(joints): %s", len(pmx.joints))
+                pmx.display_slots[display_slot.name] = display_slot
+
+            logger.test("len(display_slots): %s", len(pmx.display_slots))
+
+            # 剛体データリスト
+            for _ in range(self.read_int(4)):
+                rigidbody = RigidBody(
+                    name=self.read_text(),
+                    english_name=self.read_text(),
+                    bone_index=self.read_bone_index_size(),
+                    collision_group=self.read_int(1),
+                    no_collision_group=self.read_int(2),
+                    shape_type=self.read_int(1),
+                    shape_size=self.read_Vector3D(),
+                    shape_position=self.read_Vector3D(),
+                    shape_rotation=self.read_Vector3D(),
+                    mass=self.read_float(),
+                    linear_damping=self.read_float(),
+                    angular_damping=self.read_float(),
+                    restitution=self.read_float(),
+                    friction=self.read_float(),
+                    mode=self.read_int(1)
+                )
+
+                # ボーンのINDEX
+                rigidbody.index = len(pmx.rigidbodies.keys())
+
+                pmx.rigidbodies[rigidbody.name] = rigidbody
+                # インデックス逆引きも登録
+                pmx.rigidbody_indexes[rigidbody.index] = rigidbody.name
+
+            logger.test("len(rigidbodies): %s", len(pmx.rigidbodies))
+
+            # ジョイントデータリスト
+            for _ in range(self.read_int(4)):
+                joint = Joint(
+                    name=self.read_text(),
+                    english_name=self.read_text(),
+                    joint_type=self.read_int(1),
+                    rigidbody_index_a=self.read_rigidbody_index_size(),
+                    rigidbody_index_b=self.read_rigidbody_index_size(),
+                    position=self.read_Vector3D(),
+                    rotation=self.read_Vector3D(),
+                    translation_limit_min=self.read_Vector3D(),
+                    translation_limit_max=self.read_Vector3D(),
+                    rotation_limit_min=self.read_Vector3D(),
+                    rotation_limit_max=self.read_Vector3D(),
+                    spring_constant_translation=self.read_Vector3D(),
+                    spring_constant_rotation=self.read_Vector3D()
+                )
+
+                pmx.joints[joint.name] = joint
+
+            logger.test("len(joints): %s", len(pmx.joints))
 
         # ハッシュを設定
         pmx.digest = self.hexdigest()

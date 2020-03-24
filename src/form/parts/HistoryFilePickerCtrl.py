@@ -12,13 +12,12 @@ logger = MLogger(__name__)
 class HistoryFilePickerCtrl(BaseFilePickerCtrl):
     
     def __init__(self, frame, parent, title, message, wildcard, style, tooltip, \
-                 file_model_spacer, title_parts_ctrl, file_hitories, history_max, is_change_output, is_aster, is_save, set_no):
+                 file_model_spacer, title_parts_ctrl, file_histories_key, is_change_output, is_aster, is_save, set_no):
         
         self.parent = parent
-        self.file_hitories = file_hitories
-        self.history_max = history_max
+        self.file_histories_key = file_histories_key
 
-        # logger.info(self.file_hitories)
+        # logger.test(self.frame.file_hitories)
 
         self.histroy_btn_ctrl = wx.Button(parent, wx.ID_ANY, u"履歴", wx.DefaultPosition, wx.DefaultSize, 0)
         self.histroy_btn_ctrl.SetToolTip(u"これまで指定された{0}が再指定できます。".format(title))
@@ -30,23 +29,23 @@ class HistoryFilePickerCtrl(BaseFilePickerCtrl):
         self.histroy_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_show_history)
     
     def save(self):
-        if len(self.file_ctrl.GetPath()) > 0 and self.file_hitories and len(self.file_hitories) > 0 and self.file_ctrl.GetPath() in self.file_hitories:
+        if len(self.file_ctrl.GetPath()) > 0 and self.frame.file_hitories and self.file_ctrl.GetPath() in self.frame.file_hitories[self.file_histories_key]:
             # 既に登録されている場合、一旦削除
-            self.file_hitories.remove(self.file_ctrl.GetPath())
+            self.frame.file_hitories[self.file_histories_key].remove(self.file_ctrl.GetPath())
         
-        if not self.file_hitories:
-            self.file_hitories = []
+        if not self.frame.file_hitories:
+            self.frame.file_hitories[self.file_histories_key] = []
 
         # 改めて先頭に登録
         if len(self.file_ctrl.GetPath()) > 0:
-            self.file_hitories.insert(0, self.file_ctrl.GetPath())
+            self.frame.file_hitories[self.file_histories_key].insert(0, self.file_ctrl.GetPath())
 
     # 履歴ボタンのあるファイルコントロールは直近のパスを開く
     def on_pick_file(self, event):
 
-        if len(self.file_ctrl.GetPath()) == 0 and self.file_hitories and len(self.file_hitories) > 0:
+        if len(self.file_ctrl.GetPath()) == 0 and self.frame.file_hitories and self.file_histories_key in self.frame.file_hitories and len(self.frame.file_hitories[self.file_histories_key]) > 0:
             # パスが未指定である場合、直近のパスを設定してひらく
-            self.file_ctrl.SetInitialDirectory(MFileUtils.get_dir_path(self.file_hitories[0]))
+            self.file_ctrl.SetInitialDirectory(MFileUtils.get_dir_path(self.frame.file_hitories[self.file_histories_key][0]))
 
         event.Skip()
     
@@ -54,11 +53,11 @@ class HistoryFilePickerCtrl(BaseFilePickerCtrl):
     def on_show_history(self, event):
 
         # 入力行を伸ばす
-        hs = copy.deepcopy(self.file_hitories)
-        hs.extend(["" for x in range(self.history_max + 1)])
+        hs = copy.deepcopy(self.frame.file_hitories[self.file_histories_key])
+        hs.extend(["" for x in range(self.frame.file_hitories["max"] + 1)])
 
         with wx.SingleChoiceDialog(self.parent, "ファイルを選んでダブルクリック、またはOKボタンをクリックしてください。", caption="ファイル履歴選択",
-                                   choices=hs[:(self.history_max + 1)],
+                                   choices=hs[:(self.frame.file_hitories["max"] + 1)],
                                    style=wx.CAPTION | wx.CLOSE_BOX | wx.SYSTEM_MENU | wx.OK | wx.CANCEL | wx.CENTRE) as choiceDialog:
 
             if choiceDialog.ShowModal() == wx.ID_CANCEL:

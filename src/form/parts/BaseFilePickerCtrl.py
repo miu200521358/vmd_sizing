@@ -117,7 +117,7 @@ class BaseFilePickerCtrl():
         
         # 出力ファイル変更対象の場合、出力ファイル更新
         if self.is_change_output:
-            self.parent.set_output_vmd_path()
+            self.parent.set_output_vmd_path(True)
 
     def disable(self):
         self.file_ctrl.GetPickerCtrl().Disable()
@@ -140,7 +140,7 @@ class BaseFilePickerCtrl():
             self.file_parts_ctrl.Enable()
     
     def is_set_path(self):
-        return self.file_ctrl.GetPath()
+        return len(self.file_ctrl.GetPath()) > 0
     
     def is_valid(self):
         if self.set_no == 0:
@@ -212,6 +212,11 @@ class BaseFilePickerCtrl():
 
     # ファイル読み込み処理
     def load(self, file_idx=0):
+        if not self.is_set_path():
+            # パスが指定されてない場合、そのまま終了
+            self.data = None
+            return True
+
         if not self.is_valid():
             # 読み込み可能か
             self.data = None

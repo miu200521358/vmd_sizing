@@ -94,5 +94,5 @@ class FilePanel(BasePanel):
 
         event.Skip()
 
-    def set_output_vmd_path(self):
-        self.file_set.set_output_vmd_path()
+    def set_output_vmd_path(self, is_force=False):
+        self.file_set.set_output_vmd_path(is_force)
