@@ -8,7 +8,7 @@ from collections import OrderedDict
 from mmd.PmxData import PmxModel, Vertex, Material, Bone, Morph, DisplaySlot, RigidBody, Joint # noqa
 from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
 from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
-from module.MOptions import MOptions
+from module.MOptions import MOptions, MOptionsDataSet
 from module.MParams import BoneLinks
 from utils import MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
@@ -203,29 +203,27 @@ def calc_stance_diff(model: PmxModel, from_bone_name, to_bone_name, default_pos)
 
 
 # 足IKに基づく身体比率
-def calc_leg_ik_ratio(options: MOptions):
+def calc_leg_ik_ratio(data_set: MOptionsDataSet):
     target_bones = ["左足", "左ひざ", "左足首", "センター"]
 
-    if set(target_bones).issubset(options.org_model_data.bones) and set(target_bones).issubset(options.rep_model_data.bones):
+    if set(target_bones).issubset(data_set.org_model_data.bones) and set(target_bones).issubset(data_set.rep_model_data.bones):
         # XZ比率(足の長さ)
-        org_leg_length = ((options.org_model_data.bones["左足首"].position - options.org_model_data.bones["左ひざ"].position) \
-                          + (options.org_model_data.bones["左ひざ"].position - options.org_model_data.bones["左足"].position)).length()
-        rep_leg_length = ((options.rep_model_data.bones["左足首"].position - options.rep_model_data.bones["左ひざ"].position) \
-                          + (options.rep_model_data.bones["左ひざ"].position - options.rep_model_data.bones["左足"].position)).length()
+        org_leg_length = ((data_set.org_model_data.bones["左足首"].position - data_set.org_model_data.bones["左ひざ"].position) \
+                          + (data_set.org_model_data.bones["左ひざ"].position - data_set.org_model_data.bones["左足"].position)).length()
+        rep_leg_length = ((data_set.rep_model_data.bones["左足首"].position - data_set.rep_model_data.bones["左ひざ"].position) \
+                          + (data_set.rep_model_data.bones["左ひざ"].position - data_set.rep_model_data.bones["左足"].position)).length()
         logger.test("xz_ratio rep_leg_length: %s, org_leg_length: %s", rep_leg_length, org_leg_length)
         xz_ratio = 1 if org_leg_length == 0 else (rep_leg_length / org_leg_length)
 
         # Y比率(股下のY差)
-        rep_leg_length = (options.rep_model_data.bones["左足首"].position - options.rep_model_data.bones["左足"].position).y()
-        org_leg_length = (options.org_model_data.bones["左足首"].position - options.org_model_data.bones["左足"].position).y()
+        rep_leg_length = (data_set.rep_model_data.bones["左足首"].position - data_set.rep_model_data.bones["左足"].position).y()
+        org_leg_length = (data_set.org_model_data.bones["左足首"].position - data_set.org_model_data.bones["左足"].position).y()
         logger.test("y_ratio rep_leg_length: %s, org_leg_length: %s", rep_leg_length, org_leg_length)
         y_ratio = 1 if org_leg_length == 0 else (rep_leg_length / org_leg_length)
 
-        logger.info("足の長さの比率: xz: %s, y: %s", xz_ratio, y_ratio, decoration=MLogger.DECORATION_SIMPLE)
-
         return xz_ratio, y_ratio
     
-    logger.warning("「左足」「左ひざ」「左足首」「センター」のいずれかのボーンが不足しているため、足の長さの比率が測れませんでした。", decoration=MLogger.DECORATION_BOX)
+    logger.warning("「左足」「左ひざ」「左足首」「センター」のいずれかのボーンが不足しているため、足の長さの比率が測れませんでした。", decoration=MLogger.DECORATION_IN_BOX)
 
     return 1, 1
 

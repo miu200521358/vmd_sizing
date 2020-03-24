@@ -18,20 +18,21 @@ logger = MLogger(__name__)
 
 class SizingFileSet():
 
-    def __init__(self, frame: wx.Frame, panel: wx.Panel, file_hitories: dict, set_no=0):
+    def __init__(self, frame: wx.Frame, panel: wx.Panel, file_hitories: dict, set_no):
         self.file_hitories = file_hitories
         self.panel = panel
         self.set_no = set_no
 
-        if set_no == 0:
+        if self.set_no == 1:
             # ファイルパネルのはそのまま追加
             self.set_sizer = wx.BoxSizer(wx.VERTICAL)
         else:
             self.set_sizer = wx.StaticBoxSizer(wx.StaticBox(self.panel, wx.ID_ANY, "【No.{0}】".format(set_no)), orient=wx.VERTICAL)
 
+        able_aster_toottip = "ファイル名にアスタリスク（*）を使用すると複数件のデータを一度にサイジングできます。" if self.set_no == 1 else "一括指定はできません。"
         # VMD/VPDファイルコントロール
         self.motion_vmd_file_ctrl = HistoryFilePickerCtrl(frame, panel, u"調整対象モーションVMD/VPDファイル", u"調整対象モーションVMD/VPDファイルを開く", ("vmd", "vpd"), wx.FLP_DEFAULT_STYLE, \
-                                                          u"調整したいモーションのVMD/VPDパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。\nファイル名にアスタリスク（*）を使用すると複数件のデータを一度にサイジングできます。", \
+                                                          u"調整したいモーションのVMD/VPDパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。\n{0}".format(able_aster_toottip), \
                                                           file_model_spacer=8, title_parts_ctrl=None, file_hitories=self.file_hitories["vmd"], history_max=self.file_hitories["max"], \
                                                           is_change_output=True, is_aster=True, is_save=False, set_no=set_no)
         self.set_sizer.Add(self.motion_vmd_file_ctrl.sizer, 1, wx.EXPAND, 0)
@@ -90,17 +91,32 @@ class SizingFileSet():
         self.output_vmd_file_ctrl.enable()
 
     # ファイル読み込み前のチェック
-    def is_valid(self, idx: int):
+    def is_valid(self):
         result = True
-        result = self.motion_vmd_file_ctrl.is_valid() and result
-        result = self.org_model_file_ctrl.is_valid() and result
-        result = self.rep_model_file_ctrl.is_valid() and result
-        result = self.output_vmd_file_ctrl.is_valid() and result
+        if self.set_no == 1:
+            # 1番目は必ず調べる
+            result = self.motion_vmd_file_ctrl.is_valid() and result
+            result = self.org_model_file_ctrl.is_valid() and result
+            result = self.rep_model_file_ctrl.is_valid() and result
+            result = self.output_vmd_file_ctrl.is_valid() and result
+        else:
+            # 2番目以降は、ファイルが揃ってたら調べる
+            if self.motion_vmd_file_ctrl.is_set_path() or self.org_model_file_ctrl.is_set_path() or \
+               self.rep_model_file_ctrl.is_set_path() or self.output_vmd_file_ctrl.is_set_path():
+                result = self.motion_vmd_file_ctrl.is_valid() and result
+                result = self.org_model_file_ctrl.is_valid() and result
+                result = self.rep_model_file_ctrl.is_valid() and result
+                result = self.output_vmd_file_ctrl.is_valid() and result
 
         return result
 
     # 入力後の入力可否チェック
-    def is_loaded_valid(self, idx: int):
+    def is_loaded_valid(self):
+        if self.set_no == 0:
+            # CSVとかのファイルは番号出力なし
+            display_set_no = ""
+        else:
+            display_set_no = "{0}番目の".format(self.set_no)
         
         # 両方のPMXが読めて、モーションも読み込めた場合、キーチェック
         not_org_bones = []
@@ -113,7 +129,7 @@ class SizingFileSet():
         rep_pmx = self.rep_model_file_ctrl.data
 
         if motion.motion_cnt == 0:
-            logger.warning("ボーンモーションデータにキーフレームが登録されていません。", decoration=MLogger.DECORATION_BOX)
+            logger.warning("%sボーンモーションデータにキーフレームが登録されていません。", display_set_no, decoration=MLogger.DECORATION_BOX)
             return False
 
         result = True
@@ -139,12 +155,34 @@ class SizingFileSet():
                     not_rep_morphs.append(k)
 
         if len(not_org_bones) > 0 or len(not_org_morphs) > 0:
-            logger.warning("%sにモーションで使用されているボーン・モーフが不足しています。\nボーン: %s\nモーフ: %s", \
-                           self.org_model_file_ctrl.title, ",".join(not_org_bones), ",".join(not_org_morphs), decoration=MLogger.DECORATION_BOX)
+            logger.warning("%s%sにモーションで使用されているボーン・モーフが不足しています。\nボーン: %s\nモーフ: %s", \
+                           display_set_no, self.org_model_file_ctrl.title, ",".join(not_org_bones), ",".join(not_org_morphs), decoration=MLogger.DECORATION_BOX)
 
         if len(not_rep_bones) > 0 or len(not_rep_morphs) > 0:
-            logger.warning("%sにモーションで使用されているボーン・モーフが不足しています。\nボーン: %s\nモーフ: %s", \
-                           self.rep_model_file_ctrl.title, ",".join(not_rep_bones), ",".join(not_rep_morphs), decoration=MLogger.DECORATION_BOX)
+            logger.warning("%s%sにモーションで使用されているボーン・モーフが不足しています。\nボーン: %s\nモーフ: %s", \
+                           display_set_no, self.rep_model_file_ctrl.title, ",".join(not_rep_bones), ",".join(not_rep_morphs), decoration=MLogger.DECORATION_BOX)
+        
+        return result
+
+    def is_loaded(self):
+        result = True
+        if self.is_valid():
+            result = self.motion_vmd_file_ctrl.data and result
+            result = self.org_model_file_ctrl.data and result
+            result = self.rep_model_file_ctrl.data and result
+        else:
+            result = False
+        
+        return result
+
+    def load(self):
+        result = True
+        try:
+            result = self.motion_vmd_file_ctrl.load() and result
+            result = self.org_model_file_ctrl.load() and result
+            result = self.rep_model_file_ctrl.load() and result
+        except Exception:
+            result = False
         
         return result
 

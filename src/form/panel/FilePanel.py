@@ -19,7 +19,7 @@ class FilePanel(BasePanel):
         self.file_hitories = file_hitories
 
         # ファイルセット
-        self.file_set = SizingFileSet(frame, self, self.file_hitories)
+        self.file_set = SizingFileSet(frame, self, self.file_hitories, 1)
         self.sizer.Add(self.file_set.set_sizer, 1, wx.ALL, 0)
 
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)

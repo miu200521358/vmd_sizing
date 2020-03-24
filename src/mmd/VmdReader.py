@@ -151,44 +151,44 @@ class VmdReader():
             motion.camera_cnt = self.read_uint(4)
             logger.test("motion.camera_cnt %s", motion.camera_cnt)
 
+            # 1F分のカメラ情報
+            for _ in range(motion.camera_cnt):
+                camera = VmdCameraFrame()
+
+                # フレームIDX
+                camera.frame = self.read_uint(4)
+                logger.test("camera.frame %s", camera.frame)
+
+                # 距離
+                camera.length = self.read_float(4)
+                logger.test("camera.length %s", camera.length)
+
+                # 位置X,Y,Z
+                camera.position = self.read_Vector3D()
+                logger.test("camera.position %s", camera.position)
+
+                # 角度（オイラー角）
+                camera.euler = self.read_Vector3D()
+                logger.test("camera.euler %s", camera.euler)
+
+                # 補間曲線
+                camera.interpolation = self.unpack(24, "24B", True)
+                logger.test("camera.interpolation %s", camera.interpolation)
+
+                # 視野角
+                camera.angle = self.read_uint(4)
+                logger.test("camera.angle %s", camera.angle)
+
+                # パース有無
+                camera.perspective = self.unpack(1, "B")
+                logger.test("camera.perspective %s", camera.perspective)
+
+                # カメラを追加
+                motion.cameras[camera.frame] = camera
+
         except Exception:
             # 情報がない場合、catchして握りつぶす
             motion.camera_cnt = 0
-
-        # 1F分のカメラ情報
-        for _ in range(motion.camera_cnt):
-            camera = VmdCameraFrame()
-
-            # フレームIDX
-            camera.frame = self.read_uint(4)
-            logger.test("camera.frame %s", camera.frame)
-
-            # 距離
-            camera.length = self.read_float(4)
-            logger.test("camera.length %s", camera.length)
-
-            # 位置X,Y,Z
-            camera.position = self.read_Vector3D()
-            logger.test("camera.position %s", camera.position)
-
-            # 角度（オイラー角）
-            camera.euler = self.read_Vector3D()
-            logger.test("camera.euler %s", camera.euler)
-
-            # 補間曲線
-            camera.interpolation = self.unpack(24, "24B", True)
-            logger.test("camera.interpolation %s", camera.interpolation)
-
-            # 視野角
-            camera.angle = self.read_uint(4)
-            logger.test("camera.angle %s", camera.angle)
-
-            # パース有無
-            camera.perspective = self.unpack(1, "B")
-            logger.test("camera.perspective %s", camera.perspective)
-
-            # カメラを追加
-            motion.cameras[camera.frame] = camera
 
         # 照明数
         try:

@@ -6,6 +6,7 @@ import traceback
 
 class MLogger():
 
+    DECORATION_IN_BOX = "in_box"
     DECORATION_BOX = "box"
     DECORATION_LINE = "line"
     DECORATION_SIMPLE = "simple"
@@ -79,6 +80,8 @@ class MLogger():
                     print(self.create_box_message(log_msg, target_level, title))
                 elif target_decoration == MLogger.DECORATION_LINE:
                     print(self.create_line_message(log_msg, target_level, title))
+                elif target_decoration == MLogger.DECORATION_IN_BOX:
+                    print(self.create_in_box_message(log_msg, target_level, title))
                 else:
                     print(self.create_simple_message(log_msg, target_level, title))
             else:
@@ -112,6 +115,14 @@ class MLogger():
 
         for msg_line in msg.split("\n"):
             msg_block.append("■■ {0} --------------------".format(msg_line))
+
+        return "\n".join(msg_block)
+
+    def create_in_box_message(self, msg, level, title=None):
+        msg_block = []
+
+        for msg_line in msg.split("\n"):
+            msg_block.append("■　{0}".format(msg_line))
 
         return "\n".join(msg_block)
 

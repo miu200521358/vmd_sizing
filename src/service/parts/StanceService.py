@@ -6,7 +6,7 @@ import copy
 from mmd.PmxData import PmxModel # noqa
 from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
-from module.MOptions import MOptions
+from module.MOptions import MOptions, MOptionsDataSet
 from module.MParams import BoneLinks
 from utils import MUtils, MServiceUtils, MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
@@ -18,20 +18,21 @@ class StanceService():
     def __init__(self, options: MOptions):
         self.options = options
 
-    def execute(self, org_motion):
-        if self.options.motion_vmd_data.motion_cnt <= 0:
-            # モーションデータが無い場合、処理スキップ
+    def execute(self):
+        for data_set_idx, data_set in enumerate(self.options.data_set_list):
+            if data_set.motion_vmd_data.motion_cnt <= 0:
+                # モーションデータが無い場合、処理スキップ
+                return True
+            
+            # # 代替モデルでない場合、上半身スタンス補正
+            # if not self.options.substitute_model_flg:
+            #     self.adjust_upper_stance(org_motion)
+
+            # 腕スタンス補正
+            self.adjust_arm_stance(data_set_idx, data_set)
+
             return True
         
-        # # 代替モデルでない場合、上半身スタンス補正
-        # if not self.options.substitute_model_flg:
-        #     self.adjust_upper_stance(org_motion)
-
-        # 腕スタンス補正
-        self.adjust_arm_stance()
-
-        return True
-    
     # 上半身スタンス補正
     def adjust_upper_stance(self, org_motion: VmdMotion):
         logger.info("上半身スタンス補正", decoration=MLogger.DECORATION_LINE)
@@ -320,19 +321,19 @@ class StanceService():
                     MBezierUtils.reset_interpolation_by_rot(motion, target_bone_name, prev_bf, fillbf, bf)
     
     # 腕スタンス補正
-    def adjust_arm_stance(self):
-        logger.info("腕スタンス補正", decoration=MLogger.DECORATION_LINE)
+    def adjust_arm_stance(self, data_set_idx: int, data_set: MOptionsDataSet):
+        logger.info("腕スタンス補正　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
         
         # 腕のスタンス差
-        arm_diff_qq_dic = self.calc_arm_stance()
+        arm_diff_qq_dic = self.calc_arm_stance(data_set)
 
         for direction in ["左", "右"]:
             for bone_type in ["腕", "ひじ", "手首"]:
                 bone_name = "{0}{1}".format(direction, bone_type)
 
-                if bone_name in arm_diff_qq_dic and bone_name in self.options.motion_vmd_data.frames:
+                if bone_name in arm_diff_qq_dic and bone_name in data_set.motion_vmd_data.frames:
                     # スタンス補正値がある場合
-                    for bf in self.options.motion_vmd_data.frames[bone_name].values():
+                    for bf in data_set.motion_vmd_data.frames[bone_name].values():
                         if bf.key:
                             if arm_diff_qq_dic[bone_name]["from"] == MQuaternion():
                                 bf.rotation = bf.rotation * arm_diff_qq_dic[bone_name]["to"]
@@ -343,7 +344,7 @@ class StanceService():
                     logger.test("from: %s", arm_diff_qq_dic[bone_name]["from"].toEulerAngles())
                     logger.test("to: %s", arm_diff_qq_dic[bone_name]["to"].toEulerAngles())
 
-    def calc_arm_stance(self):
+    def calc_arm_stance(self, data_set: MOptionsDataSet):
         arm_diff_qq_dic = {}
 
         for direction in ["左", "右"]:
@@ -359,21 +360,21 @@ class StanceService():
                 else:
                     bone_names = [target_bone_name, to_bone_name]
 
-                if set(bone_names).issubset(self.options.org_model_data.bones) and set(bone_names).issubset(self.options.rep_model_data.bones):
+                if set(bone_names).issubset(data_set.org_model_data.bones) and set(bone_names).issubset(data_set.rep_model_data.bones):
                     # 対象ボーンが揃っている場合（念のためバラバラにチェック）
 
                     if from_bone_name:
                         # FROM-TARGETの傾き
-                        _, org_from_qq = MServiceUtils.calc_arm_stance_diff(self.options.org_model_data, from_bone_name, target_bone_name)
-                        _, rep_from_qq = MServiceUtils.calc_arm_stance_diff(self.options.rep_model_data, from_bone_name, target_bone_name)
+                        _, org_from_qq = MServiceUtils.calc_arm_stance_diff(data_set.org_model_data, from_bone_name, target_bone_name)
+                        _, rep_from_qq = MServiceUtils.calc_arm_stance_diff(data_set.rep_model_data, from_bone_name, target_bone_name)
 
                         arm_diff_qq_dic[target_bone_name]["from"] = rep_from_qq.inverted() * org_from_qq
                     else:
                         arm_diff_qq_dic[target_bone_name]["from"] = MQuaternion()
 
                     # TARGET-TOの傾き
-                    _, org_to_qq = MServiceUtils.calc_arm_stance_diff(self.options.org_model_data, target_bone_name, to_bone_name)
-                    _, rep_to_qq = MServiceUtils.calc_arm_stance_diff(self.options.rep_model_data, target_bone_name, to_bone_name)
+                    _, org_to_qq = MServiceUtils.calc_arm_stance_diff(data_set.org_model_data, target_bone_name, to_bone_name)
+                    _, rep_to_qq = MServiceUtils.calc_arm_stance_diff(data_set.rep_model_data, target_bone_name, to_bone_name)
 
                     arm_diff_qq_dic[target_bone_name]["to"] = rep_to_qq.inverted() * org_to_qq
         

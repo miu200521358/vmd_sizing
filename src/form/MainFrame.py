@@ -151,13 +151,23 @@ class MainFrame(wx.Frame):
     # ファイルセットの入力可否チェック
     def is_valid(self):
         result = True
-        result = self.file_panel_ctrl.file_set.is_valid(1) and result
+        result = self.file_panel_ctrl.file_set.is_valid() and result
+
+        # multiはあるだけ調べる
+        for file_set in self.multi_panel_ctrl.file_set_list:
+            result = file_set.is_valid() and result
+
         return result
     
     # 入力後の入力可否チェック
     def is_loaded_valid(self):
         result = True
-        result = self.file_panel_ctrl.file_set.is_loaded_valid(1) and result
+        result = self.file_panel_ctrl.file_set.is_loaded_valid() and result
+
+        # multiはあるだけ調べる
+        for file_set in self.multi_panel_ctrl.file_set_list:
+            result = file_set.is_loaded_valid() and result
+
         return result
         
     # 読み込み
@@ -178,7 +188,7 @@ class MainFrame(wx.Frame):
             logger.error("まだ処理が実行中です。終了してから再度実行してください。", decoration=MLogger.DECORATION_BOX)
         else:
             # 別スレッドで実行
-            self.load_worker = LoadWorkerThread(self, self.file_panel_ctrl.file_set, LoadThreadEvent, is_exec)
+            self.load_worker = LoadWorkerThread(self, LoadThreadEvent, is_exec)
             self.load_worker.start()
             self.load_worker.stop_event.set()
 

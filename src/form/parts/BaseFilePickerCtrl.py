@@ -11,7 +11,7 @@ from mmd.VpdReader import VpdReader
 from utils import MFileUtils
 from utils.MLogger import MLogger # noqa
 
-logger = MLogger(__name__, level=1)
+logger = MLogger(__name__)
 
 
 class BaseFilePickerCtrl():
@@ -39,6 +39,7 @@ class BaseFilePickerCtrl():
         self.is_change_output = is_change_output
         self.is_aster = is_aster
         self.is_save = is_save
+        self.set_no = set_no
         self.data = None
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
@@ -59,7 +60,7 @@ class BaseFilePickerCtrl():
 
         # ファイルモデル
         if file_model_spacer > 0:
-            self.file_model_ctrl = FileModelCtrl(parent, self, title, file_model_spacer, set_no)
+            self.file_model_ctrl = FileModelCtrl(parent, self, title, file_model_spacer, self.set_no)
             self.title_sizer.Add(self.file_model_ctrl.spacer_ctrl, 0, wx.ALL, 5)
             self.title_sizer.Add(self.file_model_ctrl.txt_ctrl, 0, wx.ALL, 5)
 
@@ -138,12 +139,22 @@ class BaseFilePickerCtrl():
         if self.file_parts_ctrl:
             self.file_parts_ctrl.Enable()
     
-    def is_valid(self, is_print=True):
-        if self.is_aster:
+    def is_set_path(self):
+        return self.file_ctrl.GetPath()
+    
+    def is_valid(self):
+        if self.set_no == 0:
+            # CSVとかのファイルは番号出力なし
+            display_set_no = ""
+        else:
+            display_set_no = "{0}番目の".format(self.set_no)
+
+        if self.is_aster and self.set_no <= 1:
             file_path_list = [p for p in sorted(glob.glob(self.file_ctrl.GetPath())) if os.path.isfile(p)]
 
             if len(file_path_list) == 0:
-                logger.error("{0}が見つかりませんでした。\n入力パス: {1}".format(self.title, self.file_ctrl.GetPath()), decoration=MLogger.DECORATION_BOX)
+                logger.error("{0}{1}の条件に合致するファイルが見つかりませんでした。\n入力パス: {2}".format(
+                    display_set_no, self.title, self.file_ctrl.GetPath()), decoration=MLogger.DECORATION_BOX)
                 return False
 
             file_path = file_path_list[0]
@@ -151,18 +162,21 @@ class BaseFilePickerCtrl():
             file_path = self.file_ctrl.GetPath()
 
         if not self.is_save and not os.path.exists(file_path):
-            logger.error("{0}が見つかりませんでした。\n入力パス: {1}".format(self.title, self.file_ctrl.GetPath()), decoration=MLogger.DECORATION_BOX)
+            logger.error("{0}{1}が見つかりませんでした。\n入力パス: {2}".format(
+                display_set_no, self.title, self.file_ctrl.GetPath()), decoration=MLogger.DECORATION_BOX)
             return False
 
         if not self.is_save and not os.path.isfile(file_path):
-            logger.error("{0}が正常なファイルとして見つかりませんでした。\n入力パス: {1}".format(self.title, self.file_ctrl.GetPath()), decoration=MLogger.DECORATION_BOX)
+            logger.error("{0}{1}が正常なファイルとして見つかりませんでした。\n入力パス: {2}".format(
+                display_set_no, self.title, self.file_ctrl.GetPath()), decoration=MLogger.DECORATION_BOX)
             return False
 
         # 拡張子
         _, ext = os.path.splitext(os.path.basename(file_path))
 
         if ext[1:].lower() not in self.file_type:
-            logger.error("{0}の拡張子が正しくありません。\n入力パス: {1}\n設定可能拡張子: {2}".format(self.title, self.file_ctrl.GetPath(), self.file_type), decoration=MLogger.DECORATION_BOX)
+            logger.error("{0}{1}の拡張子が正しくありません。\n入力パス: {2}\n設定可能拡張子: {3}".format(
+                display_set_no, self.title, self.file_ctrl.GetPath(), self.file_type), decoration=MLogger.DECORATION_BOX)
             return False
         
         # 親ディレクトリ取得
@@ -174,20 +188,24 @@ class BaseFilePickerCtrl():
             dir_path = MFileUtils.get_dir_path(self.file_ctrl.GetPath())
 
         if not os.path.exists(dir_path):
-            logger.error("{0}が見つかりませんでした。\n入力パス: {1}".format(self.title, dir_path), decoration=MLogger.DECORATION_BOX)
+            logger.error("{0}{1}が見つかりませんでした。\n入力パス: {2}".format(
+                display_set_no, self.title, dir_path), decoration=MLogger.DECORATION_BOX)
             return False
 
         if not os.path.isdir(dir_path):
-            logger.error("{0}が正常なフォルダとして見つかりませんでした。\n入力パス: {1}".format(self.title, dir_path), decoration=MLogger.DECORATION_BOX)
+            logger.error("{0}{1}が正常なフォルダとして見つかりませんでした。\n入力パス: {2}".format(
+                display_set_no, self.title, dir_path), decoration=MLogger.DECORATION_BOX)
             return False
 
         if not os.access(dir_path, os.W_OK):
-            logger.error("{0}の親フォルダに書き込み権限がありません。\n入力パス: {1}".format(self.title, dir_path), decoration=MLogger.DECORATION_BOX)
+            logger.error("{0}{1}の親フォルダに書き込み権限がありません。\n入力パス: {2}".format(
+                display_set_no, self.title, dir_path), decoration=MLogger.DECORATION_BOX)
             return False
 
         # 出力系の場合、自身のファイル上書き用の書き込み権限
         if self.is_save and os.path.isfile(self.file_ctrl.GetPath()) and not os.access(self.file_ctrl.GetPath(), os.W_OK):
-            logger.error("{0}に書き込み権限がありません。\n入力パス: {1}".format(self.title, self.file_ctrl.GetPath()), decoration=MLogger.DECORATION_BOX)
+            logger.error("{0}{1}に書き込み権限がありません。\n入力パス: {2}".format(
+                display_set_no, self.title, self.file_ctrl.GetPath()), decoration=MLogger.DECORATION_BOX)
             return False
 
         return True
@@ -200,7 +218,13 @@ class BaseFilePickerCtrl():
             return False
 
         try:
-            if self.is_aster:
+            if self.set_no == 0:
+                # CSVとかのファイルは番号出力なし
+                display_set_no = ""
+            else:
+                display_set_no = "【No.{0}】 ".format(self.set_no)
+
+            if self.is_aster and self.set_no == 1:
                 file_path_list = [p for p in sorted(glob.glob(self.file_ctrl.GetPath())) if os.path.isfile(p)]
 
                 if len(file_path_list) == 0:
@@ -222,6 +246,7 @@ class BaseFilePickerCtrl():
             elif input_ext.lower() == ".pmx":
                 reader = PmxReader(file_path)
             else:
+                logger.error("%s%s 読み込み失敗(拡張子不正): %s", display_set_no, self.title, os.path.basename(file_path), decoration=MLogger.DECORATION_BOX)
                 return False
             
             # ハッシュ値取得
@@ -231,17 +256,17 @@ class BaseFilePickerCtrl():
             if new_data_digest and ((self.data and self.data.digest != new_data_digest) or not self.data):
                 # ハッシュが取得できてて、過去データがないかハッシュが違う場合、読み込み
                 self.data = reader.read_data()
-                logger.info("%s 読み込み成功: %s" % (self.title, os.path.basename(file_path)), decoration=MLogger.DECORATION_SIMPLE)
+                logger.info("%s%s 読み込み成功: %s", display_set_no, self.title, os.path.basename(file_path), decoration=MLogger.DECORATION_SIMPLE)
                 return True
             elif new_data_digest and self.data and self.data.digest == new_data_digest:
                 # ハッシュが同じ場合、そのままスルー
-                logger.info("%s 読み込み成功: %s" % (self.title, os.path.basename(file_path)), decoration=MLogger.DECORATION_SIMPLE)
+                logger.info("%s%s 読み込み成功: %s", display_set_no, self.title, os.path.basename(file_path), decoration=MLogger.DECORATION_SIMPLE)
                 return True
 
         except Exception as e:
             logger.test("load失敗", e)
 
-        logger.error("%s 読み込み失敗: %s" % (self.title, os.path.basename(file_path)), decoration=MLogger.DECORATION_BOX)
+        logger.error("%s%s 読み込み失敗: %s", display_set_no, self.title, os.path.basename(file_path), decoration=MLogger.DECORATION_BOX)
         return False
 
 
@@ -253,9 +278,10 @@ class FileModelCtrl():
         self.parent = parent
         self.picker = picker
         self.title = title
+        self.set_no = set_no
         self.spacer_ctrl = wx.StaticText(parent, wx.ID_ANY, "".join(["　" for n in range(spacer_cnt)]))
 
-        width = 350 if set_no == 0 else 220
+        width = 350 if self.set_no == 1 else 220
 
         self.txt_ctrl = wx.TextCtrl(parent, wx.ID_ANY, "（未設定）", wx.DefaultPosition, (width, -1), wx.TE_READONLY | wx.BORDER_NONE | wx.WANTS_CHARS)
         self.txt_ctrl.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DLIGHT))
@@ -288,9 +314,10 @@ class FileModelCtrl():
                 reader = PmxReader(file_path)
             else:
                 return "対象外拡張子"
-
-            model_name = reader.read_model_name()
-            if not model_name:
+            
+            try:
+                model_name = reader.read_model_name()
+            except Exception:
                 model_name = "取得失敗"
 
             logger.test("model_name: %s, ", model_name)

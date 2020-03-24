@@ -203,9 +203,7 @@ class VmdMotion():
 
         for bone_name, bone_frames in self.frames.items():
             # キーフレを逆順で取得
-            fnos = reversed(self.get_bone_frame_nos(bone_name))
-
-            for fno in fnos:
+            for fno in reversed(self.get_bone_frame_nos(bone_name)):
                 total_bone_frames.append(bone_frames[fno])
         
         return total_bone_frames
@@ -216,9 +214,7 @@ class VmdMotion():
 
         for morph_name, morph_frames in self.morphs.items():
             # キーフレを逆順で取得
-            fnos = reversed(self.get_morph_frame_nos(morph_name))
-
-            for fno in fnos:
+            for fno in reversed(self.get_morph_frame_nos(morph_name)):
                 total_morph_frames.append(morph_frames[fno])
         
         return total_morph_frames
@@ -233,7 +229,7 @@ class VmdMorphFrame():
     
     def write(self, fout):
         fout.write(self.bname)
-        fout.write(bytearray([0 for i in range(len(self.name), 15)]))  # ボーン名15Byteの残りを\0で埋める
+        fout.write(bytearray([0 for i in range(len(self.bname), 15)]))  # ボーン名15Byteの残りを\0で埋める
         fout.write(struct.pack('<L', self.frame))
         fout.write(struct.pack('<f', self.ratio))
 
@@ -265,7 +261,7 @@ class VmdBoneFrame():
 
     def write(self, fout):
         fout.write(self.bname)
-        fout.write(bytearray([0 for i in range(len(self.name), 15)]))  # ボーン名15Byteの残りを\0で埋める
+        fout.write(bytearray([0 for i in range(len(self.bname), 15)]))  # ボーン名15Byteの残りを\0で埋める
         fout.write(struct.pack('<L', self.frame))
         fout.write(struct.pack('<f', self.position.x()))
         fout.write(struct.pack('<f', self.position.y()))
