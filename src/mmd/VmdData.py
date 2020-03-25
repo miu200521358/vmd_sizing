@@ -9,176 +9,6 @@ from utils.MLogger import MLogger
 logger = MLogger(__name__)
 
 
-# https://blog.goo.ne.jp/torisu_tetosuki/e/bc9f1c4d597341b394bd02b64597499d
-# https://w.atwiki.jp/kumiho_k/pages/15.html
-class VmdMotion():
-    def __init__(self):
-        self.path = ''
-        self.signature = ''
-        self.model_name = ''
-        self.last_motion_frame = 0
-        self.motion_cnt = 0
-        # ボーン名：VmdBoneFrameの辞書(key:ボーン名)
-        self.frames = {}
-        self.morph_cnt = 0
-        # モーフ名：VmdMorphFrameの辞書(key:モーフ名)
-        self.morphs = {}
-        self.camera_cnt = 0
-        # カメラ：VmdCameraFrameの配列
-        self.cameras = {}
-        self.light_cnt = 0
-        # 照明：VmdLightFrameの配列
-        self.lights = []
-        self.shadow_cnt = 0
-        # セルフ影：VmdShadowFrameの配列
-        self.shadows = []
-        self.ik_cnt = 0
-        # モデル表示・IK on/off：VmdShowIkFrameの配列
-        self.showiks = []
-        # ハッシュ値
-        self.digest = None
-
-    # 補間曲線を考慮した指定フレーム番号の位置
-    # https://www55.atwiki.jp/kumiho_k/pages/15.html
-    # https://harigane.at.webry.info/201103/article_1.html
-    def calc_bone_by_interpolation(self, bone_name, fno, is_existed=False, is_key=False, is_read=False):
-        fill_bf = VmdBoneFrame(frame=fno, name=bone_name)
-
-        if bone_name not in self.frames:
-            self.frames[bone_name] = {}
-            self.frames[bone_name][fno] = fill_bf
-        
-        # 条件に合致するフレーム番号を探す
-        # is_key: 登録対象のキーを探す
-        # is_read: データ読み込み時のキーを探す
-        fnos = [x for x in sorted(self.frames[bone_name].keys()) if (x == fno) and (not is_key or (is_key and self.frames[x].key)) and (not is_read or (is_read and self.frames[x].read))]
-        
-        if len(fnos) > 0:
-            # 合致するキーが見つかった場合、それを返す
-            return self.frames[bone_name][fnos[0]]
-        else:
-            # 合致するキーが見つからなかった場合
-            if is_existed:
-                # 既存キーのみ探している場合はNone
-                return None
-
-        # 番号より前のフレーム番号
-        before_fnos = [x for x in sorted(self.frames[bone_name].keys()) if (x < fno)]
-        # 番号より後のフレーム番号
-        after_fnos = [x for x in sorted(self.frames[bone_name].keys()) if (x >= fno)]
-
-        if len(after_fnos) == 0:
-            if len(before_fnos) == 0:
-                # 番号の前後もない場合、新規キーを返す
-                return fill_bf
-            else:
-                # 番号より前があって、後のがない場合、前のをコピーして返す
-                fill_bf = copy.deepcopy(self.frames[bone_name][before_fnos[-1]])
-                fill_bf.frame = fno
-                return fill_bf
-
-        prev_bf = self.frames[bone_name][before_fnos[-1]]
-        after_bf = self.frames[bone_name][after_fnos[0]]
-
-        # 補間曲線を元に間を埋める
-        fill_bf.rotation = self.calc_bone_by_interpolation_rot(prev_bf, fill_bf, after_bf)
-        fill_bf.position = self.calc_bone_by_interpolation_pos(prev_bf, fill_bf, after_bf)
-        
-        return fill_bf
-
-    # 補間曲線を元に、回転ボーンの値を求める
-    def calc_bone_by_interpolation_rot(self, prev_bf, fill_bf, after_bf):
-        if prev_bf.rotation != after_bf.rotation:
-            # 回転補間曲線
-            _, _, rn = MBezierUtils.calc_interpolate_bezier(after_bf.interpolation[MBezierUtils.R_x1_idxs[3]], after_bf.interpolation[MBezierUtils.R_y1_idxs[3]], \
-                                                            after_bf.interpolation[MBezierUtils.R_x2_idxs[3]], after_bf.interpolation[MBezierUtils.R_y2_idxs[3]], \
-                                                            prev_bf.frame, after_bf.frame, fill_bf.frame)
-            return MQuaternion.slerp(prev_bf.rotation, after_bf.rotation, rn)
-
-        return copy.deepcopy(prev_bf.rotation)
-
-    # 補間曲線を元に移動ボーンの値を求める
-    def calc_bone_by_interpolation_pos(self, prev_bf, fill_bf, after_bf):
-
-        # 補間曲線を元に間を埋める
-        if prev_bf.position != after_bf.position:
-            # http://rantyen.blog.fc2.com/blog-entry-65.html
-            # X移動補間曲線
-            _, _, xn = MBezierUtils.calc_interpolate_bezier(after_bf.interpolation[MBezierUtils.MX_x1_idxs[3]], after_bf.interpolation[MBezierUtils.MX_y1_idxs[3]], \
-                                                            after_bf.interpolation[MBezierUtils.MX_x2_idxs[3]], after_bf.interpolation[MBezierUtils.MX_y2_idxs[3]], \
-                                                            prev_bf.frame, after_bf.frame, fill_bf.frame)
-            # Y移動補間曲線
-            _, _, yn = MBezierUtils.calc_interpolate_bezier(after_bf.interpolation[MBezierUtils.MY_x1_idxs[3]], after_bf.interpolation[MBezierUtils.MX_y1_idxs[3]], \
-                                                            after_bf.interpolation[MBezierUtils.MY_x2_idxs[3]], after_bf.interpolation[MBezierUtils.MY_y2_idxs[3]], \
-                                                            prev_bf.frame, after_bf.frame, fill_bf.frame)
-            # Z移動補間曲線
-            _, _, zn = MBezierUtils.calc_interpolate_bezier(after_bf.interpolation[MBezierUtils.MZ_x1_idxs[3]], after_bf.interpolation[MBezierUtils.MZ_y1_idxs[3]], \
-                                                            after_bf.interpolation[MBezierUtils.MZ_x2_idxs[3]], after_bf.interpolation[MBezierUtils.MZ_y2_idxs[3]], \
-                                                            prev_bf.frame, after_bf.frame, fill_bf.frame)
-
-            fill_pos = MVector3D()
-            fill_pos.setX(prev_bf.position.x() + ((after_bf.position.x() - prev_bf.position.x()) * xn))
-            fill_pos.setY(prev_bf.position.y() + ((after_bf.position.y() - prev_bf.position.y()) * yn))
-            fill_pos.setZ(prev_bf.position.z() + ((after_bf.position.z() - prev_bf.position.z()) * zn))
-            
-            return fill_pos
-        
-        return copy.deepcopy(prev_bf.position)
-
-    # ボーンモーション：フレーム番号リスト
-    def get_bone_fnos(self, bone_name):
-        if not self.frames or self.motion_cnt == 0 or bone_name not in self.frames:
-            return []
-        
-        return sorted([fno for fno in self.frames[bone_name].keys()])
-
-    # モーフモーション：フレーム番号リスト
-    def get_morph_fnos(self, morph_name):
-        if not self.morphs or self.morph_cnt == 0 or morph_name not in self.morphs:
-            return []
-        
-        return sorted([fno for fno in self.morphs[morph_name].keys()])
-    
-    # ボーンモーション：一次元配列
-    def get_bone_frames(self):
-        total_bone_frames = []
-
-        for bone_name, bone_frames in self.frames.items():
-            # キーフレを逆順で取得
-            for fno in reversed(self.get_bone_fnos(bone_name)):
-                total_bone_frames.append(bone_frames[fno])
-        
-        return total_bone_frames
-    
-    # モーフモーション：一次元配列
-    def get_morph_frames(self):
-        total_morph_frames = []
-
-        for morph_name, morph_frames in self.morphs.items():
-            # キーフレを逆順で取得
-            for fno in reversed(self.get_morph_fnos(morph_name)):
-                total_morph_frames.append(morph_frames[fno])
-        
-        return total_morph_frames
-
-
-class VmdMorphFrame():
-    def __init__(self, frame=0):
-        self.name = ''
-        self.bname = ''
-        self.frame = frame
-        self.ratio = 0
-    
-    def write(self, fout):
-        fout.write(self.bname)
-        fout.write(bytearray([0 for i in range(len(self.bname), 15)]))  # ボーン名15Byteの残りを\0で埋める
-        fout.write(struct.pack('<L', self.frame))
-        fout.write(struct.pack('<f', self.ratio))
-
-    def __str__(self):
-        return "<VmdMorphFrame name:{0}, frame:{1}, ratio:{2}".format(self.name, self.frame, self.ratio)
-
-
 class VmdBoneFrame():
     def __init__(self, frame=0, name=''):
         self.name = name
@@ -214,6 +44,23 @@ class VmdBoneFrame():
         fout.write(struct.pack('<f', float(v.z())))
         fout.write(struct.pack('<f', float(v.w())))
         fout.write(bytearray([int(x) for x in self.interpolation]))
+
+
+class VmdMorphFrame():
+    def __init__(self, frame=0):
+        self.name = ''
+        self.bname = ''
+        self.frame = frame
+        self.ratio = 0
+    
+    def write(self, fout):
+        fout.write(self.bname)
+        fout.write(bytearray([0 for i in range(len(self.bname), 15)]))  # ボーン名15Byteの残りを\0で埋める
+        fout.write(struct.pack('<L', self.frame))
+        fout.write(struct.pack('<f', self.ratio))
+
+    def __str__(self):
+        return "<VmdMorphFrame name:{0}, frame:{1}, ratio:{2}".format(self.name, self.frame, self.ratio)
 
 
 class VmdCameraFrame():
@@ -291,4 +138,156 @@ class VmdShowIkFrame():
             fout.write(bytearray([0 for i in range(len(k.name), 20)]))  # IKボーン名20Byteの残りを\0で埋める
             fout.write(struct.pack('b', k.onoff))
         
+
+# https://blog.goo.ne.jp/torisu_tetosuki/e/bc9f1c4d597341b394bd02b64597499d
+# https://w.atwiki.jp/kumiho_k/pages/15.html
+class VmdMotion():
+    def __init__(self):
+        self.path = ''
+        self.signature = ''
+        self.model_name = ''
+        self.last_motion_frame = 0
+        self.motion_cnt = 0
+        # ボーン名：VmdBoneFrameの辞書(key:ボーン名)
+        self.frames = {}
+        self.morph_cnt = 0
+        # モーフ名：VmdMorphFrameの辞書(key:モーフ名)
+        self.morphs = {}
+        self.camera_cnt = 0
+        # カメラ：VmdCameraFrameの配列
+        self.cameras = {}
+        self.light_cnt = 0
+        # 照明：VmdLightFrameの配列
+        self.lights = []
+        self.shadow_cnt = 0
+        # セルフ影：VmdShadowFrameの配列
+        self.shadows = []
+        self.ik_cnt = 0
+        # モデル表示・IK on/off：VmdShowIkFrameの配列
+        self.showiks = []
+        # ハッシュ値
+        self.digest = None
+
+    # 補間曲線を考慮した指定フレーム番号の位置
+    # https://www55.atwiki.jp/kumiho_k/pages/15.html
+    # https://harigane.at.webry.info/201103/article_1.html
+    def calc_bone_by_interpolation(self, bone_name: str, fno: int, is_existed=False, is_key=False, is_read=False):
+        fill_bf = VmdBoneFrame(frame=fno, name=bone_name)
+
+        if bone_name not in self.frames:
+            self.frames[bone_name] = {}
+            self.frames[bone_name][fno] = fill_bf
         
+        # 条件に合致するフレーム番号を探す
+        # is_key: 登録対象のキーを探す
+        # is_read: データ読み込み時のキーを探す
+        fnos = [x for x in sorted(self.frames[bone_name].keys()) if (x == fno) and (not is_key or (is_key and self.frames[x].key)) and (not is_read or (is_read and self.frames[x].read))]
+        
+        if len(fnos) > 0:
+            # 合致するキーが見つかった場合、それを返す
+            return self.frames[bone_name][fnos[0]]
+        else:
+            # 合致するキーが見つからなかった場合
+            if is_existed:
+                # 既存キーのみ探している場合はNone
+                return None
+
+        # 番号より前のフレーム番号
+        before_fnos = [x for x in sorted(self.frames[bone_name].keys()) if (x < fno)]
+        # 番号より後のフレーム番号
+        after_fnos = [x for x in sorted(self.frames[bone_name].keys()) if (x > fno)]
+
+        if len(after_fnos) == 0:
+            if len(before_fnos) == 0:
+                # 番号の前後もない場合、新規キーを返す
+                return fill_bf
+            else:
+                # 番号より前があって、後のがない場合、前のをコピーして返す
+                fill_bf = copy.deepcopy(self.frames[bone_name][before_fnos[-1]])
+                fill_bf.frame = fno
+                return fill_bf
+
+        prev_bf = self.frames[bone_name][before_fnos[-1]]
+        after_bf = self.frames[bone_name][after_fnos[0]]
+
+        # 補間曲線を元に間を埋める
+        fill_bf.rotation = self.calc_bone_by_interpolation_rot(prev_bf, fill_bf, after_bf)
+        fill_bf.position = self.calc_bone_by_interpolation_pos(prev_bf, fill_bf, after_bf)
+        
+        return fill_bf
+
+    # 補間曲線を元に、回転ボーンの値を求める
+    def calc_bone_by_interpolation_rot(self, prev_bf: VmdBoneFrame, fill_bf: VmdBoneFrame, after_bf: VmdBoneFrame):
+        if prev_bf.rotation != after_bf.rotation:
+            # 回転補間曲線
+            _, _, rt = MBezierUtils.evaluate(after_bf.interpolation[MBezierUtils.R_x1_idxs[3]], after_bf.interpolation[MBezierUtils.R_y1_idxs[3]], \
+                                             after_bf.interpolation[MBezierUtils.R_x2_idxs[3]], after_bf.interpolation[MBezierUtils.R_y2_idxs[3]], \
+                                             prev_bf.frame, fill_bf.frame, after_bf.frame)
+            return MQuaternion.slerp(prev_bf.rotation, after_bf.rotation, rt)
+
+        return copy.deepcopy(prev_bf.rotation)
+
+    # 補間曲線を元に移動ボーンの値を求める
+    def calc_bone_by_interpolation_pos(self, prev_bf: VmdBoneFrame, fill_bf: VmdBoneFrame, after_bf: VmdBoneFrame):
+
+        # 補間曲線を元に間を埋める
+        if prev_bf.position != after_bf.position:
+            # http://rantyen.blog.fc2.com/blog-entry-65.html
+            # X移動補間曲線
+            _, _, xt = MBezierUtils.evaluate(after_bf.interpolation[MBezierUtils.MX_x1_idxs[3]], after_bf.interpolation[MBezierUtils.MX_y1_idxs[3]], \
+                                             after_bf.interpolation[MBezierUtils.MX_x2_idxs[3]], after_bf.interpolation[MBezierUtils.MX_y2_idxs[3]], \
+                                             prev_bf.frame, fill_bf.frame, after_bf.frame)
+            # Y移動補間曲線
+            _, _, yt = MBezierUtils.evaluate(after_bf.interpolation[MBezierUtils.MY_x1_idxs[3]], after_bf.interpolation[MBezierUtils.MX_y1_idxs[3]], \
+                                             after_bf.interpolation[MBezierUtils.MY_x2_idxs[3]], after_bf.interpolation[MBezierUtils.MY_y2_idxs[3]], \
+                                             prev_bf.frame, fill_bf.frame, after_bf.frame)
+            # Z移動補間曲線
+            _, _, zt = MBezierUtils.evaluate(after_bf.interpolation[MBezierUtils.MZ_x1_idxs[3]], after_bf.interpolation[MBezierUtils.MZ_y1_idxs[3]], \
+                                             after_bf.interpolation[MBezierUtils.MZ_x2_idxs[3]], after_bf.interpolation[MBezierUtils.MZ_y2_idxs[3]], \
+                                             prev_bf.frame, fill_bf.frame, after_bf.frame)
+
+            fill_pos = MVector3D()
+            fill_pos.setX(prev_bf.position.x() + ((after_bf.position.x() - prev_bf.position.x()) * xt))
+            fill_pos.setY(prev_bf.position.y() + ((after_bf.position.y() - prev_bf.position.y()) * yt))
+            fill_pos.setZ(prev_bf.position.z() + ((after_bf.position.z() - prev_bf.position.z()) * zt))
+            
+            return fill_pos
+        
+        return copy.deepcopy(prev_bf.position)
+
+    # ボーンモーション：フレーム番号リスト
+    def get_bone_fnos(self, bone_name: str):
+        if not self.frames or self.motion_cnt == 0 or bone_name not in self.frames:
+            return []
+        
+        return sorted([fno for fno in self.frames[bone_name].keys()])
+
+    # モーフモーション：フレーム番号リスト
+    def get_morph_fnos(self, morph_name: str):
+        if not self.morphs or self.morph_cnt == 0 or morph_name not in self.morphs:
+            return []
+        
+        return sorted([fno for fno in self.morphs[morph_name].keys()])
+    
+    # ボーンモーション：一次元配列
+    def get_bone_frames(self):
+        total_bone_frames = []
+
+        for bone_name, bone_frames in self.frames.items():
+            # キーフレを逆順で取得
+            for fno in reversed(self.get_bone_fnos(bone_name)):
+                total_bone_frames.append(bone_frames[fno])
+        
+        return total_bone_frames
+    
+    # モーフモーション：一次元配列
+    def get_morph_frames(self):
+        total_morph_frames = []
+
+        for morph_name, morph_frames in self.morphs.items():
+            # キーフレを逆順で取得
+            for fno in reversed(self.get_morph_fnos(morph_name)):
+                total_morph_frames.append(morph_frames[fno])
+        
+        return total_morph_frames
+

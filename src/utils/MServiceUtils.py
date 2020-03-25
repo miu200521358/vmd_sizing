@@ -8,8 +8,8 @@ from collections import OrderedDict
 from mmd.PmxData import PmxModel, Vertex, Material, Bone, Morph, DisplaySlot, RigidBody, Joint # noqa
 from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
 from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
-from module.MOptions import MOptions, MOptionsDataSet
-from module.MParams import BoneLinks
+from module.MOptions import MOptions, MOptionsDataSet # noqa
+from module.MParams import BoneLinks # noqa
 from utils import MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
 

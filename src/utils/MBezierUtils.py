@@ -2,6 +2,8 @@
 #
 from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from utils.MLogger import MLogger # noqa
+import numpy as np
+import bezier
 
 logger = MLogger(__name__, level=1)
 
@@ -31,6 +33,68 @@ MZ_x1_idxs = [2, 17, 32, 32]
 MZ_y1_idxs = [6, 21, 51, 36]
 MZ_x2_idxs = [10, 25, 55, 40]
 MZ_y2_idxs = [14, 29, 59, 44]
+
+
+# 補間曲線を求める
+# http://d.hatena.ne.jp/edvakf/20111016/1318716097
+# https://pomax.github.io/bezierinfo
+# https://shspage.hatenadiary.org/entry/20140625/1403702735
+# https://bezier.readthedocs.io/en/stable/python/reference/bezier.curve.html#bezier.curve.Curve.evaluate
+def evaluate(x1v: int, y1v: int, x2v: int, y2v: int, start: int, now: int, end: int):
+    if (now - start) == 0 or (end - start) == 0:
+        return 0, 0
+        
+    x = (now - start) / (end - start)
+    x1 = x1v / INTERPOLATION_MMD_MAX
+    x2 = x2v / INTERPOLATION_MMD_MAX
+    y1 = y1v / INTERPOLATION_MMD_MAX
+    y2 = y2v / INTERPOLATION_MMD_MAX
+
+    # 補間曲線ベジェ曲線
+    curve1 = bezier.Curve(np.asfortranarray([[0, x1, x2, 1], [0, y1, y2, 1]]), degree=3)
+    # 交点を求める為のX線上の直線
+    curve2 = bezier.Curve(np.asfortranarray([[x, x], [0, 1]]), degree=1)
+
+    # 交点を求める
+    intersections = curve1.intersect(curve2)
+
+    # tからyを求め直す
+    s_vals = np.asfortranarray(intersections[0, :])
+    es = curve1.evaluate_multi(s_vals)
+
+    # >>> curve1.evaluate_multi(s_vals)
+    # array([[0.25 , 0.75 ],
+    #        [0.375, 0.375]])
+    # x: x          横軸
+    # y: es[1, 0]   縦軸
+    # t: s_vals[0]  実際の変化量
+    return x, s_vals[0], es[1, 0]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # 回転による補間曲線の再設定
@@ -266,47 +330,6 @@ def round_bezier_mmd(target):
     t2.setY(round_integer(target.y() * INTERPOLATION_MMD_MAX))
 
     return t2
-
-
-# 補間曲線を求める
-# http://d.hatena.ne.jp/edvakf/20111016/1318716097
-# https://pomax.github.io/bezierinfo
-# https://shspage.hatenadiary.org/entry/20140625/1403702735
-def calc_interpolate_bezier(x1v, y1v, x2v, y2v, start, end, now):
-    if (now - start) == 0 or (end - start) == 0:
-        return 0, 0, 0
-        
-    x = (now - start) / (end - start)
-    x1 = x1v / INTERPOLATION_MMD_MAX
-    x2 = x2v / INTERPOLATION_MMD_MAX
-    y1 = y1v / INTERPOLATION_MMD_MAX
-    y2 = y2v / INTERPOLATION_MMD_MAX
-
-    t = 0.5
-    s = 0.5
-
-    # logger.test("x1: %s, x2: %s, y1: %s, y2: %s, x: %s", x1, x2, y1, y2, x)
-
-    for i in range(15):
-        ft = (3 * (s * s) * t * x1) + (3 * s * (t * t) * x2) + (t * t * t) - x
-        # logger.test("i: %s, 4 << i: %s, ft: %s(%s), t: %s, s: %s", i, (4 << i), ft, abs(ft) < 0.00001, t, s)
-
-        # lessさんのご指摘によりコメントアウト
-        # if abs(ft) < 0.00001:
-        #     break
-
-        if ft > 0:
-            t -= 1 / (4 << i)
-        else:
-            t += 1 / (4 << i)
-        
-        s = 1 - t
-
-    y = (3 * (s * s) * t * y1) + (3 * s * (t * t) * y2) + (t * t * t)
-
-    # logger.test("y: %s, t: %s, s: %s", y, t, s)
-
-    return t, x, y
 
 
 # 指定されたtに相当するx(フレーム番号)とy(0-1)を返す

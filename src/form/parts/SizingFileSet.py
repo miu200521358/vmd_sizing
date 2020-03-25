@@ -44,7 +44,8 @@ class SizingFileSet():
         # 作成元PMXファイルコントロール
         self.org_model_file_ctrl = HistoryFilePickerCtrl(frame, panel, u"モーション作成元モデルPMXファイル", u"モーション作成元モデルPMXファイルを開く", ("pmx"), wx.FLP_DEFAULT_STYLE, \
                                                          u"モーション作成に使用されたモデルのPMXパスを指定してください。\n精度は落ちますが、類似したサイズ・ボーン構造のモデルでも代用できます。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。", \
-                                                         file_model_spacer=2, title_parts_ctrl=substitute_model_flg_ctrl, file_histories_key="org_pmx", is_change_output=False, is_aster=False, is_save=False, set_no=set_no)
+                                                         file_model_spacer=2, title_parts_ctrl=substitute_model_flg_ctrl, file_histories_key="org_pmx", is_change_output=False, is_aster=False, \
+                                                         is_save=False, set_no=set_no)
         self.set_sizer.Add(self.org_model_file_ctrl.sizer, 1, wx.EXPAND, 0)
 
         # 捩り分散追加FLG
@@ -55,7 +56,8 @@ class SizingFileSet():
         # 変換先PMXファイルコントロール
         self.rep_model_file_ctrl = HistoryFilePickerCtrl(frame, panel, u"モーション変換先モデルPMXファイル", u"モーション変換先モデルPMXファイルを開く", ("pmx"), wx.FLP_DEFAULT_STYLE, \
                                                          u"実際にモーションを読み込ませたいモデルのPMXパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。", \
-                                                         file_model_spacer=1, title_parts_ctrl=twist_flg_ctrl, file_histories_key="rep_pmx", is_change_output=True, is_aster=False, is_save=False, set_no=set_no)
+                                                         file_model_spacer=1, title_parts_ctrl=twist_flg_ctrl, file_histories_key="rep_pmx", is_change_output=True, is_aster=False, \
+                                                         is_save=False, set_no=set_no)
         self.set_sizer.Add(self.rep_model_file_ctrl.sizer, 1, wx.EXPAND, 0)
 
         # 出力先VMDファイルコントロール
