@@ -42,7 +42,7 @@ MZ_y2_idxs = [14, 29, 59, 44]
 # https://bezier.readthedocs.io/en/stable/python/reference/bezier.curve.html#bezier.curve.Curve.evaluate
 def evaluate(x1v: int, y1v: int, x2v: int, y2v: int, start: int, now: int, end: int):
     if (now - start) == 0 or (end - start) == 0:
-        return 0, 0
+        return 0, 0, 0
         
     x = (now - start) / (end - start)
     x1 = x1v / INTERPOLATION_MMD_MAX
@@ -68,7 +68,7 @@ def evaluate(x1v: int, y1v: int, x2v: int, y2v: int, start: int, now: int, end: 
     # x: x          横軸
     # y: es[1, 0]   縦軸
     # t: s_vals[0]  実際の変化量
-    return x, s_vals[0], es[1, 0]
+    return x, es[1, 0], s_vals[0]
 
 
 

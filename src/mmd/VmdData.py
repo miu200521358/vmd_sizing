@@ -220,10 +220,10 @@ class VmdMotion():
     def calc_bone_by_interpolation_rot(self, prev_bf: VmdBoneFrame, fill_bf: VmdBoneFrame, after_bf: VmdBoneFrame):
         if prev_bf.rotation != after_bf.rotation:
             # 回転補間曲線
-            _, _, rt = MBezierUtils.evaluate(after_bf.interpolation[MBezierUtils.R_x1_idxs[3]], after_bf.interpolation[MBezierUtils.R_y1_idxs[3]], \
-                                             after_bf.interpolation[MBezierUtils.R_x2_idxs[3]], after_bf.interpolation[MBezierUtils.R_y2_idxs[3]], \
-                                             prev_bf.frame, fill_bf.frame, after_bf.frame)
-            return MQuaternion.slerp(prev_bf.rotation, after_bf.rotation, rt)
+            rx, ry, rt = MBezierUtils.evaluate(after_bf.interpolation[MBezierUtils.R_x1_idxs[3]], after_bf.interpolation[MBezierUtils.R_y1_idxs[3]], \
+                                               after_bf.interpolation[MBezierUtils.R_x2_idxs[3]], after_bf.interpolation[MBezierUtils.R_y2_idxs[3]], \
+                                               prev_bf.frame, fill_bf.frame, after_bf.frame)
+            return MQuaternion.slerp(prev_bf.rotation, after_bf.rotation, ry)
 
         return copy.deepcopy(prev_bf.rotation)
 
@@ -234,22 +234,22 @@ class VmdMotion():
         if prev_bf.position != after_bf.position:
             # http://rantyen.blog.fc2.com/blog-entry-65.html
             # X移動補間曲線
-            _, _, xt = MBezierUtils.evaluate(after_bf.interpolation[MBezierUtils.MX_x1_idxs[3]], after_bf.interpolation[MBezierUtils.MX_y1_idxs[3]], \
-                                             after_bf.interpolation[MBezierUtils.MX_x2_idxs[3]], after_bf.interpolation[MBezierUtils.MX_y2_idxs[3]], \
-                                             prev_bf.frame, fill_bf.frame, after_bf.frame)
+            xx, xy, xt = MBezierUtils.evaluate(after_bf.interpolation[MBezierUtils.MX_x1_idxs[3]], after_bf.interpolation[MBezierUtils.MX_y1_idxs[3]], \
+                                               after_bf.interpolation[MBezierUtils.MX_x2_idxs[3]], after_bf.interpolation[MBezierUtils.MX_y2_idxs[3]], \
+                                               prev_bf.frame, fill_bf.frame, after_bf.frame)
             # Y移動補間曲線
-            _, _, yt = MBezierUtils.evaluate(after_bf.interpolation[MBezierUtils.MY_x1_idxs[3]], after_bf.interpolation[MBezierUtils.MX_y1_idxs[3]], \
-                                             after_bf.interpolation[MBezierUtils.MY_x2_idxs[3]], after_bf.interpolation[MBezierUtils.MY_y2_idxs[3]], \
-                                             prev_bf.frame, fill_bf.frame, after_bf.frame)
+            yx, yy, yt = MBezierUtils.evaluate(after_bf.interpolation[MBezierUtils.MY_x1_idxs[3]], after_bf.interpolation[MBezierUtils.MY_y1_idxs[3]], \
+                                               after_bf.interpolation[MBezierUtils.MY_x2_idxs[3]], after_bf.interpolation[MBezierUtils.MY_y2_idxs[3]], \
+                                               prev_bf.frame, fill_bf.frame, after_bf.frame)
             # Z移動補間曲線
-            _, _, zt = MBezierUtils.evaluate(after_bf.interpolation[MBezierUtils.MZ_x1_idxs[3]], after_bf.interpolation[MBezierUtils.MZ_y1_idxs[3]], \
-                                             after_bf.interpolation[MBezierUtils.MZ_x2_idxs[3]], after_bf.interpolation[MBezierUtils.MZ_y2_idxs[3]], \
-                                             prev_bf.frame, fill_bf.frame, after_bf.frame)
+            zx, zy, zt = MBezierUtils.evaluate(after_bf.interpolation[MBezierUtils.MZ_x1_idxs[3]], after_bf.interpolation[MBezierUtils.MZ_y1_idxs[3]], \
+                                               after_bf.interpolation[MBezierUtils.MZ_x2_idxs[3]], after_bf.interpolation[MBezierUtils.MZ_y2_idxs[3]], \
+                                               prev_bf.frame, fill_bf.frame, after_bf.frame)
 
             fill_pos = MVector3D()
-            fill_pos.setX(prev_bf.position.x() + ((after_bf.position.x() - prev_bf.position.x()) * xt))
-            fill_pos.setY(prev_bf.position.y() + ((after_bf.position.y() - prev_bf.position.y()) * yt))
-            fill_pos.setZ(prev_bf.position.z() + ((after_bf.position.z() - prev_bf.position.z()) * zt))
+            fill_pos.setX(prev_bf.position.x() + ((after_bf.position.x() - prev_bf.position.x()) * xy))
+            fill_pos.setY(prev_bf.position.y() + ((after_bf.position.y() - prev_bf.position.y()) * yy))
+            fill_pos.setZ(prev_bf.position.z() + ((after_bf.position.z() - prev_bf.position.z()) * zy))
             
             return fill_pos
         

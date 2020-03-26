@@ -45,8 +45,8 @@ class MBezierUtilsTest(unittest.TestCase):
         print("t: %s" % t)
 
         self.assertAlmostEqual(x, 0.79, delta=0.01)
-        self.assertAlmostEqual(y, 0.74, delta=0.01)
-        self.assertAlmostEqual(t, 0.79, delta=0.01)
+        self.assertAlmostEqual(y, 0.79, delta=0.01)
+        self.assertAlmostEqual(t, 0.74, delta=0.01)
 
     def test_MBezierUtils_evaluate03(self):
         x, y, t = MBezierUtils.evaluate(104, 63, 13, 111, 0, 5, 10)
@@ -55,8 +55,28 @@ class MBezierUtilsTest(unittest.TestCase):
         print("t: %s" % t)
 
         self.assertAlmostEqual(x, 0.5, delta=0.01)
-        self.assertAlmostEqual(y, 0.61, delta=0.01)
-        self.assertAlmostEqual(t, 0.74, delta=0.01)
+        self.assertAlmostEqual(y, 0.74, delta=0.01)
+        self.assertAlmostEqual(t, 0.61, delta=0.01)
+
+    def test_MBezierUtils_evaluate04(self):
+        x, y, t = MBezierUtils.evaluate(0, 127, 127, 0, 0, 1, 30)
+        print("x: %s" % x)
+        print("y: %s" % y)
+        print("t: %s" % t)
+
+        self.assertAlmostEqual(x, 0.03, delta=0.01)
+        self.assertAlmostEqual(y, 0.26, delta=0.01)
+        self.assertAlmostEqual(t, 0.11, delta=0.01)
+
+    def test_MBezierUtils_evaluate05(self):
+        x, y, t = MBezierUtils.evaluate(0, 127, 127, 0, 0, 2, 30)
+        print("x: %s" % x)
+        print("y: %s" % y)
+        print("t: %s" % t)
+
+        self.assertAlmostEqual(x, 0.06, delta=0.01)
+        self.assertAlmostEqual(y, 0.34, delta=0.01)
+        self.assertAlmostEqual(t, 0.16, delta=0.01)
 
 
 if __name__ == "__main__":
