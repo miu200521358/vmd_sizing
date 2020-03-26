@@ -1,4 +1,4 @@
-# VMDサイジング
+# VMD繧ｵ繧､繧ｸ繝ｳ繧ｰ
 
 
 # Dependencies
