@@ -73,8 +73,8 @@ class VmdReader():
             logger.test("name: %s, bname %s", bone_name, bone_bname)
 
             # フレームIDX
-            frame.frame = self.read_uint(4)
-            logger.test("frame.frame %s", frame.frame)
+            frame.fno = self.read_uint(4)
+            logger.test("frame.fno %s", frame.fno)
 
             # 位置X,Y,Z
             frame.position = self.read_Vector3D()
@@ -96,17 +96,17 @@ class VmdReader():
             frame.org_interpolation = copy.deepcopy(frame.interpolation)
             logger.test("org_interpolation %s", frame.org_interpolation)
 
-            if bone_name not in motion.frames:
+            if bone_name not in motion.bones:
                 # まだ辞書にない場合、配列追加
-                motion.frames[bone_name] = {}
+                motion.bones[bone_name] = {}
 
             # 辞書の該当部分にボーンフレームを追加
-            if frame.frame not in motion.frames[bone_name]:
-                motion.frames[bone_name][frame.frame] = frame
+            if frame.fno not in motion.bones[bone_name]:
+                motion.bones[bone_name][frame.fno] = frame
 
-            if frame.frame > motion.last_motion_frame:
+            if frame.fno > motion.last_motion_frame:
                 # 最終フレームを記録
-                motion.last_motion_frame = frame.frame
+                motion.last_motion_frame = frame.fno
 
             if n % 10000 == 0:
                 logger.info("VMDモーション読み込み キー: %s" % n, decoration=MLogger.DECORATION_SIMPLE)
@@ -128,8 +128,8 @@ class VmdReader():
             logger.test("name: %s, bname %s", morph_name, morph_bname)
 
             # フレームIDX
-            morph.frame = self.read_uint(4)
-            logger.test("morph.frame %s", morph.frame)
+            morph.fno = self.read_uint(4)
+            logger.test("morph.fno %s", morph.fno)
 
             # 度数
             morph.ratio = self.read_float(4)
@@ -139,9 +139,9 @@ class VmdReader():
                 # まだ辞書にない場合、配列追加
                 motion.morphs[morph_name] = {}
 
-            if morph.frame in motion.morphs[morph_name]:
+            if morph.fno in motion.morphs[morph_name]:
                 # まだなければ辞書の該当部分にモーフフレームを追加
-                motion.morphs[morph_name][morph.frame] = morph
+                motion.morphs[morph_name][morph.fno] = morph
 
             if n % 1000 == 0:
                 logger.info("VMDモーション読み込み モーフ: %s" % n, decoration=MLogger.DECORATION_SIMPLE)
@@ -156,8 +156,8 @@ class VmdReader():
                 camera = VmdCameraFrame()
 
                 # フレームIDX
-                camera.frame = self.read_uint(4)
-                logger.test("camera.frame %s", camera.frame)
+                camera.fno = self.read_uint(4)
+                logger.test("camera.fno %s", camera.fno)
 
                 # 距離
                 camera.length = self.read_float(4)
@@ -184,7 +184,7 @@ class VmdReader():
                 logger.test("camera.perspective %s", camera.perspective)
 
                 # カメラを追加
-                motion.cameras[camera.frame] = camera
+                motion.cameras[camera.fno] = camera
 
         except Exception:
             # 情報がない場合、catchして握りつぶす
@@ -203,8 +203,8 @@ class VmdReader():
             light = VmdLightFrame()
 
             # フレームIDX
-            light.frame = self.read_uint(4)
-            logger.test("light.frame %s", light.frame)
+            light.fno = self.read_uint(4)
+            logger.test("light.fno %s", light.fno)
 
             # 照明色(RGBだが、下手に数値が変わるのも怖いのでV3D)
             light.color = self.read_Vector3D()
@@ -227,8 +227,8 @@ class VmdReader():
                 shadow = VmdShadowFrame()
 
                 # フレームIDX
-                shadow.frame = self.read_uint(4)
-                logger.test("shadow.frame %s", shadow.frame)
+                shadow.fno = self.read_uint(4)
+                logger.test("shadow.fno %s", shadow.fno)
 
                 # シャドウ種別
                 shadow.type = self.read_uint(1)
@@ -255,8 +255,8 @@ class VmdReader():
                 ik = VmdShowIkFrame()
 
                 # フレームIDX
-                ik.frame = self.read_uint(4)
-                logger.test("ik.frame %s", ik.frame)
+                ik.fno = self.read_uint(4)
+                logger.test("ik.fno %s", ik.fno)
 
                 # モデル表示, 0:OFF, 1:ON
                 ik.show = self.read_uint(1)

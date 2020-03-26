@@ -10,10 +10,10 @@ logger = MLogger(__name__)
 
 
 class VmdBoneFrame():
-    def __init__(self, frame=0, name=''):
+    def __init__(self, fno=0, name=''):
         self.name = name
         self.bname = name.encode('cp932').decode('shift_jis').encode('shift_jis')
-        self.frame = frame
+        self.fno = fno
         self.position = MVector3D()
         self.rotation = MQuaternion()
         self.org_position = MVector3D()
@@ -28,13 +28,13 @@ class VmdBoneFrame():
         self.split_interpolation = False
 
     def __str__(self):
-        return "<VmdBoneFrame name:{0}, frame:{1}, position:{2}, rotation:{3}, interpolation: {4}, key:{5}".format( \
-            self.name, self.frame, self.position, self.rotation, self.interpolation, self.key)
+        return "<VmdBoneFrame name:{0}, fno:{1}, position:{2}, rotation:{3}, interpolation: {4}, key:{5}".format( \
+            self.name, self.fno, self.position, self.rotation, self.interpolation, self.key)
 
     def write(self, fout):
         fout.write(self.bname)
         fout.write(bytearray([0 for i in range(len(self.bname), 15)]))  # ボーン名15Byteの残りを\0で埋める
-        fout.write(struct.pack('<L', int(self.frame)))
+        fout.write(struct.pack('<L', int(self.fno)))
         fout.write(struct.pack('<f', float(self.position.x())))
         fout.write(struct.pack('<f', float(self.position.y())))
         fout.write(struct.pack('<f', float(self.position.z())))
@@ -47,25 +47,25 @@ class VmdBoneFrame():
 
 
 class VmdMorphFrame():
-    def __init__(self, frame=0):
+    def __init__(self, fno=0):
         self.name = ''
         self.bname = ''
-        self.frame = frame
+        self.fno = fno
         self.ratio = 0
     
     def write(self, fout):
         fout.write(self.bname)
         fout.write(bytearray([0 for i in range(len(self.bname), 15)]))  # ボーン名15Byteの残りを\0で埋める
-        fout.write(struct.pack('<L', self.frame))
+        fout.write(struct.pack('<L', self.fno))
         fout.write(struct.pack('<f', self.ratio))
 
     def __str__(self):
-        return "<VmdMorphFrame name:{0}, frame:{1}, ratio:{2}".format(self.name, self.frame, self.ratio)
+        return "<VmdMorphFrame name:{0}, fno:{1}, ratio:{2}".format(self.name, self.fno, self.ratio)
 
 
 class VmdCameraFrame():
     def __init__(self):
-        self.frame = 0
+        self.fno = 0
         self.length = 0
         self.position = MVector3D(0, 0, 0)
         self.euler = MVector3D(0, 0, 0)
@@ -74,7 +74,7 @@ class VmdCameraFrame():
         self.perspective = 0
 
     def write(self, fout):
-        fout.write(struct.pack('<L', int(self.frame)))
+        fout.write(struct.pack('<L', int(self.fno)))
         fout.write(struct.pack('<f', float(self.length)))
         fout.write(struct.pack('<f', float(self.position.x())))
         fout.write(struct.pack('<f', float(self.position.y())))
@@ -89,12 +89,12 @@ class VmdCameraFrame():
 
 class VmdLightFrame():
     def __init__(self):
-        self.frame = 0
+        self.fno = 0
         self.color = MVector3D(0, 0, 0)
         self.position = MVector3D(0, 0, 0)
 
     def write(self, fout):
-        fout.write(struct.pack('<L', self.frame))
+        fout.write(struct.pack('<L', self.fno))
         fout.write(struct.pack('<f', self.color.x()))
         fout.write(struct.pack('<f', self.color.y()))
         fout.write(struct.pack('<f', self.color.z()))
@@ -105,12 +105,12 @@ class VmdLightFrame():
 
 class VmdShadowFrame():
     def __init__(self):
-        self.frame = 0
+        self.fno = 0
         self.type = 0
         self.distance = 0
 
     def write(self, fout):
-        fout.write(struct.pack('<L', self.frame))
+        fout.write(struct.pack('<L', self.fno))
         fout.write(struct.pack('<f', self.type))
         fout.write(struct.pack('<f', self.distance))
 
@@ -124,13 +124,13 @@ class VmdInfoIk():
 
 class VmdShowIkFrame():
     def __init__(self):
-        self.frame = 0
+        self.fno = 0
         self.show = 0
         self.ik_count = 0
         self.ik = []
 
     def write(self, fout):
-        fout.write(struct.pack('<L', self.frame))
+        fout.write(struct.pack('<L', self.fno))
         fout.write(struct.pack('b', self.show))
         fout.write(struct.pack('<L', len(self.ik)))
         for k in (self.ik):
@@ -149,7 +149,7 @@ class VmdMotion():
         self.last_motion_frame = 0
         self.motion_cnt = 0
         # ボーン名：VmdBoneFrameの辞書(key:ボーン名)
-        self.frames = {}
+        self.bones = {}
         self.morph_cnt = 0
         # モーフ名：VmdMorphFrameの辞書(key:モーフ名)
         self.morphs = {}
@@ -172,20 +172,20 @@ class VmdMotion():
     # https://www55.atwiki.jp/kumiho_k/pages/15.html
     # https://harigane.at.webry.info/201103/article_1.html
     def calc_bone_by_interpolation(self, bone_name: str, fno: int, is_existed=False, is_key=False, is_read=False):
-        fill_bf = VmdBoneFrame(frame=fno, name=bone_name)
+        fill_bf = VmdBoneFrame(fno=fno, name=bone_name)
 
-        if bone_name not in self.frames:
-            self.frames[bone_name] = {}
-            self.frames[bone_name][fno] = fill_bf
+        if bone_name not in self.bones:
+            self.bones[bone_name] = {}
+            self.bones[bone_name][fno] = fill_bf
         
         # 条件に合致するフレーム番号を探す
         # is_key: 登録対象のキーを探す
         # is_read: データ読み込み時のキーを探す
-        fnos = [x for x in sorted(self.frames[bone_name].keys()) if (x == fno) and (not is_key or (is_key and self.frames[x].key)) and (not is_read or (is_read and self.frames[x].read))]
+        fnos = [x for x in sorted(self.bones[bone_name].keys()) if (x == fno) and (not is_key or (is_key and self.bones[x].key)) and (not is_read or (is_read and self.bones[x].read))]
         
         if len(fnos) > 0:
             # 合致するキーが見つかった場合、それを返す
-            return self.frames[bone_name][fnos[0]]
+            return self.bones[bone_name][fnos[0]]
         else:
             # 合致するキーが見つからなかった場合
             if is_existed:
@@ -193,9 +193,9 @@ class VmdMotion():
                 return None
 
         # 番号より前のフレーム番号
-        before_fnos = [x for x in sorted(self.frames[bone_name].keys()) if (x < fno)]
+        before_fnos = [x for x in sorted(self.bones[bone_name].keys()) if (x < fno)]
         # 番号より後のフレーム番号
-        after_fnos = [x for x in sorted(self.frames[bone_name].keys()) if (x > fno)]
+        after_fnos = [x for x in sorted(self.bones[bone_name].keys()) if (x > fno)]
 
         if len(after_fnos) == 0:
             if len(before_fnos) == 0:
@@ -203,12 +203,12 @@ class VmdMotion():
                 return fill_bf
             else:
                 # 番号より前があって、後のがない場合、前のをコピーして返す
-                fill_bf = copy.deepcopy(self.frames[bone_name][before_fnos[-1]])
-                fill_bf.frame = fno
+                fill_bf = copy.deepcopy(self.bones[bone_name][before_fnos[-1]])
+                fill_bf.fno = fno
                 return fill_bf
 
-        prev_bf = self.frames[bone_name][before_fnos[-1]]
-        after_bf = self.frames[bone_name][after_fnos[0]]
+        prev_bf = self.bones[bone_name][before_fnos[-1]]
+        after_bf = self.bones[bone_name][after_fnos[0]]
 
         # 補間曲線を元に間を埋める
         fill_bf.rotation = self.calc_bone_by_interpolation_rot(prev_bf, fill_bf, after_bf)
@@ -222,7 +222,7 @@ class VmdMotion():
             # 回転補間曲線
             rx, ry, rt = MBezierUtils.evaluate(after_bf.interpolation[MBezierUtils.R_x1_idxs[3]], after_bf.interpolation[MBezierUtils.R_y1_idxs[3]], \
                                                after_bf.interpolation[MBezierUtils.R_x2_idxs[3]], after_bf.interpolation[MBezierUtils.R_y2_idxs[3]], \
-                                               prev_bf.frame, fill_bf.frame, after_bf.frame)
+                                               prev_bf.fno, fill_bf.fno, after_bf.fno)
             return MQuaternion.slerp(prev_bf.rotation, after_bf.rotation, ry)
 
         return copy.deepcopy(prev_bf.rotation)
@@ -236,15 +236,15 @@ class VmdMotion():
             # X移動補間曲線
             xx, xy, xt = MBezierUtils.evaluate(after_bf.interpolation[MBezierUtils.MX_x1_idxs[3]], after_bf.interpolation[MBezierUtils.MX_y1_idxs[3]], \
                                                after_bf.interpolation[MBezierUtils.MX_x2_idxs[3]], after_bf.interpolation[MBezierUtils.MX_y2_idxs[3]], \
-                                               prev_bf.frame, fill_bf.frame, after_bf.frame)
+                                               prev_bf.fno, fill_bf.fno, after_bf.fno)
             # Y移動補間曲線
             yx, yy, yt = MBezierUtils.evaluate(after_bf.interpolation[MBezierUtils.MY_x1_idxs[3]], after_bf.interpolation[MBezierUtils.MY_y1_idxs[3]], \
                                                after_bf.interpolation[MBezierUtils.MY_x2_idxs[3]], after_bf.interpolation[MBezierUtils.MY_y2_idxs[3]], \
-                                               prev_bf.frame, fill_bf.frame, after_bf.frame)
+                                               prev_bf.fno, fill_bf.fno, after_bf.fno)
             # Z移動補間曲線
             zx, zy, zt = MBezierUtils.evaluate(after_bf.interpolation[MBezierUtils.MZ_x1_idxs[3]], after_bf.interpolation[MBezierUtils.MZ_y1_idxs[3]], \
                                                after_bf.interpolation[MBezierUtils.MZ_x2_idxs[3]], after_bf.interpolation[MBezierUtils.MZ_y2_idxs[3]], \
-                                               prev_bf.frame, fill_bf.frame, after_bf.frame)
+                                               prev_bf.fno, fill_bf.fno, after_bf.fno)
 
             fill_pos = MVector3D()
             fill_pos.setX(prev_bf.position.x() + ((after_bf.position.x() - prev_bf.position.x()) * xy))
@@ -257,10 +257,10 @@ class VmdMotion():
 
     # ボーンモーション：フレーム番号リスト
     def get_bone_fnos(self, bone_name: str):
-        if not self.frames or self.motion_cnt == 0 or bone_name not in self.frames:
+        if not self.bones or self.motion_cnt == 0 or bone_name not in self.bones:
             return []
         
-        return sorted([fno for fno in self.frames[bone_name].keys()])
+        return sorted([fno for fno in self.bones[bone_name].keys()])
 
     # モーフモーション：フレーム番号リスト
     def get_morph_fnos(self, morph_name: str):
@@ -273,7 +273,7 @@ class VmdMotion():
     def get_bone_frames(self):
         total_bone_frames = []
 
-        for bone_name, bone_frames in self.frames.items():
+        for bone_name, bone_frames in self.bones.items():
             # キーフレを逆順で取得
             for fno in reversed(self.get_bone_fnos(bone_name)):
                 total_bone_frames.append(bone_frames[fno])
@@ -290,4 +290,20 @@ class VmdMotion():
                 total_morph_frames.append(morph_frames[fno])
         
         return total_morph_frames
+    
+    def append_bone_frame(self, frame: VmdBoneFrame):
+        if frame.name not in self.bones:
+            # まだ該当ボーン名がない場合、追加
+            self.bones[frame.name] = {}
+        
+        self.bones[frame.name][frame.fno] = frame
+
+    def append_morph_frame(self, frame: VmdMorphFrame):
+        if frame.name not in self.morphs:
+            # まだ該当モーフ名がない場合、追加
+            self.morphs[frame.name] = {}
+        
+        self.morphs[frame.name][frame.fno] = frame
+
+
 

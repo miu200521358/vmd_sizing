@@ -570,7 +570,7 @@ class MVector4D():
 
 class MQuaternion():
 
-    def __init__(self, w=0, x=0, y=0, z=0):
+    def __init__(self, w=1, x=0, y=0, z=0):
         if isinstance(w, MQuaternion):
             # クラスの場合
             self.__data = w.__data
@@ -697,7 +697,10 @@ class MQuaternion():
         return dotv
     
     @classmethod
-    def fromAxisAndAngle(cls, x, y, z, angle):
+    def fromAxisAndAngle(cls, vec3: MVector3D, angle: float):
+        x = vec3.x()
+        y = vec3.y()
+        z = vec3.z()
         length = math.sqrt(x * x + y * y + z * z)
 
         if not is_almost_null(length - 1.0) and not is_almost_null(length):
@@ -1117,9 +1120,11 @@ class MMatrix4x4():
             y = data_sum[1]
             z = data_sum[2]
             w = data_sum[3]
-                
+
             if w == 1.0:
                 return MVector3D(x, y, z)
+            elif w == 0.0:
+                return MVector3D()
             else:
                 return MVector3D(x / w, y / w, z / w)
         elif isinstance(other, MVector4D):

@@ -25,3 +25,16 @@ class MMathTest(unittest.TestCase):
         print(v.data()[0])
         self.assertEqual(x, v.x())
     
+    def test_MQuaternion_toMatrix4x4(self):
+        qq = MQuaternion.fromEulerAngles(0, 0, 0)
+        print(qq.toMatrix4x4())
+        self.assertTrue(True)
+
+    def test_MMatrix4x4_rotate(self):
+        mat = MMatrix4x4()
+        mat.setToIdentity()
+        mat.translate(MVector3D(1, 2, 3))
+        mat.rotate(MQuaternion.fromEulerAngles(10, 20, 30))
+
+        print(mat)
+
