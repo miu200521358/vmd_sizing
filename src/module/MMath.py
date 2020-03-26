@@ -34,7 +34,7 @@ class MRect():
 
 class MVector2D():
 
-    def __init__(self, x=0, y=0, z=0):
+    def __init__(self, x=0, y=0):
         if isinstance(x, MVector2D):
             # クラスの場合
             self.__data = x.__data
@@ -63,7 +63,8 @@ class MVector2D():
         self.__data = normv
     
     def effective(self):
-        return MVector2D(get_almost_zero_value(self.__data[0]), get_almost_zero_value(self.__data[1]))
+        self.setX(get_effective_value(self.x()))
+        self.setY(get_effective_value(self.y()))
             
     def data(self):
         return self.__data
@@ -94,75 +95,99 @@ class MVector2D():
             v = self.__data + other.__data
         else:
             v = self.__data + other
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __sub__(self, other):
         if isinstance(other, MVector2D):
             v = self.__data - other.__data
         else:
             v = self.__data - other
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __mul__(self, other):
         if isinstance(other, MVector2D):
             v = self.__data * other.__data
         else:
             v = self.__data * other
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __truediv__(self, other):
         if isinstance(other, MVector2D):
             v = self.__data / other.__data
         else:
             v = self.__data / other
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __floordiv__(self, other):
         if isinstance(other, MVector2D):
             v = self.__data // other.__data
         else:
             v = self.__data // other
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __mod__(self, other):
         if isinstance(other, MVector2D):
             v = self.__data % other.__data
         else:
             v = self.__data % other
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __pow__(self, other):
         if isinstance(other, MVector2D):
             v = self.__data ** other.__data
         else:
             v = self.__data ** other
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __lshift__(self, other):
         if isinstance(other, MVector2D):
             v = self.__data << other.__data
         else:
             v = self.__data << other
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __rshift__(self, other):
         if isinstance(other, MVector2D):
             v = self.__data >> other.__data
         else:
             v = self.__data >> other
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __and__(self, other):
         v = self.__data & other.__data
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __dataor__(self, other):
         v = self.__data ^ other.__data
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __or__(self, other):
         v = self.__data | other.__data
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __neg__(self):
         return self.__class__(-self.__data[0], -self.__data[1])
@@ -230,6 +255,8 @@ class MVector3D():
         tmp.setX(tmp.x() * viewport.width() + viewport.x())
         tmp.setY(tmp.y() * viewport.height() + viewport.y())
 
+        tmp.effective()
+
         return tmp.toVector3D()
 
     def unproject(self, modelView, projection, viewport):
@@ -239,12 +266,14 @@ class MVector3D():
         tmp.setX((tmp.x() - viewport.x()) / viewport.width())
         tmp.setY((tmp.y() - viewport.y()) / viewport.height())
         tmp = tmp * 2 - MVector4D(1, 1, 1, 1)
+        tmp.effective()
 
         obj = inverse * tmp
         if is_almost_null(obj.w()):
             obj.setW(1)
 
         obj /= obj.w()
+        obj.effective()
         
         return obj.toVector3D()
         
@@ -255,7 +284,9 @@ class MVector3D():
         return (is_almost_null(self.__data[0]) and is_almost_null(self.__data[1]) and is_almost_null(self.__data[2]))
     
     def effective(self):
-        return MVector3D(get_almost_zero_value(self.__data[0]), get_almost_zero_value(self.__data[1]), get_almost_zero_value(self.__data[2]))
+        self.setX(get_effective_value(self.x()))
+        self.setY(get_effective_value(self.y()))
+        self.setZ(get_effective_value(self.z()))
                 
     @classmethod
     def crossProduct(cls, v1, v2):
@@ -296,75 +327,99 @@ class MVector3D():
             v = self.__data + other.__data
         else:
             v = self.__data + other
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __sub__(self, other):
         if isinstance(other, MVector3D):
             v = self.__data - other.__data
         else:
             v = self.__data - other
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __mul__(self, other):
         if isinstance(other, MVector3D):
             v = self.__data * other.__data
         else:
             v = self.__data * other
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __truediv__(self, other):
         if isinstance(other, MVector3D):
             v = self.__data / other.__data
         else:
             v = self.__data / other
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __floordiv__(self, other):
         if isinstance(other, MVector3D):
             v = self.__data // other.__data
         else:
             v = self.__data // other
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __mod__(self, other):
         if isinstance(other, MVector3D):
             v = self.__data % other.__data
         else:
             v = self.__data % other
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __pow__(self, other):
         if isinstance(other, MVector3D):
             v = self.__data ** other.__data
         else:
             v = self.__data ** other
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __lshift__(self, other):
         if isinstance(other, MVector3D):
             v = self.__data << other.__data
         else:
             v = self.__data << other
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __rshift__(self, other):
         if isinstance(other, MVector3D):
             v = self.__data >> other.__data
         else:
             v = self.__data >> other
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __and__(self, other):
         v = self.__data & other.__data
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __dataor__(self, other):
         v = self.__data ^ other.__data
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __or__(self, other):
         v = self.__data | other.__data
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __neg__(self):
         return self.__class__(-self.__data[0], -self.__data[1], -self.__data[2])
@@ -429,6 +484,12 @@ class MVector4D():
 
     def is_almost_null(self):
         return (is_almost_null(self.__data[0]) and is_almost_null(self.__data[1]) and is_almost_null(self.__data[2]) and is_almost_null(self.__data[3]))
+                   
+    def effective(self):
+        self.setX(get_effective_value(self.x()))
+        self.setY(get_effective_value(self.y()))
+        self.setZ(get_effective_value(self.z()))
+        self.setW(get_effective_value(self.w()))
                                 
     @classmethod
     def dotProduct(cls, v1, v2):
@@ -464,75 +525,99 @@ class MVector4D():
             v = self.__data + other.__data
         else:
             v = self.__data + other
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __sub__(self, other):
         if isinstance(other, MVector4D):
             v = self.__data - other.__data
         else:
             v = self.__data - other
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __mul__(self, other):
         if isinstance(other, MVector4D):
             v = self.__data * other.__data
         else:
             v = self.__data * other
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __truediv__(self, other):
         if isinstance(other, MVector4D):
             v = self.__data / other.__data
         else:
             v = self.__data / other
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __floordiv__(self, other):
         if isinstance(other, MVector4D):
             v = self.__data // other.__data
         else:
             v = self.__data // other
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __mod__(self, other):
         if isinstance(other, MVector4D):
             v = self.__data % other.__data
         else:
             v = self.__data % other
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __pow__(self, other):
         if isinstance(other, MVector4D):
             v = self.__data ** other.__data
         else:
             v = self.__data ** other
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __lshift__(self, other):
         if isinstance(other, MVector4D):
             v = self.__data << other.__data
         else:
             v = self.__data << other
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __rshift__(self, other):
         if isinstance(other, MVector4D):
             v = self.__data >> other.__data
         else:
             v = self.__data >> other
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __and__(self, other):
         v = self.__data & other.__data
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __dataor__(self, other):
         v = self.__data ^ other.__data
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __or__(self, other):
         v = self.__data | other.__data
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        v2.effective()
+        return v2
 
     def __neg__(self):
         return self.__class__(-self.__data[0], -self.__data[1], -self.__data[2], -self.__data[3])
@@ -1185,7 +1270,7 @@ class MMatrix4x4():
 
 
 def is_almost_null(v):
-    return abs(v) < 0.00001
+    return abs(v) < 0.0000001
 
 
 def get_effective_value(v):

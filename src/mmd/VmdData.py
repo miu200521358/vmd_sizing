@@ -171,7 +171,7 @@ class VmdMotion():
     # 補間曲線を考慮した指定フレーム番号の位置
     # https://www55.atwiki.jp/kumiho_k/pages/15.html
     # https://harigane.at.webry.info/201103/article_1.html
-    def calc_bone_by_interpolation(self, bone_name: str, fno: int, is_existed=False, is_key=False, is_read=False):
+    def calc_bf(self, bone_name: str, fno: int, is_key=False, is_read=False):
         fill_bf = VmdBoneFrame(fno=fno, name=bone_name)
 
         if bone_name not in self.bones:
@@ -188,7 +188,7 @@ class VmdMotion():
             return self.bones[bone_name][fnos[0]]
         else:
             # 合致するキーが見つからなかった場合
-            if is_existed:
+            if is_key or is_read:
                 # 既存キーのみ探している場合はNone
                 return None
 
@@ -211,13 +211,13 @@ class VmdMotion():
         after_bf = self.bones[bone_name][after_fnos[0]]
 
         # 補間曲線を元に間を埋める
-        fill_bf.rotation = self.calc_bone_by_interpolation_rot(prev_bf, fill_bf, after_bf)
-        fill_bf.position = self.calc_bone_by_interpolation_pos(prev_bf, fill_bf, after_bf)
+        fill_bf.rotation = self.calc_bf_rot(prev_bf, fill_bf, after_bf)
+        fill_bf.position = self.calc_bf_pos(prev_bf, fill_bf, after_bf)
         
         return fill_bf
 
     # 補間曲線を元に、回転ボーンの値を求める
-    def calc_bone_by_interpolation_rot(self, prev_bf: VmdBoneFrame, fill_bf: VmdBoneFrame, after_bf: VmdBoneFrame):
+    def calc_bf_rot(self, prev_bf: VmdBoneFrame, fill_bf: VmdBoneFrame, after_bf: VmdBoneFrame):
         if prev_bf.rotation != after_bf.rotation:
             # 回転補間曲線
             rx, ry, rt = MBezierUtils.evaluate(after_bf.interpolation[MBezierUtils.R_x1_idxs[3]], after_bf.interpolation[MBezierUtils.R_y1_idxs[3]], \
@@ -228,7 +228,7 @@ class VmdMotion():
         return copy.deepcopy(prev_bf.rotation)
 
     # 補間曲線を元に移動ボーンの値を求める
-    def calc_bone_by_interpolation_pos(self, prev_bf: VmdBoneFrame, fill_bf: VmdBoneFrame, after_bf: VmdBoneFrame):
+    def calc_bf_pos(self, prev_bf: VmdBoneFrame, fill_bf: VmdBoneFrame, after_bf: VmdBoneFrame):
 
         # 補間曲線を元に間を埋める
         if prev_bf.position != after_bf.position:
@@ -254,6 +254,127 @@ class VmdMotion():
             return fill_pos
         
         return copy.deepcopy(prev_bf.position)
+
+    # 回転による補間曲線の再設定
+    def reset_interpolation_by_rot(self, bone_name: str, prev_bf: VmdBoneFrame, now_bf: VmdBoneFrame, next_bf: VmdBoneFrame):
+        x1_idxs = MBezierUtils.R_x1_idxs
+        y1_idxs = MBezierUtils.R_y1_idxs
+        x2_idxs = MBezierUtils.R_x2_idxs
+        y2_idxs = MBezierUtils.R_y2_idxs
+        next_x1v = now_bf.complement[x1_idxs[3]]
+        next_y1v = now_bf.complement[y1_idxs[3]]
+        next_x2v = now_bf.complement[x2_idxs[3]]
+        next_y2v = now_bf.complement[y2_idxs[3]]
+
+        self.reset_interpolation(bone_name, prev_bf, now_bf, next_bf, next_x1v, next_y1v, next_x2v, next_y2v, x1_idxs, y1_idxs, x2_idxs, y2_idxs)
+
+    # 補間曲線の再設定
+    def reset_interpolation(self, bone_name, prev_bf, now_bf, next_bf, next_x1v, next_y1v, next_x2v, next_y2v, x1_idxs, y1_idxs, x2_idxs, y2_idxs):
+        # 区切りキー位置
+        before_fill_bf = after_fill_bf = None
+        
+        # ベジェ曲線を分割して新しい制御点を求める
+        x, y, t, bresult, aresult, before_bz, after_bz = MBezierUtils.split_bezier_mmd(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.fno, now_bf.fno, next_bf.fno)
+
+        # 分割（今回キー）の始点は、前半のB
+        now_bf.complement[x1_idxs[0]] = now_bf.complement[x1_idxs[1]] = now_bf.complement[x1_idxs[2]] = now_bf.complement[x1_idxs[3]] = int(before_bz[1].x())
+        now_bf.complement[y1_idxs[0]] = now_bf.complement[y1_idxs[1]] = now_bf.complement[y1_idxs[2]] = now_bf.complement[y1_idxs[3]] = int(before_bz[1].y())
+
+        # 分割（今回キー）の終点は、後半のC
+        now_bf.complement[x2_idxs[0]] = now_bf.complement[x2_idxs[1]] = now_bf.complement[x2_idxs[2]] = now_bf.complement[x2_idxs[3]] = int(before_bz[2].x())
+        now_bf.complement[y2_idxs[0]] = now_bf.complement[y2_idxs[1]] = now_bf.complement[y2_idxs[2]] = now_bf.complement[y2_idxs[3]] = int(before_bz[2].y())
+
+        # 次回読み込みキーの始点は、後半のB
+        next_bf.complement[x1_idxs[0]] = next_bf.complement[x1_idxs[1]] = next_bf.complement[x1_idxs[2]] = next_bf.complement[x1_idxs[3]] = int(after_bz[1].x())
+        next_bf.complement[y1_idxs[0]] = next_bf.complement[y1_idxs[1]] = next_bf.complement[y1_idxs[2]] = next_bf.complement[y1_idxs[3]] = int(after_bz[1].y())
+
+        # 次回読み込みキーの終点は、後半のC
+        next_bf.complement[x2_idxs[0]] = next_bf.complement[x2_idxs[1]] = next_bf.complement[x2_idxs[2]] = next_bf.complement[x2_idxs[3]] = int(after_bz[2].x())
+        next_bf.complement[y2_idxs[0]] = next_bf.complement[y2_idxs[1]] = next_bf.complement[y2_idxs[2]] = next_bf.complement[y2_idxs[3]] = int(after_bz[2].y())
+
+        if bresult and aresult:
+            # nowとnextをモーションに再設定
+
+            self.bones[now_bf.name][now_bf.fno] = now_bf
+            self.bones[next_bf.name][next_bf.fno] = next_bf
+
+            return
+        else:
+            # 分割に失敗している場合、さらに分割する
+
+            if not bresult:
+                # 前半用補間曲線
+                next_x1v = now_bf.complement[x1_idxs[3]]
+                next_y1v = now_bf.complement[y1_idxs[3]]
+                next_x2v = now_bf.complement[x2_idxs[3]]
+                next_y2v = now_bf.complement[y2_idxs[3]]
+
+                # 前半を区切る位置を求める(t=0.5で曲線を半分に分割する位置)
+                new_fill_fno, _ = MBezierUtils.evaluate_by_t(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.fno, now_bf.fno, 0.5)
+                # logger.test("%s, 【前半】, now: %s", indent, now)
+
+                if new_fill_fno > prev_bf.fno:
+                    # ちゃんとキーが打てるような状態の場合、前半を再分割
+                    before_fill_bf = self.calc_bf(bone_name, new_fill_fno)
+
+                if before_fill_bf:
+                    # 分割キーが取得できた場合、前半の補間曲線を分割して求めなおす
+                    self.reset_interpolation(bone_name, prev_bf, before_fill_bf, now_bf, next_x1v, next_y1v, next_x2v, next_y2v, x1_idxs, y1_idxs, x2_idxs, y2_idxs)
+                else:
+                    # 分割キーが取得できなかった場合、既にキーがあるので、さらに分割する
+
+                    # 分割キーが取得できなかった場合、念のため補間曲線を0-127の間に収め直す
+                    # 分割（今回キー）の始点は、前半のB
+                    r_x1 = 0 if 0 > before_bz[1].x() else MBezierUtils.INTERPOLATION_MMD_MAX if MBezierUtils.INTERPOLATION_MMD_MAX < before_bz[1].x() else int(before_bz[1].x())
+                    now_bf.complement[x1_idxs[0]] = now_bf.complement[x1_idxs[1]] = now_bf.complement[x1_idxs[2]] = now_bf.complement[x1_idxs[3]] = r_x1
+                    r_y1 = 0 if 0 > before_bz[1].y() else MBezierUtils.INTERPOLATION_MMD_MAX if MBezierUtils.INTERPOLATION_MMD_MAX < before_bz[1].y() else int(before_bz[1].y())
+                    now_bf.complement[y1_idxs[0]] = now_bf.complement[y1_idxs[1]] = now_bf.complement[y1_idxs[2]] = now_bf.complement[y1_idxs[3]] = r_y1
+
+                    # 分割（今回キー）の終点は、後半のC
+                    r_x2 = 0 if 0 > before_bz[2].x() else MBezierUtils.INTERPOLATION_MMD_MAX if MBezierUtils.INTERPOLATION_MMD_MAX < before_bz[2].x() else int(before_bz[2].x())
+                    now_bf.complement[x2_idxs[0]] = now_bf.complement[x2_idxs[1]] = now_bf.complement[x2_idxs[2]] = now_bf.complement[x2_idxs[3]] = r_x2
+                    r_y2 = 0 if 0 > before_bz[2].y() else MBezierUtils.INTERPOLATION_MMD_MAX if MBezierUtils.INTERPOLATION_MMD_MAX < before_bz[2].y() else int(before_bz[2].y())
+                    now_bf.complement[y2_idxs[0]] = now_bf.complement[y2_idxs[1]] = now_bf.complement[y2_idxs[2]] = now_bf.complement[y2_idxs[3]] = r_y2
+
+                    self.bones[now_bf.name][now_bf.fno] = now_bf
+
+            if not aresult:
+                # 後半用補間曲線
+                next_x1v = next_bf.complement[x1_idxs[3]]
+                next_y1v = next_bf.complement[y1_idxs[3]]
+                next_x2v = next_bf.complement[x2_idxs[3]]
+                next_y2v = next_bf.complement[y2_idxs[3]]
+
+                # 後半を区切る位置を求める
+                new_fill_fno, _ = MBezierUtils.evaluate_by_t(next_x1v, next_y1v, next_x2v, next_y2v, now_bf.fno, next_bf.fno, 0.5)
+                # logger.test("%s, 【後半】, now: %s", indent, now)
+
+                if new_fill_fno > now_bf.fno:
+                    # ちゃんとキーが打てるような状態の場合、後半を再分割
+                    after_fill_bf = self.calc_bf(bone_name, new_fill_fno)
+
+                if after_fill_bf:
+                    # 分割キーが取得できた場合、後半の補間曲線を分割して求めなおす
+                    self.reset_interpolation(bone_name, now_bf, after_fill_bf, next_bf, next_x1v, next_y1v, next_x2v, next_y2v, x1_idxs, y1_idxs, x2_idxs, y2_idxs)
+                else:
+                    # 分割キーが取得できなかった場合、念のため補間曲線を0-127の間に収め直す
+
+                    # 次回読み込みキーの始点は、後半のB
+                    r_x1 = 0 if 0 > after_bz[1].x() else MBezierUtils.INTERPOLATION_MMD_MAX if MBezierUtils.INTERPOLATION_MMD_MAX < after_bz[1].x() else int(after_bz[1].x())
+                    next_bf.complement[x1_idxs[0]] = next_bf.complement[x1_idxs[1]] = next_bf.complement[x1_idxs[2]] = next_bf.complement[x1_idxs[3]] = r_x1
+                    r_y1 = 0 if 0 > after_bz[1].y() else MBezierUtils.INTERPOLATION_MMD_MAX if MBezierUtils.INTERPOLATION_MMD_MAX < after_bz[1].y() else int(after_bz[1].y())
+                    next_bf.complement[y1_idxs[0]] = next_bf.complement[y1_idxs[1]] = next_bf.complement[y1_idxs[2]] = next_bf.complement[y1_idxs[3]] = r_y1
+
+                    # 次回読み込みキーの終点は、後半のC
+                    r_x2 = 0 if 0 > after_bz[2].x() else MBezierUtils.INTERPOLATION_MMD_MAX if MBezierUtils.INTERPOLATION_MMD_MAX < after_bz[2].x() else int(after_bz[2].x())
+                    next_bf.complement[x2_idxs[0]] = next_bf.complement[x2_idxs[1]] = next_bf.complement[x2_idxs[2]] = next_bf.complement[x2_idxs[3]] = r_x2
+                    r_y2 = 0 if 0 > after_bz[2].y() else MBezierUtils.INTERPOLATION_MMD_MAX if MBezierUtils.INTERPOLATION_MMD_MAX < after_bz[2].y() else int(after_bz[2].y())
+                    next_bf.complement[y2_idxs[0]] = next_bf.complement[y2_idxs[1]] = next_bf.complement[y2_idxs[2]] = next_bf.complement[y2_idxs[3]] = r_y2
+
+                    self.bones[next_bf.name][next_bf.fno] = next_bf
+
+            return
+        return
 
     # ボーンモーション：フレーム番号リスト
     def get_bone_fnos(self, bone_name: str):

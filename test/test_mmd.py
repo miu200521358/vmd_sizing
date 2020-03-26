@@ -70,10 +70,10 @@ class PmxDataTest(unittest.TestCase):
 
 class VmdDataTest(unittest.TestCase):
 
-    def test_calc_bone_by_interpolation_01(self):
+    def test_calc_bf_01(self):
         motion = VmdReader("D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/ドラマツルギー motion 配布用 moka/ドラマツルギー_0-500.vmd").read_data()
         
-        bf = motion.calc_bone_by_interpolation("右腕", 101)
+        bf = motion.calc_bf("右腕", 101)
         print(bf)
         self.assertAlmostEqual(bf.position.x(), 0, delta=0.1)
         self.assertAlmostEqual(bf.position.y(), 0, delta=0.1)
@@ -82,7 +82,7 @@ class VmdDataTest(unittest.TestCase):
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().y(), 16.2, delta=0.1)
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().z(), -32.9, delta=0.1)
 
-        bf = motion.calc_bone_by_interpolation("右腕", 143)
+        bf = motion.calc_bf("右腕", 143)
         print(bf)
         self.assertAlmostEqual(bf.position.x(), 0, delta=0.1)
         self.assertAlmostEqual(bf.position.y(), 0, delta=0.1)
@@ -91,7 +91,7 @@ class VmdDataTest(unittest.TestCase):
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().y(), 57.3, delta=0.1)
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().z(), -23.6, delta=0.1)
 
-        bf = motion.calc_bone_by_interpolation("右腕", 107)
+        bf = motion.calc_bf("右腕", 107)
         print(bf)
         self.assertAlmostEqual(bf.position.x(), 0, delta=0.1)
         self.assertAlmostEqual(bf.position.y(), 0, delta=0.1)
@@ -100,7 +100,7 @@ class VmdDataTest(unittest.TestCase):
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().y(), 16.7, delta=0.1)
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().z(), -32.8, delta=0.1)
 
-        bf = motion.calc_bone_by_interpolation("右腕", 121)
+        bf = motion.calc_bf("右腕", 121)
         print(bf)
         self.assertAlmostEqual(bf.position.x(), 0, delta=0.1)
         self.assertAlmostEqual(bf.position.y(), 0, delta=0.1)
@@ -109,7 +109,7 @@ class VmdDataTest(unittest.TestCase):
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().y(), 24.5, delta=0.1)
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().z(), -31.4, delta=0.1)
 
-        bf = motion.calc_bone_by_interpolation("右腕", 137)
+        bf = motion.calc_bf("右腕", 137)
         print(bf)
         self.assertAlmostEqual(bf.position.x(), 0, delta=0.1)
         self.assertAlmostEqual(bf.position.y(), 0, delta=0.1)
@@ -118,7 +118,7 @@ class VmdDataTest(unittest.TestCase):
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().y(), 55.2, delta=0.1)
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().z(), -24.1, delta=0.1)
 
-        bf = motion.calc_bone_by_interpolation("センター", 108)
+        bf = motion.calc_bf("センター", 108)
         print(bf)
         self.assertAlmostEqual(bf.position.x(), 1.00, delta=0.1)
         self.assertAlmostEqual(bf.position.y(), 0, delta=0.1)
@@ -127,7 +127,7 @@ class VmdDataTest(unittest.TestCase):
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().y(), 0, delta=0.1)
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().z(), 0, delta=0.1)
 
-        bf = motion.calc_bone_by_interpolation("センター", 143)
+        bf = motion.calc_bf("センター", 143)
         print(bf)
         self.assertAlmostEqual(bf.position.x(), 1.20, delta=0.1)
         self.assertAlmostEqual(bf.position.y(), 0, delta=0.1)
@@ -136,7 +136,7 @@ class VmdDataTest(unittest.TestCase):
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().y(), 0, delta=0.1)
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().z(), 0, delta=0.1)
 
-        bf = motion.calc_bone_by_interpolation("センター", 135)
+        bf = motion.calc_bf("センター", 135)
         print(bf)
         self.assertAlmostEqual(bf.position.x(), 1.18, delta=0.1)
         self.assertAlmostEqual(bf.position.y(), 0, delta=0.1)
@@ -145,7 +145,7 @@ class VmdDataTest(unittest.TestCase):
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().y(), 0, delta=0.1)
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().z(), 0, delta=0.1)
 
-        bf = motion.calc_bone_by_interpolation("センター", 340)
+        bf = motion.calc_bf("センター", 340)
         print(bf)
         self.assertAlmostEqual(bf.position.x(), 3.21, delta=0.1)
         self.assertAlmostEqual(bf.position.y(), 0, delta=0.1)
@@ -154,7 +154,7 @@ class VmdDataTest(unittest.TestCase):
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().y(), 0, delta=0.1)
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().z(), 0, delta=0.1)
 
-        bf = motion.calc_bone_by_interpolation("右足ＩＫ", 417)
+        bf = motion.calc_bf("右足ＩＫ", 417)
         print(bf)
         self.assertAlmostEqual(bf.position.x(), 2.75, delta=0.1)
         self.assertAlmostEqual(bf.position.y(), 2.92, delta=0.1)
@@ -163,7 +163,7 @@ class VmdDataTest(unittest.TestCase):
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().y(), -25.2, delta=0.1)
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().z(), 5.0, delta=0.1)
 
-        bf = motion.calc_bone_by_interpolation("左足ＩＫ", 420)
+        bf = motion.calc_bf("左足ＩＫ", 420)
         print(bf)
         self.assertAlmostEqual(bf.position.x(), 2.47, delta=0.1)
         self.assertAlmostEqual(bf.position.y(), 2.28, delta=0.1)
@@ -172,10 +172,10 @@ class VmdDataTest(unittest.TestCase):
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().y(), 1.9, delta=0.1)
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().z(), 0.7, delta=0.1)
 
-    def test_calc_bone_by_interpolation_02(self):
+    def test_calc_bf_02(self):
         motion = VmdReader(u"test/data/補間曲線テスト01.vmd").read_data()
         
-        bf = motion.calc_bone_by_interpolation("ﾎﾞｰﾝ01", 0)
+        bf = motion.calc_bf("ﾎﾞｰﾝ01", 0)
         print(bf)
         self.assertAlmostEqual(bf.position.x(), 0, delta=0.1)
         self.assertAlmostEqual(bf.position.y(), 0, delta=0.1)
@@ -184,7 +184,7 @@ class VmdDataTest(unittest.TestCase):
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().y(), 0, delta=0.1)
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().z(), 0, delta=0.1)
 
-        bf = motion.calc_bone_by_interpolation("ﾎﾞｰﾝ01", 15)
+        bf = motion.calc_bf("ﾎﾞｰﾝ01", 15)
         print(bf)
         self.assertAlmostEqual(bf.position.x(), 20, delta=0.1)
         self.assertAlmostEqual(bf.position.y(), 30, delta=0.1)
@@ -193,7 +193,7 @@ class VmdDataTest(unittest.TestCase):
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().y(), 60.00003815, delta=0.1)
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().z(), 70, delta=0.1)
 
-        bf = motion.calc_bone_by_interpolation("ﾎﾞｰﾝ01", 1)
+        bf = motion.calc_bf("ﾎﾞｰﾝ01", 1)
         print(bf)
         self.assertAlmostEqual(bf.position.x(), 0.032109514, delta=0.1)
         self.assertAlmostEqual(bf.position.y(), 10.18260956, delta=0.1)
@@ -202,7 +202,7 @@ class VmdDataTest(unittest.TestCase):
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().y(), 0.000238923, delta=0.1)
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().z(), 0.000410508, delta=0.1)
 
-        bf = motion.calc_bone_by_interpolation("ﾎﾞｰﾝ01", 2)
+        bf = motion.calc_bf("ﾎﾞｰﾝ01", 2)
         print(bf)
         self.assertAlmostEqual(bf.position.x(), 0.140442505, delta=0.1)
         self.assertAlmostEqual(bf.position.y(), 12.61500168, delta=0.1)
@@ -211,7 +211,7 @@ class VmdDataTest(unittest.TestCase):
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().y(), 0.002085242, delta=0.1)
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().z(), 0.003582553, delta=0.1)
 
-        bf = motion.calc_bone_by_interpolation("ﾎﾞｰﾝ01", 3)
+        bf = motion.calc_bf("ﾎﾞｰﾝ01", 3)
         print(bf)
         self.assertAlmostEqual(bf.position.x(), 0.348192513, delta=0.1)
         self.assertAlmostEqual(bf.position.y(), 13.84411716, delta=0.1)
@@ -220,7 +220,7 @@ class VmdDataTest(unittest.TestCase):
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().y(), 0.007699313, delta=0.1)
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().z(), 0.013225263, delta=0.1)
 
-        bf = motion.calc_bone_by_interpolation("ﾎﾞｰﾝ01", 4)
+        bf = motion.calc_bf("ﾎﾞｰﾝ01", 4)
         print(bf)
         self.assertAlmostEqual(bf.position.x(), 0.698622525, delta=0.1)
         self.assertAlmostEqual(bf.position.y(), 14.49679756, delta=0.1)
@@ -229,7 +229,7 @@ class VmdDataTest(unittest.TestCase):
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().y(), 0.020092424, delta=0.1)
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().z(), 0.034498487, delta=0.1)
 
-        bf = motion.calc_bone_by_interpolation("ﾎﾞｰﾝ01", 5)
+        bf = motion.calc_bf("ﾎﾞｰﾝ01", 5)
         print(bf)
         self.assertAlmostEqual(bf.position.x(), 1.264359236, delta=0.1)
         self.assertAlmostEqual(bf.position.y(), 14.82721519, delta=0.1)
@@ -238,7 +238,7 @@ class VmdDataTest(unittest.TestCase):
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().y(), 0.043738037, delta=0.1)
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().z(), 0.07503701, delta=0.1)
 
-        bf = motion.calc_bone_by_interpolation("ﾎﾞｰﾝ01", 6)
+        bf = motion.calc_bf("ﾎﾞｰﾝ01", 6)
         print(bf)
         self.assertAlmostEqual(bf.position.x(), 2.228799105, delta=0.1)
         self.assertAlmostEqual(bf.position.y(), 14.96385574, delta=0.1)
@@ -247,7 +247,7 @@ class VmdDataTest(unittest.TestCase):
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().y(), 0.084980235, delta=0.1)
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().z(), 0.145587772, delta=0.1)
 
-        bf = motion.calc_bone_by_interpolation("ﾎﾞｰﾝ01", 7)
+        bf = motion.calc_bf("ﾎﾞｰﾝ01", 7)
         print(bf)
         self.assertAlmostEqual(bf.position.x(), 4.250654697, delta=0.1)
         self.assertAlmostEqual(bf.position.y(), 14.99863911, delta=0.1)
@@ -256,7 +256,7 @@ class VmdDataTest(unittest.TestCase):
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().y(), 0.153979659, delta=0.1)
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().z(), 0.263184816, delta=0.1)
 
-        bf = motion.calc_bone_by_interpolation("ﾎﾞｰﾝ01", 8)
+        bf = motion.calc_bf("ﾎﾞｰﾝ01", 8)
         print(bf)
         self.assertAlmostEqual(bf.position.x(), 15.74932003, delta=0.1)
         self.assertAlmostEqual(bf.position.y(), 15.00131607, delta=0.1)
@@ -265,7 +265,7 @@ class VmdDataTest(unittest.TestCase):
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().y(), 0.266692847, delta=0.1)
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().z(), 0.454135865, delta=0.1)
 
-        bf = motion.calc_bone_by_interpolation("ﾎﾞｰﾝ01", 9)
+        bf = motion.calc_bf("ﾎﾞｰﾝ01", 9)
         print(bf)
         self.assertAlmostEqual(bf.position.x(), 17.77118301, delta=0.1)
         self.assertAlmostEqual(bf.position.y(), 15.03609848, delta=0.1)
@@ -274,7 +274,7 @@ class VmdDataTest(unittest.TestCase):
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().y(), 0.450684816, delta=0.1)
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().z(), 0.762894511, delta=0.1)
 
-        bf = motion.calc_bone_by_interpolation("ﾎﾞｰﾝ01", 10)
+        bf = motion.calc_bf("ﾎﾞｰﾝ01", 10)
         print(bf)
         self.assertAlmostEqual(bf.position.x(), 18.73562622, delta=0.1)
         self.assertAlmostEqual(bf.position.y(), 15.17386436, delta=0.1)
@@ -283,7 +283,7 @@ class VmdDataTest(unittest.TestCase):
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().y(), 0.761205316, delta=0.1)
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().z(), 1.276175618, delta=0.1)
 
-        bf = motion.calc_bone_by_interpolation("ﾎﾞｰﾝ01", 11)
+        bf = motion.calc_bf("ﾎﾞｰﾝ01", 11)
         print(bf)
         self.assertAlmostEqual(bf.position.x(), 19.3013649, delta=0.1)
         self.assertAlmostEqual(bf.position.y(), 15.50316238, delta=0.1)
@@ -292,7 +292,7 @@ class VmdDataTest(unittest.TestCase):
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().y(), 1.313556314, delta=0.1)
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().z(), 2.167253256, delta=0.1)
 
-        bf = motion.calc_bone_by_interpolation("ﾎﾞｰﾝ01", 12)
+        bf = motion.calc_bf("ﾎﾞｰﾝ01", 12)
         print(bf)
         self.assertAlmostEqual(bf.position.x(), 19.65179825, delta=0.1)
         self.assertAlmostEqual(bf.position.y(), 16.15584373, delta=0.1)
@@ -301,7 +301,7 @@ class VmdDataTest(unittest.TestCase):
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().y(), 2.422097683, delta=0.1)
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().z(), 3.884207487, delta=0.1)
 
-        bf = motion.calc_bone_by_interpolation("ﾎﾞｰﾝ01", 13)
+        bf = motion.calc_bf("ﾎﾞｰﾝ01", 13)
         print(bf)
         self.assertAlmostEqual(bf.position.x(), 19.85955048, delta=0.1)
         self.assertAlmostEqual(bf.position.y(), 17.38496399, delta=0.1)
@@ -310,7 +310,7 @@ class VmdDataTest(unittest.TestCase):
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().y(), 5.332914352, delta=0.1)
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().z(), 8.068556786, delta=0.1)
 
-        bf = motion.calc_bone_by_interpolation("ﾎﾞｰﾝ01", 14)
+        bf = motion.calc_bf("ﾎﾞｰﾝ01", 14)
         print(bf)
         self.assertAlmostEqual(bf.position.x(), 19.96788788, delta=0.1)
         self.assertAlmostEqual(bf.position.y(), 19.81736565, delta=0.1)

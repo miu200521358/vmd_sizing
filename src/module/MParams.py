@@ -60,7 +60,7 @@ class BoneLinks():
         new_motion = VmdMotion()
         for lidx, lkey in enumerate(self.__links.keys()):
             if lidx <= self.index(bone_name):
-                calc_bone = motion.calc_bone_by_interpolation(self.__links[lkey].name, fno)
+                calc_bone = motion.calc_bf(self.__links[lkey].name, fno)
                 new_motion.frames[calc_bone.name] = {fno: calc_bone}
             else:
                 calc_bone = VmdBoneFrame(frame=fno, name=lkey)

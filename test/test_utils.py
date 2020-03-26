@@ -216,7 +216,7 @@ class MServiceUtilsTest(unittest.TestCase):
         self.assertAlmostEqual(add_qs[14].toEulerAngles4MMD().y(), 0, delta=0.1)
         self.assertAlmostEqual(add_qs[14].toEulerAngles4MMD().z(), -37.8, delta=0.1)
 
-    def test_calc_global_pos_dic01(self):
+    def test_calc_global_pos01(self):
         motion = VmdReader("D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/ドラマツルギー motion 配布用 moka/ドラマツルギー_0-500.vmd").read_data()
         model = PmxReader("D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/Tda式デフォ服ミク_ver1.1 金子卵黄/Tda式初音ミク_デフォ服ver.pmx").read_data()
 
@@ -224,7 +224,7 @@ class MServiceUtilsTest(unittest.TestCase):
         links = model.create_link_2_top_one("グルーブ")
 
         # ---------
-        pos_dic = MServiceUtils.calc_global_pos_dic(model, links, motion, 420)
+        pos_dic = MServiceUtils.calc_global_pos(model, links, motion, 420)
         self.assertEqual(4, len(pos_dic.keys()))
 
         # SIZING_ROOT_BONE
@@ -255,7 +255,7 @@ class MServiceUtilsTest(unittest.TestCase):
         links = model.create_link_2_top_one("左足ＩＫ")
 
         # ---------
-        pos_dic = MServiceUtils.calc_global_pos_dic(model, links, motion, 420)
+        pos_dic = MServiceUtils.calc_global_pos(model, links, motion, 420)
         self.assertEqual(4, len(pos_dic.keys()))
 
         # SIZING_ROOT_BONE
@@ -286,7 +286,7 @@ class MServiceUtilsTest(unittest.TestCase):
         links = model.create_link_2_top_one("右手首")
         
         # ---------
-        pos_dic = MServiceUtils.calc_global_pos_dic(model, links, motion, 420)
+        pos_dic = MServiceUtils.calc_global_pos(model, links, motion, 420)
         self.assertEqual(15, len(pos_dic.keys()))
 
         # SIZING_ROOT_BONE
@@ -420,6 +420,67 @@ class MBezierUtilsTest(unittest.TestCase):
         self.assertAlmostEqual(x, 0.06, delta=0.01)
         self.assertAlmostEqual(y, 0.34, delta=0.01)
         self.assertAlmostEqual(t, 0.16, delta=0.01)
+    
+    def test_round_integer(self):
+        self.assertEqual(MBezierUtils.round_integer(3.56), 4)
+        self.assertEqual(MBezierUtils.round_integer(3.52), 4)
+        self.assertEqual(MBezierUtils.round_integer(3.55), 4)
+        self.assertEqual(MBezierUtils.round_integer(3.48), 3)
+        self.assertEqual(MBezierUtils.round_integer(3.12), 3)
+
+    def test_round_bezier_mmd(self):
+        v = MBezierUtils.round_bezier_mmd(MVector2D(0.56, 0))
+        print("v: %s" % v)
+        self.assertAlmostEqual(v.x(), 71, delta=0.1)
+        self.assertAlmostEqual(v.y(), 0, delta=0.1)
+    
+    def test_scale_bezier_point(self):
+        v = MBezierUtils.scale_bezier_point(MVector2D(1, 2), MVector2D(3, 4), MVector2D())
+        print("v: %s" % v)
+        self.assertAlmostEqual(v.x(), 0, delta=0.1)
+        self.assertAlmostEqual(v.y(), 0, delta=0.1)
+
+    def test_scale_bezier(self):
+        s1, s2, s3, s4 = MBezierUtils.scale_bezier(MVector2D(0.2, 0.7), MVector2D(0.3, -0.5), MVector2D(0.4, 1.2), MVector2D(1.2, 2))
+        print("s1: %s" % s1)
+        print("s2: %s" % s2)
+        print("s3: %s" % s3)
+        print("s4: %s" % s4)
+
+    def test_split_bezier(self):
+        x, y, t, before_bz, after_bz = MBezierUtils.split_bezier(127, 0, 0, 127, 0, 3, 12)
+        print("x: %s" % x)
+        print("y: %s" % y)
+        print("t: %s" % t)
+        print("before_bz[0]: %s" % before_bz[0])
+        print("before_bz[1]: %s" % before_bz[1])
+        print("before_bz[2]: %s" % before_bz[2])
+        print("before_bz[3]: %s" % before_bz[3])
+        print("after_bz[0]: %s" % after_bz[0])
+        print("after_bz[1]: %s" % after_bz[1])
+        print("after_bz[2]: %s" % after_bz[2])
+        print("after_bz[3]: %s" % after_bz[3])
+
+        self.assertTrue(MBezierUtils.is_fit_bezier_mmd(before_bz))
+        self.assertFalse(MBezierUtils.is_fit_bezier_mmd(after_bz))
+
+    def split_bezier_mmd(self):
+        x, y, t, is_fit_before_bz, is_fit_after_bz, before_bz, after_bz = MBezierUtils.split_bezier_mmd(127, 0, 0, 127, 0, 3, 12)
+        
+        print("x: %s" % x)
+        print("y: %s" % y)
+        print("t: %s" % t)
+        print("before_bz[0]: %s" % before_bz[0])
+        print("before_bz[1]: %s" % before_bz[1])
+        print("before_bz[2]: %s" % before_bz[2])
+        print("before_bz[3]: %s" % before_bz[3])
+        print("after_bz[0]: %s" % after_bz[0])
+        print("after_bz[1]: %s" % after_bz[1])
+        print("after_bz[2]: %s" % after_bz[2])
+        print("after_bz[3]: %s" % after_bz[3])
+
+        self.assertTrue(is_fit_before_bz)
+        self.assertFalse(is_fit_after_bz)
 
 
 if __name__ == "__main__":

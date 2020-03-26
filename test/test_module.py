@@ -37,4 +37,11 @@ class MMathTest(unittest.TestCase):
         mat.rotate(MQuaternion.fromEulerAngles(10, 20, 30))
 
         print(mat)
+    
+    def test_MQuaternion_dotProduct(self):
+        qq1 = MQuaternion.fromEulerAngles(0, 0, 0)
+        qq2 = MQuaternion.fromEulerAngles(160, 0, 0)
+        dot = MQuaternion.dotProduct(qq1, qq2)
+
+        print(dot)
 
