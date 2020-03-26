@@ -1,7 +1,7 @@
 # VMDサイジング
 
 
-# Dependencies
+## Dependencies
 
  - [numpy](https://pypi.org/project/numpy/)
  - [wxPython](https://pypi.org/project/wxPython/)
