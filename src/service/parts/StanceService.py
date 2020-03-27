@@ -319,7 +319,7 @@ class StanceService():
                     motion.bones[target_bone_name][half_fno] = fill_bf
         
                     # モーション再設定
-                    MBezierUtils.reset_interpolation_by_rot(motion, target_bone_name, prev_bf, fill_bf, bf)
+                    MBezierUtils.split_bf(motion, target_bone_name, prev_bf, fill_bf, bf)
     
     # 腕スタンス補正
     def adjust_arm_stance(self, data_set_idx: int, data_set: MOptionsDataSet):

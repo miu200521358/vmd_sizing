@@ -338,7 +338,7 @@ class VmdDataTest(unittest.TestCase):
         VmdWriter(data_set).write()
         print(data_set.output_vmd_path)
 
-    def test_reset_interpolation_all(self):
+    def test_split_bf(self):
         motion = VmdReader(u"test/data/補間曲線テスト01.vmd").read_data()
         model = PmxReader("D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ダミーボーン頂点追加2.pmx").read_data()
 
@@ -346,16 +346,9 @@ class VmdDataTest(unittest.TestCase):
 
         prev_bf = motion.bones[target_bone_name][0]
         next_bf = motion.bones[target_bone_name][15]
+        now_bf = motion.calc_bf(target_bone_name, 8)
 
-        fill_fno = 8
-        fill_bf = motion.calc_bf(target_bone_name, fill_fno)
-        fill_bf.key = True
-
-        print("fill fno: %s ------------" % fill_bf.fno)
-        print("fill position: %s" % fill_bf.position)
-        print("fill rotation: %s" % fill_bf.rotation.toEulerAngles4MMD())
-
-        motion.reset_interpolation_all(target_bone_name, prev_bf, fill_bf, next_bf)
+        motion.split_bf(target_bone_name, prev_bf, now_bf, next_bf)
 
         for fno in motion.get_bone_fnos(target_bone_name):
             bf = motion.bones[target_bone_name][fno]
@@ -371,7 +364,7 @@ class VmdDataTest(unittest.TestCase):
             print("int rot: %s, %s, %s, %s" % (bf.interpolation[MBezierUtils.R_x1_idxs[3]], bf.interpolation[MBezierUtils.R_y1_idxs[3]], \
                   bf.interpolation[MBezierUtils.R_x2_idxs[3]], bf.interpolation[MBezierUtils.R_y2_idxs[3]]))
 
-        data_set = MOptionsDataSet(motion, model, model, "E:/WebDownload/test_reset_interpolation_all_{0:%Y%m%d_%H%M%S}.vmd".format(datetime.now()), False, False)
+        data_set = MOptionsDataSet(motion, model, model, "E:/WebDownload/test_split_bf_{0:%Y%m%d_%H%M%S}.vmd".format(datetime.now()), False, False)
 
         VmdWriter(data_set).write()
         print(data_set.output_vmd_path)

@@ -79,7 +79,7 @@ def evaluate(x1v: int, y1v: int, x2v: int, y2v: int, start: int, now: int, end: 
 def evaluate_by_t(x1v: int, y1v: int, x2v: int, y2v: int, start: int, end: int, t: float):
     if (end - start) <= 1:
         # 差が1以内の場合、終了
-        return start, 0
+        return start, 0, t
 
     x1 = x1v / INTERPOLATION_MMD_MAX
     x2 = x2v / INTERPOLATION_MMD_MAX
@@ -89,27 +89,13 @@ def evaluate_by_t(x1v: int, y1v: int, x2v: int, y2v: int, start: int, end: int, 
     # 補間曲線ベジェ曲線
     curve1 = bezier.Curve(np.asfortranarray([[0, x1, x2, 1], [0, y1, y2, 1]]), degree=3)
 
-    # 単一の評価
+    # 単一の評価(x, y)
     es = curve1.evaluate(t)
 
-    fno = int(start + ((end - start) * es[0, 0]))
+    # xに相当するフレーム番号
+    fno = int(round_integer(start + ((end - start) * es[0, 0])))
     
-    if fno == start:
-        fno = start + 1
-        # fnoがstartと同じ場合、一つ後にずらす
-        x, y, t = evaluate(x1v, y1v, x2v, y2v, start, fno, end)
-
-        return fno, y
-    
-    if fno == end:
-        # fnoがendと同じ場合、ひとつ前にずらす
-        fno = end - 1
-        # fnoがstartと同じ場合、一つ後にずらす
-        x, y, t = evaluate(x1v, y1v, x2v, y2v, start, fno, end)
-
-        return fno, y
-    
-    return fno, es[1, 0]
+    return fno, es[1, 0], t
 
 
 # 3次ベジェ曲線の分割

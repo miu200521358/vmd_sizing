@@ -21,7 +21,7 @@ class MultiPanel(BasePanel):
         self.header_panel = wx.Panel(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL)
         self.header_sizer = wx.BoxSizer(wx.VERTICAL)
 
-        self.description_txt = wx.StaticText(self.header_panel, wx.ID_ANY, "複数人数モーションなどを比率を合わせてサイジングする事ができます。" \
+        self.description_txt = wx.StaticText(self.header_panel, wx.ID_ANY, "複数人数モーションなどを比率を合わせてサイジングする事ができます。2人目以降を指定して下さい。" \
                                              + "\n縮尺を強制的に変えてますので、足などが元モーションからズレる場合があります。"
                                              + "\n間違えてファイルセットを追加してしまった場合は、４つのファイル欄をすべて空にしてください。", wx.DefaultPosition, wx.DefaultSize, 0)
         self.header_sizer.Add(self.description_txt, 0, wx.ALL, 5)

@@ -67,12 +67,12 @@ class SizingService():
                     Path(data_set.output_vmd_path).resolve(True)
 
                     if result:
-                        logger.info("変換出力完了: %s", os.path.basename(data_set.output_vmd_path), decoration=MLogger.DECORATION_BOX, title="サイジング成功")
+                        logger.info("【No.%s】変換出力完了: %s", (data_set_idx + 1), os.path.basename(data_set.output_vmd_path), decoration=MLogger.DECORATION_BOX, title="サイジング成功")
                     else:
-                        logger.warning("変換出力完了: %s\n※サイジングに失敗している箇所があります。", os.path.basename(data_set.output_vmd_path), decoration=MLogger.DECORATION_BOX, title="サイジング成功")
+                        logger.warning("【No.%s】変換出力完了: %s\n※サイジングに失敗している箇所があります。", (data_set_idx + 1), os.path.basename(data_set.output_vmd_path), decoration=MLogger.DECORATION_BOX, title="サイジング成功")
 
                 except FileNotFoundError as fe:
-                    logger.error("出力VMDファイルが正常に作成されなかったようです。\nパスを確認してください。%s\n\n%s", data_set.output_vmd_path, fe.message, decoration=MLogger.DECORATION_BOX)
+                    logger.error("【No.%s】出力VMDファイルが正常に作成されなかったようです。\nパスを確認してください。%s\n\n%s", (data_set_idx + 1), data_set.output_vmd_path, fe.message, decoration=MLogger.DECORATION_BOX)
 
             return result
         except SizingException as se:

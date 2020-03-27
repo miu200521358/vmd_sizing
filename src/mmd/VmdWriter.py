@@ -45,7 +45,7 @@ class VmdWriter():
         for mf in morph_frames:
             mf.write(fout)
         fout.write(struct.pack('<L', len(self.data_set.motion_vmd_data.cameras)))  # カメラキーフレーム数
-        for cf in self.data_set.motion_vmd_data.cameras:
+        for cf in self.data_set.motion_vmd_data.cameras.values():
             cf.write(fout)
         fout.write(struct.pack('<L', len(self.data_set.motion_vmd_data.lights)))  # 照明キーフレーム数
         for cf in self.data_set.motion_vmd_data.lights:
