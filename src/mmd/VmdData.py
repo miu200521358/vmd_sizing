@@ -12,7 +12,7 @@ logger = MLogger(__name__)
 class VmdBoneFrame():
     def __init__(self, fno=0, name=''):
         self.name = name
-        self.bname = name.encode('cp932').decode('shift_jis').encode('shift_jis')
+        self.bname = ''
         self.fno = fno
         self.position = MVector3D()
         self.rotation = MQuaternion()
@@ -28,12 +28,13 @@ class VmdBoneFrame():
         self.split_interpolation = False
 
     def __str__(self):
-        return "<VmdBoneFrame name:{0}, fno:{1}, position:{2}, rotation:{3}, interpolation: {4}, key:{5}".format( \
-            self.name, self.fno, self.position, self.rotation, self.interpolation, self.key)
+        return "<VmdBoneFrame name:{0}, fno:{1}, position:{2}, rotation:{3}, euler:{4}, interpolation: {5}, key:{6}".format( \
+            self.name, self.fno, self.position, self.rotation, self.rotation.toEulerAngles4MMD(), self.interpolation, self.key)
 
     def write(self, fout):
+        if not self.bname:
+            self.bname = self.name.encode('cp932').decode('shift_jis').encode('shift_jis')[:15].ljust(15, b'\x00')   # 15文字制限
         fout.write(self.bname)
-        fout.write(bytearray([0 for i in range(len(self.bname), 15)]))  # ボーン名15Byteの残りを\0で埋める
         fout.write(struct.pack('<L', int(self.fno)))
         fout.write(struct.pack('<f', float(self.position.x())))
         fout.write(struct.pack('<f', float(self.position.y())))
@@ -54,10 +55,11 @@ class VmdMorphFrame():
         self.ratio = 0
     
     def write(self, fout):
+        if not self.bname:
+            self.bname = self.name.encode('cp932').decode('shift_jis').encode('shift_jis')[:15].ljust(15, b'\x00')   # 15文字制限
         fout.write(self.bname)
-        fout.write(bytearray([0 for i in range(len(self.bname), 15)]))  # ボーン名15Byteの残りを\0で埋める
-        fout.write(struct.pack('<L', self.fno))
-        fout.write(struct.pack('<f', self.ratio))
+        fout.write(struct.pack('<L', int(self.fno)))
+        fout.write(struct.pack('<f', float(self.ratio)))
 
     def __str__(self):
         return "<VmdMorphFrame name:{0}, fno:{1}, ratio:{2}".format(self.name, self.fno, self.ratio)
@@ -254,6 +256,12 @@ class VmdMotion():
             return fill_pos
         
         return copy.deepcopy(prev_bf.position)
+    
+    def reset_interpolation_all(self, bone_name: str, prev_bf: VmdBoneFrame, now_bf: VmdBoneFrame, next_bf: VmdBoneFrame):
+        self.reset_interpolation_by_rot(bone_name, prev_bf, now_bf, next_bf)
+        self.reset_interpolation_by_move_x(bone_name, prev_bf, now_bf, next_bf)
+        self.reset_interpolation_by_move_y(bone_name, prev_bf, now_bf, next_bf)
+        self.reset_interpolation_by_move_z(bone_name, prev_bf, now_bf, next_bf)
 
     # 回転による補間曲線の再設定
     def reset_interpolation_by_rot(self, bone_name: str, prev_bf: VmdBoneFrame, now_bf: VmdBoneFrame, next_bf: VmdBoneFrame):
@@ -261,10 +269,49 @@ class VmdMotion():
         y1_idxs = MBezierUtils.R_y1_idxs
         x2_idxs = MBezierUtils.R_x2_idxs
         y2_idxs = MBezierUtils.R_y2_idxs
-        next_x1v = now_bf.complement[x1_idxs[3]]
-        next_y1v = now_bf.complement[y1_idxs[3]]
-        next_x2v = now_bf.complement[x2_idxs[3]]
-        next_y2v = now_bf.complement[y2_idxs[3]]
+        next_x1v = next_bf.interpolation[x1_idxs[3]]
+        next_y1v = next_bf.interpolation[y1_idxs[3]]
+        next_x2v = next_bf.interpolation[x2_idxs[3]]
+        next_y2v = next_bf.interpolation[y2_idxs[3]]
+
+        self.reset_interpolation(bone_name, prev_bf, now_bf, next_bf, next_x1v, next_y1v, next_x2v, next_y2v, x1_idxs, y1_idxs, x2_idxs, y2_idxs)
+
+    # X移動による補間曲線の再設定
+    def reset_interpolation_by_move_x(self, bone_name: str, prev_bf: VmdBoneFrame, now_bf: VmdBoneFrame, next_bf: VmdBoneFrame):
+        x1_idxs = MBezierUtils.MX_x1_idxs
+        y1_idxs = MBezierUtils.MX_y1_idxs
+        x2_idxs = MBezierUtils.MX_x2_idxs
+        y2_idxs = MBezierUtils.MX_y2_idxs
+        next_x1v = next_bf.interpolation[x1_idxs[3]]
+        next_y1v = next_bf.interpolation[y1_idxs[3]]
+        next_x2v = next_bf.interpolation[x2_idxs[3]]
+        next_y2v = next_bf.interpolation[y2_idxs[3]]
+
+        self.reset_interpolation(bone_name, prev_bf, now_bf, next_bf, next_x1v, next_y1v, next_x2v, next_y2v, x1_idxs, y1_idxs, x2_idxs, y2_idxs)
+
+    # Y移動による補間曲線の再設定
+    def reset_interpolation_by_move_y(self, bone_name: str, prev_bf: VmdBoneFrame, now_bf: VmdBoneFrame, next_bf: VmdBoneFrame):
+        x1_idxs = MBezierUtils.MY_x1_idxs
+        y1_idxs = MBezierUtils.MY_y1_idxs
+        x2_idxs = MBezierUtils.MY_x2_idxs
+        y2_idxs = MBezierUtils.MY_y2_idxs
+        next_x1v = next_bf.interpolation[x1_idxs[3]]
+        next_y1v = next_bf.interpolation[y1_idxs[3]]
+        next_x2v = next_bf.interpolation[x2_idxs[3]]
+        next_y2v = next_bf.interpolation[y2_idxs[3]]
+
+        self.reset_interpolation(bone_name, prev_bf, now_bf, next_bf, next_x1v, next_y1v, next_x2v, next_y2v, x1_idxs, y1_idxs, x2_idxs, y2_idxs)
+
+    # Z移動による補間曲線の再設定
+    def reset_interpolation_by_move_z(self, bone_name: str, prev_bf: VmdBoneFrame, now_bf: VmdBoneFrame, next_bf: VmdBoneFrame):
+        x1_idxs = MBezierUtils.MZ_x1_idxs
+        y1_idxs = MBezierUtils.MZ_y1_idxs
+        x2_idxs = MBezierUtils.MZ_x2_idxs
+        y2_idxs = MBezierUtils.MZ_y2_idxs
+        next_x1v = next_bf.interpolation[x1_idxs[3]]
+        next_y1v = next_bf.interpolation[y1_idxs[3]]
+        next_x2v = next_bf.interpolation[x2_idxs[3]]
+        next_y2v = next_bf.interpolation[y2_idxs[3]]
 
         self.reset_interpolation(bone_name, prev_bf, now_bf, next_bf, next_x1v, next_y1v, next_x2v, next_y2v, x1_idxs, y1_idxs, x2_idxs, y2_idxs)
 
@@ -277,26 +324,30 @@ class VmdMotion():
         x, y, t, bresult, aresult, before_bz, after_bz = MBezierUtils.split_bezier_mmd(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.fno, now_bf.fno, next_bf.fno)
 
         # 分割（今回キー）の始点は、前半のB
-        now_bf.complement[x1_idxs[0]] = now_bf.complement[x1_idxs[1]] = now_bf.complement[x1_idxs[2]] = now_bf.complement[x1_idxs[3]] = int(before_bz[1].x())
-        now_bf.complement[y1_idxs[0]] = now_bf.complement[y1_idxs[1]] = now_bf.complement[y1_idxs[2]] = now_bf.complement[y1_idxs[3]] = int(before_bz[1].y())
+        now_bf.interpolation[x1_idxs[0]] = now_bf.interpolation[x1_idxs[1]] = now_bf.interpolation[x1_idxs[2]] = now_bf.interpolation[x1_idxs[3]] = before_bz[1].x()
+        now_bf.interpolation[y1_idxs[0]] = now_bf.interpolation[y1_idxs[1]] = now_bf.interpolation[y1_idxs[2]] = now_bf.interpolation[y1_idxs[3]] = before_bz[1].y()
 
         # 分割（今回キー）の終点は、後半のC
-        now_bf.complement[x2_idxs[0]] = now_bf.complement[x2_idxs[1]] = now_bf.complement[x2_idxs[2]] = now_bf.complement[x2_idxs[3]] = int(before_bz[2].x())
-        now_bf.complement[y2_idxs[0]] = now_bf.complement[y2_idxs[1]] = now_bf.complement[y2_idxs[2]] = now_bf.complement[y2_idxs[3]] = int(before_bz[2].y())
+        now_bf.interpolation[x2_idxs[0]] = now_bf.interpolation[x2_idxs[1]] = now_bf.interpolation[x2_idxs[2]] = now_bf.interpolation[x2_idxs[3]] = before_bz[2].x()
+        now_bf.interpolation[y2_idxs[0]] = now_bf.interpolation[y2_idxs[1]] = now_bf.interpolation[y2_idxs[2]] = now_bf.interpolation[y2_idxs[3]] = before_bz[2].y()
 
         # 次回読み込みキーの始点は、後半のB
-        next_bf.complement[x1_idxs[0]] = next_bf.complement[x1_idxs[1]] = next_bf.complement[x1_idxs[2]] = next_bf.complement[x1_idxs[3]] = int(after_bz[1].x())
-        next_bf.complement[y1_idxs[0]] = next_bf.complement[y1_idxs[1]] = next_bf.complement[y1_idxs[2]] = next_bf.complement[y1_idxs[3]] = int(after_bz[1].y())
+        next_bf.interpolation[x1_idxs[0]] = next_bf.interpolation[x1_idxs[1]] = next_bf.interpolation[x1_idxs[2]] = next_bf.interpolation[x1_idxs[3]] = after_bz[1].x()
+        next_bf.interpolation[y1_idxs[0]] = next_bf.interpolation[y1_idxs[1]] = next_bf.interpolation[y1_idxs[2]] = next_bf.interpolation[y1_idxs[3]] = after_bz[1].y()
 
         # 次回読み込みキーの終点は、後半のC
-        next_bf.complement[x2_idxs[0]] = next_bf.complement[x2_idxs[1]] = next_bf.complement[x2_idxs[2]] = next_bf.complement[x2_idxs[3]] = int(after_bz[2].x())
-        next_bf.complement[y2_idxs[0]] = next_bf.complement[y2_idxs[1]] = next_bf.complement[y2_idxs[2]] = next_bf.complement[y2_idxs[3]] = int(after_bz[2].y())
+        next_bf.interpolation[x2_idxs[0]] = next_bf.interpolation[x2_idxs[1]] = next_bf.interpolation[x2_idxs[2]] = next_bf.interpolation[x2_idxs[3]] = after_bz[2].x()
+        next_bf.interpolation[y2_idxs[0]] = next_bf.interpolation[y2_idxs[1]] = next_bf.interpolation[y2_idxs[2]] = next_bf.interpolation[y2_idxs[3]] = after_bz[2].y()
 
         if bresult and aresult:
             # nowとnextをモーションに再設定
 
+            self.bones[now_bf.name][prev_bf.fno] = prev_bf
+            prev_bf.key = True
             self.bones[now_bf.name][now_bf.fno] = now_bf
+            now_bf.key = True
             self.bones[next_bf.name][next_bf.fno] = next_bf
+            next_bf.key = True
 
             return
         else:
@@ -304,10 +355,10 @@ class VmdMotion():
 
             if not bresult:
                 # 前半用補間曲線
-                next_x1v = now_bf.complement[x1_idxs[3]]
-                next_y1v = now_bf.complement[y1_idxs[3]]
-                next_x2v = now_bf.complement[x2_idxs[3]]
-                next_y2v = now_bf.complement[y2_idxs[3]]
+                next_x1v = now_bf.interpolation[x1_idxs[3]]
+                next_y1v = now_bf.interpolation[y1_idxs[3]]
+                next_x2v = now_bf.interpolation[x2_idxs[3]]
+                next_y2v = now_bf.interpolation[y2_idxs[3]]
 
                 # 前半を区切る位置を求める(t=0.5で曲線を半分に分割する位置)
                 new_fill_fno, _ = MBezierUtils.evaluate_by_t(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.fno, now_bf.fno, 0.5)
@@ -321,29 +372,28 @@ class VmdMotion():
                     # 分割キーが取得できた場合、前半の補間曲線を分割して求めなおす
                     self.reset_interpolation(bone_name, prev_bf, before_fill_bf, now_bf, next_x1v, next_y1v, next_x2v, next_y2v, x1_idxs, y1_idxs, x2_idxs, y2_idxs)
                 else:
-                    # 分割キーが取得できなかった場合、既にキーがあるので、さらに分割する
-
                     # 分割キーが取得できなかった場合、念のため補間曲線を0-127の間に収め直す
                     # 分割（今回キー）の始点は、前半のB
                     r_x1 = 0 if 0 > before_bz[1].x() else MBezierUtils.INTERPOLATION_MMD_MAX if MBezierUtils.INTERPOLATION_MMD_MAX < before_bz[1].x() else int(before_bz[1].x())
-                    now_bf.complement[x1_idxs[0]] = now_bf.complement[x1_idxs[1]] = now_bf.complement[x1_idxs[2]] = now_bf.complement[x1_idxs[3]] = r_x1
+                    now_bf.interpolation[x1_idxs[0]] = now_bf.interpolation[x1_idxs[1]] = now_bf.interpolation[x1_idxs[2]] = now_bf.interpolation[x1_idxs[3]] = r_x1
                     r_y1 = 0 if 0 > before_bz[1].y() else MBezierUtils.INTERPOLATION_MMD_MAX if MBezierUtils.INTERPOLATION_MMD_MAX < before_bz[1].y() else int(before_bz[1].y())
-                    now_bf.complement[y1_idxs[0]] = now_bf.complement[y1_idxs[1]] = now_bf.complement[y1_idxs[2]] = now_bf.complement[y1_idxs[3]] = r_y1
+                    now_bf.interpolation[y1_idxs[0]] = now_bf.interpolation[y1_idxs[1]] = now_bf.interpolation[y1_idxs[2]] = now_bf.interpolation[y1_idxs[3]] = r_y1
 
                     # 分割（今回キー）の終点は、後半のC
                     r_x2 = 0 if 0 > before_bz[2].x() else MBezierUtils.INTERPOLATION_MMD_MAX if MBezierUtils.INTERPOLATION_MMD_MAX < before_bz[2].x() else int(before_bz[2].x())
-                    now_bf.complement[x2_idxs[0]] = now_bf.complement[x2_idxs[1]] = now_bf.complement[x2_idxs[2]] = now_bf.complement[x2_idxs[3]] = r_x2
+                    now_bf.interpolation[x2_idxs[0]] = now_bf.interpolation[x2_idxs[1]] = now_bf.interpolation[x2_idxs[2]] = now_bf.interpolation[x2_idxs[3]] = r_x2
                     r_y2 = 0 if 0 > before_bz[2].y() else MBezierUtils.INTERPOLATION_MMD_MAX if MBezierUtils.INTERPOLATION_MMD_MAX < before_bz[2].y() else int(before_bz[2].y())
-                    now_bf.complement[y2_idxs[0]] = now_bf.complement[y2_idxs[1]] = now_bf.complement[y2_idxs[2]] = now_bf.complement[y2_idxs[3]] = r_y2
+                    now_bf.interpolation[y2_idxs[0]] = now_bf.interpolation[y2_idxs[1]] = now_bf.interpolation[y2_idxs[2]] = now_bf.interpolation[y2_idxs[3]] = r_y2
 
                     self.bones[now_bf.name][now_bf.fno] = now_bf
+                    now_bf.key = True
 
             if not aresult:
                 # 後半用補間曲線
-                next_x1v = next_bf.complement[x1_idxs[3]]
-                next_y1v = next_bf.complement[y1_idxs[3]]
-                next_x2v = next_bf.complement[x2_idxs[3]]
-                next_y2v = next_bf.complement[y2_idxs[3]]
+                next_x1v = next_bf.interpolation[x1_idxs[3]]
+                next_y1v = next_bf.interpolation[y1_idxs[3]]
+                next_x2v = next_bf.interpolation[x2_idxs[3]]
+                next_y2v = next_bf.interpolation[y2_idxs[3]]
 
                 # 後半を区切る位置を求める
                 new_fill_fno, _ = MBezierUtils.evaluate_by_t(next_x1v, next_y1v, next_x2v, next_y2v, now_bf.fno, next_bf.fno, 0.5)
@@ -361,17 +411,18 @@ class VmdMotion():
 
                     # 次回読み込みキーの始点は、後半のB
                     r_x1 = 0 if 0 > after_bz[1].x() else MBezierUtils.INTERPOLATION_MMD_MAX if MBezierUtils.INTERPOLATION_MMD_MAX < after_bz[1].x() else int(after_bz[1].x())
-                    next_bf.complement[x1_idxs[0]] = next_bf.complement[x1_idxs[1]] = next_bf.complement[x1_idxs[2]] = next_bf.complement[x1_idxs[3]] = r_x1
+                    next_bf.interpolation[x1_idxs[0]] = next_bf.interpolation[x1_idxs[1]] = next_bf.interpolation[x1_idxs[2]] = next_bf.interpolation[x1_idxs[3]] = r_x1
                     r_y1 = 0 if 0 > after_bz[1].y() else MBezierUtils.INTERPOLATION_MMD_MAX if MBezierUtils.INTERPOLATION_MMD_MAX < after_bz[1].y() else int(after_bz[1].y())
-                    next_bf.complement[y1_idxs[0]] = next_bf.complement[y1_idxs[1]] = next_bf.complement[y1_idxs[2]] = next_bf.complement[y1_idxs[3]] = r_y1
+                    next_bf.interpolation[y1_idxs[0]] = next_bf.interpolation[y1_idxs[1]] = next_bf.interpolation[y1_idxs[2]] = next_bf.interpolation[y1_idxs[3]] = r_y1
 
                     # 次回読み込みキーの終点は、後半のC
                     r_x2 = 0 if 0 > after_bz[2].x() else MBezierUtils.INTERPOLATION_MMD_MAX if MBezierUtils.INTERPOLATION_MMD_MAX < after_bz[2].x() else int(after_bz[2].x())
-                    next_bf.complement[x2_idxs[0]] = next_bf.complement[x2_idxs[1]] = next_bf.complement[x2_idxs[2]] = next_bf.complement[x2_idxs[3]] = r_x2
+                    next_bf.interpolation[x2_idxs[0]] = next_bf.interpolation[x2_idxs[1]] = next_bf.interpolation[x2_idxs[2]] = next_bf.interpolation[x2_idxs[3]] = r_x2
                     r_y2 = 0 if 0 > after_bz[2].y() else MBezierUtils.INTERPOLATION_MMD_MAX if MBezierUtils.INTERPOLATION_MMD_MAX < after_bz[2].y() else int(after_bz[2].y())
-                    next_bf.complement[y2_idxs[0]] = next_bf.complement[y2_idxs[1]] = next_bf.complement[y2_idxs[2]] = next_bf.complement[y2_idxs[3]] = r_y2
+                    next_bf.interpolation[y2_idxs[0]] = next_bf.interpolation[y2_idxs[1]] = next_bf.interpolation[y2_idxs[2]] = next_bf.interpolation[y2_idxs[3]] = r_y2
 
                     self.bones[next_bf.name][next_bf.fno] = next_bf
+                    next_bf.key = True
 
             return
         return
@@ -395,9 +446,19 @@ class VmdMotion():
         total_bone_frames = []
 
         for bone_name, bone_frames in self.bones.items():
-            # キーフレを逆順で取得
-            for fno in reversed(self.get_bone_fnos(bone_name)):
-                total_bone_frames.append(bone_frames[fno])
+            fnos = self.get_bone_fnos(bone_name)
+            
+            if len(fnos) > 0:
+                # 各ボーンの最終キーだけ先に登録
+                total_bone_frames.append(bone_frames[fnos[-1]])
+        
+        for bone_name, bone_frames in self.bones.items():
+            fnos = self.get_bone_fnos(bone_name)
+
+            if len(fnos) > 1:
+                # キーフレを最後の一つ手前まで登録
+                for fno in fnos[:-1]:
+                    total_bone_frames.append(bone_frames[fno])
         
         return total_bone_frames
     
@@ -406,12 +467,23 @@ class VmdMotion():
         total_morph_frames = []
 
         for morph_name, morph_frames in self.morphs.items():
-            # キーフレを逆順で取得
-            for fno in reversed(self.get_morph_fnos(morph_name)):
-                total_morph_frames.append(morph_frames[fno])
+            fnos = self.get_morph_fnos(morph_name)
+            
+            if len(fnos) > 0:
+                # 各モーフの最終キーだけ先に登録
+                total_morph_frames.append(morph_frames[fnos[-1]])
+        
+        for morph_name, morph_frames in self.morphs.items():
+            fnos = self.get_morph_fnos(morph_name)
+
+            if len(fnos) > 1:
+                # キーフレを最後の一つ手前まで登録
+                for fno in fnos[:-1]:
+                    total_morph_frames.append(morph_frames[fno])
         
         return total_morph_frames
-    
+
+    # ボーンキーフレを追加
     def append_bone_frame(self, frame: VmdBoneFrame):
         if frame.name not in self.bones:
             # まだ該当ボーン名がない場合、追加
@@ -419,6 +491,7 @@ class VmdMotion():
         
         self.bones[frame.name][frame.fno] = frame
 
+    # モーフキーフレを追加
     def append_morph_frame(self, frame: VmdMorphFrame):
         if frame.name not in self.morphs:
             # まだ該当モーフ名がない場合、追加

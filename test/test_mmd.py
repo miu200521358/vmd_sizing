@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #
+from datetime import datetime
 import unittest
 import sys
 import pathlib
@@ -11,10 +12,11 @@ sys.path.append(str(current_dir) + '/../src/')
 
 from mmd.PmxReader import PmxReader # noqa
 from mmd.VmdReader import VmdReader # noqa
+from mmd.VmdWriter import VmdWriter # noqa
 from mmd.PmxData import PmxModel, Vertex, Material, Bone, Morph, DisplaySlot, RigidBody, Joint # noqa
 from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
 from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
-from module.MOptions import MOptions # noqa
+from module.MOptions import MOptionsDataSet # noqa
 from module.MParams import BoneLinks # noqa
 from utils import MBezierUtils # noqa
 from utils.MException import SizingException # noqa
@@ -318,7 +320,61 @@ class VmdDataTest(unittest.TestCase):
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().x(), 33.70291519, delta=0.1)
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().y(), 18.53442383, delta=0.1)
         self.assertAlmostEqual(bf.rotation.toEulerAngles4MMD().z(), 24.47537041, delta=0.1)
+    
+    def test_vmd_output(self):
+        motion = VmdReader(u"test/data/補間曲線テスト01.vmd").read_data()
+        model = PmxReader("D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ダミーボーン頂点追加2.pmx").read_data()
 
+        for n in range(100):
+            fill_fno = 8
+            fill_bone_name = "右腕{0:03d}".format(n)
+            fill_bf = motion.calc_bf(fill_bone_name, fill_fno)
+            fill_bf.key = True
+
+            motion.bones[fill_bone_name][fill_fno] = fill_bf
+
+        data_set = MOptionsDataSet(motion, model, model, "E:/WebDownload/test_vmd_output_{0:%Y%m%d_%H%M%S}.vmd".format(datetime.now()), False, False)
+
+        VmdWriter(data_set).write()
+        print(data_set.output_vmd_path)
+
+    def test_reset_interpolation_all(self):
+        motion = VmdReader(u"test/data/補間曲線テスト01.vmd").read_data()
+        model = PmxReader("D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ダミーボーン頂点追加2.pmx").read_data()
+
+        target_bone_name = "ﾎﾞｰﾝ01"
+
+        prev_bf = motion.bones[target_bone_name][0]
+        next_bf = motion.bones[target_bone_name][15]
+
+        fill_fno = 8
+        fill_bf = motion.calc_bf(target_bone_name, fill_fno)
+        fill_bf.key = True
+
+        print("fill fno: %s ------------" % fill_bf.fno)
+        print("fill position: %s" % fill_bf.position)
+        print("fill rotation: %s" % fill_bf.rotation.toEulerAngles4MMD())
+
+        motion.reset_interpolation_all(target_bone_name, prev_bf, fill_bf, next_bf)
+
+        for fno in motion.get_bone_fnos(target_bone_name):
+            bf = motion.bones[target_bone_name][fno]
+            print("fno: %s ------------" % bf.fno)
+            print("position: %s" % bf.position)
+            print("rotation: %s" % bf.rotation.toEulerAngles4MMD())
+            print("int move x: %s, %s, %s, %s" % (bf.interpolation[MBezierUtils.MX_x1_idxs[3]], bf.interpolation[MBezierUtils.MX_y1_idxs[3]], \
+                  bf.interpolation[MBezierUtils.MX_x2_idxs[3]], bf.interpolation[MBezierUtils.MX_y2_idxs[3]]))
+            print("int move y: %s, %s, %s, %s" % (bf.interpolation[MBezierUtils.MY_x1_idxs[3]], bf.interpolation[MBezierUtils.MY_y1_idxs[3]], \
+                  bf.interpolation[MBezierUtils.MY_x2_idxs[3]], bf.interpolation[MBezierUtils.MY_y2_idxs[3]]))
+            print("int move z: %s, %s, %s, %s" % (bf.interpolation[MBezierUtils.MZ_x1_idxs[3]], bf.interpolation[MBezierUtils.MZ_y1_idxs[3]], \
+                  bf.interpolation[MBezierUtils.MZ_x2_idxs[3]], bf.interpolation[MBezierUtils.MZ_y2_idxs[3]]))
+            print("int rot: %s, %s, %s, %s" % (bf.interpolation[MBezierUtils.R_x1_idxs[3]], bf.interpolation[MBezierUtils.R_y1_idxs[3]], \
+                  bf.interpolation[MBezierUtils.R_x2_idxs[3]], bf.interpolation[MBezierUtils.R_y2_idxs[3]]))
+
+        data_set = MOptionsDataSet(motion, model, model, "E:/WebDownload/test_reset_interpolation_all_{0:%Y%m%d_%H%M%S}.vmd".format(datetime.now()), False, False)
+
+        VmdWriter(data_set).write()
+        print(data_set.output_vmd_path)
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 import struct
-from module.MOptions import MOptions, MOptionsDataSet
+from module.MOptions import MOptionsDataSet
 from utils.MLogger import MLogger # noqa
 
 logger = MLogger(__name__)

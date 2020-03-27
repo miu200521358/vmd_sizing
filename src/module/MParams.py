@@ -61,10 +61,10 @@ class BoneLinks():
         for lidx, lkey in enumerate(self.__links.keys()):
             if lidx <= self.index(bone_name):
                 calc_bone = motion.calc_bf(self.__links[lkey].name, fno)
-                new_motion.frames[calc_bone.name] = {fno: calc_bone}
+                new_motion.bones[calc_bone.name] = {fno: calc_bone}
             else:
                 calc_bone = VmdBoneFrame(frame=fno, name=lkey)
-                new_motion.frames[calc_bone.name] = {fno: calc_bone}
+                new_motion.bones[calc_bone.name] = {fno: calc_bone}
         
         return new_motion
 

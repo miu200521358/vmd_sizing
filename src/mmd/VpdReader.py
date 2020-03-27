@@ -27,7 +27,7 @@ class VpdReader():
         if len(lines) > 0:
             # vpdバージョン
             signature = lines[0]
-            logger.debug("signature %s", signature)
+            logger.test("signature %s", signature)
 
         model_name_pattern = re.compile(r'(.*)(\.osm;.*)', flags=re.IGNORECASE)
 
@@ -40,7 +40,7 @@ class VpdReader():
 
         return "VPDデータ解析失敗"
 
-    def read_vpd_file(self):
+    def read_data(self):
         # VPDファイルを通常読み込み
         lines = []
 
@@ -50,11 +50,12 @@ class VpdReader():
         if len(lines) > 0:
             # vpdバージョン
             signature = lines[0]
-            logger.debug("signature %s", signature)
+            logger.test("signature %s", signature)
 
         motion = VmdMotion()
         # モーション数(常に1)
-        motion.motion_cnt = motion.last_motion_frame = 1
+        motion.motion_cnt = 1
+        motion.last_motion_frame = 0
 
         # 各パターン（括弧はひとつのみ実体として取得する）
         model_name_pattern = re.compile(r'(.*)(?:\.osm;)(?:.*// 親ファイル名.*)', flags=re.IGNORECASE)
@@ -79,7 +80,7 @@ class VpdReader():
                 bone_name = result_values[0]
                 
                 # キーフレ生成
-                frame = VmdBoneFrame(frame=0, name=bone_name)
+                frame = VmdBoneFrame(fno=0, name=bone_name)
                 frame.key = True
                 frame.read = True
 
@@ -105,13 +106,13 @@ class VpdReader():
                 # 括弧終了
                 result_values = self.read_line(lines[n], bone_end_pattern, n)
                 if result_values:
-                    motion.frames[bone_name] = [frame]
+                    motion.bones[bone_name] = {0: frame}
                     frame = None
                     continue
 
         # ハッシュを設定
-        motion.digest = self.hexdigest(self.file_path)
-        logger.debug("motion: %s, hash: %s", motion.path, motion.digest)
+        motion.digest = self.hexdigest()
+        logger.test("motion: %s, hash: %s", motion.path, motion.digest)
 
         return motion
 
@@ -119,16 +120,16 @@ class VpdReader():
     def read_line(self, line, test_pattern, n):
         m = re.search(test_pattern, line)
         if m and len(m.groups()) > 0:
-            logger.debug("line[%s]: %s, m: %s", n, line, m.groups())
+            logger.test("line[%s]: %s, m: %s", n, line, m.groups())
             return m.groups()
 
         # 正規表現に合致するのが取れなかった場合、None
         return None
  
-    def hexdigest(self, filepath):
+    def hexdigest(self):
         sha1 = hashlib.sha1()
 
-        with open(filepath, 'rb') as f:
+        with open(self.file_path, 'rb') as f:
             for chunk in iter(lambda: f.read(2048 * sha1.block_size), b''):
                 sha1.update(chunk)
 
@@ -152,7 +153,7 @@ class VpdReader():
                 fstr = fbytes.decode(encoding)  # bytes文字列から指定文字コードの文字列に変換
                 fstr = fstr.encode('utf-8')  # uft-8文字列に変換
                 # 問題なく変換できたらエンコードを返す
-                logger.debug("%s: encoding: %s", file_path, encoding)
+                logger.test("%s: encoding: %s", file_path, encoding)
                 return encoding
             except Exception:
                 pass

@@ -41,7 +41,7 @@ MZ_y2_idxs = [14, 29, 59, 44]
 # https://shspage.hatenadiary.org/entry/20140625/1403702735
 # https://bezier.readthedocs.io/en/stable/python/reference/bezier.curve.html#bezier.curve.Curve.evaluate
 def evaluate(x1v: int, y1v: int, x2v: int, y2v: int, start: int, now: int, end: int):
-    if (now - start) == 0 or (end - start) == 0:
+    if (now - start) <= 0 or (end - start) <= 0:
         return 0, 0, 0
         
     x = (now - start) / (end - start)
@@ -53,10 +53,14 @@ def evaluate(x1v: int, y1v: int, x2v: int, y2v: int, start: int, now: int, end: 
     # 補間曲線ベジェ曲線
     curve1 = bezier.Curve(np.asfortranarray([[0, x1, x2, 1], [0, y1, y2, 1]]), degree=3)
     # 交点を求める為のX線上の直線
-    curve2 = bezier.Curve(np.asfortranarray([[x, x], [0, 1]]), degree=1)
+    curve2 = bezier.Curve(np.asfortranarray([[x, x], [-99999, 99999]]), degree=1)
 
     # 交点を求める
     intersections = curve1.intersect(curve2)
+
+    if intersections.shape[1] == 0:
+        # 交点が見つからなかった場合、終了
+        return 0, 0, 0
 
     # tからyを求め直す
     s_vals = np.asfortranarray(intersections[0, :])
@@ -73,6 +77,10 @@ def evaluate(x1v: int, y1v: int, x2v: int, y2v: int, start: int, now: int, end: 
 
 # 指定されたtになるフレーム番号を取得する
 def evaluate_by_t(x1v: int, y1v: int, x2v: int, y2v: int, start: int, end: int, t: float):
+    if (end - start) <= 1:
+        # 差が1以内の場合、終了
+        return start, 0
+
     x1 = x1v / INTERPOLATION_MMD_MAX
     x2 = x2v / INTERPOLATION_MMD_MAX
     y1 = y1v / INTERPOLATION_MMD_MAX
@@ -81,28 +89,43 @@ def evaluate_by_t(x1v: int, y1v: int, x2v: int, y2v: int, start: int, end: int, 
     # 補間曲線ベジェ曲線
     curve1 = bezier.Curve(np.asfortranarray([[0, x1, x2, 1], [0, y1, y2, 1]]), degree=3)
 
+    # 単一の評価
     es = curve1.evaluate(t)
 
     fno = int(start + ((end - start) * es[0, 0]))
+    
+    if fno == start:
+        fno = start + 1
+        # fnoがstartと同じ場合、一つ後にずらす
+        x, y, t = evaluate(x1v, y1v, x2v, y2v, start, fno, end)
 
+        return fno, y
+    
+    if fno == end:
+        # fnoがendと同じ場合、ひとつ前にずらす
+        fno = end - 1
+        # fnoがstartと同じ場合、一つ後にずらす
+        x, y, t = evaluate(x1v, y1v, x2v, y2v, start, fno, end)
+
+        return fno, y
+    
     return fno, es[1, 0]
 
 
 # 3次ベジェ曲線の分割
-# http://geom.web.fc2.com/geometry/bezier/cut-cb.html
 def split_bezier_mmd(x1v: int, y1v: int, x2v: int, y2v: int, start: int, now: int, end: int):
     if (now - start) == 0 or (end - start) == 0:
         return 0, 0, 0, False, False, [MVector2D(), MVector2D(), MVector2D(), MVector2D()], [MVector2D(), MVector2D(), MVector2D(), MVector2D()]
 
     # 3次ベジェ曲線を分割する
-    x, y, t, before_bz, after_bz = split_bezier(x1v, y1v, x2v, y2v, start, end, now)
+    x, y, t, before_bz, after_bz = split_bezier(x1v, y1v, x2v, y2v, start, now, end)
 
     # ベジェ曲線の値がMMD用に合っているかを加味して返す
     return x, y, t, is_fit_bezier_mmd(before_bz), is_fit_bezier_mmd(after_bz), before_bz, after_bz
 
 
 # ベジェ曲線の値がMMD用に合っているか
-def is_fit_bezier_mmd(bz: MVector2D, offset=0):
+def is_fit_bezier_mmd(bz: list, offset=0):
     for b in bz:
         if not (0 - offset <= b.x() <= INTERPOLATION_MMD_MAX + offset) or not (0 - offset <= b.y() <= INTERPOLATION_MMD_MAX + offset):
             # MMD用の範囲内でなければNG
@@ -122,6 +145,7 @@ def fit_bezier_mmd(bz: MVector2D):
 
 
 # 3次ベジェ曲線の分割
+# http://geom.web.fc2.com/geometry/bezier/cut-cb.html
 def split_bezier(x1v: int, y1v: int, x2v: int, y2v: int, start: int, now: int, end: int):
     # 補間曲線の進んだ時間分を求める
     x, y, t = evaluate(x1v, y1v, x2v, y2v, start, now, end)

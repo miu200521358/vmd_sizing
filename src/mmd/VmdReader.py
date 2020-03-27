@@ -4,14 +4,13 @@ import struct
 import hashlib
 import copy
 import re
-import logging
 
 from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from utils.MException import MParseException # noqa
 from utils.MLogger import MLogger # noqa
 
-logger = MLogger(__name__, level=logging.ERROR)
+logger = MLogger(__name__)
 
 
 class VmdReader():
@@ -59,6 +58,7 @@ class VmdReader():
         logger.test("motion.motion_cnt %s", motion.motion_cnt)
 
         # 1F分のモーション情報
+        prev_n = 0
         for n in range(motion.motion_cnt):
             frame = VmdBoneFrame()
             frame.key = True
@@ -108,7 +108,8 @@ class VmdReader():
                 # 最終フレームを記録
                 motion.last_motion_frame = frame.fno
 
-            if n % 10000 == 0:
+            if n // 10000 > prev_n:
+                prev_n = n // 10000
                 logger.info("VMDモーション読み込み キー: %s" % n, decoration=MLogger.DECORATION_SIMPLE)
 
         # モーフ数
@@ -116,6 +117,7 @@ class VmdReader():
         logger.test("motion.morph_cnt %s", motion.morph_cnt)
 
         # 1F分のモーフ情報
+        prev_n = 0
         for n in range(motion.morph_cnt):
             morph = VmdMorphFrame()
 
@@ -139,11 +141,12 @@ class VmdReader():
                 # まだ辞書にない場合、配列追加
                 motion.morphs[morph_name] = {}
 
-            if morph.fno in motion.morphs[morph_name]:
+            if morph.fno not in motion.morphs[morph_name]:
                 # まだなければ辞書の該当部分にモーフフレームを追加
                 motion.morphs[morph_name][morph.fno] = morph
 
-            if n % 1000 == 0:
+            if n // 1000 > prev_n:
+                prev_n = n // 1000
                 logger.info("VMDモーション読み込み モーフ: %s" % n, decoration=MLogger.DECORATION_SIMPLE)
 
         try:
@@ -152,7 +155,8 @@ class VmdReader():
             logger.test("motion.camera_cnt %s", motion.camera_cnt)
 
             # 1F分のカメラ情報
-            for _ in range(motion.camera_cnt):
+            prev_n = 0
+            for n in range(motion.camera_cnt):
                 camera = VmdCameraFrame()
 
                 # フレームIDX
@@ -185,6 +189,10 @@ class VmdReader():
 
                 # カメラを追加
                 motion.cameras[camera.fno] = camera
+
+                if n // 10000 > prev_n:
+                    prev_n = n // 10000
+                    logger.info("VMDカメラ読み込み キー: %s" % n, decoration=MLogger.DECORATION_SIMPLE)
 
         except Exception:
             # 情報がない場合、catchして握りつぶす

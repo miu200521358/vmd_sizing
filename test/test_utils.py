@@ -464,12 +464,14 @@ class MBezierUtilsTest(unittest.TestCase):
         self.assertTrue(MBezierUtils.is_fit_bezier_mmd(before_bz))
         self.assertFalse(MBezierUtils.is_fit_bezier_mmd(after_bz))
 
-    def split_bezier_mmd(self):
-        x, y, t, is_fit_before_bz, is_fit_after_bz, before_bz, after_bz = MBezierUtils.split_bezier_mmd(127, 0, 0, 127, 0, 3, 12)
+    def test_split_bezier_mmd(self):
+        x, y, t, is_fit_before_bz, is_fit_after_bz, before_bz, after_bz = MBezierUtils.split_bezier_mmd(127, 0, 0, 127, 0, 8, 15)
         
         print("x: %s" % x)
         print("y: %s" % y)
         print("t: %s" % t)
+        print("is_fit_before_bz: %s" % is_fit_before_bz)
+        print("is_fit_after_bz: %s" % is_fit_after_bz)
         print("before_bz[0]: %s" % before_bz[0])
         print("before_bz[1]: %s" % before_bz[1])
         print("before_bz[2]: %s" % before_bz[2])
@@ -479,8 +481,8 @@ class MBezierUtilsTest(unittest.TestCase):
         print("after_bz[2]: %s" % after_bz[2])
         print("after_bz[3]: %s" % after_bz[3])
 
-        self.assertTrue(is_fit_before_bz)
-        self.assertFalse(is_fit_after_bz)
+        self.assertFalse(is_fit_before_bz)
+        self.assertTrue(is_fit_after_bz)
 
 
 if __name__ == "__main__":

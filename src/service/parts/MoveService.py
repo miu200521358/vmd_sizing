@@ -25,8 +25,8 @@ class MoveService():
             self.set_center_z_offset(data_set)
 
             for k in ["右足ＩＫ", "左足ＩＫ", "右つま先ＩＫ", "左つま先ＩＫ", "右足ＩＫ親", "左足ＩＫ親", "右足IK親", "左足IK親", "センター", "グルーブ", "全ての親"]:
-                if k in data_set.motion_vmd_data.frames and k in data_set.rep_model_data.bones:
-                    for bf in data_set.motion_vmd_data.frames[k].values():
+                if k in data_set.motion_vmd_data.bones and k in data_set.rep_model_data.bones:
+                    for bf in data_set.motion_vmd_data.bones[k].values():
                         # IK比率をそのまま掛ける
                         bf.position.setX(bf.position.x() * data_set.xz_ratio)
                         bf.position.setY(bf.position.y() * data_set.y_ratio)
@@ -35,7 +35,7 @@ class MoveService():
                         # オフセット調整
                         bf.position += data_set.rep_model_data.bones[k].local_offset
 
-                    if len(data_set.motion_vmd_data.frames[k].keys()) > 0:
+                    if len(data_set.motion_vmd_data.bones[k].keys()) > 0:
                         logger.info("移動補正: %s", k, decoration=MLogger.DECORATION_SIMPLE)
 
         return True

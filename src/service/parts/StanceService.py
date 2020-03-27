@@ -24,9 +24,9 @@ class StanceService():
                 # モーションデータが無い場合、処理スキップ
                 return True
             
-            # 代替モデルでない場合、上半身スタンス補正
-            if not self.options.substitute_model_flg:
-                self.adjust_upper_stance()
+            # # 代替モデルでない場合、上半身スタンス補正
+            # if not data_set.substitute_model_flg:
+            #     self.adjust_upper_stance()
 
             # 腕スタンス補正
             self.adjust_arm_stance(data_set_idx, data_set)
@@ -46,9 +46,9 @@ class StanceService():
 
         # モデルとモーション全部に上半身2がある場合、TRUE
         is_upper2_existed = set(upper2_target_bones).issubset(self.options.org_model_data.bones) and set(upper2_target_bones).issubset(self.options.rep_model_data.bones) \
-            and "上半身2" in self.options.motion_vmd_data.frames and len(self.options.motion_vmd_data.frames["上半身2"]) > 1
+            and "上半身2" in self.options.motion_vmd_data.bones and len(self.options.motion_vmd_data.bones["上半身2"]) > 1
 
-        if set(upper_target_bones).issubset(self.options.org_model_data.bones) and set(upper_target_bones).issubset(self.options.rep_model_data.bones) and "上半身" in motion.frames:
+        if set(upper_target_bones).issubset(self.options.org_model_data.bones) and set(upper_target_bones).issubset(self.options.rep_model_data.bones) and "上半身" in motion.bones:
             # TOボーン名
             to_bone_name = "上半身2" if is_upper2_existed else "頭"
 
@@ -80,7 +80,7 @@ class StanceService():
             logger.info("上半身スタンス準備終了", decoration=MLogger.DECORATION_SIMPLE)
 
             for fno in motion.get_bone_fnos("上半身"):
-                bf = motion.frames["上半身"][fno]
+                bf = motion.bones["上半身"][fno]
                 if bf.key:
                     self.calc_rotation_stance(bf, org_motion, motion, org_upper_links, org_head_links, org_neck_links, org_arm_links, \
                                               rep_upper_links, rep_head_links, rep_neck_links, rep_arm_links, \
@@ -93,7 +93,7 @@ class StanceService():
 
             # utils.output_file_logger(file_logger, "上半身スタンス補正終了")
 
-            # if set(upper2_target_bones).issubset(self.options.org_model_data.bones) and set(upper2_target_bones).issubset(self.options.rep_model_data.bones) and "上半身2" in motion.frames:
+            # if set(upper2_target_bones).issubset(self.options.org_model_data.bones) and set(upper2_target_bones).issubset(self.options.rep_model_data.bones) and "上半身2" in motion.bones:
             #     # 元モデルのリンク生成
             #     org_head_links, org_head_indexes = self.options.org_model_data.create_link_2_top_one("頭")
             #     org_upper2_links, org_upper2_indexes = self.options.org_model_data.create_link_2_top_one("上半身2")
@@ -118,7 +118,7 @@ class StanceService():
 
             #     utils.output_file_logger(file_logger, "上半身2スタンス準備終了")
 
-            #     for bf in motion.frames["上半身2"]:
+            #     for bf in motion.bones["上半身2"]:
             #         if bf.key == True:
             #             calc_rotation_stance(org_motion, motion, self.options.org_model_data, org_upper2_links, org_upper2_indexes, org_head_links, org_head_indexes, org_arm_links, org_arm_indexes, \
             #                 self.options.rep_model_data, rep_upper2_links, rep_upper2_indexes, rep_head_links, rep_head_indexes, rep_arm_links, rep_arm_indexes, "", "上半身2", "上半身2", "頭", "上半身2", \
@@ -202,9 +202,9 @@ class StanceService():
             # チェックなし条件に合致する場合、チェックなしで適用
             bf.rotation = from_rotation
         else:
-            if bf.fno in motion.frames[target_from_bone_name]:
+            if bf.fno in motion.bones[target_from_bone_name]:
                 # 元にもあるキーである場合、内積チェック
-                uad = abs(MQuaternion.dotProduct(from_rotation, motion.frames[target_from_bone_name][bf.fno].rotation))
+                uad = abs(MQuaternion.dotProduct(from_rotation, motion.bones[target_from_bone_name][bf.fno].rotation))
                 if uad < dot_limit:
                     logger.warning("%sフレーム目%sスタンス補正失敗: 角度:%s, uad: %s", bf.fno, target_from_bone_name, from_rotation.toEulerAngles(), uad)
                 else:
@@ -301,8 +301,8 @@ class StanceService():
             if fidx == 0:
                 continue
 
-            prev_bf = motion.frames[target_bone_name][fnos[fidx - 1]]
-            bf = motion.frames[target_bone_name][fno]
+            prev_bf = motion.bones[target_bone_name][fnos[fidx - 1]]
+            bf = motion.bones[target_bone_name][fno]
 
             # 内積で離れ具合をチェック
             dot = prev_bf.rotation.dotProduct(bf)
@@ -316,7 +316,7 @@ class StanceService():
                     fill_bf = motion.calc_bf(target_bone_name, half_fno)
                     fill_bf.key = True
 
-                    motion.frames[target_bone_name][half_fno] = fill_bf
+                    motion.bones[target_bone_name][half_fno] = fill_bf
         
                     # モーション再設定
                     MBezierUtils.reset_interpolation_by_rot(motion, target_bone_name, prev_bf, fill_bf, bf)
@@ -332,9 +332,9 @@ class StanceService():
             for bone_type in ["腕", "ひじ", "手首"]:
                 bone_name = "{0}{1}".format(direction, bone_type)
 
-                if bone_name in arm_diff_qq_dic and bone_name in data_set.motion_vmd_data.frames:
+                if bone_name in arm_diff_qq_dic and bone_name in data_set.motion_vmd_data.bones:
                     # スタンス補正値がある場合
-                    for bf in data_set.motion_vmd_data.frames[bone_name].values():
+                    for bf in data_set.motion_vmd_data.bones[bone_name].values():
                         if bf.key:
                             if arm_diff_qq_dic[bone_name]["from"] == MQuaternion():
                                 bf.rotation = bf.rotation * arm_diff_qq_dic[bone_name]["to"]
@@ -353,8 +353,6 @@ class StanceService():
                 from_bone_name = "{0}{1}".format(direction, from_bone_type) if from_bone_type else None
                 target_bone_name = "{0}{1}".format(direction, target_bone_type)
                 to_bone_name = "{0}{1}".format(direction, to_bone_type)
-                
-                arm_diff_qq_dic[target_bone_name] = {}
 
                 if from_bone_name:
                     bone_names = [from_bone_name, target_bone_name, to_bone_name]
@@ -363,6 +361,9 @@ class StanceService():
 
                 if set(bone_names).issubset(data_set.org_model_data.bones) and set(bone_names).issubset(data_set.rep_model_data.bones):
                     # 対象ボーンが揃っている場合（念のためバラバラにチェック）
+
+                    # 揃ってたら辞書登録
+                    arm_diff_qq_dic[target_bone_name] = {}
 
                     if from_bone_name:
                         # FROM-TARGETの傾き

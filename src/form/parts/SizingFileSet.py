@@ -134,9 +134,9 @@ class SizingFileSet():
         result = True
 
         # ボーン
-        for k in motion.frames.keys():
+        for k in motion.bones.keys():
             bone_fnos = motion.get_bone_fnos(k)
-            if len(bone_fnos) > 1 and (motion.frames[k][bone_fnos[0]].position != MVector3D() or motion.frames[k][bone_fnos[0]].rotation != MQuaternion()):
+            if len(bone_fnos) > 1 and (motion.bones[k][bone_fnos[0]].position != MVector3D() or motion.bones[k][bone_fnos[0]].rotation != MQuaternion()):
                 # キーが存在しており、かつ初期値ではない値が入っている場合、警告対象
                 if k not in org_pmx.bones:
                     not_org_bones.append(k)
@@ -145,7 +145,7 @@ class SizingFileSet():
                     not_rep_bones.append(k)
 
             morph_fnos = motion.get_morph_fnos(k)
-            if len(morph_fnos) > 1 and (motion.frames[k][morph_fnos[0]].ratio != 0):
+            if len(morph_fnos) > 1 and (motion.bones[k][morph_fnos[0]].ratio != 0):
                 # キーが存在しており、かつ初期値ではない値が入っている場合、警告対象
                 if k not in org_pmx.morphs:
                     not_org_morphs.append(k)
@@ -219,10 +219,10 @@ class SizingFileSet():
             suffix = "_{0}".format(suffix)
 
         # 出力ファイルパス生成
-        output_vmd_path = os.path.join(motion_vmd_dir_path, "{0}_{1}{2}_{3:%Y%m%d_%H%M%S}{4}".format(motion_vmd_file_name, rep_pmx_file_name, suffix, datetime.now(), motion_vmd_ext))
+        output_vmd_path = os.path.join(motion_vmd_dir_path, "{0}_{1}{2}_{3:%Y%m%d_%H%M%S}{4}".format(motion_vmd_file_name, rep_pmx_file_name, suffix, datetime.now(), ".vmd"))
 
         # ファイルパス自体が変更されたか、自動生成ルールに則っている場合、ファイルパス変更
-        if is_force or self.is_auto_vmd_output_path(self.output_vmd_file_ctrl.file_ctrl.GetPath(), motion_vmd_dir_path, motion_vmd_file_name, motion_vmd_ext, rep_pmx_file_name):
+        if is_force or self.is_auto_vmd_output_path(self.output_vmd_file_ctrl.file_ctrl.GetPath(), motion_vmd_dir_path, motion_vmd_file_name, ".vmd", rep_pmx_file_name):
             self.output_vmd_file_ctrl.file_ctrl.SetPath(output_vmd_path)
 
         if len(output_vmd_path) >= 255 and os.name == "nt":
