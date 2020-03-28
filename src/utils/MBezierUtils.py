@@ -41,7 +41,7 @@ MZ_y2_idxs = [14, 29, 59, 44]
 # https://shspage.hatenadiary.org/entry/20140625/1403702735
 # https://bezier.readthedocs.io/en/stable/python/reference/bezier.curve.html#bezier.curve.Curve.evaluate
 def evaluate(x1v: int, y1v: int, x2v: int, y2v: int, start: int, now: int, end: int):
-    if (now - start) <= 0 or (end - start) <= 0:
+    if (end - start) <= 0:
         return 0, 0, 0
         
     x = (now - start) / (end - start)
@@ -101,7 +101,8 @@ def evaluate_by_t(x1v: int, y1v: int, x2v: int, y2v: int, start: int, end: int, 
 # 3次ベジェ曲線の分割
 def split_bezier_mmd(x1v: int, y1v: int, x2v: int, y2v: int, start: int, now: int, end: int):
     if (now - start) == 0 or (end - start) == 0:
-        return 0, 0, 0, False, False, [MVector2D(), MVector2D(), MVector2D(), MVector2D()], [MVector2D(), MVector2D(), MVector2D(), MVector2D()]
+        return 0, 0, 0, False, False, [MVector2D(0, 0), MVector2D(20, 20), MVector2D(107, 107), MVector2D(127, 127)], \
+            [MVector2D(0, 0), MVector2D(20, 20), MVector2D(107, 107), MVector2D(127, 127)]
 
     # 3次ベジェ曲線を分割する
     x, y, t, before_bz, after_bz = split_bezier(x1v, y1v, x2v, y2v, start, now, end)
@@ -117,17 +118,11 @@ def is_fit_bezier_mmd(bz: list, offset=0):
             # MMD用の範囲内でなければNG
             return False
 
+    if bz[1].x() == bz[1].y() == bz[2].x() == bz[2].y() == 0:
+        # 全部0なら不整合
+        return False
+
     return True
-
-
-def fit_bezier_mmd(bz: MVector2D):
-    if not (0 <= bz.x() <= INTERPOLATION_MMD_MAX) or not (0 <= bz.y() <= INTERPOLATION_MMD_MAX):
-        x = 0 if 0 > bz.x() else INTERPOLATION_MMD_MAX if INTERPOLATION_MMD_MAX < bz.x() else bz.x()
-        y = 0 if 0 > bz.y() else INTERPOLATION_MMD_MAX if INTERPOLATION_MMD_MAX < bz.y() else bz.y()
-
-        return MVector2D(x, y)
-
-    return bz
 
 
 # 3次ベジェ曲線の分割

@@ -693,19 +693,19 @@ class PmxModel():
         self.right_toe_vertex = None
     
     # ボーンリンク生成
-    def create_link_2_top_lr(self, *target_bone_types):
+    def create_link_2_top_lr(self, *target_bone_types, is_defined=True):
         for target_bone_type in target_bone_types:
-            left_links = self.create_link_2_top_one("左{0}".format(target_bone_type))
-            right_links = self.create_link_2_top_one("右{0}".format(target_bone_type))
+            left_links = self.create_link_2_top_one("左{0}".format(target_bone_type), is_defined)
+            right_links = self.create_link_2_top_one("右{0}".format(target_bone_type), is_defined)
 
             if left_links and right_links:
                 # IKリンクがある場合、そのまま返す
                 return {"左": left_links, "右": right_links}
 
     # ボーンリンク生成
-    def create_link_2_top_one(self, *target_bone_names):
+    def create_link_2_top_one(self, *target_bone_names, is_defined=True):
         for target_bone_name in target_bone_names:
-            links = self.create_link_2_top(target_bone_name, None)
+            links = self.create_link_2_top(target_bone_name, None, is_defined)
 
             if links and target_bone_name in links.all():
                 reversed_links = BoneLinks()
@@ -719,7 +719,7 @@ class PmxModel():
         # 最後まで回しても取れなかった場合、エラー
         raise SizingException("ボーンリンクの生成に失敗しました。モデル「%s」に「%s」のボーンがあるか確認してください。" % (self.name, ",".join(target_bone_names)))
 
-    def create_link_2_top(self, target_bone_name: str, links: BoneLinks):
+    def create_link_2_top(self, target_bone_name: str, links: BoneLinks, is_defined: bool):
         if not links:
             # まだリンクが生成されていない場合、順序保持辞書生成
             links = BoneLinks()
@@ -737,11 +737,18 @@ class PmxModel():
         links.append(self.bones[target_bone_name])
 
         parent_name = None
-        for pname in self.PARENT_BORN_PAIR[target_bone_name]:
-            # 親子関係のボーンリストから親ボーンが存在した場合
-            if pname in self.bones:
-                parent_name = pname
-                break
+        if is_defined:
+            # 定義済みの場合
+            for pname in self.PARENT_BORN_PAIR[target_bone_name]:
+                # 親子関係のボーンリストから親ボーンが存在した場合
+                if pname in self.bones:
+                    parent_name = pname
+                    break
+        else:
+            # 未定義でよい場合
+            if self.bones[target_bone_name].parent_index >= 0:
+                # 親ボーンが存在している場合
+                parent_name = self.bone_indexes[self.bones[target_bone_name].parent_index]
 
         if not parent_name:
             # 親ボーンがボーンインデックスリストになければ終了
@@ -751,7 +758,7 @@ class PmxModel():
         
         # 親をたどる
         try:
-            return self.create_link_2_top(parent_name, links)
+            return self.create_link_2_top(parent_name, links, is_defined)
         except RecursionError:
             raise SizingException("ボーンリンクの生成に失敗しました。\nモデル「{0}」の「{1}」ボーンで以下を確認してください。\n" \
                                   + "・同じ名前のボーンが複数ないか（ボーンのINDEXがズレるため、サイジングに失敗します）\n" \

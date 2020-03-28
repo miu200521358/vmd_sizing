@@ -2,7 +2,7 @@
 #
 import copy
 import struct
-from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
+from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from utils import MBezierUtils # noqa
 from utils.MLogger import MLogger
 
@@ -173,7 +173,7 @@ class VmdMotion():
     # 補間曲線を考慮した指定フレーム番号の位置
     # https://www55.atwiki.jp/kumiho_k/pages/15.html
     # https://harigane.at.webry.info/201103/article_1.html
-    def calc_bf(self, bone_name: str, fno: int, is_key=False, is_read=False):
+    def calc_bf(self, bone_name: str, fno: int, is_key=False, is_read=False, is_reset_interpolation=False):
         fill_bf = VmdBoneFrame(fno=fno, name=bone_name)
 
         if bone_name not in self.bones:
@@ -210,187 +210,190 @@ class VmdMotion():
                 return fill_bf
 
         prev_bf = self.bones[bone_name][before_fnos[-1]]
-        after_bf = self.bones[bone_name][after_fnos[0]]
+        next_bf = self.bones[bone_name][after_fnos[0]]
 
         # 補間曲線を元に間を埋める
-        fill_bf.rotation = self.calc_bf_rot(prev_bf, fill_bf, after_bf)
-        fill_bf.position = self.calc_bf_pos(prev_bf, fill_bf, after_bf)
-        
+        fill_bf.rotation = self.calc_bf_rot(prev_bf, fill_bf, next_bf)
+        fill_bf.position = self.calc_bf_pos(prev_bf, fill_bf, next_bf)
+
+        if is_reset_interpolation:
+            # 補間曲線再設定の場合、範囲外でも構わないので補間曲線を設定する
+
+            # 回転の分割
+            r_x, r_y, r_t, r_bresult, r_aresult, r_before_bz, r_after_bz \
+                = MBezierUtils.split_bezier_mmd(next_bf.interpolation[MBezierUtils.R_x1_idxs[3]], next_bf.interpolation[MBezierUtils.R_y1_idxs[3]], \
+                                                next_bf.interpolation[MBezierUtils.R_x2_idxs[3]], next_bf.interpolation[MBezierUtils.R_y2_idxs[3]], \
+                                                prev_bf.fno, fill_bf.fno, next_bf.fno)
+            # 移動Xの分割
+            x_x, x_y, x_t, x_bresult, x_aresult, x_before_bz, x_aftex_bz \
+                = MBezierUtils.split_bezier_mmd(next_bf.interpolation[MBezierUtils.MX_x1_idxs[3]], next_bf.interpolation[MBezierUtils.MX_y1_idxs[3]], \
+                                                next_bf.interpolation[MBezierUtils.MX_x2_idxs[3]], next_bf.interpolation[MBezierUtils.MX_y2_idxs[3]], \
+                                                prev_bf.fno, fill_bf.fno, next_bf.fno)
+            # 移動Yの分割
+            y_x, y_y, y_t, y_bresult, y_aresult, y_before_bz, y_aftey_bz \
+                = MBezierUtils.split_bezier_mmd(next_bf.interpolation[MBezierUtils.MY_x1_idxs[3]], next_bf.interpolation[MBezierUtils.MY_y1_idxs[3]], \
+                                                next_bf.interpolation[MBezierUtils.MY_x2_idxs[3]], next_bf.interpolation[MBezierUtils.MY_y2_idxs[3]], \
+                                                prev_bf.fno, fill_bf.fno, next_bf.fno)
+            # 移動Zの分割
+            z_x, z_y, z_t, z_bresult, z_aresult, z_before_bz, z_aftez_bz \
+                = MBezierUtils.split_bezier_mmd(next_bf.interpolation[MBezierUtils.MZ_x1_idxs[3]], next_bf.interpolation[MBezierUtils.MZ_y1_idxs[3]], \
+                                                next_bf.interpolation[MBezierUtils.MZ_x2_idxs[3]], next_bf.interpolation[MBezierUtils.MZ_y2_idxs[3]], \
+                                                prev_bf.fno, fill_bf.fno, next_bf.fno)
+
+            # 強制設定
+            self.reset_interpolation(bone_name, prev_bf, fill_bf, next_bf, r_before_bz, r_after_bz, \
+                                     MBezierUtils.R_x1_idxs, MBezierUtils.R_y1_idxs, MBezierUtils.R_x2_idxs, MBezierUtils.R_y2_idxs)
+            self.reset_interpolation(bone_name, prev_bf, fill_bf, next_bf, x_before_bz, x_aftex_bz, \
+                                     MBezierUtils.MX_x1_idxs, MBezierUtils.MX_y1_idxs, MBezierUtils.MX_x2_idxs, MBezierUtils.MX_y2_idxs)
+            self.reset_interpolation(bone_name, prev_bf, fill_bf, next_bf, y_before_bz, y_aftey_bz, \
+                                     MBezierUtils.MY_x1_idxs, MBezierUtils.MY_y1_idxs, MBezierUtils.MY_x2_idxs, MBezierUtils.MY_y2_idxs)
+            self.reset_interpolation(bone_name, prev_bf, fill_bf, next_bf, z_before_bz, z_aftez_bz, \
+                                     MBezierUtils.MZ_x1_idxs, MBezierUtils.MZ_y1_idxs, MBezierUtils.MZ_x2_idxs, MBezierUtils.MZ_y2_idxs)
+
         return fill_bf
 
     # 補間曲線を元に、回転ボーンの値を求める
-    def calc_bf_rot(self, prev_bf: VmdBoneFrame, fill_bf: VmdBoneFrame, after_bf: VmdBoneFrame):
-        if prev_bf.rotation != after_bf.rotation:
+    def calc_bf_rot(self, prev_bf: VmdBoneFrame, fill_bf: VmdBoneFrame, next_bf: VmdBoneFrame):
+        if prev_bf.rotation != next_bf.rotation:
             # 回転補間曲線
-            rx, ry, rt = MBezierUtils.evaluate(after_bf.interpolation[MBezierUtils.R_x1_idxs[3]], after_bf.interpolation[MBezierUtils.R_y1_idxs[3]], \
-                                               after_bf.interpolation[MBezierUtils.R_x2_idxs[3]], after_bf.interpolation[MBezierUtils.R_y2_idxs[3]], \
-                                               prev_bf.fno, fill_bf.fno, after_bf.fno)
-            return MQuaternion.slerp(prev_bf.rotation, after_bf.rotation, ry)
+            rx, ry, rt = MBezierUtils.evaluate(next_bf.interpolation[MBezierUtils.R_x1_idxs[3]], next_bf.interpolation[MBezierUtils.R_y1_idxs[3]], \
+                                               next_bf.interpolation[MBezierUtils.R_x2_idxs[3]], next_bf.interpolation[MBezierUtils.R_y2_idxs[3]], \
+                                               prev_bf.fno, fill_bf.fno, next_bf.fno)
+            return MQuaternion.slerp(prev_bf.rotation, next_bf.rotation, ry)
 
         return copy.deepcopy(prev_bf.rotation)
 
     # 補間曲線を元に移動ボーンの値を求める
-    def calc_bf_pos(self, prev_bf: VmdBoneFrame, fill_bf: VmdBoneFrame, after_bf: VmdBoneFrame):
+    def calc_bf_pos(self, prev_bf: VmdBoneFrame, fill_bf: VmdBoneFrame, next_bf: VmdBoneFrame):
 
         # 補間曲線を元に間を埋める
-        if prev_bf.position != after_bf.position:
+        if prev_bf.position != next_bf.position:
             # http://rantyen.blog.fc2.com/blog-entry-65.html
             # X移動補間曲線
-            xx, xy, xt = MBezierUtils.evaluate(after_bf.interpolation[MBezierUtils.MX_x1_idxs[3]], after_bf.interpolation[MBezierUtils.MX_y1_idxs[3]], \
-                                               after_bf.interpolation[MBezierUtils.MX_x2_idxs[3]], after_bf.interpolation[MBezierUtils.MX_y2_idxs[3]], \
-                                               prev_bf.fno, fill_bf.fno, after_bf.fno)
+            xx, xy, xt = MBezierUtils.evaluate(next_bf.interpolation[MBezierUtils.MX_x1_idxs[3]], next_bf.interpolation[MBezierUtils.MX_y1_idxs[3]], \
+                                               next_bf.interpolation[MBezierUtils.MX_x2_idxs[3]], next_bf.interpolation[MBezierUtils.MX_y2_idxs[3]], \
+                                               prev_bf.fno, fill_bf.fno, next_bf.fno)
             # Y移動補間曲線
-            yx, yy, yt = MBezierUtils.evaluate(after_bf.interpolation[MBezierUtils.MY_x1_idxs[3]], after_bf.interpolation[MBezierUtils.MY_y1_idxs[3]], \
-                                               after_bf.interpolation[MBezierUtils.MY_x2_idxs[3]], after_bf.interpolation[MBezierUtils.MY_y2_idxs[3]], \
-                                               prev_bf.fno, fill_bf.fno, after_bf.fno)
+            yx, yy, yt = MBezierUtils.evaluate(next_bf.interpolation[MBezierUtils.MY_x1_idxs[3]], next_bf.interpolation[MBezierUtils.MY_y1_idxs[3]], \
+                                               next_bf.interpolation[MBezierUtils.MY_x2_idxs[3]], next_bf.interpolation[MBezierUtils.MY_y2_idxs[3]], \
+                                               prev_bf.fno, fill_bf.fno, next_bf.fno)
             # Z移動補間曲線
-            zx, zy, zt = MBezierUtils.evaluate(after_bf.interpolation[MBezierUtils.MZ_x1_idxs[3]], after_bf.interpolation[MBezierUtils.MZ_y1_idxs[3]], \
-                                               after_bf.interpolation[MBezierUtils.MZ_x2_idxs[3]], after_bf.interpolation[MBezierUtils.MZ_y2_idxs[3]], \
-                                               prev_bf.fno, fill_bf.fno, after_bf.fno)
+            zx, zy, zt = MBezierUtils.evaluate(next_bf.interpolation[MBezierUtils.MZ_x1_idxs[3]], next_bf.interpolation[MBezierUtils.MZ_y1_idxs[3]], \
+                                               next_bf.interpolation[MBezierUtils.MZ_x2_idxs[3]], next_bf.interpolation[MBezierUtils.MZ_y2_idxs[3]], \
+                                               prev_bf.fno, fill_bf.fno, next_bf.fno)
 
             fill_pos = MVector3D()
-            fill_pos.setX(prev_bf.position.x() + ((after_bf.position.x() - prev_bf.position.x()) * xy))
-            fill_pos.setY(prev_bf.position.y() + ((after_bf.position.y() - prev_bf.position.y()) * yy))
-            fill_pos.setZ(prev_bf.position.z() + ((after_bf.position.z() - prev_bf.position.z()) * zy))
+            fill_pos.setX(prev_bf.position.x() + ((next_bf.position.x() - prev_bf.position.x()) * xy))
+            fill_pos.setY(prev_bf.position.y() + ((next_bf.position.y() - prev_bf.position.y()) * yy))
+            fill_pos.setZ(prev_bf.position.z() + ((next_bf.position.z() - prev_bf.position.z()) * zy))
             
             return fill_pos
         
         return copy.deepcopy(prev_bf.position)
     
-    # キーフレを指定bfで分割する
-    def split_bf(self, target_bone_name: str, prev_bf: VmdBoneFrame, now_bf: VmdBoneFrame, next_bf: VmdBoneFrame):
-        # 回転が分割可能か
-        r_x, r_y, r_t, r_bresult, r_aresult, r_before_bz, r_after_bz \
-            = self.is_able_split_bf(target_bone_name, prev_bf, now_bf, next_bf, \
-                                    MBezierUtils.R_x1_idxs, MBezierUtils.R_y1_idxs, MBezierUtils.R_x2_idxs, MBezierUtils.R_y2_idxs)
-        # 移動Xが分割可能か
-        x_x, x_y, x_t, x_bresult, x_aresult, x_before_bz, x_aftex_bz \
-            = self.is_able_split_bf(target_bone_name, prev_bf, now_bf, next_bf, \
-                                    MBezierUtils.MX_x1_idxs, MBezierUtils.MX_y1_idxs, MBezierUtils.MX_x2_idxs, MBezierUtils.MX_y2_idxs)
-        # 移動Yが分割可能か
-        y_x, y_y, y_t, y_bresult, y_aresult, y_before_bz, y_aftey_bz \
-            = self.is_able_split_bf(target_bone_name, prev_bf, now_bf, next_bf, \
-                                    MBezierUtils.MY_x1_idxs, MBezierUtils.MY_y1_idxs, MBezierUtils.MY_x2_idxs, MBezierUtils.MY_y2_idxs)
-        # 移動Zが分割可能か
-        z_x, z_y, z_t, z_bresult, z_aresult, z_before_bz, z_aftez_bz \
-            = self.is_able_split_bf(target_bone_name, prev_bf, now_bf, next_bf, \
-                                    MBezierUtils.MZ_x1_idxs, MBezierUtils.MZ_y1_idxs, MBezierUtils.MZ_x2_idxs, MBezierUtils.MZ_y2_idxs)
+    # キーフレを指定されたフレーム番号の前後で分割する
+    def split_bf_by_fno(self, target_bone_name: str, prev_bf: VmdBoneFrame, next_bf: VmdBoneFrame, fill_fno: int):
+        if not (prev_bf.fno < fill_fno < next_bf.fno):
+            # 間の分割が出来ない場合、終了
+            return False
 
-        # とりあえず補間曲線は設定する
-        self.reset_interpolation(target_bone_name, prev_bf, now_bf, next_bf, r_before_bz, r_after_bz, \
-                                 MBezierUtils.R_x1_idxs, MBezierUtils.R_y1_idxs, MBezierUtils.R_x2_idxs, MBezierUtils.R_y2_idxs)
-        self.reset_interpolation(target_bone_name, prev_bf, now_bf, next_bf, x_before_bz, x_aftex_bz, \
-                                 MBezierUtils.MX_x1_idxs, MBezierUtils.MX_y1_idxs, MBezierUtils.MX_x2_idxs, MBezierUtils.MX_y2_idxs)
-        self.reset_interpolation(target_bone_name, prev_bf, now_bf, next_bf, y_before_bz, y_aftey_bz, \
-                                 MBezierUtils.MY_x1_idxs, MBezierUtils.MY_y1_idxs, MBezierUtils.MY_x2_idxs, MBezierUtils.MY_y2_idxs)
-        self.reset_interpolation(target_bone_name, prev_bf, now_bf, next_bf, z_before_bz, z_aftez_bz, \
-                                 MBezierUtils.MZ_x1_idxs, MBezierUtils.MZ_y1_idxs, MBezierUtils.MZ_x2_idxs, MBezierUtils.MZ_y2_idxs)
+        # 補間曲線もともに分割する
+        fill_bf = self.calc_bf(target_bone_name, fill_fno, is_reset_interpolation=True)
+        fill_bf.key = True
+        self.bones[target_bone_name][fill_fno] = fill_bf
 
-        # 分割キーを登録する　
-        self.bones[prev_bf.name][prev_bf.fno] = prev_bf
-        prev_bf.key = True
-        self.bones[now_bf.name][now_bf.fno] = now_bf
-        now_bf.key = True
-        self.bones[next_bf.name][next_bf.fno] = next_bf
-        next_bf.key = True
+        # 分割結果
+        fill_result = True
+        # 前半の分割
+        fill_result = self.split_bf(target_bone_name, prev_bf, fill_bf) and fill_result
+        # 後半の分割
+        fill_result = self.split_bf(target_bone_name, fill_bf, next_bf) and fill_result
 
-        # それぞれの範囲内の整合性をチェックする（必要に応じて再分割）
-        # 回転前半
-        rb_new_fill_bf = self.get_resplit_bf(target_bone_name, prev_bf, now_bf, r_bresult, MBezierUtils.R_x1_idxs, MBezierUtils.R_y1_idxs, MBezierUtils.R_x2_idxs, MBezierUtils.R_y2_idxs)
-        # 回転後半
-        ra_new_fill_bf = self.get_resplit_bf(target_bone_name, now_bf, next_bf, r_aresult, MBezierUtils.R_x1_idxs, MBezierUtils.R_y1_idxs, MBezierUtils.R_x2_idxs, MBezierUtils.R_y2_idxs)
-        # 移動X前半
-        xb_new_fill_bf = self.get_resplit_bf(target_bone_name, prev_bf, now_bf, x_bresult, MBezierUtils.MX_x1_idxs, MBezierUtils.MX_y1_idxs, MBezierUtils.MX_x2_idxs, MBezierUtils.MX_y2_idxs)
-        # 移動X後半
-        xa_new_fill_bf = self.get_resplit_bf(target_bone_name, now_bf, next_bf, x_aresult, MBezierUtils.MX_x1_idxs, MBezierUtils.MX_y1_idxs, MBezierUtils.MX_x2_idxs, MBezierUtils.MX_y2_idxs)
-        # 移動Y前半
-        yb_new_fill_bf = self.get_resplit_bf(target_bone_name, prev_bf, now_bf, y_bresult, MBezierUtils.MY_x1_idxs, MBezierUtils.MY_y1_idxs, MBezierUtils.MY_x2_idxs, MBezierUtils.MY_y2_idxs)
-        # 移動Y後半
-        ya_new_fill_bf = self.get_resplit_bf(target_bone_name, now_bf, next_bf, y_aresult, MBezierUtils.MY_x1_idxs, MBezierUtils.MY_y1_idxs, MBezierUtils.MY_x2_idxs, MBezierUtils.MY_y2_idxs)
-        # 移動Z前半
-        zb_new_fill_bf = self.get_resplit_bf(target_bone_name, prev_bf, now_bf, z_bresult, MBezierUtils.MZ_x1_idxs, MBezierUtils.MZ_y1_idxs, MBezierUtils.MZ_x2_idxs, MBezierUtils.MZ_y2_idxs)
-        # 移動Z後半
-        za_new_fill_bf = self.get_resplit_bf(target_bone_name, now_bf, next_bf, z_aresult, MBezierUtils.MZ_x1_idxs, MBezierUtils.MZ_y1_idxs, MBezierUtils.MZ_x2_idxs, MBezierUtils.MZ_y2_idxs)
+        return fill_result
 
-        new_prev_bf = new_fill_bf = new_next_bf = None
-        for fill_prev_bf, fill_now_bf, fill_next_bf in [(prev_bf, rb_new_fill_bf, now_bf), (now_bf, ra_new_fill_bf, next_bf), (prev_bf, xb_new_fill_bf, now_bf), (now_bf, xa_new_fill_bf, next_bf), \
-                                                        (prev_bf, yb_new_fill_bf, now_bf), (now_bf, ya_new_fill_bf, next_bf), (prev_bf, zb_new_fill_bf, now_bf), (now_bf, za_new_fill_bf, next_bf)]:
-            if not new_fill_bf or (new_fill_bf and fill_now_bf and fill_now_bf.fno < new_fill_bf.fno):
-                # まだbfが設定されていないか、より小さいfnoの場合、処理対象
-                new_prev_bf = fill_prev_bf
-                new_fill_bf = fill_now_bf
-                new_next_bf = fill_next_bf
+    # キーフレを移動量の中心で分割する
+    def split_bf(self, target_bone_name: str, prev_bf: VmdBoneFrame, next_bf: VmdBoneFrame):
+        if prev_bf.fno == next_bf.fno:
+            # 間の分割が出来ない場合、終了
+            return True
 
-        if new_fill_bf:
-            # 分割対象bfがある場合、再分割
-            self.split_bf(target_bone_name, new_prev_bf, new_fill_bf, new_next_bf)
+        # 回転中点fno
+        r_fill_fno = self.get_split_fill_fno(target_bone_name, prev_bf, next_bf, \
+                                             MBezierUtils.R_x1_idxs, MBezierUtils.R_y1_idxs, MBezierUtils.R_x2_idxs, MBezierUtils.R_y2_idxs)
+        # 移動X中点fno
+        x_fill_fno = self.get_split_fill_fno(target_bone_name, prev_bf, next_bf, \
+                                             MBezierUtils.MX_x1_idxs, MBezierUtils.MX_y1_idxs, MBezierUtils.MX_x2_idxs, MBezierUtils.MX_y2_idxs)
+        # 移動Y中点fno
+        y_fill_fno = self.get_split_fill_fno(target_bone_name, prev_bf, next_bf, \
+                                             MBezierUtils.MY_x1_idxs, MBezierUtils.MY_y1_idxs, MBezierUtils.MY_x2_idxs, MBezierUtils.MY_y2_idxs)
+        # 移動Z中点fno
+        z_fill_fno = self.get_split_fill_fno(target_bone_name, prev_bf, next_bf, \
+                                             MBezierUtils.MZ_x1_idxs, MBezierUtils.MZ_y1_idxs, MBezierUtils.MZ_x2_idxs, MBezierUtils.MZ_y2_idxs)
 
-    # 分割可否チェック
-    def get_resplit_bf(self, target_bone_name: str, prev_bf: VmdBoneFrame, next_bf: VmdBoneFrame, is_result: bool, \
-                       x1_idxs: list, y1_idxs: list, x2_idxs: list, y2_idxs: list):
-        if not is_result:
-            # 分割不可の場合
-            new_fill_bf = self.get_refill_bf(target_bone_name, prev_bf, next_bf, x1_idxs, y1_idxs, x2_idxs, y2_idxs)
-            return new_fill_bf
+        fnos = []
+        for fill_fno in [r_fill_fno, x_fill_fno, y_fill_fno, z_fill_fno]:
+            if fill_fno and prev_bf.fno < fill_fno < next_bf.fno:
+                # fnoがあって範囲内の場合、設定対象でfnoを保持
+                fnos.append(fill_fno)
 
-        # 問題ない場合分割不要
-        return None
+        # 重複なしの昇順リスト
+        fnos = list(sorted(list(set(fnos))))
 
-    # キーフレを指定bf間の中間で区切れるフレーム番号を取得する
-    def get_refill_bf(self, target_bone_name: str, prev_bf: VmdBoneFrame, next_bf: VmdBoneFrame, \
-                      x1_idxs: list, y1_idxs: list, x2_idxs: list, y2_idxs: list):
-        next_x1v = next_bf.interpolation[x1_idxs[3]]
-        next_y1v = next_bf.interpolation[y1_idxs[3]]
-        next_x2v = next_bf.interpolation[x2_idxs[3]]
-        next_y2v = next_bf.interpolation[y2_idxs[3]]
-
-        new_fill_fno, _, _ = MBezierUtils.evaluate_by_t(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.fno, next_bf.fno, 0.5)
-
-        if prev_bf.fno < new_fill_fno < next_bf.fno:
-            # prevとnextの範囲内であれば、補間曲線込みでキーフレーム生成
-            fill_bf = self.calc_bf(target_bone_name, new_fill_fno)
-
-            return fill_bf
+        fill_result = True
+        if len(fnos) > 0:
+            # 現在処理対象以外にfnoがある場合、その最小地点で前後に分割
+            fill_result = self.split_bf_by_fno(target_bone_name, prev_bf, next_bf, fnos[0]) and fill_result
         
-        # 範囲内でない場合、None
-        return None
+        return fill_result
     
-    # キーフレを指定bfで分割できるかのチェック
-    def is_able_split_bf(self, target_bone_name: str, prev_bf: VmdBoneFrame, now_bf: VmdBoneFrame, next_bf: VmdBoneFrame, \
-                         x1_idxs: list, y1_idxs: list, x2_idxs: list, y2_idxs: list):
+    # キーフレを指定bf間の中間で区切れるフレーム番号を取得する
+    # 分割が不要（範囲内に収まってる）場合、-1で対象外
+    def get_split_fill_fno(self, target_bone_name: str, prev_bf: VmdBoneFrame, next_bf: VmdBoneFrame, \
+                           x1_idxs: list, y1_idxs: list, x2_idxs: list, y2_idxs: list):
         next_x1v = next_bf.interpolation[x1_idxs[3]]
         next_y1v = next_bf.interpolation[y1_idxs[3]]
         next_x2v = next_bf.interpolation[x2_idxs[3]]
         next_y2v = next_bf.interpolation[y2_idxs[3]]
 
-        return MBezierUtils.split_bezier_mmd(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.fno, now_bf.fno, next_bf.fno)
-    
+        if not MBezierUtils.is_fit_bezier_mmd([MVector2D(), MVector2D(next_x1v, next_y1v), MVector2D(next_x2v, next_y2v), MVector2D()]):
+            # ベジェ曲線がMMDの範囲内に収まっていない場合、中点で分割
+            new_fill_fno, _, _ = MBezierUtils.evaluate_by_t(next_x1v, next_y1v, next_x2v, next_y2v, prev_bf.fno, next_bf.fno, 0.5)
+
+            if prev_bf.fno < new_fill_fno < next_bf.fno:
+                return new_fill_fno
+        
+        # 範囲内でない場合
+        return -1
+
     # 補間曲線の再設定処理
     def reset_interpolation(self, target_bone_name: str, prev_bf: VmdBoneFrame, now_bf: VmdBoneFrame, next_bf: VmdBoneFrame, \
                             before_bz: list, after_bz: list, x1_idxs: list, y1_idxs: list, x2_idxs: list, y2_idxs: list):
+        
+        # 今回キーに設定
+        self.reset_interpolation_parts(target_bone_name, now_bf, before_bz, x1_idxs, y1_idxs, x2_idxs, y2_idxs)
 
-        # 分割（今回キー）の始点は、前半のB
-        now_bf.interpolation[x1_idxs[0]] = now_bf.interpolation[x1_idxs[1]] = now_bf.interpolation[x1_idxs[2]] = now_bf.interpolation[x1_idxs[3]] = before_bz[1].x()
-        now_bf.interpolation[y1_idxs[0]] = now_bf.interpolation[y1_idxs[1]] = now_bf.interpolation[y1_idxs[2]] = now_bf.interpolation[y1_idxs[3]] = before_bz[1].y()
+        # nextキーに設定
+        self.reset_interpolation_parts(target_bone_name, next_bf, after_bz, x1_idxs, y1_idxs, x2_idxs, y2_idxs)
 
-        # 分割（今回キー）の終点は、前半のC
-        now_bf.interpolation[x2_idxs[0]] = now_bf.interpolation[x2_idxs[1]] = now_bf.interpolation[x2_idxs[2]] = now_bf.interpolation[x2_idxs[3]] = before_bz[2].x()
-        now_bf.interpolation[y2_idxs[0]] = now_bf.interpolation[y2_idxs[1]] = now_bf.interpolation[y2_idxs[2]] = now_bf.interpolation[y2_idxs[3]] = before_bz[2].y()
+    # 補間曲線の再設定部品
+    def reset_interpolation_parts(self, target_bone_name: str, bf: VmdBoneFrame, bz: list, x1_idxs: list, y1_idxs: list, x2_idxs: list, y2_idxs: list):
+        # キーの始点は、B
+        bf.interpolation[x1_idxs[0]] = bf.interpolation[x1_idxs[1]] = bf.interpolation[x1_idxs[2]] = bf.interpolation[x1_idxs[3]] = int(bz[1].x())
+        bf.interpolation[y1_idxs[0]] = bf.interpolation[y1_idxs[1]] = bf.interpolation[y1_idxs[2]] = bf.interpolation[y1_idxs[3]] = int(bz[1].y())
 
-        # 次回読み込みキーの始点は、後半のB
-        next_bf.interpolation[x1_idxs[0]] = next_bf.interpolation[x1_idxs[1]] = next_bf.interpolation[x1_idxs[2]] = next_bf.interpolation[x1_idxs[3]] = after_bz[1].x()
-        next_bf.interpolation[y1_idxs[0]] = next_bf.interpolation[y1_idxs[1]] = next_bf.interpolation[y1_idxs[2]] = next_bf.interpolation[y1_idxs[3]] = after_bz[1].y()
-
-        # 次回読み込みキーの終点は、後半のC
-        next_bf.interpolation[x2_idxs[0]] = next_bf.interpolation[x2_idxs[1]] = next_bf.interpolation[x2_idxs[2]] = next_bf.interpolation[x2_idxs[3]] = after_bz[2].x()
-        next_bf.interpolation[y2_idxs[0]] = next_bf.interpolation[y2_idxs[1]] = next_bf.interpolation[y2_idxs[2]] = next_bf.interpolation[y2_idxs[3]] = after_bz[2].y()
+        # キーの終点は、C
+        bf.interpolation[x2_idxs[0]] = bf.interpolation[x2_idxs[1]] = bf.interpolation[x2_idxs[2]] = bf.interpolation[x2_idxs[3]] = int(bz[2].x())
+        bf.interpolation[y2_idxs[0]] = bf.interpolation[y2_idxs[1]] = bf.interpolation[y2_idxs[2]] = bf.interpolation[y2_idxs[3]] = int(bz[2].y())
 
     # ボーンモーション：フレーム番号リスト
-    def get_bone_fnos(self, bone_name: str):
+    def get_bone_fnos(self, bone_name: str, is_key=False, is_read=False):
         if not self.bones or self.motion_cnt == 0 or bone_name not in self.bones:
             return []
         
-        return sorted([fno for fno in self.bones[bone_name].keys()])
+        # 条件に合致するフレーム番号を探す
+        # is_key: 登録対象のキーを探す
+        # is_read: データ読み込み時のキーを探す
+        return [x for x in sorted(self.bones[bone_name].keys()) if (not is_key or (is_key and self.bones[x].key)) and (not is_read or (is_read and self.bones[x].read))]
 
     # モーフモーション：フレーム番号リスト
     def get_morph_fnos(self, morph_name: str):
@@ -404,19 +407,23 @@ class VmdMotion():
         total_bone_frames = []
 
         for bone_name, bone_frames in self.bones.items():
-            fnos = self.get_bone_fnos(bone_name)
-            
-            if len(fnos) > 0:
-                # 各ボーンの最終キーだけ先に登録
-                total_bone_frames.append(bone_frames[fnos[-1]])
+            if bone_name not in ["SIZING_ROOT_BONE", "頭頂", "右つま先実体", "左つま先実体", "右足底辺", "左足底辺"]:
+                # サイジング用ボーンは出力しない
+                fnos = self.get_bone_fnos(bone_name)
+                
+                if len(fnos) > 0:
+                    # 各ボーンの最終キーだけ先に登録
+                    total_bone_frames.append(bone_frames[fnos[-1]])
         
         for bone_name, bone_frames in self.bones.items():
-            fnos = self.get_bone_fnos(bone_name)
+            if bone_name not in ["SIZING_ROOT_BONE", "頭頂", "右つま先実体", "左つま先実体", "右足底辺", "左足底辺"]:
+                # サイジング用ボーンは出力しない
+                fnos = self.get_bone_fnos(bone_name)
 
-            if len(fnos) > 1:
-                # キーフレを最後の一つ手前まで登録
-                for fno in fnos[:-1]:
-                    total_bone_frames.append(bone_frames[fno])
+                if len(fnos) > 1:
+                    # キーフレを最後の一つ手前まで登録
+                    for fno in fnos[:-1]:
+                        total_bone_frames.append(bone_frames[fno])
         
         return total_bone_frames
     

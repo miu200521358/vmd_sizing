@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 #
+import numpy as np
+import _pickle as cPickle
 from datetime import datetime
 import unittest
 import sys
@@ -18,7 +20,7 @@ from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdL
 from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from module.MOptions import MOptionsDataSet # noqa
 from module.MParams import BoneLinks # noqa
-from utils import MBezierUtils # noqa
+from utils import MBezierUtils, MServiceUtils # noqa
 from utils.MException import SizingException # noqa
 from utils.MLogger import MLogger # noqa
 
@@ -338,7 +340,7 @@ class VmdDataTest(unittest.TestCase):
         VmdWriter(data_set).write()
         print(data_set.output_vmd_path)
 
-    def test_split_bf(self):
+    def test_split_bf_by_fno(self):
         motion = VmdReader(u"test/data/補間曲線テスト01.vmd").read_data()
         model = PmxReader("D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ダミーボーン頂点追加2.pmx").read_data()
 
@@ -346,9 +348,8 @@ class VmdDataTest(unittest.TestCase):
 
         prev_bf = motion.bones[target_bone_name][0]
         next_bf = motion.bones[target_bone_name][15]
-        now_bf = motion.calc_bf(target_bone_name, 8)
 
-        motion.split_bf(target_bone_name, prev_bf, now_bf, next_bf)
+        motion.split_bf_by_fno(target_bone_name, prev_bf, next_bf, 8)
 
         for fno in motion.get_bone_fnos(target_bone_name):
             bf = motion.bones[target_bone_name][fno]
@@ -364,10 +365,251 @@ class VmdDataTest(unittest.TestCase):
             print("int rot: %s, %s, %s, %s" % (bf.interpolation[MBezierUtils.R_x1_idxs[3]], bf.interpolation[MBezierUtils.R_y1_idxs[3]], \
                   bf.interpolation[MBezierUtils.R_x2_idxs[3]], bf.interpolation[MBezierUtils.R_y2_idxs[3]]))
 
-        data_set = MOptionsDataSet(motion, model, model, "E:/WebDownload/test_split_bf_{0:%Y%m%d_%H%M%S}.vmd".format(datetime.now()), False, False)
+        data_set = MOptionsDataSet(motion, model, model, "E:/WebDownload/test_split_bf_by_fno_{0:%Y%m%d_%H%M%S}.vmd".format(datetime.now()), False, False)
 
         VmdWriter(data_set).write()
         print(data_set.output_vmd_path)
+
+    def test_split_bf_by_fno01(self):
+        original_motion = VmdReader(u"test/data/補間曲線テスト01.vmd").read_data()
+        model = PmxReader("D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ダミーボーン頂点追加2.pmx").read_data()
+
+        target_bone_name = "ﾎﾞｰﾝ01"
+        links = BoneLinks()
+        links.append(model.bones["SIZING_ROOT_BONE"])
+        links.append(model.bones["ﾎﾞｰﾝ01"])
+
+        for pidx in range(10):
+            try:
+                params = np.random.randint(0, 127, (1, 4))
+                # params = [[116, 24, 22, 82]]
+
+                for fill_fno in range(original_motion.get_bone_fnos(target_bone_name)[0] + 1, original_motion.get_bone_fnos(target_bone_name)[-1]):
+
+                    motion = cPickle.loads(cPickle.dumps(original_motion, -1))
+
+                    # bfの補間曲線を再設定する
+                    next_bf = motion.bones[target_bone_name][motion.get_bone_fnos(target_bone_name)[-1]]
+                    motion.reset_interpolation_parts(target_bone_name, next_bf, [None, MVector2D(20, 20), MVector2D(107, 107), None], \
+                                                     MBezierUtils.R_x1_idxs, MBezierUtils.R_y1_idxs, MBezierUtils.R_x2_idxs, MBezierUtils.R_y2_idxs)
+                    motion.reset_interpolation_parts(target_bone_name, next_bf, [None, MVector2D(params[0][0], params[0][1]), MVector2D(params[0][2], params[0][3]), None], \
+                                                     MBezierUtils.MX_x1_idxs, MBezierUtils.MX_y1_idxs, MBezierUtils.MX_x2_idxs, MBezierUtils.MX_y2_idxs)
+                    motion.reset_interpolation_parts(target_bone_name, next_bf, [None, MVector2D(20, 20), MVector2D(107, 107), None], \
+                                                     MBezierUtils.MY_x1_idxs, MBezierUtils.MY_y1_idxs, MBezierUtils.MY_x2_idxs, MBezierUtils.MY_y2_idxs)
+                    motion.reset_interpolation_parts(target_bone_name, next_bf, [None, MVector2D(20, 20), MVector2D(107, 107), None], \
+                                                     MBezierUtils.MZ_x1_idxs, MBezierUtils.MZ_y1_idxs, MBezierUtils.MZ_x2_idxs, MBezierUtils.MZ_y2_idxs)
+                    
+                    # 補間曲線を再設定したモーションを再保持
+                    org_motion = cPickle.loads(cPickle.dumps(motion, -1))
+
+                    # 間のキーフレをテスト
+                    prev_bf = motion.bones[target_bone_name][motion.get_bone_fnos(target_bone_name)[0]]
+                    next_bf = motion.bones[target_bone_name][motion.get_bone_fnos(target_bone_name)[-1]]
+
+                    result = motion.split_bf_by_fno(target_bone_name, prev_bf, next_bf, fill_fno)
+                    # 分割に成功した場合、誤差小。失敗してる場合は誤差大
+                    delta = 0.3 if result else 1
+
+                    print("-----------------------------")
+
+                    for now_fno in motion.get_bone_fnos(target_bone_name):
+                        # 有効なキーフレをテスト
+                        now_bf = motion.calc_bf(target_bone_name, now_fno)
+
+                        org_pos_dic = MServiceUtils.calc_global_pos(model, links, org_motion, now_fno)
+                        now_pos_dic = MServiceUtils.calc_global_pos(model, links, motion, now_fno)
+
+                        print("fill_fno: %s, now_fno: %s key: %s (%s) ------------" % (fill_fno, now_bf.fno, now_bf.key, pidx))
+                        print("params: %s" % params)
+                        print("position: %s" % now_bf.position)
+                        print("rotation: %s" % now_bf.rotation.toEulerAngles4MMD())
+                        print("int move x: %s, %s, %s, %s" % (now_bf.interpolation[MBezierUtils.MX_x1_idxs[3]], now_bf.interpolation[MBezierUtils.MX_y1_idxs[3]], \
+                              now_bf.interpolation[MBezierUtils.MX_x2_idxs[3]], now_bf.interpolation[MBezierUtils.MX_y2_idxs[3]]))
+                        print("int move y: %s, %s, %s, %s" % (now_bf.interpolation[MBezierUtils.MY_x1_idxs[3]], now_bf.interpolation[MBezierUtils.MY_y1_idxs[3]], \
+                              now_bf.interpolation[MBezierUtils.MY_x2_idxs[3]], now_bf.interpolation[MBezierUtils.MY_y2_idxs[3]]))
+                        print("int move z: %s, %s, %s, %s" % (now_bf.interpolation[MBezierUtils.MZ_x1_idxs[3]], now_bf.interpolation[MBezierUtils.MZ_y1_idxs[3]], \
+                              now_bf.interpolation[MBezierUtils.MZ_x2_idxs[3]], now_bf.interpolation[MBezierUtils.MZ_y2_idxs[3]]))
+                        print("int rot: %s, %s, %s, %s" % (now_bf.interpolation[MBezierUtils.R_x1_idxs[3]], now_bf.interpolation[MBezierUtils.R_y1_idxs[3]], \
+                              now_bf.interpolation[MBezierUtils.R_x2_idxs[3]], now_bf.interpolation[MBezierUtils.R_y2_idxs[3]]))
+
+                        self.assertAlmostEqual(org_pos_dic[target_bone_name].x(), now_pos_dic[target_bone_name].x(), delta=0.2)
+                        self.assertAlmostEqual(org_pos_dic[target_bone_name].y(), now_pos_dic[target_bone_name].y(), delta=0.2)
+                        self.assertAlmostEqual(org_pos_dic[target_bone_name].z(), now_pos_dic[target_bone_name].z(), delta=0.2)
+                    
+                    print("-----------------------------")
+
+                    for fno in range(motion.get_bone_fnos(target_bone_name)[-1]):
+                        # org_bf = org_motion.calc_bf(target_bone_name, fno)
+                        now_bf = motion.calc_bf(target_bone_name, fno)
+
+                        org_pos_dic = MServiceUtils.calc_global_pos(model, links, org_motion, fno)
+                        now_pos_dic = MServiceUtils.calc_global_pos(model, links, motion, fno)
+
+                        print("** fill_fno: %s, fno: %s key: %s (%s) ------------" % (fill_fno, now_bf.fno, now_bf.key, pidx))
+                        print("** params: %s" % params)
+                        print("** position: %s" % now_bf.position)
+                        print("** rotation: %s" % now_bf.rotation.toEulerAngles4MMD())
+                        print("** int move x: %s, %s, %s, %s" % (now_bf.interpolation[MBezierUtils.MX_x1_idxs[3]], now_bf.interpolation[MBezierUtils.MX_y1_idxs[3]], \
+                              now_bf.interpolation[MBezierUtils.MX_x2_idxs[3]], now_bf.interpolation[MBezierUtils.MX_y2_idxs[3]]))
+                        print("** int move y: %s, %s, %s, %s" % (now_bf.interpolation[MBezierUtils.MY_x1_idxs[3]], now_bf.interpolation[MBezierUtils.MY_y1_idxs[3]], \
+                              now_bf.interpolation[MBezierUtils.MY_x2_idxs[3]], now_bf.interpolation[MBezierUtils.MY_y2_idxs[3]]))
+                        print("** int move z: %s, %s, %s, %s" % (now_bf.interpolation[MBezierUtils.MZ_x1_idxs[3]], now_bf.interpolation[MBezierUtils.MZ_y1_idxs[3]], \
+                              now_bf.interpolation[MBezierUtils.MZ_x2_idxs[3]], now_bf.interpolation[MBezierUtils.MZ_y2_idxs[3]]))
+                        print("** int rot: %s, %s, %s, %s" % (now_bf.interpolation[MBezierUtils.R_x1_idxs[3]], now_bf.interpolation[MBezierUtils.R_y1_idxs[3]], \
+                              now_bf.interpolation[MBezierUtils.R_x2_idxs[3]], now_bf.interpolation[MBezierUtils.R_y2_idxs[3]]))
+
+                        self.assertAlmostEqual(org_pos_dic[target_bone_name].x(), now_pos_dic[target_bone_name].x(), delta=(delta * 2))
+                        self.assertAlmostEqual(org_pos_dic[target_bone_name].y(), now_pos_dic[target_bone_name].y(), delta=(delta * 3))
+                        self.assertAlmostEqual(org_pos_dic[target_bone_name].z(), now_pos_dic[target_bone_name].z(), delta=(delta * 4))
+
+                    now = datetime.now()
+
+                    data_set = MOptionsDataSet(motion, model, model, "E:/WebDownload/test_split_bf_by_fno01_{0:%Y%m%d_%H%M%S%f}.vmd".format(now), False, False)
+                    VmdWriter(data_set).write()
+                    print(data_set.output_vmd_path)
+
+                    data_set = MOptionsDataSet(org_motion, model, model, "E:/WebDownload/test_split_bf_by_fno01_{0:%Y%m%d_%H%M%S%f}_orignal.vmd".format(now), False, False)
+                    VmdWriter(data_set).write()
+                    print(data_set.output_vmd_path)
+
+            except Exception as e:
+                # エラーになったらデータを出力する
+                now = datetime.now()
+
+                data_set = MOptionsDataSet(motion, model, model, "E:/WebDownload/test_split_bf_by_fno01_{0:%Y%m%d_%H%M%S%f}.vmd".format(now), False, False)
+                VmdWriter(data_set).write()
+                print(data_set.output_vmd_path)
+
+                data_set = MOptionsDataSet(org_motion, model, model, "E:/WebDownload/test_split_bf_by_fno01_{0:%Y%m%d_%H%M%S%f}_orignal.vmd".format(now), False, False)
+                VmdWriter(data_set).write()
+                print(data_set.output_vmd_path)
+
+                raise e
+
+    def a_test_split_bf_by_fno02(self):
+        original_motion = VmdReader(u"test/data/補間曲線テスト01.vmd").read_data()
+        model = PmxReader("D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ダミーボーン頂点追加2.pmx").read_data()
+
+        target_bone_name = "ﾎﾞｰﾝ01"
+        links = BoneLinks()
+        links.append(model.bones["SIZING_ROOT_BONE"])
+        links.append(model.bones["ﾎﾞｰﾝ01"])
+
+        base_params = [0, 16, 32, 127]
+
+        # https://qiita.com/wakame1367/items/0744268e928a28810c20
+        for xparams, yparams, zparams, rparams in zip(np.array(np.meshgrid(base_params, base_params, base_params, base_params)).T.reshape(-1, 4), \
+                                                      np.array(np.meshgrid(base_params, base_params, base_params, base_params)).T.reshape(-1, 4), \
+                                                      np.array(np.meshgrid(base_params, base_params, base_params, base_params)).T.reshape(-1, 4), \
+                                                      np.array(np.meshgrid(base_params, base_params, base_params, base_params)).T.reshape(-1, 4)):
+            try:
+                for fill_fno in range(original_motion.get_bone_fnos(target_bone_name)[0] + 1, original_motion.get_bone_fnos(target_bone_name)[-1]):
+
+                    motion = cPickle.loads(cPickle.dumps(original_motion, -1))
+
+                    # bfの補間曲線を再設定する
+                    next_bf = motion.bones[target_bone_name][motion.get_bone_fnos(target_bone_name)[-1]]
+                    motion.reset_interpolation_parts(target_bone_name, next_bf, [None, MVector2D(xparams[0], xparams[1]), MVector2D(xparams[2], xparams[3]), None], \
+                                                     MBezierUtils.MX_x1_idxs, MBezierUtils.MX_y1_idxs, MBezierUtils.MX_x2_idxs, MBezierUtils.MX_y2_idxs)
+                    motion.reset_interpolation_parts(target_bone_name, next_bf, [None, MVector2D(yparams[0], yparams[1]), MVector2D(yparams[2], yparams[3]), None], \
+                                                     MBezierUtils.MY_x1_idxs, MBezierUtils.MY_y1_idxs, MBezierUtils.MY_x2_idxs, MBezierUtils.MY_y2_idxs)
+                    motion.reset_interpolation_parts(target_bone_name, next_bf, [None, MVector2D(zparams[0], zparams[1]), MVector2D(zparams[2], zparams[3]), None], \
+                                                     MBezierUtils.MZ_x1_idxs, MBezierUtils.MZ_y1_idxs, MBezierUtils.MZ_x2_idxs, MBezierUtils.MZ_y2_idxs)
+                    motion.reset_interpolation_parts(target_bone_name, next_bf, [None, MVector2D(rparams[0], rparams[1]), MVector2D(rparams[2], rparams[3]), None], \
+                                                     MBezierUtils.R_x1_idxs, MBezierUtils.R_y1_idxs, MBezierUtils.R_x2_idxs, MBezierUtils.R_y2_idxs)
+                    
+                    # 補間曲線を再設定したモーションを再保持
+                    org_motion = cPickle.loads(cPickle.dumps(motion, -1))
+
+                    # 間のキーフレをテスト
+                    prev_bf = motion.bones[target_bone_name][motion.get_bone_fnos(target_bone_name)[0]]
+                    next_bf = motion.bones[target_bone_name][motion.get_bone_fnos(target_bone_name)[-1]]
+
+                    result = motion.split_bf_by_fno(target_bone_name, prev_bf, next_bf, fill_fno)
+                    # 分割に成功した場合、誤差小。失敗してる場合は誤差大
+                    delta = 0.3 if result else 1
+
+                    # print("-----------------------------")
+
+                    # for now_fno in motion.get_bone_fnos(target_bone_name):
+                    #     # 有効なキーフレをテスト
+                    #     now_bf = motion.calc_bf(target_bone_name, now_fno)
+
+                    #     org_pos_dic = MServiceUtils.calc_global_pos(model, links, org_motion, now_fno)
+                    #     now_pos_dic = MServiceUtils.calc_global_pos(model, links, motion, now_fno)
+
+                    #     print("fill_fno: %s, now_fno: %s key: %s ------------" % (fill_fno, now_bf.fno, now_bf.key))
+                    #     print("xparams: %s" % xparams)
+                    #     print("yparams: %s" % yparams)
+                    #     print("zparams: %s" % zparams)
+                    #     print("rparams: %s" % rparams)
+                    #     print("position: %s" % now_bf.position)
+                    #     print("rotation: %s" % now_bf.rotation.toEulerAngles4MMD())
+                    #     print("int move x: %s, %s, %s, %s" % (now_bf.interpolation[MBezierUtils.MX_x1_idxs[3]], now_bf.interpolation[MBezierUtils.MX_y1_idxs[3]], \
+                    #           now_bf.interpolation[MBezierUtils.MX_x2_idxs[3]], now_bf.interpolation[MBezierUtils.MX_y2_idxs[3]]))
+                    #     print("int move y: %s, %s, %s, %s" % (now_bf.interpolation[MBezierUtils.MY_x1_idxs[3]], now_bf.interpolation[MBezierUtils.MY_y1_idxs[3]], \
+                    #           now_bf.interpolation[MBezierUtils.MY_x2_idxs[3]], now_bf.interpolation[MBezierUtils.MY_y2_idxs[3]]))
+                    #     print("int move z: %s, %s, %s, %s" % (now_bf.interpolation[MBezierUtils.MZ_x1_idxs[3]], now_bf.interpolation[MBezierUtils.MZ_y1_idxs[3]], \
+                    #           now_bf.interpolation[MBezierUtils.MZ_x2_idxs[3]], now_bf.interpolation[MBezierUtils.MZ_y2_idxs[3]]))
+                    #     print("int rot: %s, %s, %s, %s" % (now_bf.interpolation[MBezierUtils.R_x1_idxs[3]], now_bf.interpolation[MBezierUtils.R_y1_idxs[3]], \
+                    #           now_bf.interpolation[MBezierUtils.R_x2_idxs[3]], now_bf.interpolation[MBezierUtils.R_y2_idxs[3]]))
+
+                    #     self.assertAlmostEqual(org_pos_dic[target_bone_name].x(), now_pos_dic[target_bone_name].x(), delta=(delta * 2))
+                    #     self.assertAlmostEqual(org_pos_dic[target_bone_name].y(), now_pos_dic[target_bone_name].y(), delta=(delta * 3))
+                    #     self.assertAlmostEqual(org_pos_dic[target_bone_name].z(), now_pos_dic[target_bone_name].z(), delta=(delta * 4))
+                    
+                    print("-----------------------------")
+
+                    for fno in range(motion.get_bone_fnos(target_bone_name)[-1]):
+                        # org_bf = org_motion.calc_bf(target_bone_name, fno)
+                        now_bf = motion.calc_bf(target_bone_name, fno)
+
+                        org_pos_dic = MServiceUtils.calc_global_pos(model, links, org_motion, fno)
+                        now_pos_dic = MServiceUtils.calc_global_pos(model, links, motion, fno)
+
+                        print("** fill_fno: %s, fno: %s key: %s ------------" % (fill_fno, now_bf.fno, now_bf.key))
+                        print("xparams: %s" % xparams)
+                        print("yparams: %s" % yparams)
+                        print("zparams: %s" % zparams)
+                        print("rparams: %s" % rparams)
+                        print("** position: %s" % now_bf.position)
+                        print("** rotation: %s" % now_bf.rotation.toEulerAngles4MMD())
+                        print("** int move x: %s, %s, %s, %s" % (now_bf.interpolation[MBezierUtils.MX_x1_idxs[3]], now_bf.interpolation[MBezierUtils.MX_y1_idxs[3]], \
+                              now_bf.interpolation[MBezierUtils.MX_x2_idxs[3]], now_bf.interpolation[MBezierUtils.MX_y2_idxs[3]]))
+                        print("** int move y: %s, %s, %s, %s" % (now_bf.interpolation[MBezierUtils.MY_x1_idxs[3]], now_bf.interpolation[MBezierUtils.MY_y1_idxs[3]], \
+                              now_bf.interpolation[MBezierUtils.MY_x2_idxs[3]], now_bf.interpolation[MBezierUtils.MY_y2_idxs[3]]))
+                        print("** int move z: %s, %s, %s, %s" % (now_bf.interpolation[MBezierUtils.MZ_x1_idxs[3]], now_bf.interpolation[MBezierUtils.MZ_y1_idxs[3]], \
+                              now_bf.interpolation[MBezierUtils.MZ_x2_idxs[3]], now_bf.interpolation[MBezierUtils.MZ_y2_idxs[3]]))
+                        print("** int rot: %s, %s, %s, %s" % (now_bf.interpolation[MBezierUtils.R_x1_idxs[3]], now_bf.interpolation[MBezierUtils.R_y1_idxs[3]], \
+                              now_bf.interpolation[MBezierUtils.R_x2_idxs[3]], now_bf.interpolation[MBezierUtils.R_y2_idxs[3]]))
+
+                        self.assertAlmostEqual(org_pos_dic[target_bone_name].x(), now_pos_dic[target_bone_name].x(), delta=(delta * 2))
+                        self.assertAlmostEqual(org_pos_dic[target_bone_name].y(), now_pos_dic[target_bone_name].y(), delta=(delta * 3))
+                        self.assertAlmostEqual(org_pos_dic[target_bone_name].z(), now_pos_dic[target_bone_name].z(), delta=(delta * 4))
+
+                    # now = datetime.now()
+
+                    # data_set = MOptionsDataSet(motion, model, model, "E:/WebDownload/test_split_bf_by_fno01_{0:%Y%m%d_%H%M%S%f}.vmd".format(now), False, False)
+                    # VmdWriter(data_set).write()
+                    # print(data_set.output_vmd_path)
+
+                    # data_set = MOptionsDataSet(org_motion, model, model, "E:/WebDownload/test_split_bf_by_fno01_{0:%Y%m%d_%H%M%S%f}_orignal.vmd".format(now), False, False)
+                    # VmdWriter(data_set).write()
+                    # print(data_set.output_vmd_path)
+
+            except Exception as e:
+                # エラーになったらデータを出力する
+                now = datetime.now()
+
+                data_set = MOptionsDataSet(motion, model, model, "E:/WebDownload/test_split_bf_by_fno01_{0:%Y%m%d_%H%M%S%f}.vmd".format(now), False, False)
+                VmdWriter(data_set).write()
+                print(data_set.output_vmd_path)
+
+                data_set = MOptionsDataSet(org_motion, model, model, "E:/WebDownload/test_split_bf_by_fno01_{0:%Y%m%d_%H%M%S%f}_orignal.vmd".format(now), False, False)
+                VmdWriter(data_set).write()
+                print(data_set.output_vmd_path)
+
+                raise e
 
 
 if __name__ == "__main__":

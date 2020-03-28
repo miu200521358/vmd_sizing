@@ -27,6 +27,7 @@ class PmxReader():
         self.rigidbody_index_size = 0
 
     def read_model_name(self):
+        model_name = ""
         with open(self.file_path, "rb") as f:
             # PMXファイルをバイナリ読み込み
             self.buffer = f.read()
@@ -95,6 +96,10 @@ class PmxReader():
         return model_name
 
     def read_data(self):
+        # Pmxモデル生成
+        pmx = PmxModel()
+        pmx.path = self.file_path
+
         # PMXファイルをバイナリ読み込み
         with open(self.file_path, "rb") as f:
             self.buffer = f.read()
@@ -155,10 +160,6 @@ class PmxReader():
             self.rigidbody_index_size = self.read_int(1)
             logger.test("rigidbody_index_size: %s (%s)", self.rigidbody_index_size, self.offset)
             self.read_rigidbody_index_size = lambda: self.read_int(self.rigidbody_index_size)
-
-            # Pmxモデル生成
-            pmx = PmxModel()
-            pmx.path = self.file_path
 
             # モデル名（日本語）
             pmx.name = self.read_text()
