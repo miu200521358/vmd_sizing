@@ -30,11 +30,11 @@ class SizingService():
             for data_set_idx, data_set in enumerate(self.options.data_set_list):
                 service_data_txt = "{service_data_txt}\n【No.{no}】 --------- \n".format(service_data_txt=service_data_txt, no=(data_set_idx+1)) # noqa
                 service_data_txt = "{service_data_txt}　　モーション: {motion}\n".format(service_data_txt=service_data_txt,
-                                        motion=os.path.basename(data_set.motion_vmd_data.path)) # noqa
+                                        motion=os.path.basename(data_set.motion.path)) # noqa
                 service_data_txt = "{service_data_txt}　　作成元モデル: {trace_model} ({model_name})\n".format(service_data_txt=service_data_txt,
-                                        trace_model=os.path.basename(data_set.org_model_data.path), model_name=data_set.org_model_data.name) # noqa
+                                        trace_model=os.path.basename(data_set.org_model.path), model_name=data_set.org_model.name) # noqa
                 service_data_txt = "{service_data_txt}　　変換先モデル: {replace_model} ({model_name})\n".format(service_data_txt=service_data_txt,
-                                        replace_model=os.path.basename(data_set.rep_model_data.path), model_name=data_set.rep_model_data.name) # noqa
+                                        replace_model=os.path.basename(data_set.rep_model.path), model_name=data_set.rep_model.name) # noqa
                 service_data_txt = "{service_data_txt}　　代替モデル有無: {substitute_model_flg}\n".format(service_data_txt=service_data_txt,
                                         substitute_model_flg=data_set.substitute_model_flg) # noqa
                 service_data_txt = "{service_data_txt}　　捩り分散有無: {twist_flg}".format(service_data_txt=service_data_txt,

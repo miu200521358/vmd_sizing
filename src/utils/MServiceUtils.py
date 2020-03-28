@@ -58,10 +58,7 @@ def calc_global_pos_by_direction(direction_qq: MQuaternion, target_pos_3ds_dic: 
     direction_pos_dic = OrderedDict()
 
     for bone_name, target_pos in target_pos_3ds_dic.items():
-        mat = MMatrix4x4()
-        mat.rotate(direction_qq)
-
-        direction_pos_dic[bone_name] = mat.mapVector(target_pos)
+        direction_pos_dic[bone_name] = direction_qq * target_pos
     
     return direction_pos_dic
 
@@ -82,7 +79,7 @@ def calc_relative_position(model: PmxModel, links: BoneLinks, motion: VmdMotion,
             trans_vs.append(link_bone.position + fill_bf.position)
         else:
             # 位置：自身から親の位置を引いた相対位置
-            trans_vs.append(link_bone.position + fill_bf.position - links.get(link_bone_name, offset=1).position)
+            trans_vs.append(link_bone.position + fill_bf.position - links.get(link_bone_name, offset=-1).position)
 
     return trans_vs
 
@@ -208,18 +205,18 @@ def calc_stance_diff(model: PmxModel, from_bone_name: str, to_bone_name: str, de
 def calc_leg_ik_ratio(data_set: MOptionsDataSet):
     target_bones = ["左足", "左ひざ", "左足首", "センター"]
 
-    if set(target_bones).issubset(data_set.org_model_data.bones) and set(target_bones).issubset(data_set.rep_model_data.bones):
+    if set(target_bones).issubset(data_set.org_model.bones) and set(target_bones).issubset(data_set.rep_model.bones):
         # XZ比率(足の長さ)
-        org_leg_length = ((data_set.org_model_data.bones["左足首"].position - data_set.org_model_data.bones["左ひざ"].position) \
-                          + (data_set.org_model_data.bones["左ひざ"].position - data_set.org_model_data.bones["左足"].position)).length()
-        rep_leg_length = ((data_set.rep_model_data.bones["左足首"].position - data_set.rep_model_data.bones["左ひざ"].position) \
-                          + (data_set.rep_model_data.bones["左ひざ"].position - data_set.rep_model_data.bones["左足"].position)).length()
+        org_leg_length = ((data_set.org_model.bones["左足首"].position - data_set.org_model.bones["左ひざ"].position) \
+                          + (data_set.org_model.bones["左ひざ"].position - data_set.org_model.bones["左足"].position)).length()
+        rep_leg_length = ((data_set.rep_model.bones["左足首"].position - data_set.rep_model.bones["左ひざ"].position) \
+                          + (data_set.rep_model.bones["左ひざ"].position - data_set.rep_model.bones["左足"].position)).length()
         logger.test("xz_ratio rep_leg_length: %s, org_leg_length: %s", rep_leg_length, org_leg_length)
         xz_ratio = 1 if org_leg_length == 0 else (rep_leg_length / org_leg_length)
 
         # Y比率(股下のY差)
-        rep_leg_length = (data_set.rep_model_data.bones["左足首"].position - data_set.rep_model_data.bones["左足"].position).y()
-        org_leg_length = (data_set.org_model_data.bones["左足首"].position - data_set.org_model_data.bones["左足"].position).y()
+        rep_leg_length = (data_set.rep_model.bones["左足首"].position - data_set.rep_model.bones["左足"].position).y()
+        org_leg_length = (data_set.org_model.bones["左足首"].position - data_set.org_model.bones["左足"].position).y()
         logger.test("y_ratio rep_leg_length: %s, org_leg_length: %s", rep_leg_length, org_leg_length)
         y_ratio = 1 if org_leg_length == 0 else (rep_leg_length / org_leg_length)
 

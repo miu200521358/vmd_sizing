@@ -20,7 +20,7 @@ class BoneLinks():
             
             # オフセット加味して、該当INDEXを探す
             for lidx, lkey in enumerate(self.__links.keys()):
-                if (lidx + offset) == target_bone_index:
+                if lidx == target_bone_index + offset:
                     return self.__links[lkey]
         
         return VmdBoneFrame()
@@ -52,6 +52,8 @@ class BoneLinks():
         new_links = BoneLinks()
         for lidx, lkey in enumerate(self.__links.keys()):
             new_links.append(self.__links[lkey])
+            if lkey == bone_name:
+                break
         return new_links
     
     # 指定されたボーン名までのフレームを取得
@@ -63,7 +65,7 @@ class BoneLinks():
                 calc_bone = motion.calc_bf(self.__links[lkey].name, fno)
                 new_motion.bones[calc_bone.name] = {fno: calc_bone}
             else:
-                calc_bone = VmdBoneFrame(frame=fno, name=lkey)
+                calc_bone = VmdBoneFrame(fno=fno, name=lkey)
                 new_motion.bones[calc_bone.name] = {fno: calc_bone}
         
         return new_motion

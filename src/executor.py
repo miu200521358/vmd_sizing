@@ -10,7 +10,7 @@ from utils import MFileUtils
 from utils.MLogger import MLogger
 
 logger = MLogger(__name__)
-VERSION_NAME = "ver5.00_β30"
+VERSION_NAME = "ver5.00_β31"
 
 
 if __name__ == '__main__':

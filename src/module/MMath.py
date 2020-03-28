@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #
+import copy
 import math
 import numpy as np
 import quaternion # noqa
@@ -659,6 +660,9 @@ class MQuaternion():
         if isinstance(w, MQuaternion):
             # クラスの場合
             self.__data = w.__data
+        elif isinstance(w, np.quaternion):
+            # quaternionの場合
+            self.__data = w
         elif isinstance(w, np.ndarray):
             # arrayそのものの場合
             self.__data = np.quaternion(w[0], w[1], w[2], w[3])
@@ -778,7 +782,7 @@ class MQuaternion():
         
     @classmethod
     def dotProduct(cls, v1, v2):
-        dotv = np.sum(v1.__data.components * v2.__data.components)
+        dotv = np.sum(copy.deepcopy(v1.__data.components) * copy.deepcopy(v2.__data.components))
         return dotv
     
     @classmethod
@@ -1005,9 +1009,9 @@ class MQuaternion():
     def __mul__(self, other):
         if isinstance(other, MQuaternion):
             v = self.__data * other.__data
-            return self.__class__(v.w, v.x, v.y, v.z)
+            return self.__class__(v)
         elif isinstance(other, MVector3D):
-            v = self.__data.toMatrix4x4() * other.__data
+            v = self.toMatrix4x4() * other
             return v
         else:
             v = self.__data * other

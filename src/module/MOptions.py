@@ -50,20 +50,28 @@ class MOptions():
 
 
 class MOptionsDataSet():
-    def __init__(self, motion_vmd_data, org_model_data, rep_model_data, output_vmd_path, substitute_model_flg, twist_flg):
-        self.motion_vmd_data = motion_vmd_data
-        self.org_model_data = org_model_data
-        self.rep_model_data = rep_model_data
+    def __init__(self, motion, org_model, rep_model, output_vmd_path, substitute_model_flg, twist_flg):
+        self.motion = motion
+        self.org_model = org_model
+        self.rep_model = rep_model
         self.output_vmd_path = output_vmd_path
         self.substitute_model_flg = substitute_model_flg
         self.twist_flg = twist_flg
-        self.org_motion = cPickle.loads(cPickle.dumps(self.motion_vmd_data, -1))
+        self.org_motion = cPickle.loads(cPickle.dumps(self.motion, -1))
 
-        # 実際に計算に使う足IKの比率
+        # 本来の足IKの比率
         self.original_xz_ratio = 1
         self.original_y_ratio = 1
 
-        # 足IKの比率
+        # 実際に計算に使う足IKの比率
         self.xz_ratio = 1
         self.y_ratio = 1
 
+
+class MCsvOptions():
+
+    def __init__(self, version_name, logging_level, motion):
+        self.version_name = version_name
+        self.logging_level = logging_level
+        self.motion = motion
+    

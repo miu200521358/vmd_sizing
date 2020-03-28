@@ -8,6 +8,7 @@ import winsound
 from form.panel.FilePanel import FilePanel
 from form.panel.MorphPanel import MorphPanel
 from form.panel.MultiPanel import MultiPanel
+from form.panel.CsvPanel import CsvPanel
 from form.worker.SizingWorkerThread import SizingWorkerThread
 from form.worker.LoadWorkerThread import LoadWorkerThread
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
@@ -60,14 +61,14 @@ class MainFrame(wx.Frame):
         self.morph_panel_ctrl = MorphPanel(self, self.note_ctrl, 1)
         self.note_ctrl.AddPage(self.morph_panel_ctrl, u"モーフ", False)
 
-        # # 腕タブ
-        # self.arm_panel_ctrl = ArmPanel(self, self.note_ctrl, 2)
-        # self.note_ctrl.AddPage(self.arm_panel_ctrl, u"腕", False)
-    
         # 複数タブ
         self.multi_panel_ctrl = MultiPanel(self, self.note_ctrl, 3, self.file_hitories)
         self.note_ctrl.AddPage(self.multi_panel_ctrl, u"複数", False)
 
+        # 腕タブ
+        self.csv_panel_ctrl = CsvPanel(self, self.note_ctrl, 10)
+        self.note_ctrl.AddPage(self.csv_panel_ctrl, u"CSV", False)
+    
         # ---------------------------------------------
 
         # タブ押下時の処理
@@ -268,5 +269,3 @@ class MainFrame(wx.Frame):
         self.enable()
         # プログレス非表示
         self.file_panel_ctrl.gauge_ctrl.SetValue(0)
-
-
