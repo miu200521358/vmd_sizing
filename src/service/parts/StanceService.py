@@ -82,7 +82,7 @@ class StanceService():
             # 準備（細分化）
             self.prepare_split_stance(data_set_idx, data_set, "上半身")
 
-            logger.info("上半身スタンス準備終了", decoration=MLogger.DECORATION_SIMPLE)
+            logger.info("上半身スタンス準備終了")
 
             prev_fno = 0
             for fno in data_set.motion.get_bone_fnos("上半身"):
@@ -92,7 +92,7 @@ class StanceService():
                                               org_upper_links, org_head_links, org_neck_links, org_arm_links, rep_upper_links, rep_head_links, rep_neck_links, rep_arm_links, \
                                               "", "上半身", "上半身", to_bone_name, rep_upper_initial_slope_qq, self.def_is_rotation_no_check_upper, self.def_calc_up_upper, dot_limit)
                 if fno // 500 > prev_fno:
-                    logger.info("** %sフレーム目完了", fno, decoration=MLogger.DECORATION_SIMPLE)
+                    logger.info("** %sフレーム目完了", fno)
                     prev_fno = fno
 
             # 子の角度調整
@@ -100,7 +100,7 @@ class StanceService():
             self.adjust_rotation_by_parent(data_set_idx, data_set, "左腕", "上半身")
             self.adjust_rotation_by_parent(data_set_idx, data_set, "右腕", "上半身")
 
-            logger.info("上半身スタンス終了", decoration=MLogger.DECORATION_SIMPLE)
+            logger.info("上半身スタンス終了")
 
             if is_upper2_existed:
                 # 上半身2がある場合
@@ -131,7 +131,7 @@ class StanceService():
                 # 準備（細分化）
                 self.prepare_split_stance(data_set_idx, data_set, "上半身2")
 
-                logger.info("上半身2スタンス準備終了", decoration=MLogger.DECORATION_SIMPLE)
+                logger.info("上半身2スタンス準備終了")
 
                 prev_fno = 0
                 for fno in data_set.motion.get_bone_fnos("上半身2"):
@@ -141,7 +141,7 @@ class StanceService():
                                                   org_upper2_links, org_head_links, org_neck_links, org_arm_links, rep_upper2_links, rep_head_links, rep_neck_links, rep_arm_links, \
                                                   "", "上半身2", "上半身2", "頭", rep_upper2_initial_slope_qq, self.def_is_rotation_no_check_upper, self.def_calc_up_upper, dot2_limit)
                     if fno // 500 > prev_fno:
-                        logger.info("** %sフレーム目完了", fno, decoration=MLogger.DECORATION_SIMPLE)
+                        logger.info("** %sフレーム目完了", fno)
                         prev_fno = fno
 
                 # 子の角度調整
@@ -149,7 +149,7 @@ class StanceService():
                 self.adjust_rotation_by_parent(data_set_idx, data_set, "左腕", "上半身2")
                 self.adjust_rotation_by_parent(data_set_idx, data_set, "右腕", "上半身2")
 
-                logger.info("上半身2スタンス終了", decoration=MLogger.DECORATION_SIMPLE)
+                logger.info("上半身2スタンス終了")
 
     # 指定したボーンを親ボーンの調整量に合わせてオフセット
     def adjust_rotation_by_parent(self, data_set_idx: int, data_set: MOptionsDataSet, target_bone_name: str, target_parent_name: str):
@@ -186,7 +186,7 @@ class StanceService():
                              rep_base_links: BoneLinks, rep_to_links: BoneLinks, rep_neck_links: BoneLinks, rep_arm_links: BoneLinks, \
                              direction_name: str, base_bone_name: str, from_bone_name: str, to_bone_name: str, rep_initial_slope_qq: MQuaternion, \
                              def_is_rotation_no_check, def_calc_up, dot_limit):
-        logger.test("f: %s -----------------------------", bf.fno, decoration=MLogger.DECORATION_SIMPLE)
+        logger.test("f: %s -----------------------------", bf.fno)
 
         target_base_bone_name = "{0}{1}".format(direction_name, base_bone_name)
         target_from_bone_name = "{0}{1}".format(direction_name, from_bone_name)
@@ -229,28 +229,28 @@ class StanceService():
         initial = rep_initial_slope_qq
         from_rotation = parent_qq.inverted() * from_orientation * initial.inverted()
         from_rotation.normalize()
-        logger.test("f: %s, rep_base_pos(%s): %s", bf.fno, base_bone_name, rep_base_pos, decoration=MLogger.DECORATION_SIMPLE)
-        logger.test("f: %s, rep_to_pos(%s): %s", bf.fno, target_to_bone_name, new_rep_to_pos, decoration=MLogger.DECORATION_SIMPLE)
-        logger.test("f: %s, 元rep_to_pos(%s): %s", bf.fno, target_to_bone_name, rep_to_pos, decoration=MLogger.DECORATION_SIMPLE)
-        logger.test("f: %s, up_pos: %s", bf.fno, up_pos, decoration=MLogger.DECORATION_SIMPLE)
-        logger.test("f: %s, parent: %s", bf.fno, parent_qq.toEulerAngles4MMD(), decoration=MLogger.DECORATION_SIMPLE)
-        logger.test("f: %s, initial: %s", bf.fno, initial.toEulerAngles4MMD(), decoration=MLogger.DECORATION_SIMPLE)
-        logger.test("f: %s, orientation: %s", bf.fno, from_orientation.toEulerAngles4MMD(), decoration=MLogger.DECORATION_SIMPLE)
-        logger.test("f: %s, from_rotation: %s", bf.fno, from_rotation.toEulerAngles4MMD(), decoration=MLogger.DECORATION_SIMPLE)
+        logger.test("f: %s, rep_base_pos(%s): %s", bf.fno, base_bone_name, rep_base_pos)
+        logger.test("f: %s, rep_to_pos(%s): %s", bf.fno, target_to_bone_name, new_rep_to_pos)
+        logger.test("f: %s, 元rep_to_pos(%s): %s", bf.fno, target_to_bone_name, rep_to_pos)
+        logger.test("f: %s, up_pos: %s", bf.fno, up_pos)
+        logger.test("f: %s, parent: %s", bf.fno, parent_qq.toEulerAngles4MMD())
+        logger.test("f: %s, initial: %s", bf.fno, initial.toEulerAngles4MMD())
+        logger.test("f: %s, orientation: %s", bf.fno, from_orientation.toEulerAngles4MMD())
+        logger.test("f: %s, from_rotation: %s", bf.fno, from_rotation.toEulerAngles4MMD())
 
         if def_is_rotation_no_check and def_is_rotation_no_check(rep_initial_slope_qq):
             # チェックなし条件に合致する場合、チェックなしで適用
             bf.rotation = from_rotation
         else:
             org_bf = data_set.org_motion.calc_bf(target_from_bone_name, bf.fno)
-            logger.test("f: %s, org_rotation: %s", bf.fno, org_bf.rotation.toEulerAngles4MMD(), decoration=MLogger.DECORATION_SIMPLE)
+            logger.test("f: %s, org_rotation: %s", bf.fno, org_bf.rotation.toEulerAngles4MMD())
 
             if org_bf:
                 # 元にもあるキーである場合、内積チェック
                 uad = abs(MQuaternion.dotProduct(from_rotation, org_bf.rotation))
-                logger.test("f: %s, uad: %s", bf.fno, uad, decoration=MLogger.DECORATION_SIMPLE)
+                logger.test("f: %s, uad: %s", bf.fno, uad)
                 if uad < dot_limit:
-                    logger.warning("%sフレーム目%sスタンス補正失敗: 角度:%s, uad: %s", bf.fno, target_from_bone_name, from_rotation.toEulerAngles(), uad, decoration=MLogger.DECORATION_SIMPLE)
+                    logger.warning("%sフレーム目%sスタンス補正失敗: 角度:%s, uad: %s", bf.fno, target_from_bone_name, from_rotation.toEulerAngles(), uad)
                 else:
                     # 内積の差が小さい場合、回転適用
                     bf.rotation = from_rotation
@@ -380,7 +380,7 @@ class StanceService():
                             else:
                                 bf.rotation = arm_diff_qq_dic[bone_name]["from"].inverted() * bf.rotation * arm_diff_qq_dic[bone_name]["to"]
                     
-                    logger.info("スタンス補正: %s", bone_name, decoration=MLogger.DECORATION_SIMPLE)
+                    logger.info("スタンス補正: %s", bone_name)
                     logger.test("from: %s", arm_diff_qq_dic[bone_name]["from"].toEulerAngles())
                     logger.test("to: %s", arm_diff_qq_dic[bone_name]["to"].toEulerAngles())
 

@@ -1,10 +1,18 @@
 # -*- coding: utf-8 -*-
 #
+import os
+import argparse
 import _pickle as cPickle
+
+from mmd.PmxReader import PmxReader
+from mmd.VmdReader import VmdReader
+from mmd.VpdReader import VpdReader
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
+from utils import MFileUtils
+from utils.MException import SizingException
 from utils.MLogger import MLogger # noqa
 
-logger = MLogger(__name__, level=1)
+logger = MLogger(__name__)
 
 
 class MOptions():
@@ -46,7 +54,89 @@ class MOptions():
 
             log_txt = "{0}【No.{1}】　xz: {2}, y: {3} (元: xz: {4})\n".format(log_txt, (n + 1), data_set.xz_ratio, data_set.y_ratio, data_set.original_xz_ratio)
 
-        logger.info(log_txt, decoration=MLogger.DECORATION_SIMPLE)
+        logger.info(log_txt)
+
+    @classmethod
+    def parse(cls, version_name):
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--motion_path", required=True, type=(lambda x: list(map(str, x.split(';')))))
+        parser.add_argument("--org_model_path", required=True, type=(lambda x: list(map(str, x.split(';')))))
+        parser.add_argument("--rep_model_path", required=True, type=(lambda x: list(map(str, x.split(';')))))
+        parser.add_argument("--substitute_model_flg", required=True, type=(lambda x: list(map(bool, x.split(';')))))
+        parser.add_argument("--twist_flg", required=True, type=(lambda x: list(map(bool, x.split(';')))))
+        parser.add_argument("--verbose", default=20, type=int)
+
+        args = parser.parse_args()
+        
+        MLogger.initialize(level=args.verbose, is_file=True)
+
+        try:
+            data_set_list = []
+            for set_no, (motion_path, org_model_path, rep_model_path, substitute_model_flg, twist_flg) in enumerate( \
+                zip(args.motion_path, args.org_model_path, args.rep_model_path, args.substitute_model_flg, args.twist_flg)): # noqa
+
+                display_set_no = "【No.{0}】".format(set_no + 1)
+
+                # モーションパス --------
+                logger.info("%s 調整対象モーションVMD/VPDファイル 読み込み開始", display_set_no)
+                
+                file_name, input_ext = os.path.splitext(os.path.basename(motion_path))
+                if input_ext.lower() == ".vmd":
+                    motion_reader = VmdReader(motion_path)
+                elif input_ext.lower() == ".vpd":
+                    motion_reader = VpdReader(motion_path)
+                else:
+                    raise SizingException("%s.motion_path 読み込み失敗(拡張子不正): %s", display_set_no, os.path.basename(motion_path), decoration=MLogger.DECORATION_BOX)
+                
+                motion = motion_reader.read_data()
+
+                logger.info("%s 調整対象モーションVMD/VPDファイル 読み込み成功 %s", display_set_no, os.path.basename(motion_path))
+
+                # 元モデル ----------
+                logger.info("%s モーション作成元モデルPMXファイル 読み込み開始", display_set_no)
+
+                file_name, input_ext = os.path.splitext(os.path.basename(org_model_path))
+                if input_ext.lower() == ".pmx":
+                    org_model_reader = PmxReader(org_model_path)
+                else:
+                    raise SizingException("%s.org_model_path 読み込み失敗(拡張子不正): %s", display_set_no, os.path.basename(org_model_path), decoration=MLogger.DECORATION_BOX)
+                
+                org_model = org_model_reader.read_data()
+
+                logger.info("%s モーション作成元モデルPMXファイル 読み込み成功 %s", display_set_no, os.path.basename(org_model_path))
+
+                # 先モデル ----------
+                logger.info("%s モーション変換先モデルPMXファイル 読み込み開始", display_set_no)
+
+                file_name, input_ext = os.path.splitext(os.path.basename(rep_model_path))
+                if input_ext.lower() == ".pmx":
+                    rep_model_reader = PmxReader(rep_model_path)
+                else:
+                    raise SizingException("%s.rep_model_path 読み込み失敗(拡張子不正): %s", display_set_no, os.path.basename(rep_model_path), decoration=MLogger.DECORATION_BOX)
+                
+                rep_model = rep_model_reader.read_data()
+
+                logger.info("%s モーション変換先モデルPMXファイル 読み込み成功 %s", display_set_no, os.path.basename(rep_model_path))
+
+                # 出力ファイルパス
+                output_vmd_path = MFileUtils.get_output_vmd_path(motion_path, rep_model_path, substitute_model_flg, twist_flg, "", True)
+
+                data_set = MOptionsDataSet(
+                    motion,
+                    org_model,
+                    rep_model,
+                    output_vmd_path,
+                    substitute_model_flg,
+                    twist_flg
+                )
+
+                data_set_list.append(data_set)
+
+            return MOptions(version_name, args.verbose, data_set_list)
+        except SizingException as se:
+            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
+        except Exception as e:
+            logger.critical("サイジング処理が意図せぬエラーで終了しました。", e, decoration=MLogger.DECORATION_BOX)
 
 
 class MOptionsDataSet():

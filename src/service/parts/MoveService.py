@@ -36,7 +36,7 @@ class MoveService():
                         bf.position += data_set.rep_model.bones[k].local_offset
 
                     if len(data_set.motion.bones[k].keys()) > 0:
-                        logger.info("移動補正: %s", k, decoration=MLogger.DECORATION_SIMPLE)
+                        logger.info("移動補正: %s", k)
 
         return True
 
@@ -87,11 +87,11 @@ class MoveService():
             data_set.rep_model.bones["センター"].local_offset = local_offset
             logger.test("local_offset %s", data_set.rep_model.bones["センター"].local_offset)
 
-            logger.info("Zオフセット: %s: %s", "センター", local_offset.z(), decoration=MLogger.DECORATION_SIMPLE)
+            logger.info("Zオフセット: %s: %s", "センター", local_offset.z())
 
             return
 
-        logger.info("Zオフセットなし", decoration=MLogger.DECORATION_SIMPLE)
+        logger.info("Zオフセットなし")
 
 
 

@@ -3,7 +3,6 @@
 
 import logging
 import os
-import traceback
 from pathlib import Path
 
 from mmd.VmdWriter import VmdWriter
@@ -67,9 +66,9 @@ class SizingService():
                     Path(data_set.output_vmd_path).resolve(True)
 
                     if result:
-                        logger.info("【No.%s】変換出力完了: %s", (data_set_idx + 1), os.path.basename(data_set.output_vmd_path), decoration=MLogger.DECORATION_BOX, title="サイジング成功")
+                        logger.info("【No.%s】 変換出力完了: %s", (data_set_idx + 1), os.path.basename(data_set.output_vmd_path), decoration=MLogger.DECORATION_BOX, title="サイジング成功")
                     else:
-                        logger.warning("【No.%s】変換出力完了: %s\n※サイジングに失敗している箇所があります。", (data_set_idx + 1), os.path.basename(data_set.output_vmd_path), decoration=MLogger.DECORATION_BOX, title="サイジング成功")
+                        logger.warning("【No.%s】 変換出力完了: %s\n※サイジングに失敗している箇所があります。", (data_set_idx + 1), os.path.basename(data_set.output_vmd_path), decoration=MLogger.DECORATION_BOX, title="サイジング成功")
 
                 except FileNotFoundError as fe:
                     logger.error("【No.%s】出力VMDファイルが正常に作成されなかったようです。\nパスを確認してください。%s\n\n%s", (data_set_idx + 1), data_set.output_vmd_path, fe.message, decoration=MLogger.DECORATION_BOX)
@@ -77,8 +76,8 @@ class SizingService():
             return result
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
-        except Exception:
-            logger.critical("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc(), decoration=MLogger.DECORATION_BOX)
+        except Exception as e:
+            logger.critical("サイジング処理が意図せぬエラーで終了しました。", e, decoration=MLogger.DECORATION_BOX)
         finally:
             logging.shutdown()
 

@@ -261,11 +261,11 @@ class BaseFilePickerCtrl():
             if new_data_digest and ((self.data and self.data.digest != new_data_digest) or not self.data):
                 # ハッシュが取得できてて、過去データがないかハッシュが違う場合、読み込み
                 self.data = reader.read_data()
-                logger.info("%s%s 読み込み成功: %s", display_set_no, self.title, os.path.basename(file_path), decoration=MLogger.DECORATION_SIMPLE)
+                logger.info("%s%s 読み込み成功: %s", display_set_no, self.title, os.path.basename(file_path))
                 return True
             elif new_data_digest and self.data and self.data.digest == new_data_digest:
                 # ハッシュが同じ場合、そのままスルー
-                logger.info("%s%s 読み込み成功: %s", display_set_no, self.title, os.path.basename(file_path), decoration=MLogger.DECORATION_SIMPLE)
+                logger.info("%s%s 読み込み成功: %s", display_set_no, self.title, os.path.basename(file_path))
                 return True
 
         except Exception as e:

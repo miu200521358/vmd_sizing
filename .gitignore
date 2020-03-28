@@ -17,7 +17,6 @@ vmd/
 VmdSizingSelf.bat
 VmdSizingSelfAll.bat
 replace_model_all.txt
-command.txt
 memo.txt
 
 born/*
@@ -27,6 +26,7 @@ born/*
 vertex/*
 src/past
 test/data
+log
 
 data
 build

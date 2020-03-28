@@ -10,4 +10,3 @@ def on_select_all(event, target_ctrl):
     if keyInput == 1:  # 1 stands for 'ctrl+a'
         target_ctrl.SelectAll()
     event.Skip()
-        

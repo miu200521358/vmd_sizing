@@ -244,14 +244,14 @@ class MainFrame(wx.Frame):
             event.Skip()
             return True
         else:
-            logger.info("処理時間: %s", self.show_worked_time(), decoration=MLogger.DECORATION_SIMPLE)
+            logger.info("処理時間: %s", self.show_worked_time())
         
         event.Skip()
 
     # スレッド実行結果
     def on_exec_result(self, event: wx.Event):
         self.elapsed_time += event.elapsed_time
-        logger.info("処理時間: %s", self.show_worked_time(), decoration=MLogger.DECORATION_SIMPLE)
+        logger.info("処理時間: %s", self.show_worked_time())
 
         # 終了音を鳴らす
         if os.name == "nt":

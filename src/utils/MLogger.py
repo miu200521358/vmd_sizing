@@ -2,6 +2,8 @@
 #
 import logging
 import traceback
+from datetime import datetime
+import os
 
 
 class MLogger():
@@ -9,13 +11,15 @@ class MLogger():
     DECORATION_IN_BOX = "in_box"
     DECORATION_BOX = "box"
     DECORATION_LINE = "line"
-    DECORATION_SIMPLE = "simple"
+    
+    is_file = False
+    outout_datetime = ""
 
     def __init__(self, module_name, level=logging.INFO):
         self.module_name = module_name
         self.default_level = level
         self.logger = logging.getLogger("VmdSizing").getChild(module_name)
-    
+
     def test(self, msg, *args, **kwargs):
         if not kwargs:
             kwargs = {}
@@ -62,6 +66,19 @@ class MLogger():
     def print_logger(self, msg, *args, **kwargs):
         target_level = kwargs.pop("level", logging.INFO)
         if self.logger.isEnabledFor(target_level) and self.default_level <= target_level:
+
+            if self.is_file:
+                for f in self.logger.handlers:
+                    # 既存のハンドラはすべて削除
+                    self.logger.removeHandler(f)
+                
+                # ログディレクトリ作成
+                os.makedirs("log", exist_ok=True)
+
+                # ファイル出力ありの場合、ハンドラ紐付け
+                handler = logging.FileHandler("log/VmdSizing_{0}.log".format(self.outout_datetime))
+                self.logger.addHandler(handler)
+                    
             if args and isinstance(args[0], Exception):
                 log_msg = logging.LogRecord('name', target_level, "(unknown file)", 0, "{0}\n\n{1}".format(msg, traceback.format_exc()), None, exc_info=None, func=None).getMessage()
             else:
@@ -75,17 +92,18 @@ class MLogger():
             target_decoration = kwargs.pop("decoration", None)
             title = kwargs.pop("title", None)
 
-            if target_decoration:
-                if target_decoration == MLogger.DECORATION_BOX:
-                    print(self.create_box_message(log_msg, target_level, title))
-                elif target_decoration == MLogger.DECORATION_LINE:
-                    print(self.create_line_message(log_msg, target_level, title))
-                elif target_decoration == MLogger.DECORATION_IN_BOX:
-                    print(self.create_in_box_message(log_msg, target_level, title))
+            if not self.is_file:
+                if target_decoration:
+                    if target_decoration == MLogger.DECORATION_BOX:
+                        print(self.create_box_message(log_msg, target_level, title))
+                    elif target_decoration == MLogger.DECORATION_LINE:
+                        print(self.create_line_message(log_msg, target_level, title))
+                    elif target_decoration == MLogger.DECORATION_IN_BOX:
+                        print(self.create_in_box_message(log_msg, target_level, title))
+                    else:
+                        print(self.create_simple_message(log_msg, target_level, title))
                 else:
                     print(self.create_simple_message(log_msg, target_level, title))
-            else:
-                print(self.create_simple_message(log_msg, target_level, title))
 
     def create_box_message(self, msg, level, title=None):
         msg_block = []
@@ -136,7 +154,8 @@ class MLogger():
         return "\n".join(msg_block)
 
     @classmethod
-    def initialize(cls, level=logging.INFO):
+    def initialize(cls, level=logging.INFO, is_file=False):
         # logging.basicConfig(level=level)
         logging.basicConfig(level=level, format="%(message)s [%(module_name)s]")
-
+        cls.is_file = is_file
+        cls.outout_datetime = "{0:%Y%m%d_%H%M%S}".format(datetime.now())
