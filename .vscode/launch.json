@@ -14,8 +14,8 @@
             "stopOnEntry": false,
             "args": [
                 // "--motion_path", "C:/MMD/vmd_sizing/vmd/20191226_らぶ肩01.vmd",
-                // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/運動/バレエっぽいターン グレイ/バレエっぽいターン.vmd",
-                "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/オートファジー JUICY/●オートファジー_0-1000.vmd",
+                "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/運動/バレエっぽいターン グレイ/バレエっぽいターン.vmd",
+                // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/オートファジー JUICY/●オートファジー_0-1000.vmd",
                 // "--motion_path", "C:/MMD/vmd_sizing/vmd/腰回転_さとく鶯丸.vmd",
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/ELECT yurie/エレクト.vmd",
                 // "--motion_path", "C:/MMD/vmd_sizing/vmd/20191224_センター回転_アペミク.vmd",
@@ -67,7 +67,7 @@
                 // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/艦隊これくしょん/prinzeugen 鼈(すっぽん)/prinzeugen_剛体追加.pmx",
                 "--substitute_model_flg", "0",
                 "--twist_flg", "0",
-                "--verbose", "1",
+                "--verbose", "10",
             ]
         },
         {

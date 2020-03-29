@@ -112,7 +112,7 @@ class VmdReader():
 
                 if n // 10000 > prev_n:
                     prev_n = n // 10000
-                    logger.info("VMDモーション読み込み キー: %s" % n)
+                    logger.info("-- VMDモーション読み込み キー: %s" % n)
 
             # モーフ数
             motion.morph_cnt = self.read_uint(4)
@@ -149,7 +149,7 @@ class VmdReader():
 
                 if n // 1000 > prev_n:
                     prev_n = n // 1000
-                    logger.info("VMDモーション読み込み モーフ: %s" % n)
+                    logger.info("-- VMDモーション読み込み モーフ: %s" % n)
 
             try:
                 # カメラ数

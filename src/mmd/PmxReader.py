@@ -2,7 +2,6 @@
 #
 import struct
 import hashlib
-import logging
 import copy
 from collections import OrderedDict
 
@@ -11,7 +10,7 @@ from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # 
 from utils.MException import MParseException # noqa
 from utils.MLogger import MLogger # noqa
 
-logger = MLogger(__name__, level=logging.ERROR)
+logger = MLogger(__name__)
 
 
 class PmxReader():
@@ -203,6 +202,7 @@ class PmxReader():
 
             logger.test("len(vertices): %s", len(pmx.vertices))
             logger.test("vertices.keys: %s", pmx.vertices.keys())
+            logger.info("-- PMX 頂点読み込み完了")
 
             # 面データリスト
             for _ in range(self.read_int(4)):
@@ -212,11 +212,15 @@ class PmxReader():
                 else:
                     pmx.indices.append(self.read_int(self.vertex_index_size))
             logger.test("len(indices): %s", len(pmx.indices))
+            
+            logger.info("-- PMX 面読み込み完了")
 
             # テクスチャデータリスト
             for _ in range(self.read_int(4)):
                 pmx.textures.append(self.read_text())
             logger.test("len(textures): %s", len(pmx.textures))
+
+            logger.info("-- PMX テクスチャ読み込み完了")
 
             # 材質データリスト
             for material_idx in range(self.read_int(4)):
@@ -248,6 +252,8 @@ class PmxReader():
 
                 pmx.materials[material.name] = material
             logger.test("len(materials): %s", len(pmx.materials))
+
+            logger.info("-- PMX 材質読み込み完了")
 
             # サイジング用ルートボーン
             sizing_root_bone = Bone("SIZING_ROOT_BONE", "SIZING_ROOT_BONE", MVector3D(), -1, 0, 0)
@@ -322,49 +328,49 @@ class PmxReader():
                     pmx.bones[bone.name] = bone
                     # インデックス逆引きも登録
                     pmx.bone_indexes[bone.index] = bone.name
-                
-                # サイジング用ボーン ---------
-                # 頭頂ボーン
-                head_top_vertex = pmx.get_head_top_vertex()
-                pmx.head_top_vertex = head_top_vertex
-                head_top_bone = Bone("頭頂", "head_top", copy.deepcopy(head_top_vertex.position), -1, 0, 0)
-                head_top_bone.index = len(pmx.bones.keys())
-                pmx.bones[head_top_bone.name] = head_top_bone
-                pmx.bone_indexes[head_top_bone.index] = head_top_bone.name
+            
+            # サイジング用ボーン ---------
+            # 頭頂ボーン
+            head_top_vertex = pmx.get_head_top_vertex()
+            pmx.head_top_vertex = head_top_vertex
+            head_top_bone = Bone("頭頂", "head_top", copy.deepcopy(head_top_vertex.position), -1, 0, 0)
+            head_top_bone.index = len(pmx.bones.keys())
+            pmx.bones[head_top_bone.name] = head_top_bone
+            pmx.bone_indexes[head_top_bone.index] = head_top_bone.name
 
-                # 右つま先ボーン
-                right_toe_vertex = pmx.get_toe_vertex("右")
-                pmx.right_toe_vertex = right_toe_vertex
-                right_toe_bone = Bone("右つま先実体", "right toe entity", copy.deepcopy(right_toe_vertex.position), -1, 0, 0)
-                right_toe_bone.index = len(pmx.bones.keys())
-                pmx.bones[right_toe_bone.name] = right_toe_bone
-                pmx.bone_indexes[right_toe_bone.index] = right_toe_bone.name
+            # 右つま先ボーン
+            right_toe_vertex = pmx.get_toe_vertex("右")
+            pmx.right_toe_vertex = right_toe_vertex
+            right_toe_bone = Bone("右つま先実体", "right toe entity", copy.deepcopy(right_toe_vertex.position), -1, 0, 0)
+            right_toe_bone.index = len(pmx.bones.keys())
+            pmx.bones[right_toe_bone.name] = right_toe_bone
+            pmx.bone_indexes[right_toe_bone.index] = right_toe_bone.name
 
-                # 左つま先ボーン
-                left_toe_vertex = pmx.get_toe_vertex("左")
-                pmx.left_toe_vertex = left_toe_vertex
-                left_toe_bone = Bone("左つま先実体", "left toe entity", copy.deepcopy(left_toe_vertex.position), -1, 0, 0)
-                left_toe_bone.index = len(pmx.bones.keys())
-                pmx.bones[left_toe_bone.name] = left_toe_bone
-                pmx.bone_indexes[left_toe_bone.index] = left_toe_bone.name
+            # 左つま先ボーン
+            left_toe_vertex = pmx.get_toe_vertex("左")
+            pmx.left_toe_vertex = left_toe_vertex
+            left_toe_bone = Bone("左つま先実体", "left toe entity", copy.deepcopy(left_toe_vertex.position), -1, 0, 0)
+            left_toe_bone.index = len(pmx.bones.keys())
+            pmx.bones[left_toe_bone.name] = left_toe_bone
+            pmx.bone_indexes[left_toe_bone.index] = left_toe_bone.name
 
-                if "右足ＩＫ" in pmx.bones:
-                    # 右足底辺ボーン
-                    right_leg_bottom_vertex = MVector3D(pmx.bones["右足ＩＫ"].position.x(), 0, pmx.bones["右足ＩＫ"].position.z())
-                    pmx.right_leg_bottom_vertex = right_leg_bottom_vertex
-                    right_leg_bottom_bone = Bone("右足底辺", "right toe entity", right_leg_bottom_vertex, -1, 0, 0)
-                    right_leg_bottom_bone.index = len(pmx.bones.keys())
-                    pmx.bones[right_leg_bottom_bone.name] = right_leg_bottom_bone
-                    pmx.bone_indexes[right_leg_bottom_bone.index] = right_leg_bottom_bone.name
+            if "右足ＩＫ" in pmx.bones:
+                # 右足底辺ボーン
+                right_leg_bottom_vertex = MVector3D(pmx.bones["右足ＩＫ"].position.x(), 0, pmx.bones["右足ＩＫ"].position.z())
+                pmx.right_leg_bottom_vertex = right_leg_bottom_vertex
+                right_leg_bottom_bone = Bone("右足底辺", "right toe entity", right_leg_bottom_vertex, -1, 0, 0)
+                right_leg_bottom_bone.index = len(pmx.bones.keys())
+                pmx.bones[right_leg_bottom_bone.name] = right_leg_bottom_bone
+                pmx.bone_indexes[right_leg_bottom_bone.index] = right_leg_bottom_bone.name
 
-                # 左足底辺ボーン
-                if "左足ＩＫ" in pmx.bones:
-                    left_leg_bottom_vertex = MVector3D(pmx.bones["左足ＩＫ"].position.x(), 0, pmx.bones["左足ＩＫ"].position.z())
-                    pmx.left_leg_bottom_vertex = left_leg_bottom_vertex
-                    left_leg_bottom_bone = Bone("左足底辺", "left toe entity", left_leg_bottom_vertex, -1, 0, 0)
-                    left_leg_bottom_bone.index = len(pmx.bones.keys())
-                    pmx.bones[left_leg_bottom_bone.name] = left_leg_bottom_bone
-                    pmx.bone_indexes[left_leg_bottom_bone.index] = left_leg_bottom_bone.name
+            # 左足底辺ボーン
+            if "左足ＩＫ" in pmx.bones:
+                left_leg_bottom_vertex = MVector3D(pmx.bones["左足ＩＫ"].position.x(), 0, pmx.bones["左足ＩＫ"].position.z())
+                pmx.left_leg_bottom_vertex = left_leg_bottom_vertex
+                left_leg_bottom_bone = Bone("左足底辺", "left toe entity", left_leg_bottom_vertex, -1, 0, 0)
+                left_leg_bottom_bone.index = len(pmx.bones.keys())
+                pmx.bones[left_leg_bottom_bone.name] = left_leg_bottom_bone
+                pmx.bone_indexes[left_leg_bottom_bone.index] = left_leg_bottom_bone.name
 
             # 指先ボーンがない場合、代替で挿入
             for direction in ["左", "右"]:
@@ -383,6 +389,8 @@ class PmxReader():
                         pmx.bone_indexes[to_bone.index] = to_bone.name
 
             logger.test("len(bones): %s", len(pmx.bones))
+
+            logger.info("-- PMX ボーン読み込み完了")
 
             # ボーンの長さを計算する
             self.calc_bone_length(pmx.bones, pmx.bone_indexes)
@@ -452,6 +460,8 @@ class PmxReader():
 
             logger.test("len(morphs): %s", len(pmx.morphs))
 
+            logger.info("-- PMX モーフ読み込み完了")
+
             # 表示枠データリスト
             for _ in range(self.read_int(4)):
                 display_slot = DisplaySlot(
@@ -486,6 +496,8 @@ class PmxReader():
 
             logger.test("len(display_slots): %s", len(pmx.display_slots))
 
+            logger.info("-- PMX 表示枠読み込み完了")
+
             # 剛体データリスト
             for rigidbody_idx in range(self.read_int(4)):
                 rigidbody = RigidBody(
@@ -515,6 +527,8 @@ class PmxReader():
 
             logger.test("len(rigidbodies): %s", len(pmx.rigidbodies))
 
+            logger.info("-- PMX 剛体読み込み完了")
+
             # ジョイントデータリスト
             for joint_idx in range(self.read_int(4)):
                 joint = Joint(
@@ -537,13 +551,15 @@ class PmxReader():
 
             logger.test("len(joints): %s", len(pmx.joints))
 
+            logger.info("-- PMX ジョイント読み込み完了")
+
         # ハッシュを設定
         pmx.digest = self.hexdigest()
         logger.test("pmx: %s, hash: %s", pmx.name, pmx.digest)
 
-        # # 腕がサイジング可能かチェック
-        # pmx.can_arm_sizing = pmx.check_arm_bone_can_sizing()
-        # logger.test("pmx: %s, can_arm_sizing: %s", pmx.name, pmx.can_arm_sizing)
+        # 腕がサイジング可能かチェック
+        pmx.can_arm_sizing = pmx.check_arm_bone_can_sizing()
+        logger.test("pmx: %s, can_arm_sizing: %s", pmx.name, pmx.can_arm_sizing)
 
         # # 上半身がサイジング可能かチェック
         # pmx.can_upper_sizing = pmx.check_upper_bone_can_sizing()

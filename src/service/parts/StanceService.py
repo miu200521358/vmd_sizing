@@ -2,7 +2,6 @@
 #
 
 import copy
-import _pickle as cPickle
 
 from mmd.PmxData import PmxModel # noqa
 from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
@@ -29,8 +28,22 @@ class StanceService():
             if not data_set.substitute_model_flg:
                 self.adjust_upper_stance(data_set_idx, data_set)
 
-            # 腕スタンス補正
-            self.adjust_arm_stance(data_set_idx, data_set)
+            # 腕系サイジング可能であれば、腕スタンス補正
+            if data_set.org_model.can_arm_sizing and data_set.rep_model.can_arm_sizing:
+                self.adjust_arm_stance(data_set_idx, data_set)
+            else:
+                target_model_type = ""
+
+                if not data_set.org_model.can_arm_sizing:
+                    target_model_type = "作成元"
+
+                if not data_set.rep_model.can_arm_sizing:
+                    if len(target_model_type) > 0:
+                        target_model_type = target_model_type + "/"
+                    
+                    target_model_type = target_model_type + "変換先"
+
+                logger.warning("%sモデルの腕構造にサイジングが対応していない為、腕スタンス補正をスキップします。", target_model_type, decoration=MLogger.DECORATION_BOX)
 
         return True
         
@@ -92,7 +105,7 @@ class StanceService():
                                               rep_upper_links, rep_upper_links, rep_head_links, rep_head_links, rep_arm_links, \
                                               "", "上半身", "上半身", "頭", rep_upper_initial_slope_qq, self.def_calc_up_upper, dot_limit)
                 if fno // 500 > prev_fno:
-                    logger.info("** %sフレーム目完了", fno)
+                    logger.info("-- %sフレーム目完了", fno)
                     prev_fno = fno // 500
 
             # 子の角度調整
@@ -143,7 +156,7 @@ class StanceService():
                                                   "", "上半身2", "上半身2", "頭", rep_upper2_initial_slope_qq, self.def_calc_up_upper, dot2_limit)
 
                     if fno // 500 > prev_fno:
-                        logger.info("** %sフレーム目完了", fno)
+                        logger.info("-- %sフレーム目完了", fno)
                         prev_fno = fno // 500
 
                 # 子の角度調整
