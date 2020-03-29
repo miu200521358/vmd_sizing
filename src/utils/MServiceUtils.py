@@ -16,6 +16,21 @@ from utils.MLogger import MLogger # noqa
 logger = MLogger(__name__, level=1)
 
 
+# 正面向きの情報を含むグローバル位置
+def calc_front_global_pos(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, limit_links=None):
+
+    # グローバル位置
+    global_3ds = org_center_global_3ds = calc_global_pos(model, links, motion, fno, limit_links)
+
+    # 指定ボーンまでの向いている回転量
+    direction_qq = calc_direction_qq(model, links, motion, fno, limit_links)
+
+    # 正面向きのグローバル位置
+    front_global_3ds = calc_global_pos_by_direction(direction_qq.inverted(), org_center_global_3ds)
+
+    return global_3ds, front_global_3ds, direction_qq
+
+
 # グローバル位置算出
 def calc_global_pos(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, limit_links=None):
     trans_vs = calc_relative_position(model, links, motion, fno, limit_links)

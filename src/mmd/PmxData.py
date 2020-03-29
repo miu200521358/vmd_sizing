@@ -718,7 +718,7 @@ class PmxModel():
 
         if not (down_max_pos.y() <= left_elbow_pos.y() <= up_max_pos.y()):
             # 上下の範囲内にボーンがなければNG
-            logger.warning("ひじボーンの位置が頂点位置とズレている可能性があるため、\n腕系サイジングをスキップします。\nモデル: %s", self.name, decoration=MLogger.DECORATION_BOX)
+            logger.warning("ひじボーンの位置が頂点位置とズレている可能性があるため、腕系処理をスキップします。\nモデル: %s", self.name, decoration=MLogger.DECORATION_BOX)
             return False
 
         return True
