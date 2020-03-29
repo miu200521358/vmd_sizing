@@ -66,11 +66,15 @@ class StanceService():
             # 元モデルのリンク生成
             org_center_links = data_set.org_model.create_link_2_top_one(org_center_bone_name)
             org_leg_ik_links = data_set.org_model.create_link_2_top_lr("足ＩＫ")
+            org_upper_links = data_set.org_model.create_link_2_top_one("上半身")
+            org_lower_links = data_set.org_model.create_link_2_top_one("下半身")
             org_leg_links = data_set.org_model.create_link_2_top_lr("足")
 
             # 変換先モデルのリンク生成
             rep_center_links = data_set.rep_model.create_link_2_top_one(rep_center_bone_name)
             rep_leg_ik_links = data_set.rep_model.create_link_2_top_lr("足ＩＫ")
+            rep_upper_links = data_set.rep_model.create_link_2_top_one("上半身")
+            rep_lower_links = data_set.rep_model.create_link_2_top_one("下半身")
             rep_leg_links = data_set.rep_model.create_link_2_top_lr("足")
 
             # 準備（細分化）
@@ -87,6 +91,11 @@ class StanceService():
                                                                      org_center_links, org_leg_ik_links, rep_center_links, rep_leg_ik_links, \
                                                                      org_center_bone_name, rep_center_bone_name)
                     logger.debug("f: %s, 足IKオフセット後: %s", bf.fno, bf.position)
+                    bf.position += self.calc_center_offset_by_trunk(bf, data_set_idx, data_set, \
+                                                                    org_center_links, org_upper_links, org_lower_links, org_leg_links, \
+                                                                    rep_center_links, rep_upper_links, rep_lower_links, rep_leg_links, \
+                                                                    org_center_bone_name, rep_center_bone_name)
+                    logger.debug("f: %s, 体幹オフセット後: %s", bf.fno, bf.position)
 
                 if fno // 500 > prev_fno:
                     logger.info("-- %sフレーム目完了", fno)
@@ -99,22 +108,28 @@ class StanceService():
                                      org_center_bone_name: str, rep_center_bone_name: str):
 
         # 元モデルのセンターオフセット
-        org_center_ik_offset = self.calc_center_offset_by_leg_ik_parts(bf, data_set_idx, data_set, data_set.org_model, data_set.org_motion, \
-                                                                       org_center_links, org_leg_ik_links, org_center_bone_name)
-        logger.test("f: %s, org_center_ik_offset: %s", bf.fno, org_center_ik_offset)
+        org_front_center_ik_offset, org_center_direction_qq = \
+            self.calc_center_offset_by_leg_ik_model(bf, data_set_idx, data_set, data_set.org_model, data_set.org_motion, \
+                                                    org_center_links, org_leg_ik_links, org_center_bone_name)
+        logger.test("f: %s, org_front_center_ik_offset: %s", bf.fno, org_front_center_ik_offset)
 
         # 先モデルのセンターオフセット
-        rep_center_ik_offset = self.calc_center_offset_by_leg_ik_parts(bf, data_set_idx, data_set, data_set.rep_model, data_set.motion, \
-                                                                       rep_center_links, rep_leg_ik_links, rep_center_bone_name)
-        logger.test("f: %s, rep_center_ik_offset: %s", bf.fno, rep_center_ik_offset)
+        rep_front_center_ik_offset, rep_center_direction_qq = \
+            self.calc_center_offset_by_leg_ik_model(bf, data_set_idx, data_set, data_set.rep_model, data_set.motion, \
+                                                    rep_center_links, rep_leg_ik_links, rep_center_bone_name)
+        logger.test("f: %s, rep_front_center_ik_offset: %s", bf.fno, rep_front_center_ik_offset)
         
         # 元モデルに本来のXZ比率をかけて、それと先モデルの差をオフセットとする
-        center_ik_offset = rep_center_ik_offset - (org_center_ik_offset * data_set.original_xz_ratio)
-        logger.debug("f: %s, center_ik_offset: %s", bf.fno, center_ik_offset)
+        front_center_ik_offset = rep_front_center_ik_offset - (org_front_center_ik_offset * data_set.original_xz_ratio)
+        logger.debug("f: %s, front_center_ik_offset: %s", bf.fno, front_center_ik_offset)
 
-        return center_ik_offset
+        # 回転を元に戻した位置
+        rotated_center_3ds = MServiceUtils.calc_global_pos_by_direction(rep_center_direction_qq, {rep_center_bone_name: front_center_ik_offset})
 
-    def calc_center_offset_by_leg_ik_parts(self, bf: VmdBoneFrame, data_set_idx: int, data_set: MOptionsDataSet, \
+        return rotated_center_3ds[rep_center_bone_name]
+
+    # モデル別足IKによるセンターオフセット値
+    def calc_center_offset_by_leg_ik_model(self, bf: VmdBoneFrame, data_set_idx: int, data_set: MOptionsDataSet, \
                                            model: PmxModel, motion: VmdMotion, \
                                            center_links: BoneLinks, leg_ik_links: BoneLinks, center_bone_name: str):
 
@@ -130,16 +145,103 @@ class StanceService():
         right_leg_ik_global_3ds, front_right_leg_ik_global_3ds, right_leg_ik_direction_qq = \
             MServiceUtils.calc_front_global_pos(model, leg_ik_links["右"], motion, bf.fno)
         
-        global_center_pos = front_center_global_3ds[center_bone_name]
-        global_left_ik_pos = front_left_leg_ik_global_3ds["左足ＩＫ"]
-        global_right_ik_pos = front_right_leg_ik_global_3ds["右足ＩＫ"]
+        front_center_pos = front_center_global_3ds[center_bone_name]
+        front_left_ik_pos = front_left_leg_ik_global_3ds["左足ＩＫ"]
+        front_right_ik_pos = front_right_leg_ik_global_3ds["右足ＩＫ"]
 
         # 足IKの中間とセンターの差分をオフセットとする
-        center_ik_offset = ((global_left_ik_pos + global_right_ik_pos) / 2 - global_center_pos)
-        center_ik_offset.effective()
-        center_ik_offset.setY(0)
+        front_center_ik_offset = ((front_left_ik_pos + front_right_ik_pos) / 2 - front_center_pos)
+        front_center_ik_offset.effective()
+        front_center_ik_offset.setY(0)
 
-        return center_ik_offset
+        return front_center_ik_offset, center_direction_qq
+
+    # 体幹によるセンターオフセット値
+    def calc_center_offset_by_trunk(self, bf: VmdBoneFrame, data_set_idx: int, data_set: MOptionsDataSet, \
+                                    org_center_links: BoneLinks, org_upper_links: BoneLinks, org_lower_links: BoneLinks, org_leg_links: BoneLinks, \
+                                    rep_center_links: BoneLinks, rep_upper_links: BoneLinks, rep_lower_links: BoneLinks, rep_leg_links: BoneLinks, \
+                                    org_center_bone_name: str, rep_center_bone_name: str):
+        
+        # 元モデルのセンター差分
+        org_front_upper_center_diff, org_front_lower_center_diff, org_upper_direction_qq, org_lower_direction_qq = \
+            self.calc_center_offset_by_trunk_model(bf, data_set_idx, data_set, data_set.org_model, data_set.org_motion, \
+                                                   org_center_links, org_upper_links, org_lower_links, org_center_bone_name)
+    
+        # 先モデルのセンター差分
+        rep_front_upper_center_diff, rep_front_lower_center_diff, rep_upper_direction_qq, rep_lower_direction_qq = \
+            self.calc_center_offset_by_trunk_model(bf, data_set_idx, data_set, data_set.rep_model, data_set.motion, \
+                                                   rep_center_links, rep_upper_links, rep_lower_links, rep_center_bone_name)
+    
+        # 上半身差分
+        front_upper_center_diff = rep_front_upper_center_diff - (org_front_upper_center_diff * data_set.original_xz_ratio)
+        logger.debug("f: %s, front_upper_center_diff: %s", bf.fno, front_upper_center_diff)
+    
+        # 下半身差分
+        front_lower_center_diff = rep_front_lower_center_diff - (org_front_lower_center_diff * data_set.original_xz_ratio)
+        logger.debug("f: %s, front_lower_center_diff: %s", bf.fno, front_lower_center_diff)
+
+        # 元々の方向に向かせる
+        rotated_upper_center_3ds = MServiceUtils.calc_global_pos_by_direction(rep_upper_direction_qq, {rep_center_bone_name: front_upper_center_diff})
+        rotated_lower_center_3ds = MServiceUtils.calc_global_pos_by_direction(rep_lower_direction_qq, {rep_center_bone_name: front_lower_center_diff})
+
+        # 差分の平均
+        center_trunk_diff = (rotated_upper_center_3ds[rep_center_bone_name] + rotated_lower_center_3ds[rep_center_bone_name]) / 2
+        center_trunk_diff.effective()
+        center_trunk_diff.setY(0)
+        logger.debug("f: %s, center_trunk_diff: %s", bf.fno, center_trunk_diff)
+
+        return center_trunk_diff
+
+    def calc_center_offset_by_trunk_model(self, bf: VmdBoneFrame, data_set_idx: int, data_set: MOptionsDataSet, \
+                                          model: PmxModel, motion: VmdMotion, \
+                                          center_links: BoneLinks, upper_links: BoneLinks, lower_links: BoneLinks, \
+                                          center_bone_name: str):
+
+        # センターまでの位置
+        center_global_3ds, front_center_global_3ds, center_direction_qq = \
+            MServiceUtils.calc_front_global_pos(model, center_links, motion, bf.fno)
+        
+        # 上半身を原点として回った場合のモーション
+        upper_motion = VmdMotion()
+        for lidx, lname in enumerate(upper_links.all().keys()):
+            calc_bf = copy.deepcopy(motion.calc_bf(lname, bf.fno))
+            
+            if lidx == 0:
+                # SIZING_ROOTに上半身とセンターとのズレを加算する
+                calc_bf.position += (model.bones["上半身"].position - model.bones["センター"].position)
+                calc_bf.position.setY(0)
+            
+            upper_motion.bones[lname] = {bf.fno: calc_bf}
+
+        # 上半身までの位置(センターを含む)
+        upper_global_3ds, front_upper_global_3ds, upper_direction_qq = \
+            MServiceUtils.calc_front_global_pos(model, upper_links, upper_motion, bf.fno)
+
+        # 上半身起点に基づくセンター差分
+        front_upper_center_diff = front_center_global_3ds[center_bone_name] - front_upper_global_3ds[center_bone_name]
+
+        # ---------------
+        
+        # 下半身を原点として回った場合のモーション
+        lower_motion = VmdMotion()
+        for lidx, lname in enumerate(lower_links.all().keys()):
+            calc_bf = copy.deepcopy(motion.calc_bf(lname, bf.fno))
+            
+            if lidx == 0:
+                # SIZING_ROOTに下半身とセンターとのズレを加算する
+                calc_bf.position += (model.bones["下半身"].position - model.bones["センター"].position)
+                calc_bf.position.setY(0)
+            
+            lower_motion.bones[lname] = {bf.fno: calc_bf}
+
+        # 下半身までの位置(センターを含む)
+        lower_global_3ds, front_lower_global_3ds, lower_direction_qq = \
+            MServiceUtils.calc_front_global_pos(model, lower_links, lower_motion, bf.fno)
+
+        # 下半身起点に基づくセンター差分
+        front_lower_center_diff = front_center_global_3ds[center_bone_name] - front_lower_global_3ds[center_bone_name]
+
+        return front_upper_center_diff, front_lower_center_diff, upper_direction_qq, lower_direction_qq
 
     # 上半身スタンス補正
     def adjust_upper_stance(self, data_set_idx: int, data_set: MOptionsDataSet):

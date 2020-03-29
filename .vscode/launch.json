@@ -67,8 +67,11 @@
                 // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/艦隊これくしょん/prinzeugen 鼈(すっぽん)/prinzeugen_剛体追加.pmx",
                 "--substitute_model_flg", "0",
                 "--twist_flg", "0",
-                "--verbose", "10",
-            ]
+                "--verbose", "1",
+            ],
+            "presentation": {
+                "clear": true
+            }
         },
         {
             "name": "Python: debug_exec_smooth",
@@ -128,7 +131,7 @@
             "pythonPath": "${config:python.pythonPath}",
             "stopOnEntry": false,
             "args": [
-                "--verbose", "1",
+                "--verbose", "10",
                 // "--out_log",
             ]
         },
