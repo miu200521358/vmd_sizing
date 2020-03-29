@@ -179,6 +179,7 @@ class VmdMotion():
         if bone_name not in self.bones:
             self.bones[bone_name] = {}
             self.bones[bone_name][fno] = fill_bf
+            return fill_bf
         
         # 条件に合致するフレーム番号を探す
         # is_key: 登録対象のキーを探す

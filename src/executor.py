@@ -16,7 +16,7 @@ from utils.MException import SizingException
 from utils.MLogger import MLogger
 
 logger = MLogger(__name__)
-VERSION_NAME = "ver5.00_β31"
+VERSION_NAME = "ver5.00_β32"
 
 
 if __name__ == '__main__':
@@ -43,12 +43,13 @@ if __name__ == '__main__':
     else:
         parser = argparse.ArgumentParser()
         parser.add_argument("--verbose", default=20, type=int)
+        parser.add_argument("--out_log", default=0, type=int)
         args = parser.parse_args()
         
         # ロギングレベル
-        is_out_log = True if "--out_log" in sys.argv else False
+        is_out_log = True if args.out_log == 1 else False
 
-        MLogger.initialize(level=args.verbose, is_file=is_out_log)
+        MLogger.initialize(level=args.verbose, is_file=False)
 
         # 引数指定がない場合、通常起動
         app = wx.App(False)

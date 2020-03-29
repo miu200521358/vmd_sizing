@@ -645,7 +645,6 @@ class Joint():
                    self.spring_constant_translation, self.spring_constant_rotation)
 
 
-
 class PmxModel():
     def __init__(self):
         self.path = ''

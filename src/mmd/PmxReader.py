@@ -178,8 +178,7 @@ class PmxReader():
             logger.test("english_comment: %s (%s)", pmx.english_comment, self.offset)
 
             # 頂点データリスト
-            vidx = 0
-            for _ in range(self.read_int(4)):
+            for vertex_idx in range(self.read_int(4)):
                 position = self.read_Vector3D()
                 normal = self.read_Vector3D()
                 uv = self.read_Vector2D()
@@ -193,8 +192,7 @@ class PmxReader():
                 deform = self.read_deform()
                 edge_factor = self.read_float()
 
-                vindex = vidx
-                vidx += 1
+                vindex = vertex_idx
 
                 # 頂点をウェイトボーンごとに分けて保持する
                 vertex = Vertex(vindex, position, normal, uv, extended_uvs, deform, edge_factor)
@@ -221,7 +219,7 @@ class PmxReader():
             logger.test("len(textures): %s", len(pmx.textures))
 
             # 材質データリスト
-            for _ in range(self.read_int(4)):
+            for material_idx in range(self.read_int(4)):
                 material = Material(
                     name=self.read_text(),
                     english_name=self.read_text(),
@@ -260,7 +258,7 @@ class PmxReader():
             pmx.bone_indexes[sizing_root_bone.index] = sizing_root_bone.name
 
             # ボーンデータリスト
-            for _ in range(self.read_int(4)):
+            for bone_idx in range(self.read_int(4)):
                 bone = Bone(
                     name=self.read_text(),
                     english_name=self.read_text(),
@@ -317,7 +315,7 @@ class PmxReader():
                         bone.ik.link.append(link)
 
                 # ボーンのINDEX
-                bone.index = len(pmx.bones.keys()) - 1
+                bone.index = bone_idx
 
                 if bone.name not in pmx.bones:
                     # まだ未登録の名前のボーンの場合のみ登録
@@ -330,7 +328,7 @@ class PmxReader():
                 head_top_vertex = pmx.get_head_top_vertex()
                 pmx.head_top_vertex = head_top_vertex
                 head_top_bone = Bone("頭頂", "head_top", copy.deepcopy(head_top_vertex.position), -1, 0, 0)
-                head_top_bone.index = len(pmx.bones.keys()) - 1
+                head_top_bone.index = len(pmx.bones.keys())
                 pmx.bones[head_top_bone.name] = head_top_bone
                 pmx.bone_indexes[head_top_bone.index] = head_top_bone.name
 
@@ -338,7 +336,7 @@ class PmxReader():
                 right_toe_vertex = pmx.get_toe_vertex("右")
                 pmx.right_toe_vertex = right_toe_vertex
                 right_toe_bone = Bone("右つま先実体", "right toe entity", copy.deepcopy(right_toe_vertex.position), -1, 0, 0)
-                right_toe_bone.index = len(pmx.bones.keys()) - 1
+                right_toe_bone.index = len(pmx.bones.keys())
                 pmx.bones[right_toe_bone.name] = right_toe_bone
                 pmx.bone_indexes[right_toe_bone.index] = right_toe_bone.name
 
@@ -346,7 +344,7 @@ class PmxReader():
                 left_toe_vertex = pmx.get_toe_vertex("左")
                 pmx.left_toe_vertex = left_toe_vertex
                 left_toe_bone = Bone("左つま先実体", "left toe entity", copy.deepcopy(left_toe_vertex.position), -1, 0, 0)
-                left_toe_bone.index = len(pmx.bones.keys()) - 1
+                left_toe_bone.index = len(pmx.bones.keys())
                 pmx.bones[left_toe_bone.name] = left_toe_bone
                 pmx.bone_indexes[left_toe_bone.index] = left_toe_bone.name
 
@@ -355,7 +353,7 @@ class PmxReader():
                     right_leg_bottom_vertex = MVector3D(pmx.bones["右足ＩＫ"].position.x(), 0, pmx.bones["右足ＩＫ"].position.z())
                     pmx.right_leg_bottom_vertex = right_leg_bottom_vertex
                     right_leg_bottom_bone = Bone("右足底辺", "right toe entity", right_leg_bottom_vertex, -1, 0, 0)
-                    right_leg_bottom_bone.index = len(pmx.bones.keys()) - 1
+                    right_leg_bottom_bone.index = len(pmx.bones.keys())
                     pmx.bones[right_leg_bottom_bone.name] = right_leg_bottom_bone
                     pmx.bone_indexes[right_leg_bottom_bone.index] = right_leg_bottom_bone.name
 
@@ -364,7 +362,7 @@ class PmxReader():
                     left_leg_bottom_vertex = MVector3D(pmx.bones["左足ＩＫ"].position.x(), 0, pmx.bones["左足ＩＫ"].position.z())
                     pmx.left_leg_bottom_vertex = left_leg_bottom_vertex
                     left_leg_bottom_bone = Bone("左足底辺", "left toe entity", left_leg_bottom_vertex, -1, 0, 0)
-                    left_leg_bottom_bone.index = len(pmx.bones.keys()) - 1
+                    left_leg_bottom_bone.index = len(pmx.bones.keys())
                     pmx.bones[left_leg_bottom_bone.name] = left_leg_bottom_bone
                     pmx.bone_indexes[left_leg_bottom_bone.index] = left_leg_bottom_bone.name
 
@@ -397,9 +395,8 @@ class PmxReader():
             morphs_by_panel[4] = []  # 他
             morphs_by_panel[0] = []  # システム予約
 
-            morph_idx = 0
             # モーフデータリスト
-            for _ in range(self.read_int(4)):
+            for morph_idx in range(self.read_int(4)):
                 morph = Morph(
                     name=self.read_text(),
                     english_name=self.read_text(),
@@ -441,7 +438,6 @@ class PmxReader():
 
                 # モーフのINDEXは、先頭から順番に設定
                 morph.index = morph_idx
-                morph_idx += 1
 
                 if morph.panel not in morphs_by_panel.keys():
                     # ないと思うが念のためパネル情報がなければ追加
@@ -491,7 +487,7 @@ class PmxReader():
             logger.test("len(display_slots): %s", len(pmx.display_slots))
 
             # 剛体データリスト
-            for _ in range(self.read_int(4)):
+            for rigidbody_idx in range(self.read_int(4)):
                 rigidbody = RigidBody(
                     name=self.read_text(),
                     english_name=self.read_text(),
@@ -511,7 +507,7 @@ class PmxReader():
                 )
 
                 # ボーンのINDEX
-                rigidbody.index = len(pmx.rigidbodies.keys())
+                rigidbody.index = rigidbody_idx
 
                 pmx.rigidbodies[rigidbody.name] = rigidbody
                 # インデックス逆引きも登録
@@ -520,7 +516,7 @@ class PmxReader():
             logger.test("len(rigidbodies): %s", len(pmx.rigidbodies))
 
             # ジョイントデータリスト
-            for _ in range(self.read_int(4)):
+            for joint_idx in range(self.read_int(4)):
                 joint = Joint(
                     name=self.read_text(),
                     english_name=self.read_text(),

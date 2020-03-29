@@ -13,13 +13,13 @@ from module.MParams import BoneLinks # noqa
 from utils import MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
 
-logger = MLogger(__name__)
+logger = MLogger(__name__, level=1)
 
 
 # グローバル位置算出
-def calc_global_pos(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int):
-    trans_vs = calc_relative_position(model, links, motion, fno)
-    add_qs = calc_relative_rotation(model, links, motion, fno)
+def calc_global_pos(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, limit_links=None):
+    trans_vs = calc_relative_position(model, links, motion, fno, limit_links)
+    add_qs = calc_relative_rotation(model, links, motion, fno, limit_links)
 
     # 行列
     matrixs = [MMatrix4x4() for i in range(links.size())]
@@ -58,20 +58,37 @@ def calc_global_pos_by_direction(direction_qq: MQuaternion, target_pos_3ds_dic: 
     direction_pos_dic = OrderedDict()
 
     for bone_name, target_pos in target_pos_3ds_dic.items():
-        direction_pos_dic[bone_name] = direction_qq * target_pos
+        mat = MMatrix4x4()
+        # 初期化
+        mat.setToIdentity()
+        # 指定位置
+        mat.translate(target_pos)
+        # 回転させる
+        mat.rotate(direction_qq)
+        # その地点の回転後の位置
+        direction_pos_dic[bone_name] = mat * MVector3D()
+
+        # # direction_pos_dic[bone_name] = direction_qq * target_pos
+        # logger.test("f: %s, direction_qq: %s", bone_name, direction_qq.toEulerAngles4MMD())
+        # logger.test("f: %s, target_pos: %s", bone_name, target_pos)
+        # logger.test("f: %s, direction_pos_dic: %s", bone_name, direction_pos_dic[bone_name])
     
     return direction_pos_dic
 
 
 # 各ボーンの相対位置情報
-def calc_relative_position(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int):
+def calc_relative_position(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, limit_links=None):
     trans_vs = []
 
     for link_idx, link_bone_name in enumerate(links.all()):
         link_bone = links.get(link_bone_name)
 
-        # キー情報を取得
-        fill_bf = motion.calc_bf(link_bone.name, fno)
+        if not limit_links or (limit_links and limit_links.get(link_bone_name)):
+            # 上限リンクがある倍、ボーンが存在している場合のみ、モーション内のキー情報を取得
+            fill_bf = motion.calc_bf(link_bone.name, fno)
+        else:
+            # 上限リンクでボーンがない場合、ボーンは初期値
+            fill_bf = VmdBoneFrame(fno=fno, name=link_bone_name)
 
         # 位置
         if link_idx == 0:
@@ -85,14 +102,18 @@ def calc_relative_position(model: PmxModel, links: BoneLinks, motion: VmdMotion,
 
 
 # 各ボーンの相対回転情報
-def calc_relative_rotation(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int):
+def calc_relative_rotation(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, limit_links=None):
     add_qs = []
 
     for link_idx, link_bone_name in enumerate(links.all()):
         link_bone = links.get(link_bone_name)
 
-        # キー情報を取得
-        fill_bf = motion.calc_bf(link_bone.name, fno)
+        if not limit_links or (limit_links and limit_links.get(link_bone_name)):
+            # 上限リンクがある倍、ボーンが存在している場合のみ、モーション内のキー情報を取得
+            fill_bf = motion.calc_bf(link_bone.name, fno)
+        else:
+            # 上限リンクでボーンがない場合、ボーンは初期値
+            fill_bf = VmdBoneFrame(fno=fno, name=link_bone_name)
         
         # 回転量
         rot = fill_bf.rotation
@@ -126,14 +147,27 @@ def calc_relative_rotation(model: PmxModel, links: BoneLinks, motion: VmdMotion,
             rot = MQuaternion.fromAxisAndAngle(link_bone.fixed_axis, degree)
         
         if link_bone.getExternalRotationFlag() and link_bone.effect_index in model.bone_indexes:
-            # 該当する付与親の回転を取得する
-            effect_bf = motion.calc_bf(model.bone_indexes[link_bone.effect_index], fno)
+            
+            effect_bone = model.bones[model.bone_indexes[link_bone.effect_index]]
+            cnt = 0
 
-            # 自身の回転量に付与親の回転量を付与率を加味して付与する
-            rot = rot * effect_bf.rotation
-            rot.setX(rot.x() * link_bone.effect_factor)
-            rot.setY(rot.y() * link_bone.effect_factor)
-            rot.setZ(rot.z() * link_bone.effect_factor)
+            while cnt < 10:
+                # 付与親が取得できたら、該当する付与親の回転を取得する
+                effect_bf = motion.calc_bf(effect_bone.name, fno)
+
+                # 自身の回転量に付与親の回転量を付与率を加味して付与する
+                rot = rot * effect_bf.rotation
+                rot.setX(rot.x() * effect_bone.effect_factor)
+                rot.setY(rot.y() * effect_bone.effect_factor)
+                rot.setZ(rot.z() * effect_bone.effect_factor)
+
+                if effect_bone.getExternalRotationFlag() and effect_bone.effect_index in model.bone_indexes:
+                    # 付与親置き換え
+                    effect_bone = model.bones[model.bone_indexes[effect_bone.effect_index]]
+                else:
+                    break
+
+                cnt += 1
 
         add_qs.append(rot)
 
@@ -141,8 +175,8 @@ def calc_relative_rotation(model: PmxModel, links: BoneLinks, motion: VmdMotion,
 
 
 # 指定されたボーンまでの回転量
-def calc_direction_qq(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int):
-    add_qs = calc_relative_rotation(model, links, motion, fno)
+def calc_direction_qq(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, limit_links=None):
+    add_qs = calc_relative_rotation(model, links, motion, fno, limit_links)
 
     total_qq = MQuaternion()
     for qq in add_qs:
@@ -225,5 +259,55 @@ def calc_leg_ik_ratio(data_set: MOptionsDataSet):
     logger.warning("「左足」「左ひざ」「左足首」「センター」のいずれかのボーンが不足しているため、足の長さの比率が測れませんでした。", decoration=MLogger.DECORATION_IN_BOX)
 
     return 1, 1
+
+
+# リンクを元モデルの縮尺に合わせた位置にフィットさせる
+def fit_links(org_model: PmxModel, rep_model: PmxModel, rep_links: BoneLinks):
+    # そのまま弄るとモデルのリンクも変わってしまうので、コピー
+    fit_rep_links = copy.deepcopy(rep_links)
+
+    # 上半身2の調整
+    if fit_rep_links.get("上半身2"):
+        if org_model.bones["上半身2"] and rep_model.bones["上半身2"] and org_model.bones["上半身"] and rep_model.bones["上半身"] \
+           and org_model.bones["左腕"] and rep_model.bones["左腕"]:
+
+            org_upper2_pos = org_model.bones["上半身2"].position
+            org_upper_pos = org_model.bones["上半身"].position
+            org_left_arm_pos = org_model.bones["左腕"].position
+
+            rep_upper2_pos = rep_model.bones["上半身2"].position
+            rep_upper_pos = rep_model.bones["上半身"].position
+            rep_left_arm_pos = rep_model.bones["左腕"].position
+
+            org_upper_diff = MVector3D(0, org_left_arm_pos.y(), 0) - org_upper_pos
+            org_upper_diff.setZ(1)
+            org_upper_diff.abs()
+
+            org_upper2_diff = org_upper2_pos - org_upper_pos
+            org_upper2_diff.abs()
+
+            rep_upper_diff = MVector3D(0, rep_left_arm_pos.y(), 0) - rep_upper_pos
+            rep_upper_diff.setZ(1)
+            rep_upper_diff.abs()
+
+            rep_upper2_diff = rep_upper2_pos - rep_upper_pos
+            rep_upper2_diff.abs()
+
+            logger.test("org_upper_diff: %s ", org_upper_diff)
+            logger.test("org_upper2_diff: %s ", org_upper2_diff)
+            logger.test("rep_upper_diff: %s ", rep_upper_diff)
+            logger.test("rep_upper2_diff: %s ", rep_upper2_diff)
+
+            upper2_diff_ratio = (org_upper2_diff / org_upper_diff) / (rep_upper2_diff / rep_upper_diff)
+            logger.test("upper2_diff_ratio: %s ", upper2_diff_ratio)
+
+            # 補正値
+            rep_upper2_correction = (rep_upper2_diff * upper2_diff_ratio) - rep_upper2_diff
+            rep_upper2_correction.effective()
+            logger.info("rep_upper2_correction: %s ", rep_upper2_correction)
+
+            fit_rep_links.get("上半身2").position += rep_upper2_correction
+
+    return fit_rep_links
 
 

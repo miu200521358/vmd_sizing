@@ -289,6 +289,11 @@ class MVector3D():
         self.setY(get_effective_value(self.y()))
         self.setZ(get_effective_value(self.z()))
                 
+    def abs(self):
+        self.setX(abs(get_effective_value(self.x())))
+        self.setY(abs(get_effective_value(self.y())))
+        self.setZ(abs(get_effective_value(self.z())))
+                
     @classmethod
     def crossProduct(cls, v1, v2):
         crossv = np.cross(v1.__data, v2.__data)
@@ -694,7 +699,7 @@ class MQuaternion():
         m = mat.data()
 
         # q(w,x,y,z)から(x,y,z,w)に並べ替え.
-        q2 = np.array([self.__data.x, self.__data.y, self.__data.z, self.__data.w])
+        q2 = np.array([self.__data.x, self.__data.y, self.__data.z, self.__data.w], dtype=np.float64)
 
         m[0, 0] = q2[3] * q2[3] + q2[0] * q2[0] - q2[1] * q2[1] - q2[2] * q2[2]
         m[0, 1] = 2.0 * q2[0] * q2[1] - 2.0 * q2[3] * q2[2]
@@ -718,8 +723,6 @@ class MQuaternion():
 
         m /= m[3, 3]
         m[3, 3] = 1.0
-
-        m = m
 
         return mat
     
@@ -1083,7 +1086,7 @@ class MQuaternion():
 
 class MMatrix4x4():
     
-    def __init__(self, m11=0, m12=0, m13=0, m14=0, m21=0, m22=0, m23=0, m24=0, m31=0, m32=0, m33=0, m34=0, m41=0, m42=0, m43=0, m44=0):
+    def __init__(self, m11=1, m12=0, m13=0, m14=0, m21=0, m22=1, m23=0, m24=0, m31=0, m32=0, m33=1, m34=0, m41=0, m42=0, m43=0, m44=1):
         if isinstance(m11, MMatrix4x4):
             # 行列クラスの場合
             self.__data = m11.__data
@@ -1162,7 +1165,7 @@ class MMatrix4x4():
         vec_mat = np.array([vector.x(), vector.y(), vector.z()])
         xyz = np.sum(vec_mat * self.__data[:3, :3], axis=1)
 
-        return MVector3D(xyz)
+        return MVector3D(xyz[0], xyz[1], xyz[2])
 
     def __str__(self):
         return "MMatrix4x4({0})".format(self.__data)

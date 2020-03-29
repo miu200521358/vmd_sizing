@@ -62,8 +62,8 @@ class MOptions():
         parser.add_argument("--motion_path", required=True, type=(lambda x: list(map(str, x.split(';')))))
         parser.add_argument("--org_model_path", required=True, type=(lambda x: list(map(str, x.split(';')))))
         parser.add_argument("--rep_model_path", required=True, type=(lambda x: list(map(str, x.split(';')))))
-        parser.add_argument("--substitute_model_flg", required=True, type=(lambda x: list(map(bool, x.split(';')))))
-        parser.add_argument("--twist_flg", required=True, type=(lambda x: list(map(bool, x.split(';')))))
+        parser.add_argument("--substitute_model_flg", required=True, type=(lambda x: list(map(int, x.split(';')))))
+        parser.add_argument("--twist_flg", required=True, type=(lambda x: list(map(int, x.split(';')))))
         parser.add_argument("--verbose", default=20, type=int)
 
         args = parser.parse_args()
@@ -72,7 +72,7 @@ class MOptions():
 
         try:
             data_set_list = []
-            for set_no, (motion_path, org_model_path, rep_model_path, substitute_model_flg, twist_flg) in enumerate( \
+            for set_no, (motion_path, org_model_path, rep_model_path, substitute_model_flg_val, twist_flg_val) in enumerate( \
                 zip(args.motion_path, args.org_model_path, args.rep_model_path, args.substitute_model_flg, args.twist_flg)): # noqa
 
                 display_set_no = "【No.{0}】".format(set_no + 1)
@@ -117,6 +117,9 @@ class MOptions():
                 rep_model = rep_model_reader.read_data()
 
                 logger.info("%s モーション変換先モデルPMXファイル 読み込み成功 %s", display_set_no, os.path.basename(rep_model_path))
+
+                substitute_model_flg = True if substitute_model_flg_val == 1 else False
+                twist_flg = True if twist_flg_val == 1 else False
 
                 # 出力ファイルパス
                 output_vmd_path = MFileUtils.get_output_vmd_path(motion_path, rep_model_path, substitute_model_flg, twist_flg, "", True)

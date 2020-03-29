@@ -333,7 +333,7 @@ class VmdReader():
 
         for encoding in codelst:
             try:
-                fstr = self.decode_text(fbytes, encoding, True)  # bytes文字列から指定文字コードの文字列に変換
+                fstr = self.decode_text(fbytes, encoding, False)  # bytes文字列から指定文字コードの文字列に変換
                 fstr = fstr.encode('utf-8')  # uft-8文字列に変換
                 # 問題なく変換できたらエンコードを返す
                 logger.test("%s: encoding: %s", fstr, encoding)

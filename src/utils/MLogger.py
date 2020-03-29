@@ -156,6 +156,6 @@ class MLogger():
     @classmethod
     def initialize(cls, level=logging.INFO, is_file=False):
         # logging.basicConfig(level=level)
-        logging.basicConfig(level=level, format="%(message)s [%(module_name)s]")
+        logging.basicConfig(level=level, format="%(message)s [%(module_name)s](%(asctime)s)")
         cls.is_file = is_file
         cls.outout_datetime = "{0:%Y%m%d_%H%M%S}".format(datetime.now())
