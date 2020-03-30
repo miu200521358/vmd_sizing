@@ -924,7 +924,7 @@ class PmxModel():
 
         # 足末端系ボーン
         for bk, bv in self.bones.items():
-            if ("{0}つま先".format(direction) in bk or "{0}足首".format(direction) in bk or "{0}足先".format(direction) in bk):
+            if bv.position.y() <= self.bones["{0}足首".format(direction)].position.y() :
                 bone_name_list.append(bk)
         
         if len(bone_name_list) == 0:

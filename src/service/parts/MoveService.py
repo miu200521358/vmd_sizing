@@ -70,12 +70,19 @@ class MoveService():
                         toe_diff = rep_toe_pos.y() - (org_toe_pos.y() * data_set.original_y_ratio)
                         if org_toe_pos.y() < 0.5 and toe_diff > 0:
                             bf.position.setY(bf.position.y() - toe_diff)
-                            logger.debug("f: %s, %sつま先元補正: %s", bf.fno, k[0], toe_diff)
+                            logger.debug("f: %s, %sつま先元補正: %s", bf.fno, k[0], -toe_diff)
 
+                        # ----------
+
+                        rep_toe_3ds = MServiceUtils.calc_global_pos(data_set.rep_model, rep_toe_links[k[0]], data_set.motion, bf.fno)
+                        rep_toe_pos = rep_toe_3ds["{0}つま先実体".format(k[0])]
+                        # [logger.test("%s: %s", k, v) for k, v in org_toe_3ds.items()]
+                        logger.test("f: %s, %s - 変換先つま先re: %s", bf.fno, k[0], rep_toe_pos)
+                        
                         # つま先がマイナス位置にある場合、床に戻す
                         if rep_toe_pos.y() < 0:
                             bf.position.setY(bf.position.y() - rep_toe_pos.y())
-                            logger.debug("f: %s, %sつま先床補正: %s", bf.fno, k[0], rep_toe_pos.y())
+                            logger.debug("f: %s, %sつま先床補正: %s", bf.fno, k[0], -rep_toe_pos.y())
 
                     if len(data_set.motion.bones[k].keys()) > 0:
                         logger.info("つま先補正: %s", k)

@@ -200,15 +200,20 @@ class VmdMotion():
         # 番号より後のフレーム番号
         after_fnos = [x for x in sorted(self.bones[bone_name].keys()) if (x > fno)]
 
+        if len(after_fnos) == 0 and len(before_fnos) == 0:
+            return fill_bf
+
         if len(after_fnos) == 0:
-            if len(before_fnos) == 0:
-                # 番号の前後もない場合、新規キーを返す
-                return fill_bf
-            else:
-                # 番号より前があって、後のがない場合、前のをコピーして返す
-                fill_bf = copy.deepcopy(self.bones[bone_name][before_fnos[-1]])
-                fill_bf.fno = fno
-                return fill_bf
+            # 番号より前があって、後のがない場合、前のをコピーして返す
+            fill_bf = copy.deepcopy(self.bones[bone_name][before_fnos[-1]])
+            fill_bf.fno = fno
+            return fill_bf
+        
+        if len(before_fnos) == 0:
+            # 番号より後があって、前がない場合、後のをコピーして返す
+            fill_bf = copy.deepcopy(self.bones[bone_name][after_fnos[0]])
+            fill_bf.fno = fno
+            return fill_bf
 
         prev_bf = self.bones[bone_name][before_fnos[-1]]
         next_bf = self.bones[bone_name][after_fnos[0]]
