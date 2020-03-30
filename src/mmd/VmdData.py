@@ -402,7 +402,14 @@ class VmdMotion():
             return []
         
         return sorted([fno for fno in self.morphs[morph_name].keys()])
-    
+
+    # カメラモーション：フレーム番号リスト
+    def get_camera_fnos(self):
+        if not self.cameras or self.camera_cnt == 0:
+            return []
+        
+        return sorted([fno for fno in self.cameras.keys()])
+        
     # ボーンモーション：一次元配列
     def get_bone_frames(self):
         total_bone_frames = []
@@ -448,6 +455,16 @@ class VmdMotion():
                     total_morph_frames.append(morph_frames[fno])
         
         return total_morph_frames
+
+    # カメラモーション：一次元配列
+    def get_camera_frames(self):
+        total_camera_frames = []
+
+        # カメラキーフレを逆順に登録
+        for fno in reversed(self.get_camera_fnos()):
+            total_camera_frames.append(self.cameras[fno])
+
+        return total_camera_frames
 
     # ボーンキーフレを追加
     def append_bone_frame(self, frame: VmdBoneFrame):

@@ -20,6 +20,7 @@ class VmdWriter():
 
         bone_frames = self.data_set.motion.get_bone_frames()
         morph_frames = self.data_set.motion.get_morph_frames()
+        camera_frames = self.data_set.motion.get_camera_frames()
             
         if len(bone_frames) > 0 or len(morph_frames) > 0:
             try:
@@ -44,8 +45,8 @@ class VmdWriter():
         fout.write(struct.pack('<L', len(morph_frames)))  # 表情キーフレーム数
         for mf in morph_frames:
             mf.write(fout)
-        fout.write(struct.pack('<L', len(self.data_set.motion.cameras)))  # カメラキーフレーム数
-        for cf in self.data_set.motion.cameras.values():
+        fout.write(struct.pack('<L', len(camera_frames)))  # カメラキーフレーム数
+        for cf in camera_frames:
             cf.write(fout)
         fout.write(struct.pack('<L', len(self.data_set.motion.lights)))  # 照明キーフレーム数
         for cf in self.data_set.motion.lights:

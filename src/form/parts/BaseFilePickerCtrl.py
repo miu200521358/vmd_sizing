@@ -150,7 +150,12 @@ class BaseFilePickerCtrl():
             display_set_no = "{0}番目の".format(self.set_no)
 
         if self.is_aster and self.set_no <= 1:
-            file_path_list = [p for p in sorted(glob.glob(self.file_ctrl.GetPath())) if os.path.isfile(p)]
+            base_file_path = self.file_ctrl.GetPath()
+
+            if os.path.exists(base_file_path):
+                file_path_list = [base_file_path]
+            else:
+                file_path_list = [p for p in glob.glob(base_file_path) if os.path.isfile(p)]
 
             if len(file_path_list) == 0:
                 logger.error("{0}{1}の条件に合致するファイルが見つかりませんでした。\n入力パス: {2}".format(
@@ -188,12 +193,12 @@ class BaseFilePickerCtrl():
             dir_path = MFileUtils.get_dir_path(self.file_ctrl.GetPath())
 
         if not os.path.exists(dir_path):
-            logger.error("{0}{1}が見つかりませんでした。\n入力パス: {2}".format(
+            logger.error("{0}{1}の親フォルダが見つかりませんでした。\n入力パス: {2}".format(
                 display_set_no, self.title, dir_path), decoration=MLogger.DECORATION_BOX)
             return False
 
         if not os.path.isdir(dir_path):
-            logger.error("{0}{1}が正常なフォルダとして見つかりませんでした。\n入力パス: {2}".format(
+            logger.error("{0}{1}の親フォルダが正常なフォルダとして見つかりませんでした。\n入力パス: {2}".format(
                 display_set_no, self.title, dir_path), decoration=MLogger.DECORATION_BOX)
             return False
 
@@ -230,7 +235,12 @@ class BaseFilePickerCtrl():
                 display_set_no = "【No.{0}】 ".format(self.set_no)
 
             if self.is_aster and self.set_no == 1:
-                file_path_list = [p for p in sorted(glob.glob(self.file_ctrl.GetPath())) if os.path.isfile(p)]
+                base_file_path = self.file_ctrl.GetPath()
+
+                if os.path.exists(base_file_path):
+                    file_path_list = [base_file_path]
+                else:
+                    file_path_list = [p for p in glob.glob(base_file_path) if os.path.isfile(p)]
 
                 if len(file_path_list) == 0:
                     # 読み込み可能か
@@ -299,7 +309,12 @@ class FileModelCtrl():
     def get_model_name(self):
         try:
             if self.picker.is_aster:
-                file_path_list = [p for p in sorted(glob.glob(self.picker.file_ctrl.GetPath())) if os.path.isfile(p)]
+                base_file_path = self.picker.file_ctrl.GetPath()
+
+                if os.path.exists(base_file_path):
+                    file_path_list = [base_file_path]
+                else:
+                    file_path_list = [p for p in glob.glob(base_file_path) if os.path.isfile(p)]
 
                 if len(file_path_list) == 0:
                     return "取得失敗"

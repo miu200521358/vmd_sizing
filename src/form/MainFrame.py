@@ -48,8 +48,8 @@ class MainFrame(wx.Frame):
         bSizer1 = wx.BoxSizer(wx.VERTICAL)
 
         self.note_ctrl = wx.Notebook(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0)
-        # self.note_ctrl.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DLIGHT))
-        self.note_ctrl.SetBackgroundColour("BLUE")
+        self.note_ctrl.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_BTNSHADOW))
+        # self.note_ctrl.SetBackgroundColour("BLUE")
 
         # ---------------------------------------------
 

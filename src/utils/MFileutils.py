@@ -65,7 +65,10 @@ def get_mydir_path(exec_path):
 
 # ディレクトリパス
 def get_dir_path(base_file_path, is_print=True):
-    file_path_list = [p for p in glob.glob(base_file_path) if os.path.isfile(p)]
+    if os.path.exists(base_file_path):
+        file_path_list = [base_file_path]
+    else:
+        file_path_list = [p for p in glob.glob(base_file_path) if os.path.isfile(p)]
 
     if len(file_path_list) == 0:
         return ""
@@ -79,14 +82,17 @@ def get_dir_path(base_file_path, is_print=True):
 
 
 # VMD出力ファイルパス生成
-# motion_vmd_all_path: モーションVMDパス(アスタリスク込み)
+# base_file_path: モーションVMDパス(アスタリスク込み)
 # rep_pmx_path: 変換先モデルPMXパス
 # substitute_model_flg: 代替モデル
 # twist_flg: 捩り分散
 # output_vmd_path: 出力ファイルパス
-def get_output_vmd_path(motion_vmd_all_path: str, rep_pmx_path: str, substitute_model_flg: bool, twist_flg: bool, output_vmd_path: str, is_force=False):
+def get_output_vmd_path(base_file_path: str, rep_pmx_path: str, substitute_model_flg: bool, twist_flg: bool, output_vmd_path: str, is_force=False):
     # モーションVMDパスの拡張子リスト
-    file_path_list = [p for p in glob.glob(motion_vmd_all_path) if os.path.isfile(p)]
+    if os.path.exists(base_file_path):
+        file_path_list = [base_file_path]
+    else:
+        file_path_list = [p for p in glob.glob(base_file_path) if os.path.isfile(p)]
 
     if len(file_path_list) == 0 or (len(file_path_list) > 0 and not os.path.exists(file_path_list[0])) or not os.path.exists(rep_pmx_path):
         return ""

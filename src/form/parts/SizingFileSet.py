@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-from datetime import datetime
-import glob
 import os
-import re
 import wx
 import wx.lib.newevent
 
@@ -145,7 +142,7 @@ class SizingFileSet():
                     not_rep_bones.append(k)
 
             morph_fnos = motion.get_morph_fnos(k)
-            if len(morph_fnos) > 1 and (motion.bones[k][morph_fnos[0]].ratio != 0):
+            if len(morph_fnos) > 1 and (motion.morphs[k][morph_fnos[0]].ratio != 0):
                 # キーが存在しており、かつ初期値ではない値が入っている場合、警告対象
                 if k not in org_pmx.morphs:
                     not_org_morphs.append(k)

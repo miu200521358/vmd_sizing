@@ -366,6 +366,10 @@ class VmdReader():
         else:
             # エラーを投げない場合
             try:
+                if encoding == 'shift-jis':
+                    # shift-jisは一旦cp932に変換してもう一度戻したのでテスト
+                    return fbytes2.decode('shift_jis', errors='replace').encode('cp932', errors='replace').decode('cp932', errors='replace')
+
                 # 変換できなかった文字は「?」に変換する
                 return fbytes2.decode(encoding=encoding, errors='replace')
             except Exception:

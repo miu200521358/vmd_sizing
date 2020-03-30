@@ -47,15 +47,19 @@ class ConvertCsvService():
         # モーションVMDファイル名・拡張子
         motion_vmd_file_name, motion_vmd_ext = os.path.splitext(os.path.basename(self.options.motion.path))
 
+        dt_now = datetime.now()
+
         if self.options.motion.motion_cnt > 0:
             # ボーンモーションがある場合、ボーンモーション出力
 
-            bone_fpath = "{0}\\{1}_bone_{2:%Y%m%d_%H%M%S}.csv".format(motion_vmd_dir_path, motion_vmd_file_name, datetime.now())
+            bone_fpath = "{0}\\{1}_bone_{2:%Y%m%d_%H%M%S}.csv".format(motion_vmd_dir_path, motion_vmd_file_name, dt_now)
 
             # Excel等で読めるよう、cp932限定
             with open(bone_fpath, encoding='cp932', mode='w') as f:
                 
-                s = "ボーン名,フレーム,位置X,位置Y,位置Z,回転X,回転Y,回転Z,【X_x1】,Y_x1,Z_x1,R_x1,【X_y1】,Y_y1,Z_y1,R_y1,【X_x2】,Y_x2,Z_x2,R_x2,【X_y2】,Y_y2,Z_y2,R_y2,【Y_x1】,Z_x1,R_x1,X_y1,【Y_y1】,Z_y1,R_y1,X_x2,【Y_x2】,Z_x2,R_x2,X_y2,【Y_y2】,Z_y2,R_y2,1,【Z_x1】,R_x1,X_y1,Y_y1,【Z_y1】,R_y1,X_x2,Y_x2,【Z_x2】,R_x2,X_y2,Y_y2,【Z_y2】,R_y2,1,0,【R_x1】,X_y1,Y_y1,Z_y1,【R_y1】,X_x2,Y_x2,Z_x2,【R_x2】,X_y2,Y_y2,Z_y2,【R_y2】,01,00,00"
+                s = "ボーン名,フレーム,位置X,位置Y,位置Z,回転X,回転Y,回転Z,【X_x1】,Y_x1,Z_x1,R_x1,【X_y1】,Y_y1,Z_y1,R_y1,【X_x2】,Y_x2,Z_x2,R_x2,【X_y2】,Y_y2,Z_y2,R_y2," + \
+                    "【Y_x1】,Z_x1,R_x1,X_y1,【Y_y1】,Z_y1,R_y1,X_x2,【Y_x2】,Z_x2,R_x2,X_y2,【Y_y2】,Z_y2,R_y2,1,【Z_x1】,R_x1,X_y1,Y_y1,【Z_y1】,R_y1,X_x2,Y_x2,【Z_x2】" + \
+                    ",R_x2,X_y2,Y_y2,【Z_y2】,R_y2,1,0,【R_x1】,X_y1,Y_y1,Z_y1,【R_y1】,X_x2,Y_x2,Z_x2,【R_x2】,X_y2,Y_y2,Z_y2,【R_y2】,01,00,00"
                 f.write(s)
                 f.write("\n")
 
@@ -68,6 +72,50 @@ class ConvertCsvService():
                         f.write(s)
                         f.write("\n")
 
+            logger.info("ボーンモーションCSV: %s", os.path.basename(bone_fpath))
+
+        if self.options.motion.morph_cnt > 0:
+            # モーフ出力
+            morph_fpath = "{0}\\{1}_morph_{2:%Y%m%d_%H%M%S}.csv".format(motion_vmd_dir_path, motion_vmd_file_name, dt_now)
+
+            # Excel等で読めるよう、cp932限定
+            with open(morph_fpath, encoding='cp932', mode='w') as f:
+                
+                s = "モーフ名,フレーム,大きさ"
+                f.write(s)
+                f.write("\n")
+
+                for morph_name in self.options.motion.morphs:
+                    for fno in self.options.motion.get_morph_fnos(morph_name):
+                        mf = self.options.motion.morphs[morph_name][fno]
+                        s = "{0},{1},{2}".format(mf.name, mf.fno, mf.ratio)
+                        f.write(s)
+                        f.write("\n")
+
+            logger.info("モーフモーションCSV: %s", os.path.basename(morph_fpath))
+                    
+        if self.options.motion.camera_cnt > 0:
+            # カメラ出力
+            camera_fpath = "{0}\\{1}_camera_{2:%Y%m%d_%H%M%S}.csv".format(motion_vmd_dir_path, motion_vmd_file_name, dt_now)
+
+            # Excel等で読めるよう、cp932限定
+            with open(camera_fpath, encoding='cp932', mode='w') as f:
+                
+                s = "フレーム,位置X,位置Y,位置Z,回転X,回転Y,回転Z,距離,視野角,パース,X_x1,Y_x1,Z_x1,R_x1,L_x1,VA_x1," + \
+                    "X_y1,Y_y1,Z_y1,R_y1,L_y1,VA_y1,X_x2,Y_x2,Z_x2,R_x2,L_x2,VA_x2, X_y2,Y_y2,Z_y2,R_y2,L_y2,VA_y2"
+                f.write(s)
+                f.write("\n")
+
+                for fno in self.options.motion.get_camera_fnos():
+                    cf = self.options.motion.cameras[fno]
+                    s = "{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10}" \
+                        .format(cf.fno, cf.position.x(), cf.position.y(), cf.position.z(), \
+                                cf.euler.x(), cf.euler.y(), cf.euler.z(), -cf.length, cf.angle, cf.perspective, ','.join([str(i) for i in cf.interpolation]))
+                    f.write(s)
+                    f.write("\n")
+
+            logger.info("カメラモーションCSV: %s", os.path.basename(camera_fpath))
+                    
         return True
 
 

@@ -29,7 +29,12 @@ class SizingWorkerThread(BaseWorkerThread):
             start = time.time()
             # データセットリスト
             data_set_list = []
-            file_path_list = [p for p in sorted(glob.glob(self.frame.file_panel_ctrl.file_set.motion_vmd_file_ctrl.file_ctrl.GetPath())) if os.path.isfile(p)]
+            
+            base_file_path = self.frame.file_panel_ctrl.file_set.motion_vmd_file_ctrl.file_ctrl.GetPath()
+            if os.path.exists(base_file_path):
+                file_path_list = [base_file_path]
+            else:
+                file_path_list = [p for p in glob.glob(base_file_path) if os.path.isfile(p)]
 
             for file_idx in range(len(file_path_list)):
                 if self.frame.file_panel_ctrl.file_set.motion_vmd_file_ctrl.load(file_idx):
