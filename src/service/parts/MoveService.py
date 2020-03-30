@@ -27,7 +27,7 @@ class MoveService():
             # 足IKのオフセットを計算
             self.set_leg_ik_offset(data_set)
 
-            for k in ["右足ＩＫ", "左足ＩＫ", "右つま先ＩＫ", "左つま先ＩＫ", "右足ＩＫ親", "左足ＩＫ親", "右足IK親", "左足IK親", "センター", "グルーブ", "全ての親"]:
+            for k in ["右足ＩＫ", "左足ＩＫ", "右つま先ＩＫ", "左つま先ＩＫ", "右足IK親", "左足IK親", "センター", "グルーブ", "全ての親"]:
                 if k in data_set.motion.bones and k in data_set.rep_model.bones:
                     for fno in data_set.motion.get_bone_fnos(k):
                         bf = data_set.motion.bones[k][fno]
@@ -52,7 +52,7 @@ class MoveService():
             logger.debug("先：左つま先：%s", data_set.rep_model.left_toe_vertex)
             logger.debug("先：右つま先：%s", data_set.rep_model.right_toe_vertex)
 
-            for k in ["右足ＩＫ", "左足ＩＫ"]:
+            for k in ["右足ＩＫ", "左足ＩＫ", "右足IK親", "左足IK親"]:
                 if k in data_set.motion.bones and k in data_set.rep_model.bones and rep_toe_links:
                     for fno in data_set.motion.get_bone_fnos(k):
                         bf = data_set.motion.bones[k][fno]

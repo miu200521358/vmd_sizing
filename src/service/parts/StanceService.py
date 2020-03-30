@@ -47,7 +47,7 @@ class StanceService():
                     
                     target_model_type = target_model_type + "変換先"
 
-                logger.warning("%sモデルの腕構造にサイジングが対応していない為、腕スタンス補正をスキップします。", target_model_type, decoration=MLogger.DECORATION_BOX)
+                logger.warning("%sモデルの腕構造にサイジングが対応していない為、腕系処理をスキップします。", target_model_type, decoration=MLogger.DECORATION_BOX)
 
         return True
         
