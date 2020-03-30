@@ -11,6 +11,7 @@ from utils.MLogger import MLogger # noqa
 
 logger = MLogger(__name__)
 
+
 # 頂点構造 ----------------------------
 class Vertex():
     def __init__(self, index, position, normal, uv, extended_uvs, deform, edge_factor):
@@ -724,17 +725,21 @@ class PmxModel():
         return True
     
     # ボーンリンク生成
-    def create_link_2_top_lr(self, *target_bone_types, is_defined=True):
+    def create_link_2_top_lr(self, *target_bone_types, **kwargs):
+        is_defined = kwargs["is_defined"] if "is_defined" in kwargs else True
+
         for target_bone_type in target_bone_types:
-            left_links = self.create_link_2_top_one("左{0}".format(target_bone_type), is_defined)
-            right_links = self.create_link_2_top_one("右{0}".format(target_bone_type), is_defined)
+            left_links = self.create_link_2_top_one("左{0}".format(target_bone_type), is_defined=is_defined)
+            right_links = self.create_link_2_top_one("右{0}".format(target_bone_type), is_defined=is_defined)
 
             if left_links and right_links:
                 # IKリンクがある場合、そのまま返す
                 return {"左": left_links, "右": right_links}
 
     # ボーンリンク生成
-    def create_link_2_top_one(self, *target_bone_names, is_defined=True):
+    def create_link_2_top_one(self, *target_bone_names, **kwargs):
+        is_defined = kwargs["is_defined"] if "is_defined" in kwargs else True
+
         for target_bone_name in target_bone_names:
             links = self.create_link_2_top(target_bone_name, None, is_defined)
 
@@ -844,11 +849,11 @@ class PmxModel():
         "左ひざ": ["左足"],
         "左足首": ["左ひざ"],
         "左つま先": ["左足首"],
-        "左足IK親": ["全ての親"],
+        "左足IK親": ["全ての親", "SIZING_ROOT_BONE"],
         "左足ＩＫ": ["左足IK親", "全ての親", "SIZING_ROOT_BONE"],
         "左つま先ＩＫ": ["左足ＩＫ"],
-        "左足先EX": ["左足ＩＫ"],
-        "左つま先ＩＫ実体": ["左足先EX", "左足ＩＫ"],
+        "左足先EX": ["左つま先ＩＫ", "左足ＩＫ"],
+        "左つま先実体": ["左足先EX", "左つま先ＩＫ", "左足ＩＫ"],
         "左足底辺": ["左足ＩＫ"],
         "右肩P": ["上半身2", "上半身"],
         "右肩": ["右肩P", "上半身2", "上半身"],
@@ -886,11 +891,11 @@ class PmxModel():
         "右ひざ": ["右足"],
         "右足首": ["右ひざ"],
         "右つま先": ["右足首"],
-        "右足IK親": ["全ての親"],
+        "右足IK親": ["全ての親", "SIZING_ROOT_BONE"],
         "右足ＩＫ": ["右足IK親", "全ての親", "SIZING_ROOT_BONE"],
         "右つま先ＩＫ": ["右足ＩＫ"],
-        "右足先EX": ["右足ＩＫ"],
-        "右つま先ＩＫ実体": ["右足先EX", "右足ＩＫ"],
+        "右足先EX": ["右つま先ＩＫ", "右足ＩＫ"],
+        "右つま先実体": ["右足先EX", "右つま先ＩＫ", "右足ＩＫ"],
         "右足底辺": ["右足ＩＫ"],
         "左目": ["頭"],
         "右目": ["頭"]
@@ -919,7 +924,7 @@ class PmxModel():
 
         # 足末端系ボーン
         for bk, bv in self.bones.items():
-            if ("{0}つま先".format(direction) in bk or "{0}足首".format(direction) in bk or "{0}足先".format(direction) in bk) and "指" not in bk:
+            if ("{0}つま先".format(direction) in bk or "{0}足首".format(direction) in bk or "{0}足先".format(direction) in bk):
                 bone_name_list.append(bk)
         
         if len(bone_name_list) == 0:
@@ -1006,15 +1011,15 @@ class PmxModel():
                         left_max_pos = v_pos
                         left_max_vertex = v
 
-                    if v_pos.z() < back_max_pos.z():
-                        # 指定ボーンにウェイトが乗っていて、かつ最下の頂点より下の場合、保持
-                        back_max_pos = v_pos
-                        back_max_vertex = v
-
-                    if v_pos.z() > front_max_pos.z():
-                        # 指定ボーンにウェイトが乗っていて、かつ最上の頂点より上の場合、保持
+                    if v_pos.z() < front_max_pos.z():
+                        # 指定ボーンにウェイトが乗っていて、かつ最上の頂点より手前の場合、保持
                         front_max_pos = v_pos
                         front_max_vertex = v
+
+                    if v_pos.z() > back_max_pos.z():
+                        # 指定ボーンにウェイトが乗っていて、かつ最下の頂点より奥の場合、保持
+                        back_max_pos = v_pos
+                        back_max_vertex = v
 
         return up_max_pos, up_max_vertex, down_max_pos, down_max_vertex, right_max_pos, right_max_vertex, left_max_pos, left_max_vertex, \
             back_max_pos, back_max_vertex, front_max_pos, front_max_vertex

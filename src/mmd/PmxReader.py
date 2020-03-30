@@ -191,10 +191,8 @@ class PmxReader():
                 deform = self.read_deform()
                 edge_factor = self.read_float()
 
-                vindex = vertex_idx
-
                 # 頂点をウェイトボーンごとに分けて保持する
-                vertex = Vertex(vindex, position, normal, uv, extended_uvs, deform, edge_factor)
+                vertex = Vertex(vertex_idx, position, normal, uv, extended_uvs, deform, edge_factor)
                 for bone_idx in vertex.deform.get_idx_list():
                     if bone_idx not in pmx.vertices:
                         pmx.vertices[bone_idx] = []
@@ -338,21 +336,25 @@ class PmxReader():
             pmx.bones[head_top_bone.name] = head_top_bone
             pmx.bone_indexes[head_top_bone.index] = head_top_bone.name
 
-            # 右つま先ボーン
-            right_toe_vertex = pmx.get_toe_vertex("右")
-            pmx.right_toe_vertex = right_toe_vertex
-            right_toe_bone = Bone("右つま先実体", "right toe entity", copy.deepcopy(right_toe_vertex.position), -1, 0, 0)
-            right_toe_bone.index = len(pmx.bones.keys())
-            pmx.bones[right_toe_bone.name] = right_toe_bone
-            pmx.bone_indexes[right_toe_bone.index] = right_toe_bone.name
+            if "右足ＩＫ" in pmx.bones or "右つま先ＩＫ" in pmx.bones:
+                # 右つま先ボーン
+                right_toe_vertex = pmx.get_toe_vertex("右")
+                pmx.right_toe_vertex = right_toe_vertex
+                right_toe_bone = Bone("右つま先実体", "right toe entity", copy.deepcopy(right_toe_vertex.position), -1, 0, 0)
+                right_toe_bone.position.setY(0)
+                right_toe_bone.index = len(pmx.bones.keys())
+                pmx.bones[right_toe_bone.name] = right_toe_bone
+                pmx.bone_indexes[right_toe_bone.index] = right_toe_bone.name
 
-            # 左つま先ボーン
-            left_toe_vertex = pmx.get_toe_vertex("左")
-            pmx.left_toe_vertex = left_toe_vertex
-            left_toe_bone = Bone("左つま先実体", "left toe entity", copy.deepcopy(left_toe_vertex.position), -1, 0, 0)
-            left_toe_bone.index = len(pmx.bones.keys())
-            pmx.bones[left_toe_bone.name] = left_toe_bone
-            pmx.bone_indexes[left_toe_bone.index] = left_toe_bone.name
+            if "左足ＩＫ" in pmx.bones or "左つま先ＩＫ" in pmx.bones:
+                # 左つま先ボーン
+                left_toe_vertex = pmx.get_toe_vertex("左")
+                pmx.left_toe_vertex = left_toe_vertex
+                left_toe_bone = Bone("左つま先実体", "left toe entity", copy.deepcopy(left_toe_vertex.position), -1, 0, 0)
+                left_toe_bone.position.setY(0)
+                left_toe_bone.index = len(pmx.bones.keys())
+                pmx.bones[left_toe_bone.name] = left_toe_bone
+                pmx.bone_indexes[left_toe_bone.index] = left_toe_bone.name
 
             if "右足ＩＫ" in pmx.bones:
                 # 右足底辺ボーン

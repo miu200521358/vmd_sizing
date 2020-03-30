@@ -63,7 +63,7 @@ def calc_global_pos(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: i
                 total_mat[n] *= copy.deepcopy(matrixs[m])
         
         # 自分は、位置だけ掛ける
-        global_3ds_dic[lname] = total_mat[n] * trans_vs[n]
+        global_3ds_dic[lname] = total_mat[n] * v
 
     return global_3ds_dic
 

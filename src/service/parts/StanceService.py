@@ -80,7 +80,7 @@ class StanceService():
             # 準備（細分化）
             self.prepare_split_stance(data_set_idx, data_set, "センター")
 
-            logger.info("センタースタンス準備終了")
+            logger.info("センタースタンス補正: 準備終了")
 
             prev_fno = 0
             for fno in data_set.motion.get_bone_fnos("センター"):
@@ -100,6 +100,8 @@ class StanceService():
                 if fno // 500 > prev_fno:
                     logger.info("-- %sフレーム目完了", fno)
                     prev_fno = fno // 500
+
+            logger.info("センタースタンス補正: 終了")
 
     # 足IKによるセンターオフセット値
     def calc_center_offset_by_leg_ik(self, bf: VmdBoneFrame, data_set_idx: int, data_set: MOptionsDataSet, \
@@ -287,7 +289,7 @@ class StanceService():
             # 準備（細分化）
             self.prepare_split_stance(data_set_idx, data_set, "上半身")
 
-            logger.info("上半身スタンス準備終了")
+            logger.info("上半身スタンス補正: 準備終了")
 
             prev_fno = 0
             for fno in data_set.motion.get_bone_fnos("上半身"):
@@ -306,7 +308,7 @@ class StanceService():
             self.adjust_rotation_by_parent(data_set_idx, data_set, "左腕", "上半身")
             self.adjust_rotation_by_parent(data_set_idx, data_set, "右腕", "上半身")
 
-            logger.info("上半身スタンス終了")
+            logger.info("上半身スタンス補正: 終了")
 
             if is_upper2_existed:
                 # 上半身2がある場合
@@ -337,7 +339,7 @@ class StanceService():
                 # 準備（細分化）
                 self.prepare_split_stance(data_set_idx, data_set, "上半身2")
 
-                logger.info("上半身2スタンス準備終了")
+                logger.info("上半身2スタンス補正: 準備終了")
 
                 prev_fno = 0
                 for fno in data_set.motion.get_bone_fnos("上半身2"):
@@ -357,7 +359,7 @@ class StanceService():
                 self.adjust_rotation_by_parent(data_set_idx, data_set, "左腕", "上半身2")
                 self.adjust_rotation_by_parent(data_set_idx, data_set, "右腕", "上半身2")
 
-                logger.info("上半身2スタンス終了")
+                logger.info("上半身2スタンス補正: 終了")
 
     # 指定したボーンを親ボーンの調整量に合わせてオフセット
     def adjust_rotation_by_parent(self, data_set_idx: int, data_set: MOptionsDataSet, target_bone_name: str, target_parent_name: str):
@@ -561,7 +563,7 @@ class StanceService():
                             else:
                                 bf.rotation = arm_diff_qq_dic[bone_name]["from"].inverted() * bf.rotation * arm_diff_qq_dic[bone_name]["to"]
                     
-                    logger.info("スタンス補正: %s", bone_name)
+                    logger.info("腕スタンス補正: %s", bone_name)
                     logger.test("from: %s", arm_diff_qq_dic[bone_name]["from"].toEulerAngles())
                     logger.test("to: %s", arm_diff_qq_dic[bone_name]["to"].toEulerAngles())
 
