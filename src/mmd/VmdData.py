@@ -392,14 +392,23 @@ class VmdMotion():
         bf.interpolation[y2_idxs[0]] = bf.interpolation[y2_idxs[1]] = bf.interpolation[y2_idxs[2]] = bf.interpolation[y2_idxs[3]] = int(bz[2].y())
 
     # ボーンモーション：フレーム番号リスト
-    def get_bone_fnos(self, bone_name: str, is_key=False, is_read=False):
-        if not self.bones or self.motion_cnt == 0 or bone_name not in self.bones:
+    def get_bone_fnos(self, *bone_names, **kwargs):
+        if not self.bones or self.motion_cnt == 0:
             return []
         
-        # 条件に合致するフレーム番号を探す
         # is_key: 登録対象のキーを探す
         # is_read: データ読み込み時のキーを探す
-        return [x for x in sorted(self.bones[bone_name].keys()) if (not is_key or (is_key and self.bones[x].key)) and (not is_read or (is_read and self.bones[x].read))]
+        is_key = True if "is_key" in kwargs and kwargs["is_key"] else False
+        is_read = True if "is_read" in kwargs and kwargs["is_read"] else False
+        
+        # 条件に合致するフレーム番号を探す
+        keys = []
+        for bone_name in bone_names:
+            if bone_name in self.bones:
+                keys.extend([x for x in self.bones[bone_name].keys() if (not is_key or (is_key and self.bones[x].key)) and (not is_read or (is_read and self.bones[x].read))])
+        
+        # 重複を除いた昇順フレーム番号リストを返す
+        return sorted(list(set(keys)))
 
     # モーフモーション：フレーム番号リスト
     def get_morph_fnos(self, morph_name: str):

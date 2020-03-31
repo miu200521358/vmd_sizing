@@ -810,7 +810,8 @@ class PmxModel():
         "下半身": ["腰", "グルーブ", "センター"],
         "上半身": ["腰", "グルーブ", "センター"],
         "上半身2": ["上半身"],
-        "首": ["上半身2", "上半身"],
+        "首": ["首根元", "上半身2", "上半身"],
+        "首根元": ["上半身2", "上半身"],
         "頭": ["首"],
         "頭頂": ["頭"],
         "左肩P": ["上半身2", "上半身"],
@@ -924,7 +925,8 @@ class PmxModel():
 
         # 足末端系ボーン
         for bk, bv in self.bones.items():
-            if bv.position.y() <= self.bones["{0}足首".format(direction)].position.y() :
+            if ((direction == "右" and bv.position.x() < 0) or (direction == "左" and bv.position.x() > 0)) \
+               and bv.position.y() <= self.bones["{0}足首".format(direction)].position.y() and direction in bk:
                 bone_name_list.append(bk)
         
         if len(bone_name_list) == 0:

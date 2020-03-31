@@ -373,6 +373,15 @@ class PmxReader():
                 left_leg_bottom_bone.index = len(pmx.bones.keys())
                 pmx.bones[left_leg_bottom_bone.name] = left_leg_bottom_bone
                 pmx.bone_indexes[left_leg_bottom_bone.index] = left_leg_bottom_bone.name
+            
+            # 首根元ボーン
+            if "左腕" in pmx.bones and "右腕" in pmx.bones:
+                neck_base_vertex = (pmx.bones["左腕"].position + pmx.bones["右腕"].position) / 2
+                neck_base_vertex.setX(0)
+                neck_base_bone = Bone("首根元", "base of neck", neck_base_vertex, -1, 0, 0)
+                neck_base_bone.index = len(pmx.bones.keys())
+                pmx.bones[neck_base_bone.name] = neck_base_bone
+                pmx.bone_indexes[neck_base_bone.index] = neck_base_bone.name
 
             # 指先ボーンがない場合、代替で挿入
             for direction in ["左", "右"]:

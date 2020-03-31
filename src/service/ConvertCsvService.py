@@ -49,6 +49,9 @@ class ConvertCsvService():
 
         dt_now = datetime.now()
 
+        if self.options.motion.motion_cnt == self.options.motion.morph_cnt == self.options.motion.camera_cnt == 0:
+            logger.warning("出力可能なモーションデータ（ボーン・モーフ・カメラ）がありません", decoration=MLogger.DECORATION_BOX)
+
         if self.options.motion.motion_cnt > 0:
             # ボーンモーションがある場合、ボーンモーション出力
 
@@ -72,7 +75,7 @@ class ConvertCsvService():
                         f.write(s)
                         f.write("\n")
 
-            logger.info("ボーンモーションCSV: %s", os.path.basename(bone_fpath))
+            logger.info("ボーンモーションCSV: %s", os.path.basename(bone_fpath), decoration=MLogger.DECORATION_BOX)
 
         if self.options.motion.morph_cnt > 0:
             # モーフ出力
@@ -92,7 +95,7 @@ class ConvertCsvService():
                         f.write(s)
                         f.write("\n")
 
-            logger.info("モーフモーションCSV: %s", os.path.basename(morph_fpath))
+            logger.info("モーフモーションCSV: %s", os.path.basename(morph_fpath), decoration=MLogger.DECORATION_BOX)
                     
         if self.options.motion.camera_cnt > 0:
             # カメラ出力
@@ -114,7 +117,7 @@ class ConvertCsvService():
                     f.write(s)
                     f.write("\n")
 
-            logger.info("カメラモーションCSV: %s", os.path.basename(camera_fpath))
+            logger.info("カメラモーションCSV: %s", os.path.basename(camera_fpath), decoration=MLogger.DECORATION_BOX)
                     
         return True
 

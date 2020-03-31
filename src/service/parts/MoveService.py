@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 #
+import logging # noqa
 import numpy as np
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from module.MOptions import MOptions, MOptionsDataSet
 from utils import MUtils, MServiceUtils # noqa
 from utils.MLogger import MLogger # noqa
 
-logger = MLogger(__name__, level=1)
+logger = MLogger(__name__)
 
 
 class MoveService():
@@ -41,51 +42,6 @@ class MoveService():
 
                     if len(data_set.motion.bones[k].keys()) > 0:
                         logger.info("移動補正: %s", k)
-
-            logger.info("つま先補正　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
-
-            org_toe_links = data_set.org_model.create_link_2_top_lr("つま先実体")
-            rep_toe_links = data_set.rep_model.create_link_2_top_lr("つま先実体")
-
-            logger.debug("元：左つま先：%s", data_set.org_model.left_toe_vertex)
-            logger.debug("元：右つま先：%s", data_set.org_model.right_toe_vertex)
-            logger.debug("先：左つま先：%s", data_set.rep_model.left_toe_vertex)
-            logger.debug("先：右つま先：%s", data_set.rep_model.right_toe_vertex)
-
-            for k in ["右足ＩＫ", "左足ＩＫ", "右足IK親", "左足IK親"]:
-                if k in data_set.motion.bones and k in data_set.rep_model.bones and rep_toe_links:
-                    for fno in data_set.motion.get_bone_fnos(k):
-                        bf = data_set.motion.bones[k][fno]
-                        org_toe_3ds = MServiceUtils.calc_global_pos(data_set.org_model, org_toe_links[k[0]], data_set.org_motion, bf.fno)
-                        # [logger.test("%s: %s", k, v) for k, v in org_toe_3ds.items()]
-                        org_toe_pos = org_toe_3ds["{0}つま先実体".format(k[0])]
-                        logger.test("f: %s, %s - 作成元つま先: %s", bf.fno, k[0], org_toe_pos)
-
-                        rep_toe_3ds = MServiceUtils.calc_global_pos(data_set.rep_model, rep_toe_links[k[0]], data_set.motion, bf.fno)
-                        rep_toe_pos = rep_toe_3ds["{0}つま先実体".format(k[0])]
-                        # [logger.test("%s: %s", k, v) for k, v in org_toe_3ds.items()]
-                        logger.test("f: %s, %s - 変換先つま先: %s", bf.fno, k[0], rep_toe_pos)
-                        
-                        # つま先が元モデルの上にある場合、つま先を合わせて下に下ろす
-                        toe_diff = rep_toe_pos.y() - (org_toe_pos.y() * data_set.original_y_ratio)
-                        if org_toe_pos.y() < 0.5 and toe_diff > 0:
-                            bf.position.setY(bf.position.y() - toe_diff)
-                            logger.debug("f: %s, %sつま先元補正: %s", bf.fno, k[0], -toe_diff)
-
-                        # ----------
-
-                        rep_toe_3ds = MServiceUtils.calc_global_pos(data_set.rep_model, rep_toe_links[k[0]], data_set.motion, bf.fno)
-                        rep_toe_pos = rep_toe_3ds["{0}つま先実体".format(k[0])]
-                        # [logger.test("%s: %s", k, v) for k, v in org_toe_3ds.items()]
-                        logger.test("f: %s, %s - 変換先つま先re: %s", bf.fno, k[0], rep_toe_pos)
-                        
-                        # つま先がマイナス位置にある場合、床に戻す
-                        if rep_toe_pos.y() < 0:
-                            bf.position.setY(bf.position.y() - rep_toe_pos.y())
-                            logger.debug("f: %s, %sつま先床補正: %s", bf.fno, k[0], -rep_toe_pos.y())
-
-                    if len(data_set.motion.bones[k].keys()) > 0:
-                        logger.info("つま先補正: %s", k)
                         
         return True
     

@@ -211,6 +211,12 @@ def calc_arm_stance_diff(model: PmxModel, from_bone_name: str, to_bone_name=None
     return calc_stance_diff(model, from_bone_name, to_bone_name, default_pos)
 
 
+# 肩のスタンスの違い
+def calc_shoulder_stance_diff(model: PmxModel, from_bone_name: str, to_bone_name=None):
+    default_pos = MVector3D(1, 0, 0) if "左" in from_bone_name else MVector3D(-1, 0, 0)
+    return calc_stance_diff(model, from_bone_name, to_bone_name, default_pos)
+
+
 # 指定ボーンのスタンスの違い
 def calc_stance_diff(model: PmxModel, from_bone_name: str, to_bone_name: str, default_pos: MVector3D):
     from_pos = MVector3D()

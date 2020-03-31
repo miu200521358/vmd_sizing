@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #
+import math
 import unittest
 import numpy as np # noqa
 import sys
@@ -44,4 +45,33 @@ class MMathTest(unittest.TestCase):
         dot = MQuaternion.dotProduct(qq1, qq2)
 
         print(dot)
+
+    def test_MQuaternion_rotationTo(self):
+        vec1 = MVector3D(3.2637246521852603, -17.9330321457957, 0.30790635451710674)
+        vec2 = MVector3D(3.2299432048123995, -17.563372285818442, -1.5114782033123464)
+        vec3 = MVector3D(1.8119074772766035, -15.793834017971799, 0.24888510565615118)
+        
+        qq1 = MQuaternion.rotationTo(MVector3D(1, 0, 0), vec1.normalized())
+        print(qq1.toEulerAngles4MMD())
+
+        qq2 = MQuaternion.rotationTo(MVector3D(1, 0, 0), vec2.normalized())
+        print(qq2.toEulerAngles4MMD())
+
+        qq = qq2 * qq1.inverted()
+        print(qq.toEulerAngles4MMD())
+
+        vec = (vec1 - vec3)
+        print(vec)
+
+        qq3 = MQuaternion.rotationTo(MVector3D(1, 0, 0), vec2.normalized())
+        print(qq3.toEulerAngles4MMD())
+
+        dot = MVector3D.dotProduct(vec1.normalized(), vec2.normalized())
+        print(dot)
+
+        degree = math.degrees(2 * math.acos(min(1, max(-1, dot))))
+        print(degree)
+
+
+
 
