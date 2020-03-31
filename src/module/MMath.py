@@ -294,6 +294,12 @@ class MVector3D():
         self.setY(abs(get_effective_value(self.y())))
         self.setZ(abs(get_effective_value(self.z())))
                 
+    def one(self):
+        self.effective()
+        self.setX(1 if is_almost_null(self.x()) else self.x())
+        self.setY(1 if is_almost_null(self.y()) else self.y())
+        self.setZ(1 if is_almost_null(self.z()) else self.z())
+                
     @classmethod
     def crossProduct(cls, v1, v2):
         crossv = np.cross(v1.__data, v2.__data)
@@ -306,6 +312,9 @@ class MVector3D():
     
     def data(self):
         return self.__data
+    
+    def to_log(self):
+        return "x: {0}, y: {1} z: {2}".format(self.__data[0], self.__data[1], self.__data[2])
 
     def __str__(self):
         return "MVector3D({0}, {1}, {2})".format(self.__data[0], self.__data[1], self.__data[2])
