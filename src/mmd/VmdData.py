@@ -405,10 +405,29 @@ class VmdMotion():
         keys = []
         for bone_name in bone_names:
             if bone_name in self.bones:
-                keys.extend([x for x in self.bones[bone_name].keys() if (not is_key or (is_key and self.bones[x].key)) and (not is_read or (is_read and self.bones[x].read))])
+                keys.extend([x for x in self.bones[bone_name].keys() if (not is_key or (is_key and self.bones[bone_name][x].key)) and (not is_read or (is_read and self.bones[bone_name][x].read))])
         
         # 重複を除いた昇順フレーム番号リストを返す
         return sorted(list(set(keys)))
+    
+    # 指定されたfnoの前後のキーを取得する
+    def get_bone_prev_next_fno(self, *bone_names, **kwargs):
+        # 指定されたボーン名のfnos
+        fnos = self.get_bone_fnos(*bone_names, **kwargs)
+
+        fno = kwargs["fno"] if "fno" in kwargs else 0
+
+        # 指定より前のキーフレ
+        prev_fnos = [x for x in fnos if x < fno]
+        # 指定より後のキーフレ
+        next_fnos = [x for x in fnos if x > fno]
+        
+        # 前のは取れなければ-1で強制的に前の
+        prev_fno = -1 if len(prev_fnos) <= 0 else prev_fnos[-1]
+        # 後のは取れなければ最終フレーム＋1
+        next_fno = self.last_motion_frame + 1 if len(next_fnos) <= 0 else next_fnos[0]
+
+        return prev_fno, next_fno
 
     # モーフモーション：フレーム番号リスト
     def get_morph_fnos(self, morph_name: str):

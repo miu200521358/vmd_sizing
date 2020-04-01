@@ -341,7 +341,7 @@ class PmxReader():
                 right_toe_vertex = pmx.get_toe_vertex("右")
                 pmx.right_toe_vertex = right_toe_vertex
                 right_toe_bone = Bone("右つま先実体", "right toe entity", copy.deepcopy(right_toe_vertex.position), -1, 0, 0)
-                right_toe_bone.position.setY(0)
+                # right_toe_bone.position.setY(0)
                 right_toe_bone.index = len(pmx.bones.keys())
                 pmx.bones[right_toe_bone.name] = right_toe_bone
                 pmx.bone_indexes[right_toe_bone.index] = right_toe_bone.name
@@ -351,7 +351,7 @@ class PmxReader():
                 left_toe_vertex = pmx.get_toe_vertex("左")
                 pmx.left_toe_vertex = left_toe_vertex
                 left_toe_bone = Bone("左つま先実体", "left toe entity", copy.deepcopy(left_toe_vertex.position), -1, 0, 0)
-                left_toe_bone.position.setY(0)
+                # left_toe_bone.position.setY(0)
                 left_toe_bone.index = len(pmx.bones.keys())
                 pmx.bones[left_toe_bone.name] = left_toe_bone
                 pmx.bone_indexes[left_toe_bone.index] = left_toe_bone.name

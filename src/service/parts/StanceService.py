@@ -57,7 +57,7 @@ class StanceService():
             self.adjust_toe_stance(data_set_idx, data_set)
 
         return True
-    
+
     # つま先補正
     def adjust_toe_stance(self, data_set_idx: int, data_set: MOptionsDataSet):
         logger.info("つま先補正　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
@@ -70,88 +70,148 @@ class StanceService():
         logger.debug("先：左つま先：%s", data_set.rep_model.left_toe_vertex)
         logger.debug("先：右つま先：%s", data_set.rep_model.right_toe_vertex)
 
-        # センター調整は、グルーブがある場合はそちら
-        center_bone_name = "グルーブ" if "グルーブ" in data_set.rep_model.bones and "グルーブ" in data_set.org_model.bones else "センター"
+        # # センター調整は、グルーブがある場合はそちら
+        # center_bone_name = "グルーブ" if "グルーブ" in data_set.rep_model.bones and "グルーブ" in data_set.org_model.bones else "センター"
 
-        prev_sep_fno = 0
-        for k in ["右足IK親", "右足ＩＫ", "左足IK親", "左足ＩＫ"]:
-            if k in data_set.motion.bones and k in data_set.rep_model.bones and rep_toe_links and len(data_set.motion.get_bone_fnos(k)) > 0:
-                # 指定ＩＫとセンターの両方でフレーム番号をチェックする
-                fnos = data_set.motion.get_bone_fnos(k, center_bone_name)
-                for fno_idx, fno in enumerate(fnos):
-                    # 指定ＩＫとセンターのbf(センターはこの時点では登録するか分からないので、補間曲線リセットなし)
-                    bf = data_set.motion.calc_bf(k, fno, is_reset_interpolation=True)
-                    center_bf = data_set.motion.calc_bf(center_bone_name, fno)
-                    
-                    # センター登録可否
-                    is_center_resist = False
+        # つま先調整に必要なボーン群
+        toe_target_bones = ["センター", "左足ＩＫ", "右足ＩＫ", "左つま先ＩＫ", "右つま先ＩＫ", "左足首", "右足首"]
 
-                    org_toe_3ds = MServiceUtils.calc_global_pos(data_set.org_model, org_toe_links[k[0]], data_set.org_motion, bf.fno)
-                    [logger.test("%s: %s", k, v) for k, v in org_toe_3ds.items()]
-                    org_toe_pos = org_toe_3ds["{0}つま先実体".format(k[0])]
-                    logger.test("f: %s, %s - 作成元つま先: %s", bf.fno, k[0], org_toe_pos)
+        if set(toe_target_bones).issubset(data_set.org_model.bones) and set(toe_target_bones).issubset(data_set.rep_model.bones):
+            
+            org_left_toe_limit = data_set.org_model.bones["左足首"].position.distanceToPoint(data_set.org_model.bones["左つま先ＩＫ"].position)
+            org_right_toe_limit = data_set.org_model.bones["右足首"].position.distanceToPoint(data_set.org_model.bones["右つま先ＩＫ"].position)
 
-                    rep_toe_3ds = MServiceUtils.calc_global_pos(data_set.rep_model, rep_toe_links[k[0]], data_set.motion, bf.fno)
-                    rep_toe_pos = rep_toe_3ds["{0}つま先実体".format(k[0])]
-                    [logger.test("%s: %s", k, v) for k, v in org_toe_3ds.items()]
-                    logger.test("f: %s, %s - 変換先つま先: %s", bf.fno, k[0], rep_toe_pos)
-                    
-                    # つま先が元モデルの上にある場合、つま先を合わせて下に下ろす
-                    toe_diff = rep_toe_pos.y() - (org_toe_pos.y() * data_set.original_y_ratio)
-                    if org_toe_pos.y() < 0.5 and toe_diff > 0:
-                        # 足ＩＫとセンターを両方下げる
-                        bf.position.setY(bf.position.y() - toe_diff)
-                        center_bf.position.setY(center_bf.position.y() - toe_diff)
-                        logger.debug("f: %s, %sつま先元補正: %s", bf.fno, k[0], -toe_diff)
-                        # センター登録対象
-                        is_center_resist = True
+            prev_sep_fno = 0
+            # 指定ＩＫとセンターの両方でフレーム番号をチェックする
+            fnos = data_set.motion.get_bone_fnos("左足ＩＫ", "右足ＩＫ", "左足IK親", "右足IK親")
+            for fno_idx, fno in enumerate(fnos):
+                # 指定ＩＫとセンターのbf(この時点では登録するか分からないので、補間曲線リセットなし)
+                left_ik_bf = data_set.motion.calc_bf("左足ＩＫ", fno)
+                right_ik_bf = data_set.motion.calc_bf("右足ＩＫ", fno)
+                # center_bf = data_set.motion.calc_bf(center_bone_name, fno)
 
-                    # ----------
+                # 登録可否
+                is_left_ik_resist = False
+                is_right_ik_resist = False
+                # is_center_resist = False
+                center_diff = 0
 
-                    rep_toe_3ds = MServiceUtils.calc_global_pos(data_set.rep_model, rep_toe_links[k[0]], data_set.motion, bf.fno)
-                    rep_toe_pos = rep_toe_3ds["{0}つま先実体".format(k[0])]
-                    # [logger.test("%s: %s", k, v) for k, v in org_toe_3ds.items()]
-                    logger.test("f: %s, %s - 変換先つま先re: %s", bf.fno, k[0], rep_toe_pos)
-                    
-                    # つま先がマイナス位置にある場合、床に戻す
-                    if rep_toe_pos.y() < 0:
-                        # 足ＩＫのみあげる（センターもあげると浮く）
-                        bf.position.setY(bf.position.y() - rep_toe_pos.y())
-                        # center_bf.position.setY(center_bf.position.y() - rep_toe_pos.y())
-                        logger.debug("f: %s, %sつま先床補正: %s", bf.fno, k[0], -rep_toe_pos.y())
-                    
-                    # 足ＩＫ ----------
-                    # キーを登録
-                    bf.key = True
-                    data_set.motion.bones[k][fno] = bf
-                    # 補間曲線を設定
-                    prev_fno = fnos[fno_idx - 1] if fno_idx > 0 else 0
-                    prev_bf = data_set.motion.calc_bf(k, prev_fno)
-                    next_fno = fnos[fno_idx + 1] if fno_idx < len(fnos) - 1 else data_set.motion.last_motion_frame
-                    next_bf = data_set.motion.calc_bf(k, next_fno)
-                    data_set.motion.split_bf_by_fno(k, prev_bf, next_bf, fno)
+                # つま先の差異
+                org_left_toe_pos, left_toe_diff = self.get_toe_diff(data_set_idx, data_set, org_toe_links, rep_toe_links, "左足ＩＫ", fno)
+                org_right_toe_pos, right_toe_diff = self.get_toe_diff(data_set_idx, data_set, org_toe_links, rep_toe_links, "右足ＩＫ", fno)
 
-                    # センター ---------------
-                    if is_center_resist:
-                        # 登録対象の場合のみ、補間曲線リセットで登録する
-                        regist_center_bf = data_set.motion.calc_bf(center_bone_name, fno, is_reset_interpolation=True)
-                        regist_center_bf.position = center_bf.position
-                        # キーを登録
-                        regist_center_bf.key = True
-                        data_set.motion.bones[center_bone_name][fno] = regist_center_bf
-                        # 補間曲線を設定
-                        prev_fno = fnos[fno_idx - 1] if fno_idx > 0 else 0
-                        prev_center_bf = data_set.motion.calc_bf(center_bone_name, prev_fno)
-                        next_fno = fnos[fno_idx + 1] if fno_idx < len(fnos) - 1 else data_set.motion.last_motion_frame
-                        next_center_bf = data_set.motion.calc_bf(center_bone_name, next_fno)
-                        data_set.motion.split_bf_by_fno(center_bone_name, prev_center_bf, next_center_bf, fno)
+                if org_left_toe_pos.y() < org_left_toe_limit and left_toe_diff > 0:
+                    # 足ＩＫを下げる
+                    left_ik_bf.position.setY(left_ik_bf.position.y() - left_toe_diff)
+                    logger.debug("f: %s, 左つま先元補正: %s", fno, left_toe_diff)
+                    # 登録対象
+                    is_left_ik_resist = True
+                    center_diff = left_toe_diff
+                else:
+                    logger.debug("f: %s, 左つま先元補正なし: %s", fno, left_toe_diff)
 
-                    if fno // 500 > prev_sep_fno:
-                        logger.info("-- %sフレーム目完了", fno)
-                        prev_sep_fno = fno // 500
+                if org_right_toe_pos.y() < org_right_toe_limit and right_toe_diff > 0:
+                    # 足ＩＫを下げる
+                    right_ik_bf.position.setY(right_ik_bf.position.y() - right_toe_diff)
+                    logger.debug("f: %s, 右つま先元補正: %s", fno, right_toe_diff)
+                    # 登録対象
+                    is_right_ik_resist = True
+                    # センターは、既に差異が指定されている場合、小さい方を採用
+                    center_diff = right_toe_diff if center_diff == 0 else min(center_diff, right_toe_diff)
+                else:
+                    logger.debug("f: %s, 右つま先元補正なし: %s", fno, right_toe_diff)
+                
+                # if center_diff != 0:
+                #     # センター差異がある場合、下げる
+                #     center_bf.position.setY(center_bf.position.y() - center_diff)
+                #     logger.debug("f: %s, センター元補正: %s", fno, center_diff)
+                #     is_center_resist = True
+                # else:
+                #     logger.debug("f: %s, センター元補正なし: %s", fno, center_diff)
 
-                if len(data_set.motion.bones[k].keys()) > 0:
-                    logger.info("つま先補正: %s", k)
+                # つま先を取り直す
+                left_rep_toe_pos = self.get_toe_entity(data_set_idx, data_set, data_set.rep_model, data_set.motion, rep_toe_links, "左足ＩＫ", fno)
+                right_rep_toe_pos = self.get_toe_entity(data_set_idx, data_set, data_set.rep_model, data_set.motion, rep_toe_links, "右足ＩＫ", fno)
+
+                if left_rep_toe_pos.y() < 0:
+                    # 足ＩＫのみあげる（センターもあげると浮く）
+                    left_ik_bf.position.setY(left_ik_bf.position.y() - left_rep_toe_pos.y())
+                    logger.debug("f: %s, 左つま先床補正: %s", left_ik_bf.fno, left_rep_toe_pos.y())
+                    # 登録対象
+                    is_left_ik_resist = True
+                else:
+                    logger.debug("f: %s, 左つま先床補正なし: %s", left_ik_bf.fno, left_rep_toe_pos.y())
+
+                if right_rep_toe_pos.y() < 0:
+                    # 足ＩＫのみあげる（センターもあげると浮く）
+                    right_ik_bf.position.setY(right_ik_bf.position.y() - right_rep_toe_pos.y())
+                    logger.debug("f: %s, 右つま先床補正: %s", right_ik_bf.fno, right_rep_toe_pos.y())
+                    # 登録対象
+                    is_right_ik_resist = True
+                else:
+                    logger.debug("f: %s, 右つま先床補正なし: %s", right_ik_bf.fno, right_rep_toe_pos.y())
+                
+                # if left_rep_toe_pos.y() < 0 or right_rep_toe_pos.y() < 0:
+                #     # センターは正で小さい方を上げる
+                #     center_diff = max(0, min(left_rep_toe_pos.y(), right_rep_toe_pos.y()))
+                #     center_bf.position.setY(center_bf.position.y() - center_diff)
+                #     logger.debug("f: %s, センター床補正: %s", fno, center_diff)
+                #     is_center_resist = True
+                # else:
+                #     logger.debug("f: %s, センター床補正なし: %s", fno, center_diff)
+
+                # 登録対象である場合、それぞれのbfを登録
+                if is_left_ik_resist:
+                    self.regist_toe_bf(data_set_idx, data_set, left_ik_bf, "左足ＩＫ", fno)
+                
+                if is_right_ik_resist:
+                    self.regist_toe_bf(data_set_idx, data_set, right_ik_bf, "右足ＩＫ", fno)
+                
+                # if is_center_resist:
+                #     self.regist_toe_bf(data_set_idx, data_set, center_bf, center_bone_name, fno)
+
+                if fno // 500 > prev_sep_fno:
+                    logger.info("-- %sフレーム目完了", fno)
+                    prev_sep_fno = fno // 500
+
+        logger.info("つま先補正完了")
+
+    def regist_toe_bf(self, data_set_idx: int, data_set: MOptionsDataSet, bf: VmdBoneFrame, ik_bone_name: str, fno: int):
+        # 登録対象の場合のみ、補間曲線リセットで登録する
+        regist_bf = data_set.motion.calc_bf(ik_bone_name, fno, is_reset_interpolation=True)
+        regist_bf.position = bf.position
+        # キーを登録
+        regist_bf.key = True
+        data_set.motion.bones[ik_bone_name][fno] = regist_bf
+        # 補間曲線を設定（有効なキーのみ）
+        prev_fno, next_fno = data_set.motion.get_bone_prev_next_fno(ik_bone_name, fno=fno, is_key=True)
+
+        prev_bf = data_set.motion.calc_bf(ik_bone_name, prev_fno)
+        next_bf = data_set.motion.calc_bf(ik_bone_name, next_fno)
+        data_set.motion.split_bf_by_fno(ik_bone_name, prev_bf, next_bf, fno)
+
+    # つま先の差異
+    def get_toe_diff(self, data_set_idx: int, data_set: MOptionsDataSet, org_toe_links: BoneLinks, rep_toe_links: BoneLinks, ik_bone_name: str, fno: int):
+        org_toe_pos = self.get_toe_entity(data_set_idx, data_set, data_set.org_model, data_set.org_motion, org_toe_links, ik_bone_name, fno)
+        rep_toe_pos = self.get_toe_entity(data_set_idx, data_set, data_set.rep_model, data_set.motion, rep_toe_links, ik_bone_name, fno)
+        
+        logger.test("f: %s, %s - 作成元つま先: %s", fno, ik_bone_name[0], org_toe_pos)
+        logger.test("f: %s, %s - 変換先つま先: %s", fno, ik_bone_name[0], rep_toe_pos)
+        
+        # つま先が元モデルの上にある場合、つま先を合わせて下に下ろす
+        toe_diff = rep_toe_pos.y() - (org_toe_pos.y() * data_set.original_y_ratio)
+        logger.test("f: %s, %s - toe_diff: %s", fno, ik_bone_name[0], toe_diff)
+
+        return org_toe_pos, toe_diff
+    
+    # つま先実体のグローバル位置を取得する
+    def get_toe_entity(self, data_set_idx: int, data_set: MOptionsDataSet, model: PmxModel, motion: VmdMotion, toe_links: BoneLinks, ik_bone_name: str, fno: int):
+        toe_3ds = MServiceUtils.calc_global_pos(model, toe_links[ik_bone_name[0]], motion, fno)
+        toe_pos = toe_3ds["{0}つま先実体".format(ik_bone_name[0])]
+        logger.test(model.name)
+        [logger.test("-- %s: %s", k, v) for k, v in toe_3ds.items()]
+
+        return toe_pos
 
     # センタースタンス補正
     def adjust_center_stance(self, data_set_idx: int, data_set: MOptionsDataSet):
