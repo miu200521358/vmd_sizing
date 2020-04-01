@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
-import math
-import unittest
+import math # noqa
+import unittest # noqa
 import numpy as np # noqa
 import sys
 import pathlib

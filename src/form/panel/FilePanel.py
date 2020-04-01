@@ -20,7 +20,7 @@ class FilePanel(BasePanel):
 
         # ファイルセット
         self.file_set = SizingFileSet(frame, self, self.file_hitories, 1)
-        self.sizer.Add(self.file_set.set_sizer, 1, wx.ALL, 0)
+        self.sizer.Add(self.file_set.set_sizer, 0, wx.ALL, 0)
 
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -74,7 +74,7 @@ class FilePanel(BasePanel):
         self.console_ctrl.Clear()
         wx.GetApp().Yield()
 
-        # 一旦読み込み
+        # 一旦読み込み(そのままチェック)
         self.frame.load()
 
         event.Skip()

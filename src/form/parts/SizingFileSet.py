@@ -28,7 +28,7 @@ class SizingFileSet():
 
         able_aster_toottip = "ファイル名にアスタリスク（*）を使用すると複数件のデータを一度にサイジングできます。" if self.set_no == 1 else "一括指定はできません。"
         # VMD/VPDファイルコントロール
-        self.motion_vmd_file_ctrl = HistoryFilePickerCtrl(frame, panel, u"調整対象モーションVMD/VPDファイル", u"調整対象モーションVMD/VPDファイルを開く", ("vmd", "vpd"), wx.FLP_DEFAULT_STYLE, \
+        self.motion_vmd_file_ctrl = HistoryFilePickerCtrl(frame, panel, u"調整対象モーションVMD/VPD", u"調整対象モーションVMD/VPDファイルを開く", ("vmd", "vpd"), wx.FLP_DEFAULT_STYLE, \
                                                           u"調整したいモーションのVMD/VPDパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。\n{0}".format(able_aster_toottip), \
                                                           file_model_spacer=8, title_parts_ctrl=None, file_histories_key="vmd", is_change_output=True, is_aster=True, is_save=False, set_no=set_no)
         self.set_sizer.Add(self.motion_vmd_file_ctrl.sizer, 1, wx.EXPAND, 0)
@@ -39,7 +39,7 @@ class SizingFileSet():
         substitute_model_flg_ctrl.Bind(wx.EVT_CHECKBOX, self.set_output_vmd_path)
 
         # 作成元PMXファイルコントロール
-        self.org_model_file_ctrl = HistoryFilePickerCtrl(frame, panel, u"モーション作成元モデルPMXファイル", u"モーション作成元モデルPMXファイルを開く", ("pmx"), wx.FLP_DEFAULT_STYLE, \
+        self.org_model_file_ctrl = HistoryFilePickerCtrl(frame, panel, u"モーション作成元モデルPMX", u"モーション作成元モデルPMXファイルを開く", ("pmx"), wx.FLP_DEFAULT_STYLE, \
                                                          u"モーション作成に使用されたモデルのPMXパスを指定してください。\n精度は落ちますが、類似したサイズ・ボーン構造のモデルでも代用できます。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。", \
                                                          file_model_spacer=2, title_parts_ctrl=substitute_model_flg_ctrl, file_histories_key="org_pmx", is_change_output=False, is_aster=False, \
                                                          is_save=False, set_no=set_no)
@@ -51,14 +51,14 @@ class SizingFileSet():
         twist_flg_ctrl.Bind(wx.EVT_CHECKBOX, self.set_output_vmd_path)
 
         # 変換先PMXファイルコントロール
-        self.rep_model_file_ctrl = HistoryFilePickerCtrl(frame, panel, u"モーション変換先モデルPMXファイル", u"モーション変換先モデルPMXファイルを開く", ("pmx"), wx.FLP_DEFAULT_STYLE, \
+        self.rep_model_file_ctrl = HistoryFilePickerCtrl(frame, panel, u"モーション変換先モデルPMX", u"モーション変換先モデルPMXファイルを開く", ("pmx"), wx.FLP_DEFAULT_STYLE, \
                                                          u"実際にモーションを読み込ませたいモデルのPMXパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。", \
                                                          file_model_spacer=1, title_parts_ctrl=twist_flg_ctrl, file_histories_key="rep_pmx", is_change_output=True, is_aster=False, \
                                                          is_save=False, set_no=set_no)
         self.set_sizer.Add(self.rep_model_file_ctrl.sizer, 1, wx.EXPAND, 0)
 
         # 出力先VMDファイルコントロール
-        self.output_vmd_file_ctrl = BaseFilePickerCtrl(frame, panel, u"出力VMDファイル", u"出力VMDファイルを開く", ("vmd"), wx.FLP_OVERWRITE_PROMPT | wx.FLP_SAVE | wx.FLP_USE_TEXTCTRL, \
+        self.output_vmd_file_ctrl = BaseFilePickerCtrl(frame, panel, u"出力VMD", u"出力VMDファイルを開く", ("vmd"), wx.FLP_OVERWRITE_PROMPT | wx.FLP_SAVE | wx.FLP_USE_TEXTCTRL, \
                                                        u"調整結果のVMD出力パスを指定してください。\nVMDファイルと変換先PMXのファイル名に基づいて自動生成されますが、任意のパスに変更することも可能です。", \
                                                        is_aster=False, is_save=True, set_no=set_no)
         self.set_sizer.Add(self.output_vmd_file_ctrl.sizer, 1, wx.EXPAND, 0)
@@ -129,35 +129,51 @@ class SizingFileSet():
             return True
 
         result = True
+        is_warning = False
 
         # ボーン
         for k in motion.bones.keys():
             bone_fnos = motion.get_bone_fnos(k)
-            if len(bone_fnos) > 1 and (motion.bones[k][bone_fnos[0]].position != MVector3D() or motion.bones[k][bone_fnos[0]].rotation != MQuaternion()):
-                # キーが存在しており、かつ初期値ではない値が入っている場合、警告対象
-                if k not in org_pmx.bones:
-                    not_org_bones.append(k)
+            for fno in bone_fnos:
+                if motion.bones[k][fno].position != MVector3D() or motion.bones[k][fno].rotation != MQuaternion():
+                    # キーが存在しており、かつ初期値ではない値が入っている場合、警告対象
 
-                if k not in rep_pmx.bones:
-                    not_rep_bones.append(k)
+                    if k not in org_pmx.bones:
+                        not_org_bones.append(k)
+
+                    if k not in rep_pmx.bones:
+                        not_rep_bones.append(k)
+                    
+                    # 1件あればOK
+                    break
 
             morph_fnos = motion.get_morph_fnos(k)
-            if len(morph_fnos) > 1 and (motion.morphs[k][morph_fnos[0]].ratio != 0):
-                # キーが存在しており、かつ初期値ではない値が入っている場合、警告対象
-                if k not in org_pmx.morphs:
-                    not_org_morphs.append(k)
+            for fno in morph_fnos:
+                if motion.morphs[k][fno].ratio != 0:
+                    # キーが存在しており、かつ初期値ではない値が入っている場合、警告対象
 
-                if k not in rep_pmx.morphs:
-                    not_rep_morphs.append(k)
+                    if k not in org_pmx.morphs:
+                        not_org_morphs.append(k)
+
+                    if k not in rep_pmx.morphs:
+                        not_rep_morphs.append(k)
+                    
+                    # 1件あればOK
+                    break
 
         if len(not_org_bones) > 0 or len(not_org_morphs) > 0:
-            logger.warning("%s%sにモーションで使用されているボーン・モーフが不足しています。\nボーン: %s\nモーフ: %s", \
-                           display_set_no, self.org_model_file_ctrl.title, ",".join(not_org_bones), ",".join(not_org_morphs), decoration=MLogger.DECORATION_BOX)
+            logger.warning("%s%sに、モーションで使用されているボーン・モーフが不足しています。\nモデル: %s\n不足ボーン: %s\n不足モーフ: %s", \
+                           display_set_no, self.org_model_file_ctrl.title, org_pmx.name, ",".join(not_org_bones), ",".join(not_org_morphs), decoration=MLogger.DECORATION_BOX)
+            is_warning = True
 
         if len(not_rep_bones) > 0 or len(not_rep_morphs) > 0:
-            logger.warning("%s%sにモーションで使用されているボーン・モーフが不足しています。\nボーン: %s\nモーフ: %s", \
-                           display_set_no, self.rep_model_file_ctrl.title, ",".join(not_rep_bones), ",".join(not_rep_morphs), decoration=MLogger.DECORATION_BOX)
-        
+            logger.warning("%s%sに、モーションで使用されているボーン・モーフが不足しています。\nモデル: %s\n不足ボーン: %s\n不足モーフ: %s", \
+                           display_set_no, self.rep_model_file_ctrl.title, rep_pmx.name, ",".join(not_rep_bones), ",".join(not_rep_morphs), decoration=MLogger.DECORATION_BOX)
+            is_warning = True
+
+        if not is_warning:
+            logger.info("モーションで使用されているボーン・モーフが揃っています。", decoration=MLogger.DECORATION_BOX, title="OK")
+
         return result
 
     def is_loaded(self):

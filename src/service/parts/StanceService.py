@@ -24,18 +24,22 @@ class StanceService():
                 # モーションデータが無い場合、処理スキップ
                 continue
             
-            # # 代替モデルでない場合
-            # if not data_set.substitute_model_flg:
-            #     # センタースタンス補正
-            #     self.adjust_center_stance(data_set_idx, data_set)
+            # 代替モデルでない場合
+            if not data_set.substitute_model_flg:
+                # センタースタンス補正
+                self.adjust_center_stance(data_set_idx, data_set)
 
-            #     # 上半身スタンス補正
-            #     self.adjust_upper_stance(data_set_idx, data_set)
+                # 上半身スタンス補正
+                self.adjust_upper_stance(data_set_idx, data_set)
+            
+                # つま先補正
+                self.adjust_toe_stance(data_set_idx, data_set)
 
             # 腕系サイジング可能であれば、腕スタンス補正
             if data_set.org_model.can_arm_sizing and data_set.rep_model.can_arm_sizing:
-                # # 肩スタンス補正
-                # self.adjust_shoulder_stance(data_set_idx, data_set)
+                if not data_set.substitute_model_flg:
+                    # 肩スタンス補正
+                    self.adjust_shoulder_stance(data_set_idx, data_set)
 
                 # 腕スタンス補正
                 self.adjust_arm_stance(data_set_idx, data_set)
@@ -52,9 +56,6 @@ class StanceService():
                     target_model_type = target_model_type + "変換先"
 
                 logger.warning("%sモデルの腕構造にサイジングが対応していない為、腕系処理をスキップします。", target_model_type, decoration=MLogger.DECORATION_BOX)
-            
-            # つま先補正
-            self.adjust_toe_stance(data_set_idx, data_set)
 
         return True
 
@@ -82,10 +83,10 @@ class StanceService():
             org_right_toe_limit = data_set.org_model.bones["右足首"].position.distanceToPoint(data_set.org_model.bones["右つま先ＩＫ"].position)
 
             prev_sep_fno = 0
-            # 指定ＩＫとセンターの両方でフレーム番号をチェックする
+            # 足ＩＫと足IK親の両方でフレーム番号をチェックする
             fnos = data_set.motion.get_bone_fnos("左足ＩＫ", "右足ＩＫ", "左足IK親", "右足IK親")
             for fno_idx, fno in enumerate(fnos):
-                # 指定ＩＫとセンターのbf(この時点では登録するか分からないので、補間曲線リセットなし)
+                # 足ＩＫのbf(この時点では登録するか分からないので、補間曲線リセットなし)
                 left_ik_bf = data_set.motion.calc_bf("左足ＩＫ", fno)
                 right_ik_bf = data_set.motion.calc_bf("右足ＩＫ", fno)
                 # center_bf = data_set.motion.calc_bf(center_bone_name, fno)
@@ -94,7 +95,7 @@ class StanceService():
                 is_left_ik_resist = False
                 is_right_ik_resist = False
                 # is_center_resist = False
-                center_diff = 0
+                # center_diff = 0
 
                 # つま先の差異
                 org_left_toe_pos, left_toe_diff = self.get_toe_diff(data_set_idx, data_set, org_toe_links, rep_toe_links, "左足ＩＫ", fno)
@@ -106,7 +107,7 @@ class StanceService():
                     logger.debug("f: %s, 左つま先元補正: %s", fno, left_toe_diff)
                     # 登録対象
                     is_left_ik_resist = True
-                    center_diff = left_toe_diff
+                    # center_diff = left_toe_diff
                 else:
                     logger.debug("f: %s, 左つま先元補正なし: %s", fno, left_toe_diff)
 
@@ -117,7 +118,7 @@ class StanceService():
                     # 登録対象
                     is_right_ik_resist = True
                     # センターは、既に差異が指定されている場合、小さい方を採用
-                    center_diff = right_toe_diff if center_diff == 0 else min(center_diff, right_toe_diff)
+                    # center_diff = right_toe_diff if center_diff == 0 else min(center_diff, right_toe_diff)
                 else:
                     logger.debug("f: %s, 右つま先元補正なし: %s", fno, right_toe_diff)
                 
