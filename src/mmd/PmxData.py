@@ -683,10 +683,10 @@ class PmxModel():
         self.can_arm_sizing = True
         # 頭頂頂点
         self.head_top_vertex = None
-        # 左足底辺頂点
-        self.left_leg_bottom_vertex = None
-        # 右足底辺頂点
-        self.right_leg_bottom_vertex = None
+        # 左足底頂点
+        self.left_sole_vertex = None
+        # 右足底頂点
+        self.right_sole_vertex = None
         # 左つま先頂点
         self.left_toe_vertex = None
         # 右つま先頂点
@@ -708,7 +708,8 @@ class PmxModel():
             return False
 
         up_max_pos, up_max_vertex, down_max_pos, down_max_vertex, right_max_pos, right_max_vertex, left_max_pos, left_max_vertex, \
-            back_max_pos, back_max_vertex, front_max_pos, front_max_vertex = self.get_bone_end_vertex(bone_name_list, self.def_calc_vertex_pos_original, None)
+            back_max_pos, back_max_vertex, front_max_pos, front_max_vertex, multi_max_pos, multi_max_vertex \
+            = self.get_bone_end_vertex(bone_name_list, self.def_calc_vertex_pos_original, None)
 
         if not up_max_vertex or not down_max_vertex:
             # 左ひじウェイト頂点が取れなかった場合、そもそもNG
@@ -854,8 +855,8 @@ class PmxModel():
         "左足ＩＫ": ["左足IK親", "全ての親", "SIZING_ROOT_BONE"],
         "左つま先ＩＫ": ["左足ＩＫ"],
         "左足先EX": ["左つま先ＩＫ", "左足ＩＫ"],
-        "左つま先実体": ["左足先EX", "左つま先ＩＫ", "左足ＩＫ"],
-        "左足底辺": ["左足ＩＫ"],
+        "左足底実体": ["左足先EX", "左つま先ＩＫ", "左足ＩＫ"],
+        "左つま先実体": ["左足底実体", "左足先EX", "左つま先ＩＫ", "左足ＩＫ"],
         "右肩P": ["上半身2", "上半身"],
         "右肩": ["右肩P", "上半身2", "上半身"],
         "右肩C": ["右肩"],
@@ -896,8 +897,8 @@ class PmxModel():
         "右足ＩＫ": ["右足IK親", "全ての親", "SIZING_ROOT_BONE"],
         "右つま先ＩＫ": ["右足ＩＫ"],
         "右足先EX": ["右つま先ＩＫ", "右足ＩＫ"],
-        "右つま先実体": ["右足先EX", "右つま先ＩＫ", "右足ＩＫ"],
-        "右足底辺": ["右足ＩＫ"],
+        "右足底実体": ["右足先EX", "右つま先ＩＫ", "右足ＩＫ"],
+        "右つま先実体": ["右足底実体", "右足先EX", "右つま先ＩＫ", "右足ＩＫ"],
         "左目": ["頭"],
         "右目": ["頭"]
     }
@@ -907,7 +908,8 @@ class PmxModel():
         bone_name_list = ["頭"]
 
         up_max_pos, up_max_vertex, down_max_pos, down_max_vertex, right_max_pos, right_max_vertex, left_max_pos, left_max_vertex, \
-            back_max_pos, back_max_vertex, front_max_pos, front_max_vertex = self.get_bone_end_vertex(bone_name_list, self.def_calc_vertex_pos_original, None)
+            back_max_pos, back_max_vertex, front_max_pos, front_max_vertex, multi_max_pos, multi_max_vertex \
+            = self.get_bone_end_vertex(bone_name_list, self.def_calc_vertex_pos_original, None)
 
         if not up_max_vertex:
             # 頭頂頂点が取れなかった場合
@@ -941,9 +943,11 @@ class PmxModel():
                 return Vertex(-1, MVector3D(), MVector3D(), [], [], Vertex.Bdef1(-1), -1)
 
         up_max_pos, up_max_vertex, down_max_pos, down_max_vertex, right_max_pos, right_max_vertex, left_max_pos, left_max_vertex, \
-            back_max_pos, back_max_vertex, front_max_pos, front_max_vertex = self.get_bone_end_vertex(bone_name_list, self.def_calc_vertex_pos_original, None)
+            back_max_pos, back_max_vertex, front_max_pos, front_max_vertex, front_down_max_pos, front_down_max_vertex \
+            = self.get_bone_end_vertex(bone_name_list, self.def_calc_vertex_pos_original, def_is_target=None, \
+                                       def_is_multi_target=self.def_is_multi_target_down_front, multi_target_default_val=MVector3D(0, 99999, 99999))
 
-        if not front_max_vertex:
+        if not front_down_max_vertex:
             # つま先頂点が取れなかった場合
             if "{0}つま先".format(direction) in self.bones:
                 return Vertex(-1, self.bones["{0}つま先".format(direction)].position, MVector3D(), [], [], Vertex.Bdef1(-1), -1)
@@ -954,14 +958,18 @@ class PmxModel():
             else:
                 return Vertex(-1, MVector3D(), MVector3D(), [], [], Vertex.Bdef1(-1), -1)
         
-        return front_max_vertex
+        return front_down_max_vertex
 
     # 頂点位置を返す（オリジナルそのまま）
     def def_calc_vertex_pos_original(self, v: Vertex):
         return v.position
+    
+    # 最も底面で前面にある頂点であるか
+    def def_is_multi_target_down_front(self, multi_max_pos: MVector3D, v_pos: MVector3D):
+        return v_pos.z() < multi_max_pos.z()
 
     # 指定ボーンにウェイトが乗っている頂点とそのINDEX
-    def get_bone_end_vertex(self, bone_name_list, def_calc_vertex_pos, def_is_target=None):
+    def get_bone_end_vertex(self, bone_name_list, def_calc_vertex_pos, def_is_target=None, def_is_multi_target=None, multi_target_default_val=None):
         # 指定ボーンにウェイトが乗っているボーンINDEXリスト
         bone_idx_list = []
         for bk, bv in self.bones.items():
@@ -971,7 +979,7 @@ class PmxModel():
         if len(bone_idx_list) == 0:
             logger.test("bone_name: %s, ウェイト頂点がない", bone_name_list)
             # ウェイトボーンがない場合、初期値
-            return MVector3D(), None, MVector3D(), None, MVector3D(), None, MVector3D(), None, MVector3D(), None, MVector3D(), None
+            return MVector3D(), None, MVector3D(), None, MVector3D(), None, MVector3D(), None, MVector3D(), None, MVector3D(), None, MVector3D(), None
 
         logger.test("model: %s, bone_name: %s, bone_idx_list:%s", self.name, bone_name_list, bone_idx_list)
 
@@ -987,6 +995,8 @@ class PmxModel():
         back_max_vertex = None
         front_max_pos = MVector3D(0, 0, 99999)
         front_max_vertex = None
+        multi_max_pos = multi_target_default_val
+        multi_max_vertex = None
 
         for bone_idx in bone_idx_list:
             for v in self.vertices[bone_idx]:
@@ -1008,7 +1018,7 @@ class PmxModel():
                         right_max_pos = v_pos
                         right_max_vertex = v
 
-                    if v_pos.x() > right_max_pos.x():
+                    if v_pos.x() > left_max_pos.x():
                         # 指定ボーンにウェイトが乗っていて、かつ最上の頂点より上の場合、保持
                         left_max_pos = v_pos
                         left_max_vertex = v
@@ -1022,9 +1032,13 @@ class PmxModel():
                         # 指定ボーンにウェイトが乗っていて、かつ最下の頂点より奥の場合、保持
                         back_max_pos = v_pos
                         back_max_vertex = v
+                    
+                    if def_is_multi_target and def_is_multi_target(multi_max_pos, v_pos):
+                        multi_max_pos = v_pos
+                        multi_max_vertex = v
 
         return up_max_pos, up_max_vertex, down_max_pos, down_max_vertex, right_max_pos, right_max_vertex, left_max_pos, left_max_vertex, \
-            back_max_pos, back_max_vertex, front_max_pos, front_max_vertex
+            back_max_pos, back_max_vertex, front_max_pos, front_max_vertex, multi_max_pos, multi_max_vertex
 
     @classmethod
     def get_effective_value(cls, v):

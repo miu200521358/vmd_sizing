@@ -356,24 +356,30 @@ class PmxReader():
                 pmx.bones[left_toe_bone.name] = left_toe_bone
                 pmx.bone_indexes[left_toe_bone.index] = left_toe_bone.name
 
-            if "右足ＩＫ" in pmx.bones:
-                # 右足底辺ボーン
-                right_leg_bottom_vertex = MVector3D(pmx.bones["右足ＩＫ"].position.x(), 0, pmx.bones["右足ＩＫ"].position.z())
-                pmx.right_leg_bottom_vertex = right_leg_bottom_vertex
-                right_leg_bottom_bone = Bone("右足底辺", "right toe entity", right_leg_bottom_vertex, -1, 0, 0)
-                right_leg_bottom_bone.index = len(pmx.bones.keys())
-                pmx.bones[right_leg_bottom_bone.name] = right_leg_bottom_bone
-                pmx.bone_indexes[right_leg_bottom_bone.index] = right_leg_bottom_bone.name
+            if "右足先EX" in pmx.bones or "右足ＩＫ" in pmx.bones:
+                # 右足底実体ボーン
+                if "右足先EX" in pmx.bones:
+                    right_sole_vertex = MVector3D(pmx.bones["右足先EX"].position.x(), 0, pmx.bones["右足先EX"].position.z())
+                elif "右足ＩＫ" in pmx.bones:
+                    right_sole_vertex = MVector3D(pmx.bones["右足ＩＫ"].position.x(), 0, pmx.bones["右足ＩＫ"].position.z())
+                pmx.right_sole_vertex = right_sole_vertex
+                right_sole_bone = Bone("右足底実体", "right sole entity", right_sole_vertex, -1, 0, 0)
+                right_sole_bone.index = len(pmx.bones.keys())
+                pmx.bones[right_sole_bone.name] = right_sole_bone
+                pmx.bone_indexes[right_sole_bone.index] = right_sole_bone.name
 
-            # 左足底辺ボーン
-            if "左足ＩＫ" in pmx.bones:
-                left_leg_bottom_vertex = MVector3D(pmx.bones["左足ＩＫ"].position.x(), 0, pmx.bones["左足ＩＫ"].position.z())
-                pmx.left_leg_bottom_vertex = left_leg_bottom_vertex
-                left_leg_bottom_bone = Bone("左足底辺", "left toe entity", left_leg_bottom_vertex, -1, 0, 0)
-                left_leg_bottom_bone.index = len(pmx.bones.keys())
-                pmx.bones[left_leg_bottom_bone.name] = left_leg_bottom_bone
-                pmx.bone_indexes[left_leg_bottom_bone.index] = left_leg_bottom_bone.name
-            
+            if "左足先EX" in pmx.bones or "左足ＩＫ" in pmx.bones:
+                # 左足底実体ボーン
+                if "左足先EX" in pmx.bones:
+                    left_sole_vertex = MVector3D(pmx.bones["左足先EX"].position.x(), 0, pmx.bones["左足先EX"].position.z())
+                elif "左足ＩＫ" in pmx.bones:
+                    left_sole_vertex = MVector3D(pmx.bones["左足ＩＫ"].position.x(), 0, pmx.bones["左足ＩＫ"].position.z())
+                pmx.left_sole_vertex = left_sole_vertex
+                left_sole_bone = Bone("左足底実体", "left sole entity", left_sole_vertex, -1, 0, 0)
+                left_sole_bone.index = len(pmx.bones.keys())
+                pmx.bones[left_sole_bone.name] = left_sole_bone
+                pmx.bone_indexes[left_sole_bone.index] = left_sole_bone.name
+
             # 首根元ボーン
             if "左腕" in pmx.bones and "右腕" in pmx.bones:
                 neck_base_vertex = (pmx.bones["左腕"].position + pmx.bones["右腕"].position) / 2
@@ -586,6 +592,9 @@ class PmxReader():
                 sha1.update(chunk)
 
         sha1.update(chunk)
+
+        # ファイルパスをハッシュに含める
+        sha1.update(self.file_path.encode('utf-8'))
 
         return sha1.hexdigest()
 

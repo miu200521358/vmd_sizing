@@ -75,7 +75,7 @@ class ConvertCsvService():
                         f.write(s)
                         f.write("\n")
 
-            logger.info("ボーンモーションCSV: %s", os.path.basename(bone_fpath), decoration=MLogger.DECORATION_BOX)
+            logger.info("ボーンモーションCSV: %s", bone_fpath, decoration=MLogger.DECORATION_BOX)
 
         if self.options.motion.morph_cnt > 0:
             # モーフ出力
@@ -95,7 +95,7 @@ class ConvertCsvService():
                         f.write(s)
                         f.write("\n")
 
-            logger.info("モーフモーションCSV: %s", os.path.basename(morph_fpath), decoration=MLogger.DECORATION_BOX)
+            logger.info("モーフモーションCSV: %s", morph_fpath, decoration=MLogger.DECORATION_BOX)
                     
         if self.options.motion.camera_cnt > 0:
             # カメラ出力
@@ -117,7 +117,7 @@ class ConvertCsvService():
                     f.write(s)
                     f.write("\n")
 
-            logger.info("カメラモーションCSV: %s", os.path.basename(camera_fpath), decoration=MLogger.DECORATION_BOX)
+            logger.info("カメラモーションCSV: %s", camera_fpath, decoration=MLogger.DECORATION_BOX)
                     
         return True
 

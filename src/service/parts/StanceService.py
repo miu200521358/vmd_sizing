@@ -71,111 +71,69 @@ class StanceService():
         logger.debug("先：左つま先：%s", data_set.rep_model.left_toe_vertex)
         logger.debug("先：右つま先：%s", data_set.rep_model.right_toe_vertex)
 
-        # # センター調整は、グルーブがある場合はそちら
-        # center_bone_name = "グルーブ" if "グルーブ" in data_set.rep_model.bones and "グルーブ" in data_set.org_model.bones else "センター"
+        for direction in ["左", "右"]:
+            # つま先調整に必要なボーン群
+            toe_target_bones = ["{0}足ＩＫ".format(direction), "{0}つま先ＩＫ".format(direction), "{0}足首".format(direction), "{0}つま先実体".format(direction), "{0}足底実体".format(direction)]
 
-        # つま先調整に必要なボーン群
-        toe_target_bones = ["センター", "左足ＩＫ", "右足ＩＫ", "左つま先ＩＫ", "右つま先ＩＫ", "左足首", "右足首"]
+            if set(toe_target_bones).issubset(data_set.org_model.bones) and set(toe_target_bones).issubset(data_set.rep_model.bones):
+                org_toe_limit = data_set.org_model.bones["{0}足首".format(direction)].position.distanceToPoint(data_set.org_model.bones["{0}つま先実体".format(direction)].position)
+                rep_toe_limit = data_set.rep_model.bones["{0}足首".format(direction)].position.distanceToPoint(data_set.rep_model.bones["{0}つま先実体".format(direction)].position)
 
-        if set(toe_target_bones).issubset(data_set.org_model.bones) and set(toe_target_bones).issubset(data_set.rep_model.bones):
+                toe_limit_ratio = rep_toe_limit / org_toe_limit
             
-            org_left_toe_limit = data_set.org_model.bones["左足首"].position.distanceToPoint(data_set.org_model.bones["左つま先ＩＫ"].position)
-            org_right_toe_limit = data_set.org_model.bones["右足首"].position.distanceToPoint(data_set.org_model.bones["右つま先ＩＫ"].position)
+                prev_sep_fno = 0
+                # 足ＩＫと足IK親の両方でフレーム番号をチェックする
+                fnos = data_set.motion.get_bone_fnos("{0}足ＩＫ".format(direction), "{0}足IK親".format(direction))
+                for fno_idx, fno in enumerate(fnos):
+                    # 足ＩＫのbf(この時点では登録するか分からないので、補間曲線リセットなし)
+                    ik_bf = data_set.motion.calc_bf("{0}足ＩＫ".format(direction), fno)
 
-            prev_sep_fno = 0
-            # 足ＩＫと足IK親の両方でフレーム番号をチェックする
-            fnos = data_set.motion.get_bone_fnos("左足ＩＫ", "右足ＩＫ", "左足IK親", "右足IK親")
-            for fno_idx, fno in enumerate(fnos):
-                # 足ＩＫのbf(この時点では登録するか分からないので、補間曲線リセットなし)
-                left_ik_bf = data_set.motion.calc_bf("左足ＩＫ", fno)
-                right_ik_bf = data_set.motion.calc_bf("右足ＩＫ", fno)
-                # center_bf = data_set.motion.calc_bf(center_bone_name, fno)
+                    # 登録可否
+                    is_ik_resist = False
 
-                # 登録可否
-                is_left_ik_resist = False
-                is_right_ik_resist = False
-                # is_center_resist = False
-                # center_diff = 0
+                    # つま先の差異
+                    org_toe_pos, toe_diff = self.get_toe_diff(data_set_idx, data_set, org_toe_links, rep_toe_links, toe_limit_ratio, "{0}足ＩＫ".format(direction), fno)
 
-                # つま先の差異
-                org_left_toe_pos, left_toe_diff = self.get_toe_diff(data_set_idx, data_set, org_toe_links, rep_toe_links, "左足ＩＫ", fno)
-                org_right_toe_pos, right_toe_diff = self.get_toe_diff(data_set_idx, data_set, org_toe_links, rep_toe_links, "右足ＩＫ", fno)
+                    if org_toe_pos.y() < org_toe_limit and toe_diff > 0:
+                        # 足ＩＫを合わせる
+                        ik_bf.position.setY(max(0, ik_bf.position.y() - toe_diff))
+                        logger.debug("f: %s, %sつま先元補正: %s", fno, direction, toe_diff)
+                        # 登録対象
+                        is_ik_resist = True
+                        # center_diff = toe_diff
+                    else:
+                        logger.debug("f: %s, %sつま先元補正なし: %s", fno, direction, toe_diff)
 
-                if org_left_toe_pos.y() < org_left_toe_limit and left_toe_diff > 0:
-                    # 足ＩＫを下げる
-                    left_ik_bf.position.setY(left_ik_bf.position.y() - left_toe_diff)
-                    logger.debug("f: %s, 左つま先元補正: %s", fno, left_toe_diff)
-                    # 登録対象
-                    is_left_ik_resist = True
-                    # center_diff = left_toe_diff
-                else:
-                    logger.debug("f: %s, 左つま先元補正なし: %s", fno, left_toe_diff)
+                    # つま先を取り直す
+                    rep_toe_pos, rep_sole_pos = self.get_toe_entity(data_set_idx, data_set, data_set.rep_model, data_set.motion, rep_toe_links, "{0}足ＩＫ".format(direction), fno)
 
-                if org_right_toe_pos.y() < org_right_toe_limit and right_toe_diff > 0:
-                    # 足ＩＫを下げる
-                    right_ik_bf.position.setY(right_ik_bf.position.y() - right_toe_diff)
-                    logger.debug("f: %s, 右つま先元補正: %s", fno, right_toe_diff)
-                    # 登録対象
-                    is_right_ik_resist = True
-                    # センターは、既に差異が指定されている場合、小さい方を採用
-                    # center_diff = right_toe_diff if center_diff == 0 else min(center_diff, right_toe_diff)
-                else:
-                    logger.debug("f: %s, 右つま先元補正なし: %s", fno, right_toe_diff)
-                
-                # if center_diff != 0:
-                #     # センター差異がある場合、下げる
-                #     center_bf.position.setY(center_bf.position.y() - center_diff)
-                #     logger.debug("f: %s, センター元補正: %s", fno, center_diff)
-                #     is_center_resist = True
-                # else:
-                #     logger.debug("f: %s, センター元補正なし: %s", fno, center_diff)
+                    # つま先と足底の地面に近い方を近づける
+                    if rep_sole_pos.y() < rep_toe_pos.y() and rep_sole_pos.y() < data_set.rep_model.bones["{0}足底実体".format(direction)].position.y():
+                        # つま先が曲がっていて、足底の方が床に近い場合(マイナスにはさせない)
+                        adjust_toe_y = max(0, ik_bf.position.y() - rep_sole_pos.y())
+                        # 登録対象
+                        ik_bf.position.setY(adjust_toe_y)
+                        is_ik_resist = True
+                        logger.debug("f: %s, %sつま先床補正: 足底合わせ つま先実体: %s, 足底実体: %s, 足IK: %s", ik_bf.fno, direction, rep_toe_pos.y(), rep_sole_pos.y(), adjust_toe_y)
+                    elif rep_toe_pos.y() < data_set.rep_model.bones["{0}つま先実体".format(direction)].position.y():
+                        # つま先が伸びていて、足底よりも床に近い場合(マイナスにはさせない)
+                        adjust_toe_y = max(0, ik_bf.position.y() - rep_toe_pos.y())
+                        # 登録対象
+                        ik_bf.position.setY(adjust_toe_y)
+                        is_ik_resist = True
+                        logger.debug("f: %s, %sつま先床補正: つま先合わせ つま先実体: %s, 足底実体: %s, 足IK: %s", ik_bf.fno, direction, rep_toe_pos.y(), rep_sole_pos.y(), adjust_toe_y)
+                    else:
+                        logger.debug("f: %s, %sつま先床補正なし: つま先実体: %s, 足底実体: %s", ik_bf.fno, direction, rep_toe_pos.y(), rep_sole_pos.y())
 
-                # つま先を取り直す
-                left_rep_toe_pos = self.get_toe_entity(data_set_idx, data_set, data_set.rep_model, data_set.motion, rep_toe_links, "左足ＩＫ", fno)
-                right_rep_toe_pos = self.get_toe_entity(data_set_idx, data_set, data_set.rep_model, data_set.motion, rep_toe_links, "右足ＩＫ", fno)
+                    # 登録対象である場合、それぞれのbfを登録
+                    if is_ik_resist:
+                        self.regist_toe_bf(data_set_idx, data_set, ik_bf, "{0}足ＩＫ".format(direction), fno)
+                    
+                    if fno // 500 > prev_sep_fno:
+                        logger.info("-- %sフレーム目完了(%sつま先)", fno, direction)
+                        prev_sep_fno = fno // 500
 
-                if left_rep_toe_pos.y() < 0:
-                    # 足ＩＫのみあげる（センターもあげると浮く）
-                    left_ik_bf.position.setY(left_ik_bf.position.y() - left_rep_toe_pos.y())
-                    logger.debug("f: %s, 左つま先床補正: %s", left_ik_bf.fno, left_rep_toe_pos.y())
-                    # 登録対象
-                    is_left_ik_resist = True
-                else:
-                    logger.debug("f: %s, 左つま先床補正なし: %s", left_ik_bf.fno, left_rep_toe_pos.y())
-
-                if right_rep_toe_pos.y() < 0:
-                    # 足ＩＫのみあげる（センターもあげると浮く）
-                    right_ik_bf.position.setY(right_ik_bf.position.y() - right_rep_toe_pos.y())
-                    logger.debug("f: %s, 右つま先床補正: %s", right_ik_bf.fno, right_rep_toe_pos.y())
-                    # 登録対象
-                    is_right_ik_resist = True
-                else:
-                    logger.debug("f: %s, 右つま先床補正なし: %s", right_ik_bf.fno, right_rep_toe_pos.y())
-                
-                # if left_rep_toe_pos.y() < 0 or right_rep_toe_pos.y() < 0:
-                #     # センターは正で小さい方を上げる
-                #     center_diff = max(0, min(left_rep_toe_pos.y(), right_rep_toe_pos.y()))
-                #     center_bf.position.setY(center_bf.position.y() - center_diff)
-                #     logger.debug("f: %s, センター床補正: %s", fno, center_diff)
-                #     is_center_resist = True
-                # else:
-                #     logger.debug("f: %s, センター床補正なし: %s", fno, center_diff)
-
-                # 登録対象である場合、それぞれのbfを登録
-                if is_left_ik_resist:
-                    self.regist_toe_bf(data_set_idx, data_set, left_ik_bf, "左足ＩＫ", fno)
-                
-                if is_right_ik_resist:
-                    self.regist_toe_bf(data_set_idx, data_set, right_ik_bf, "右足ＩＫ", fno)
-                
-                # if is_center_resist:
-                #     self.regist_toe_bf(data_set_idx, data_set, center_bf, center_bone_name, fno)
-
-                if fno // 500 > prev_sep_fno:
-                    logger.info("-- %sフレーム目完了", fno)
-                    prev_sep_fno = fno // 500
-
-        logger.info("つま先補正完了")
+                logger.info("%sつま先補正完了", direction)
 
     def regist_toe_bf(self, data_set_idx: int, data_set: MOptionsDataSet, bf: VmdBoneFrame, ik_bone_name: str, fno: int):
         # 登録対象の場合のみ、補間曲線リセットで登録する
@@ -192,27 +150,41 @@ class StanceService():
         data_set.motion.split_bf_by_fno(ik_bone_name, prev_bf, next_bf, fno)
 
     # つま先の差異
-    def get_toe_diff(self, data_set_idx: int, data_set: MOptionsDataSet, org_toe_links: BoneLinks, rep_toe_links: BoneLinks, ik_bone_name: str, fno: int):
-        org_toe_pos = self.get_toe_entity(data_set_idx, data_set, data_set.org_model, data_set.org_motion, org_toe_links, ik_bone_name, fno)
-        rep_toe_pos = self.get_toe_entity(data_set_idx, data_set, data_set.rep_model, data_set.motion, rep_toe_links, ik_bone_name, fno)
+    def get_toe_diff(self, data_set_idx: int, data_set: MOptionsDataSet, org_toe_links: BoneLinks, rep_toe_links: BoneLinks, toe_limit_ratio: float, ik_bone_name: str, fno: int):
+        org_toe_pos, org_sole_pos = self.get_toe_entity(data_set_idx, data_set, data_set.org_model, data_set.org_motion, org_toe_links, ik_bone_name, fno)
+        rep_toe_pos, rep_sole_pos = self.get_toe_entity(data_set_idx, data_set, data_set.rep_model, data_set.motion, rep_toe_links, ik_bone_name, fno)
         
         logger.test("f: %s, %s - 作成元つま先: %s", fno, ik_bone_name[0], org_toe_pos)
         logger.test("f: %s, %s - 変換先つま先: %s", fno, ik_bone_name[0], rep_toe_pos)
         
-        # つま先が元モデルの上にある場合、つま先を合わせて下に下ろす
-        toe_diff = rep_toe_pos.y() - (org_toe_pos.y() * data_set.original_y_ratio)
+        logger.test("f: %s, %s - 作成元足底: %s", fno, ik_bone_name[0], org_sole_pos)
+        logger.test("f: %s, %s - 変換先足底: %s", fno, ik_bone_name[0], rep_sole_pos)
+        
+        # つま先が元モデルの上にある場合、つま先を合わせて下に下ろす（実体を考慮する）
+        toe_diff = (rep_toe_pos.y() - data_set.rep_model.bones["{0}つま先実体".format(ik_bone_name[0])].position.y()) \
+            - ((org_toe_pos.y() - data_set.org_model.bones["{0}つま先実体".format(ik_bone_name[0])].position.y()) * toe_limit_ratio) \
+            + (data_set.rep_model.bones["{0}つま先実体".format(ik_bone_name[0])].position.y() - data_set.org_model.bones["{0}つま先実体".format(ik_bone_name[0])].position.y())
         logger.test("f: %s, %s - toe_diff: %s", fno, ik_bone_name[0], toe_diff)
+        
+        # 足底が元モデルの上にある場合、足底を合わせて下に下ろす（実体を考慮する）
+        sole_diff = (rep_sole_pos.y() - data_set.rep_model.bones["{0}足底実体".format(ik_bone_name[0])].position.y()) \
+            - ((org_sole_pos.y() - data_set.org_model.bones["{0}足底実体".format(ik_bone_name[0])].position.y()) * toe_limit_ratio) \
+            + (data_set.rep_model.bones["{0}足底実体".format(ik_bone_name[0])].position.y() - data_set.org_model.bones["{0}足底実体".format(ik_bone_name[0])].position.y())
+        logger.test("f: %s, %s - sole_diff: %s", fno, ik_bone_name[0], sole_diff)
 
         return org_toe_pos, toe_diff
     
     # つま先実体のグローバル位置を取得する
     def get_toe_entity(self, data_set_idx: int, data_set: MOptionsDataSet, model: PmxModel, motion: VmdMotion, toe_links: BoneLinks, ik_bone_name: str, fno: int):
         toe_3ds = MServiceUtils.calc_global_pos(model, toe_links[ik_bone_name[0]], motion, fno)
-        toe_pos = toe_3ds["{0}つま先実体".format(ik_bone_name[0])]
+
         logger.test(model.name)
         [logger.test("-- %s: %s", k, v) for k, v in toe_3ds.items()]
 
-        return toe_pos
+        toe_pos = toe_3ds["{0}つま先実体".format(ik_bone_name[0])]
+        sole_pos = toe_3ds["{0}足底実体".format(ik_bone_name[0])]
+
+        return toe_pos, sole_pos
 
     # センタースタンス補正
     def adjust_center_stance(self, data_set_idx: int, data_set: MOptionsDataSet):
@@ -446,8 +418,36 @@ class StanceService():
 
             # 上半身の傾き度合い - 0.1 を変化量の上限とする
             dot_limit = MVector3D.dotProduct(org_upper_slope.normalized(), rep_upper_slope.normalized()) - 0.1
+            logger.debug("dot_limit: %s", dot_limit)
 
+            # 初期傾き
             rep_upper_initial_slope_qq = MQuaternion.fromDirection(rep_upper_slope, rep_upper_slope_cross)
+
+            # 初期状態の上半身2の傾き
+            initial_bf = VmdBoneFrame(fno=0, name="上半身")
+            initial_dataset = MOptionsDataSet(VmdMotion(), data_set.org_model, data_set.rep_model, data_set.output_vmd_path, data_set.substitute_model_flg, data_set.twist_flg)
+
+            self.calc_rotation_stance(initial_bf, data_set_idx, initial_dataset, \
+                                      org_upper_links, org_upper_links, org_head_links, org_head_links, org_arm_links, \
+                                      rep_upper_links, rep_upper_links, rep_head_links, rep_head_links, rep_arm_links, \
+                                      "上半身", "上半身", "頭", rep_upper_links.get("上半身", offset=-1).name, \
+                                      rep_upper_initial_slope_qq, MQuaternion(), self.def_calc_up_upper, 0)
+
+            # 内積
+            dot = MVector3D.dotProduct(org_upper_slope.normalized(), rep_upper_slope.normalized())
+
+            if dot >= 0.8:
+                upper_initial_qq = initial_bf.rotation
+                # 肩の傾き度合い - 0.1 を変化量の上限とする
+                dot_limit = dot - 0.1
+            else:
+                # 初期姿勢が違いすぎてる場合、初期姿勢を維持しない（四つ足等）
+                upper_initial_qq = MQuaternion()
+                dot_limit = 0
+
+            logger.debug("dot: %s", dot)
+            logger.debug("upper_initial_qq: %s", upper_initial_qq)
+            logger.debug("dot_limit: %s", dot_limit)
 
             # 準備（細分化）
             self.prepare_split_stance(data_set_idx, data_set, "上半身")
@@ -462,7 +462,7 @@ class StanceService():
                                               org_upper_links, org_upper_links, org_head_links, org_head_links, org_arm_links, \
                                               rep_upper_links, rep_upper_links, rep_head_links, rep_head_links, rep_arm_links, \
                                               "上半身", "上半身", "頭", rep_upper_links.get("上半身", offset=-1).name, \
-                                              rep_upper_initial_slope_qq, self.def_calc_up_upper, dot_limit)
+                                              rep_upper_initial_slope_qq, upper_initial_qq, self.def_calc_up_upper, dot_limit)
                 if fno // 500 > prev_fno:
                     logger.info("-- %sフレーム目完了", fno)
                     prev_fno = fno // 500
@@ -495,10 +495,33 @@ class StanceService():
                 logger.test("上半身 slope: %s", rep_upper2_slope)
                 logger.test("上半身 cross: %s", rep_upper2_slope_cross)
 
-                # 上半身2の傾き度合い - 0.1 を変化量の上限とする
-                dot2_limit = MVector3D.dotProduct(org_upper2_slope.normalized(), rep_upper2_slope.normalized()) - 0.1
-
                 rep_upper2_initial_slope_qq = MQuaternion.fromDirection(rep_upper2_slope, rep_upper2_slope_cross)
+
+                # 初期状態の上半身2の傾き
+                initial_bf = VmdBoneFrame(fno=0, name="上半身2")
+                initial_dataset = MOptionsDataSet(VmdMotion(), data_set.org_model, data_set.rep_model, data_set.output_vmd_path, data_set.substitute_model_flg, data_set.twist_flg)
+
+                self.calc_rotation_stance(initial_bf, data_set_idx, initial_dataset, \
+                                          org_upper2_links, org_upper2_links, org_head_links, org_head_links, org_arm_links, \
+                                          rep_upper2_links, rep_upper2_links, rep_head_links, rep_head_links, rep_arm_links, \
+                                          "上半身2", "上半身2", "頭", rep_upper2_links.get("上半身2", offset=-1).name, \
+                                          rep_upper2_initial_slope_qq, MQuaternion(), self.def_calc_up_upper, 0)
+
+                # 内積
+                dot = MVector3D.dotProduct(org_upper2_slope.normalized(), rep_upper2_slope.normalized())
+
+                if dot >= 0.8:
+                    upper2_initial_qq = initial_bf.rotation
+                    # 肩の傾き度合い - 0.1 を変化量の上限とする
+                    dot2_limit = dot - 0.1
+                else:
+                    # 初期姿勢が違いすぎてる場合、初期姿勢を維持しない（四つ足等）
+                    upper2_initial_qq = MQuaternion()
+                    dot2_limit = 0
+
+                logger.debug("dot: %s", dot)
+                logger.debug("upper2_initial_qq: %s", upper2_initial_qq)
+                logger.debug("dot2_limit: %s", dot2_limit)
 
                 # 準備（細分化）
                 self.prepare_split_stance(data_set_idx, data_set, "上半身2")
@@ -513,7 +536,7 @@ class StanceService():
                                                   org_upper2_links, org_upper2_links, org_head_links, org_head_links, org_arm_links, \
                                                   rep_upper2_links, rep_upper2_links, rep_head_links, rep_head_links, rep_arm_links, \
                                                   "上半身2", "上半身2", "頭", rep_upper2_links.get("上半身2", offset=-1).name, \
-                                                  rep_upper2_initial_slope_qq, self.def_calc_up_upper, dot2_limit)
+                                                  rep_upper2_initial_slope_qq, upper2_initial_qq, self.def_calc_up_upper, dot2_limit)
 
                     if fno // 500 > prev_fno:
                         logger.info("-- %sフレーム目完了", fno)
@@ -534,9 +557,6 @@ class StanceService():
             # 肩調整に必要なボーン群
             shoulder_target_bones = ["頭", "首", "首根元", shoulder_name, arm_name, "上半身"]
 
-            # # モデルに上半身2が揃ってる場合、回転基準は上半身2
-            # rot_bone_name = "上半身2" if "上半身2" in data_set.org_model.bones and "上半身2" in data_set.rep_model.bones else "上半身"
-
             if set(shoulder_target_bones).issubset(data_set.org_model.bones) and set(shoulder_target_bones).issubset(data_set.rep_model.bones) and shoulder_name in data_set.motion.bones:
                 # 元モデルのリンク生成
                 org_neck_base_links = data_set.org_model.create_link_2_top_one("首根元")
@@ -550,26 +570,45 @@ class StanceService():
                 rep_arm_links = data_set.rep_model.create_link_2_top_lr("腕")
                 rep_head_links = data_set.rep_model.create_link_2_top_one("頭")
 
-                # # 肩ボーンは肩Pの回転量だけ加味する
-                # rep_parent_limit_links = BoneLinks()
-                # if "P" not in shoulder_name and "{0}P".format(shoulder_name) in data_set.rep_model.bones:
-                #     rep_parent_limit_links.append(data_set.rep_model.bones["{0}P".format(shoulder_name)])
-
                 # 元モデルの肩の傾き
                 org_shoulder_slope = (data_set.org_model.bones[arm_name].position - data_set.org_model.bones[shoulder_name].position).normalized()
 
-                # BASE(首根元)からTO(腕)への傾き
+                # 肩から腕への傾き
                 rep_shoulder_slope = (data_set.rep_model.bones[arm_name].position - data_set.rep_model.bones["首根元"].position).normalized()
+                # _, rep_shoulder2arm_slope_qq = MServiceUtils.calc_shoulder_stance(data_set.rep_model, shoulder_name, arm_name)
                 rep_shoulder_slope_up = MVector3D(-1, 1, 0)
                 rep_shoulder_slope_cross = MVector3D.crossProduct(rep_shoulder_slope, rep_shoulder_slope_up).normalized()
                 
+                rep_shoulder_initial_slope_qq = MQuaternion.fromDirection(rep_shoulder_slope, rep_shoulder_slope_cross)
+
                 logger.test("肩 slope: %s", rep_shoulder_slope)
                 logger.test("肩 cross: %s", rep_shoulder_slope_cross)
 
-                # 肩の傾き度合い - 0.2 を変化量の上限とする
-                dot_limit = MVector3D.dotProduct(org_shoulder_slope.normalized(), rep_shoulder_slope.normalized()) - 0.2
+                # 初期状態の肩の傾き
+                initial_bf = VmdBoneFrame(fno=0, name=shoulder_name)
+                initial_dataset = MOptionsDataSet(VmdMotion(), data_set.org_model, data_set.rep_model, data_set.output_vmd_path, data_set.substitute_model_flg, data_set.twist_flg)
 
-                rep_shoulder_initial_slope_qq = MQuaternion.fromDirection(rep_shoulder_slope, rep_shoulder_slope_cross)
+                self.calc_rotation_stance(initial_bf, data_set_idx, initial_dataset, \
+                                          org_neck_base_links, org_shoulder_links, org_arm_links[shoulder_name[0]], org_head_links, org_arm_links, \
+                                          rep_neck_base_links, rep_shoulder_links, rep_arm_links[shoulder_name[0]], rep_head_links, rep_arm_links, \
+                                          "首根元", shoulder_name, arm_name, rep_shoulder_links.get(shoulder_name, offset=-1).name, \
+                                          rep_shoulder_initial_slope_qq, MQuaternion(), self.def_calc_up_shoulder, 0)
+                
+                # 内積
+                dot = MVector3D.dotProduct(org_shoulder_slope.normalized(), rep_shoulder_slope.normalized())
+
+                if dot >= 0.7:
+                    shoulder_initial_qq = initial_bf.rotation
+                    # 肩の傾き度合い - 0.1 を変化量の上限とする
+                    dot_limit = dot - 0.1
+                else:
+                    # 初期姿勢が違いすぎてる場合、初期姿勢を維持しない（四つ足等）
+                    shoulder_initial_qq = MQuaternion()
+                    dot_limit = 0
+
+                logger.debug("dot: %s", dot)
+                logger.debug("shoulder_initial_qq: %s", shoulder_initial_qq)
+                logger.debug("dot_limit: %s", dot_limit)
 
                 # 準備（細分化）
                 self.prepare_split_stance(data_set_idx, data_set, shoulder_name)
@@ -584,9 +623,9 @@ class StanceService():
                                                   org_neck_base_links, org_shoulder_links, org_arm_links[shoulder_name[0]], org_head_links, org_arm_links, \
                                                   rep_neck_base_links, rep_shoulder_links, rep_arm_links[shoulder_name[0]], rep_head_links, rep_arm_links, \
                                                   "首根元", shoulder_name, arm_name, rep_shoulder_links.get(shoulder_name, offset=-1).name, \
-                                                  rep_shoulder_initial_slope_qq, self.def_calc_up_shoulder, dot_limit)
+                                                  rep_shoulder_initial_slope_qq, shoulder_initial_qq, self.def_calc_up_shoulder, dot_limit)
                     if fno // 500 > prev_fno:
-                        logger.info("-- %sフレーム目完了", fno)
+                        logger.info("-- %sフレーム目完了(%s)", fno, shoulder_name)
                         prev_fno = fno // 500
                 
                 # 子の角度調整(肩Pは調整しない)
@@ -646,7 +685,7 @@ class StanceService():
                              org_base_links: BoneLinks, org_from_links: BoneLinks, org_to_links: BoneLinks, org_head_links: BoneLinks, org_arm_links: BoneLinks, \
                              rep_base_links: BoneLinks, rep_from_links: BoneLinks, rep_to_links: BoneLinks, rep_head_links: BoneLinks, rep_arm_links: BoneLinks, \
                              base_bone_name: str, from_bone_name: str, to_bone_name: str, rep_parent_bone_name: str, \
-                             rep_initial_slope_qq: MQuaternion, def_calc_up, dot_limit):
+                             rep_initial_slope_qq: MQuaternion, cancel_qq: MQuaternion, def_calc_up, dot_limit):
         logger.test("f: %s -----------------------------", bf.fno)
 
         # 基準より親の回転量
@@ -671,7 +710,7 @@ class StanceService():
         up = MVector3D.crossProduct(direction, up_pos)
         from_orientation = MQuaternion.fromDirection(direction.normalized(), up.normalized())
         initial = rep_initial_slope_qq
-        from_rotation = parent_qq.inverted() * from_orientation * initial.inverted()
+        from_rotation = parent_qq.inverted() * from_orientation * initial.inverted() * cancel_qq.inverted()
         from_rotation.normalize()
         logger.test("f: %s, rep_base_pos(%s): %s", bf.fno, base_bone_name, rep_base_pos)
         logger.test("f: %s, rep_from_pos(%s): %s", bf.fno, from_bone_name, rep_from_pos)
@@ -844,16 +883,16 @@ class StanceService():
 
                     if from_bone_name:
                         # FROM-TARGETの傾き
-                        _, org_from_qq = MServiceUtils.calc_arm_stance_diff(data_set.org_model, from_bone_name, target_bone_name)
-                        _, rep_from_qq = MServiceUtils.calc_arm_stance_diff(data_set.rep_model, from_bone_name, target_bone_name)
+                        _, org_from_qq = MServiceUtils.calc_arm_stance(data_set.org_model, from_bone_name, target_bone_name)
+                        _, rep_from_qq = MServiceUtils.calc_arm_stance(data_set.rep_model, from_bone_name, target_bone_name)
 
                         arm_diff_qq_dic[target_bone_name]["from"] = rep_from_qq.inverted() * org_from_qq
                     else:
                         arm_diff_qq_dic[target_bone_name]["from"] = MQuaternion()
 
                     # TARGET-TOの傾き
-                    _, org_to_qq = MServiceUtils.calc_arm_stance_diff(data_set.org_model, target_bone_name, to_bone_name)
-                    _, rep_to_qq = MServiceUtils.calc_arm_stance_diff(data_set.rep_model, target_bone_name, to_bone_name)
+                    _, org_to_qq = MServiceUtils.calc_arm_stance(data_set.org_model, target_bone_name, to_bone_name)
+                    _, rep_to_qq = MServiceUtils.calc_arm_stance(data_set.rep_model, target_bone_name, to_bone_name)
 
                     arm_diff_qq_dic[target_bone_name]["to"] = rep_to_qq.inverted() * org_to_qq
         

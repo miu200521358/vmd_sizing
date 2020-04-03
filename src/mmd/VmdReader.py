@@ -312,6 +312,9 @@ class VmdReader():
 
         sha1.update(chunk)
 
+        # ファイルパスをハッシュに含める
+        sha1.update(self.file_path.encode('utf-8'))
+
         return sha1.hexdigest()
 
     def read_text(self, format_size):

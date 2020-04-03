@@ -248,6 +248,9 @@ class MainFrame(wx.Frame):
             event.Skip()
             return True
         else:
+            # 終了音を鳴らす
+            self.sound_finish()
+
             logger.info("処理時間: %s", self.show_worked_time())
         
         event.Skip()
@@ -258,12 +261,7 @@ class MainFrame(wx.Frame):
         logger.info("処理時間: %s", self.show_worked_time())
 
         # 終了音を鳴らす
-        if os.name == "nt":
-            # Windows
-            try:
-                winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
-            except Exception:
-                pass
+        self.sound_finish()
 
         # ワーカー終了
         self.worker = None
@@ -273,3 +271,13 @@ class MainFrame(wx.Frame):
         self.enable()
         # プログレス非表示
         self.file_panel_ctrl.gauge_ctrl.SetValue(0)
+
+    def sound_finish(self):
+        # 終了音を鳴らす
+        if os.name == "nt":
+            # Windows
+            try:
+                winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
+            except Exception:
+                pass
+

@@ -90,6 +90,8 @@ class CsvPanel(BasePanel):
         result = self.vmd_file_ctrl.is_valid() and result
 
         if not result:
+            # 終了音
+            self.frame.sound_finish()
             # タブ移動可
             self.release_tab()
             # フォーム有効化
@@ -115,6 +117,9 @@ class CsvPanel(BasePanel):
     # CSV変換完了処理
     def on_convert_csv_result(self, event: wx.Event):
         self.elapsed_time = event.elapsed_time
+
+        # 終了音
+        self.frame.sound_finish()
 
         # タブ移動可
         self.release_tab()
