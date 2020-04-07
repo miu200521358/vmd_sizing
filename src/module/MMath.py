@@ -288,17 +288,23 @@ class MVector3D():
         self.setX(get_effective_value(self.x()))
         self.setY(get_effective_value(self.y()))
         self.setZ(get_effective_value(self.z()))
+
+        return self
                 
     def abs(self):
         self.setX(abs(get_effective_value(self.x())))
         self.setY(abs(get_effective_value(self.y())))
         self.setZ(abs(get_effective_value(self.z())))
+
+        return self
                 
     def one(self):
         self.effective()
         self.setX(1 if is_almost_null(self.x()) else self.x())
         self.setY(1 if is_almost_null(self.y()) else self.y())
         self.setZ(1 if is_almost_null(self.z()) else self.z())
+
+        return self
                 
     @classmethod
     def crossProduct(cls, v1, v2):
@@ -1124,7 +1130,12 @@ class MMatrix4x4():
         vec_mat = np.tile(np.array([vec3.x(), vec3.y(), vec3.z()]), (4, 1))
         data_mat = self.__data[:, :3] * vec_mat
         self.__data[:, 3] += np.sum(data_mat, axis=1)
-    
+
+    # 縮尺行列
+    def scale(self, vec3):
+        vec_mat = np.tile(np.array([vec3.x(), vec3.y(), vec3.z()]), (4, 1))
+        self.__data[:, :3] *= vec_mat
+        
     # 単位行列
     def setToIdentity(self):
         self.__data = np.identity(4)

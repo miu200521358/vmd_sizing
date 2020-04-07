@@ -227,16 +227,6 @@ class MainFrame(wx.Frame):
             # タブ固定
             self.file_panel_ctrl.fix_tab()
 
-            # 履歴保持
-            self.file_panel_ctrl.file_set.save()
-
-            # multiのも全部保持
-            for file_set in self.multi_panel_ctrl.file_set_list:
-                result = file_set.save()
-
-            # JSON出力
-            MFileUtils.save_history(self.mydir_path, self.file_hitories)
-
             if self.worker:
                 logger.error("まだ処理が実行中です。終了してから再度実行してください。", decoration=MLogger.DECORATION_BOX)
             else:

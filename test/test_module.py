@@ -5,6 +5,7 @@ import unittest # noqa
 import numpy as np # noqa
 import sys
 import pathlib
+
 # このソースのあるディレクトリの絶対パスを取得
 current_dir = pathlib.Path(__file__).resolve().parent
 # モジュールのあるパスを追加
@@ -60,6 +61,12 @@ class MMathTest(unittest.TestCase):
         qq1 = MQuaternion.rotationTo(new_from_v, old_from_v)
         print(qq1.toEulerAngles4MMD())
 
+    def test_MQuaternion_inverted(self):
+        parent_qq = MQuaternion.fromEulerAngles(4.444088972232067, -131.68893846184505, 6.602773293502102)
+        from_orientation = MQuaternion.fromEulerAngles(-28.005875419210547, -34.26259576800703, -81.65247193883769)
+        initial = MQuaternion.fromEulerAngles(-0.0, 90.0, -90.0)
+        cancel_qq = MQuaternion(-0.9992778836743259, -0.037996199801564046, -5.551115123125783e-17, 5.551115123125783e-17)
 
-
+        from_rotation = parent_qq.inverted() * from_orientation * initial.inverted() * cancel_qq.inverted()
+        print(from_rotation.toEulerAngles4MMD())
 

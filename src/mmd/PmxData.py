@@ -819,6 +819,7 @@ class PmxModel():
         "左肩": ["左肩P", "上半身2", "上半身"],
         "左肩C": ["左肩"],
         "左腕": ["左肩C", "左肩"],
+        "左腕下延長": ["左肩C", "左肩"],
         "左腕捩": ["左腕"],
         "左ひじ": ["左腕捩", "左腕"],
         "左手捩": ["左ひじ"],
@@ -852,8 +853,10 @@ class PmxModel():
         "左足首": ["左ひざ"],
         "左つま先": ["左足首"],
         "左足IK親": ["全ての親", "SIZING_ROOT_BONE"],
+        "左足IK親底実体": ["左足IK親"],
         "左足ＩＫ": ["左足IK親", "全ての親", "SIZING_ROOT_BONE"],
         "左つま先ＩＫ": ["左足ＩＫ"],
+        "左足ＩＫ底実体": ["左足ＩＫ"],
         "左足先EX": ["左つま先ＩＫ", "左足ＩＫ"],
         "左足底実体": ["左足先EX", "左つま先ＩＫ", "左足ＩＫ"],
         "左つま先実体": ["左足底実体", "左足先EX", "左つま先ＩＫ", "左足ＩＫ"],
@@ -861,6 +864,7 @@ class PmxModel():
         "右肩": ["右肩P", "上半身2", "上半身"],
         "右肩C": ["右肩"],
         "右腕": ["右肩C", "右肩"],
+        "右腕下延長": ["右肩C", "右肩"],
         "右腕捩": ["右腕"],
         "右ひじ": ["右腕捩", "右腕"],
         "右手捩": ["右ひじ"],
@@ -894,8 +898,10 @@ class PmxModel():
         "右足首": ["右ひざ"],
         "右つま先": ["右足首"],
         "右足IK親": ["全ての親", "SIZING_ROOT_BONE"],
+        "右足IK親底実体": ["右足IK親"],
         "右足ＩＫ": ["右足IK親", "全ての親", "SIZING_ROOT_BONE"],
         "右つま先ＩＫ": ["右足ＩＫ"],
+        "右足ＩＫ底実体": ["右足ＩＫ"],
         "右足先EX": ["右つま先ＩＫ", "右足ＩＫ"],
         "右足底実体": ["右足先EX", "右つま先ＩＫ", "右足ＩＫ"],
         "右つま先実体": ["右足底実体", "右足先EX", "右つま先ＩＫ", "右足ＩＫ"],
@@ -943,11 +949,11 @@ class PmxModel():
                 return Vertex(-1, MVector3D(), MVector3D(), [], [], Vertex.Bdef1(-1), -1)
 
         up_max_pos, up_max_vertex, down_max_pos, down_max_vertex, right_max_pos, right_max_vertex, left_max_pos, left_max_vertex, \
-            back_max_pos, back_max_vertex, front_max_pos, front_max_vertex, front_down_max_pos, front_down_max_vertex \
+            back_max_pos, back_max_vertex, front_max_pos, front_max_vertex, multi_max_pos, multi_max_vertex \
             = self.get_bone_end_vertex(bone_name_list, self.def_calc_vertex_pos_original, def_is_target=None, \
-                                       def_is_multi_target=self.def_is_multi_target_down_front, multi_target_default_val=MVector3D(0, 99999, 99999))
+                                       def_is_multi_target=None, multi_target_default_val=None)
 
-        if not front_down_max_vertex:
+        if not front_max_vertex:
             # つま先頂点が取れなかった場合
             if "{0}つま先".format(direction) in self.bones:
                 return Vertex(-1, self.bones["{0}つま先".format(direction)].position, MVector3D(), [], [], Vertex.Bdef1(-1), -1)
@@ -958,7 +964,39 @@ class PmxModel():
             else:
                 return Vertex(-1, MVector3D(), MVector3D(), [], [], Vertex.Bdef1(-1), -1)
         
-        return front_down_max_vertex
+        return front_max_vertex
+
+    # 足底の頂点を取得
+    def get_sole_vertex(self, direction: str):
+        # 足首より下で、指ではないボーン
+        bone_name_list = []
+
+        # 足末端系ボーン
+        for bk, bv in self.bones.items():
+            if ((direction == "右" and bv.position.x() < 0) or (direction == "左" and bv.position.x() > 0)) \
+               and bv.position.y() <= self.bones["{0}足首".format(direction)].position.y() and direction in bk:
+                bone_name_list.append(bk)
+        
+        if len(bone_name_list) == 0:
+            # ウェイトボーンがない場合、足ＩＫの位置
+            if "{0}足ＩＫ".format(direction) in self.bones:
+                return Vertex(-1, self.bones["{0}足ＩＫ".format(direction)].position, MVector3D(), [], [], Vertex.Bdef1(-1), -1)
+            else:
+                return Vertex(-1, MVector3D(), MVector3D(), [], [], Vertex.Bdef1(-1), -1)
+
+        up_max_pos, up_max_vertex, down_max_pos, down_max_vertex, right_max_pos, right_max_vertex, left_max_pos, left_max_vertex, \
+            back_max_pos, back_max_vertex, front_max_pos, front_max_vertex, multi_max_pos, multi_max_vertex \
+            = self.get_bone_end_vertex(bone_name_list, self.def_calc_vertex_pos_original, def_is_target=None, \
+                                       def_is_multi_target=self.def_is_multi_target_down_front, multi_target_default_val=MVector3D(0, 99999, 99999))
+
+        if not multi_max_vertex:
+            # 足底頂点が取れなかった場合
+            if "{0}足ＩＫ".format(direction) in self.bones:
+                return Vertex(-1, self.bones["{0}足ＩＫ".format(direction)].position, MVector3D(), [], [], Vertex.Bdef1(-1), -1)
+            else:
+                return Vertex(-1, MVector3D(), MVector3D(), [], [], Vertex.Bdef1(-1), -1)
+        
+        return multi_max_vertex
 
     # 頂点位置を返す（オリジナルそのまま）
     def def_calc_vertex_pos_original(self, v: Vertex):
@@ -966,7 +1004,7 @@ class PmxModel():
     
     # 最も底面で前面にある頂点であるか
     def def_is_multi_target_down_front(self, multi_max_pos: MVector3D, v_pos: MVector3D):
-        return v_pos.z() < multi_max_pos.z()
+        return v_pos.y() <= multi_max_pos.y() + 0.1 and v_pos.z() <= multi_max_pos.z()
 
     # 指定ボーンにウェイトが乗っている頂点とそのINDEX
     def get_bone_end_vertex(self, bone_name_list, def_calc_vertex_pos, def_is_target=None, def_is_multi_target=None, multi_target_default_val=None):

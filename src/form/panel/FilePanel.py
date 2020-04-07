@@ -89,6 +89,16 @@ class FilePanel(BasePanel):
         self.console_ctrl.Clear()
         wx.GetApp().Yield()
 
+        # 履歴保持
+        self.frame.file_panel_ctrl.file_set.save()
+
+        # multiのも全部保持
+        for file_set in self.frame.multi_panel_ctrl.file_set_list:
+            file_set.save()
+
+        # JSON出力
+        MFileUtils.save_history(self.frame.mydir_path, self.frame.file_hitories)
+
         # サイジング可否チェックの後に実行
         self.frame.load(is_exec=True)
 

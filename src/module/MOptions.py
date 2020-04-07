@@ -151,6 +151,7 @@ class MOptionsDataSet():
         self.substitute_model_flg = substitute_model_flg
         self.twist_flg = twist_flg
         self.org_motion = cPickle.loads(cPickle.dumps(self.motion, -1))
+        self.test_params = None
 
         # 本来の足IKの比率
         self.original_xz_ratio = 1
