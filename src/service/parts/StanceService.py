@@ -576,25 +576,34 @@ class StanceService():
                 logger.test("%s: %s", shoulder_name, data_set.org_model.bones[shoulder_name].position)
                 logger.test("首根元: %s", data_set.org_model.bones["首根元"].position)
 
-                # FIXME
-                slope_names = {"arm_name": arm_name, "shoulder_name": shoulder_name, "首根元": "首根元"}
+                # # FIXME
+                # slope_names = {"arm_name": arm_name, "shoulder_name": shoulder_name, "首根元": "首根元"}
 
-                # FIXME
-                # 元モデルの肩の傾き
-                org_shoulder_slope = (data_set.org_model.bones[slope_names[data_set.test_params[0][0]]].position - data_set.org_model.bones[slope_names[data_set.test_params[0][1]]].position).normalized()
+                # # 元モデルの肩の傾き
+                # org_shoulder_slope = (data_set.org_model.bones[slope_names[data_set.test_params[0][0]]].position - data_set.org_model.bones[slope_names[data_set.test_params[0][1]]].position).normalized()
 
-                # 肩から腕への傾き
-                rep_shoulder_slope = (data_set.rep_model.bones[slope_names[data_set.test_params[0][0]]].position - data_set.rep_model.bones[slope_names[data_set.test_params[0][1]]].position).normalized()
-                # _, rep_shoulder2arm_slope_qq = MServiceUtils.calc_shoulder_stance(data_set.rep_model, shoulder_name, arm_name)
+                # # 肩から腕への傾き
+                # rep_shoulder_slope = (data_set.rep_model.bones[slope_names[data_set.test_params[0][0]]].position - data_set.rep_model.bones[slope_names[data_set.test_params[0][1]]].position).normalized()
                 
-                # FIXME
-                rep_shoulder_slope_up = MVector3D(data_set.test_params[1][0], data_set.test_params[1][1], data_set.test_params[1][2])
-                rep_shoulder_slope_cross = MVector3D.crossProduct(rep_shoulder_slope, rep_shoulder_slope_up).normalized()
-                
-                rep_shoulder_initial_slope_qq = MQuaternion.fromDirection(rep_shoulder_slope, rep_shoulder_slope_cross)
+                # # FIXME
+                # # _, qq1 = MServiceUtils.calc_shoulder_stance(data_set.rep_model, "首根元", arm_name)
+                # # logger.test("首根元-arm: %s", qq1.toEulerAngles4MMD())
+                # # _, qq2 = MServiceUtils.calc_shoulder_stance(data_set.rep_model, "首根元", shoulder_name)
+                # # logger.test("首根元-shoulder: %s", qq2.toEulerAngles4MMD())
+                # # _, qq3 = MServiceUtils.calc_shoulder_stance(data_set.rep_model, shoulder_name, arm_name)
+                # # logger.test("rep_shoulder2arm_slope_qq: %s", qq3.toEulerAngles4MMD())
 
-                logger.test("肩 slope: %s", rep_shoulder_slope)
-                logger.test("肩 cross: %s", rep_shoulder_slope_cross)
+                # # qq_params = {"qq1": qq1, "qq1i": qq1.inverted(), "qq2": qq2, "qq2i": qq2.inverted(), "qq3": qq3, "qq3i": qq3.inverted(), "0": MQuaternion()}
+                
+                # rep_shoulder_slope_up = MVector3D(data_set.test_params[1][0], data_set.test_params[1][1], data_set.test_params[1][2])
+                # rep_shoulder_slope_cross = MVector3D.crossProduct(rep_shoulder_slope, rep_shoulder_slope_up).normalized()
+                
+                # rep_shoulder_initial_slope_qq = MQuaternion.fromDirection(rep_shoulder_slope, rep_shoulder_slope_cross)
+
+                # logger.test("肩 slope: %s", rep_shoulder_slope)
+                # logger.test("肩 cross: %s", rep_shoulder_slope_cross)
+
+                rep_shoulder_initial_slope_qq = MQuaternion.fromDirection(MVector3D(-2, -0.8, 0), MVector3D(0.5, 0.5, 1))
 
                 # 初期状態の肩の傾き
                 initial_bf = VmdBoneFrame(fno=0, name=shoulder_name)
@@ -606,22 +615,23 @@ class StanceService():
                                           "首根元", shoulder_name, arm_name, rep_shoulder_links.get(shoulder_name, offset=-1).name, \
                                           rep_shoulder_initial_slope_qq, MQuaternion(), self.def_calc_up_shoulder, 0)
                 
-                # 内積
-                dot = MVector3D.dotProduct(org_shoulder_slope.normalized(), rep_shoulder_slope.normalized())
+                # # 内積
+                # dot = MVector3D.dotProduct(org_shoulder_slope.normalized(), rep_shoulder_slope.normalized())
 
-                if dot >= 0.7:
-                    shoulder_initial_qq = initial_bf.rotation
-                    # 肩の傾き度合い - 0.1 を変化量の上限とする
-                    dot_limit = dot - 0.1
-                else:
-                    # 初期姿勢が違いすぎてる場合、初期姿勢を維持しない（四つ足等）
-                    shoulder_initial_qq = MQuaternion()
-                    dot_limit = 0
+                # if dot >= 0.7:
+                #     shoulder_initial_qq = initial_bf.rotation
+                #     # 肩の傾き度合い - 0.1 を変化量の上限とする
+                #     dot_limit = dot - 0.1
+                # else:
+                #     # 初期姿勢が違いすぎてる場合、初期姿勢を維持しない（四つ足等）
+                #     shoulder_initial_qq = MQuaternion()
+                #     dot_limit = 0
 
                 # FIXME
+                shoulder_initial_qq = MQuaternion()
                 dot_limit = 0
 
-                logger.debug("dot: %s", dot)
+                # logger.debug("dot: %s", dot)
                 logger.debug("shoulder_initial_qq: %s", shoulder_initial_qq)
                 logger.debug("dot_limit: %s", dot_limit)
 
@@ -679,19 +689,27 @@ class StanceService():
 
     # 定義: 傾きを求める方向の位置計算（肩）
     def def_calc_up_shoulder(self, bf: VmdBoneFrame, data_set_idx: int, data_set: MOptionsDataSet, \
-                             org_base_links: BoneLinks, org_from_links: BoneLinks, org_to_links: BoneLinks, org_arm_under_links: BoneLinks, org_arm_links: BoneLinks, \
+                             org_base_links: BoneLinks, org_from_links: BoneLinks, org_to_links: BoneLinks, org_head_links: BoneLinks, org_arm_links: BoneLinks, \
                              base_bone_name: str, from_bone_name: str, to_bone_name: str):
-        # 腕下延長ボーンまでの位置
-        org_arm_under_global_3ds = MServiceUtils.calc_global_pos(data_set.org_model, org_arm_under_links, data_set.org_motion, bf.fno)
-        org_arm_under_pos = org_arm_under_global_3ds["{0}下延長".format(to_bone_name)]
-        logger.test("f: %s, org_arm_under_pos: %s", bf.fno, org_arm_under_pos)
-
         # 腕ボーンまでの位置
-        org_arm_global_3ds = MServiceUtils.calc_global_pos(data_set.org_model, org_arm_links[to_bone_name[0]], data_set.org_motion, bf.fno)
+        org_arm_global_3ds = MServiceUtils.calc_global_pos(data_set.org_model, org_to_links, data_set.org_motion, bf.fno)
         org_arm_pos = org_arm_global_3ds[to_bone_name]
+        org_neck_base_pos = org_arm_global_3ds[base_bone_name]
         logger.test("f: %s, org_arm_pos: %s", bf.fno, org_arm_pos)
+        logger.test("f: %s, org_neck_base_pos: %s", bf.fno, org_neck_base_pos)
 
-        return org_arm_under_pos - org_arm_pos
+        # 反対側の腕から自身の腕ボーンまでの位置
+        another_arm_direction = "右" if to_bone_name[0] == "左" else "左"
+        org_another_arm_global_3ds = MServiceUtils.calc_global_pos(data_set.org_model, org_arm_links[another_arm_direction], data_set.org_motion, bf.fno)
+        org_another_arm_pos = org_another_arm_global_3ds["{0}腕".format(another_arm_direction)]
+        logger.test("f: %s, org_another_arm_pos: %s", bf.fno, org_another_arm_pos)
+
+        direction = (org_arm_pos - org_neck_base_pos).normalized()
+        logger.test("f: %s, calc_up direction: %s", bf.fno, direction)
+        up = (org_another_arm_pos - org_arm_pos).normalized()
+        logger.test("f: %s, calc_up up: %s", bf.fno, up)
+
+        return MVector3D.crossProduct(direction, up).normalized()
 
     # スタンス補正
     def calc_rotation_stance(self, bf: VmdBoneFrame, data_set_idx: int, data_set: MOptionsDataSet, \
@@ -723,7 +741,7 @@ class StanceService():
         up = MVector3D.crossProduct(direction, up_pos)
         from_orientation = MQuaternion.fromDirection(direction.normalized(), up.normalized())
         initial = rep_initial_slope_qq
-        from_rotation = parent_qq.inverted() * from_orientation * initial.inverted() # * cancel_qq.inverted()
+        from_rotation = parent_qq.inverted() * cancel_qq.inverted() * from_orientation * initial.inverted()
         from_rotation.normalize()
         logger.test("f: %s, rep_base_pos(%s): %s", bf.fno, base_bone_name, rep_base_pos)
         logger.test("f: %s, rep_from_pos(%s): %s", bf.fno, from_bone_name, rep_from_pos)
