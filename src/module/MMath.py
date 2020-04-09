@@ -1186,6 +1186,45 @@ class MMatrix4x4():
         xyz = np.sum(vec_mat * self.__data[:3, :3], axis=1)
 
         return MVector3D(xyz[0], xyz[1], xyz[2])
+    
+    def toQuaternion(self):
+        a = [[self.__data[0, 0], self.__data[0, 1], self.__data[0, 3], self.__data[0, 4]],
+             [self.__data[1, 0], self.__data[1, 1], self.__data[1, 3], self.__data[1, 4]],
+             [self.__data[2, 0], self.__data[2, 1], self.__data[2, 3], self.__data[2, 4]],
+             [self.__data[3, 0], self.__data[3, 1], self.__data[3, 3], self.__data[3, 4]]]
+        
+        q = MQuaternion()
+        
+        # I removed + 1
+        trace = a[0][0] + a[1][1] + a[2][2]
+        # I changed M_EPSILON to 0
+        if trace > 0:
+            s = 0.5 / math.sqrt(trace + 1)
+            q.setScalar(0.25 / s)
+            q.setX((a[2][1] - a[1][2]) * s)
+            q.setY((a[0][2] - a[2][0]) * s)
+            q.setZ((a[1][0] - a[0][1]) * s)
+        else:
+            if a[0][0] > a[1][1] and a[0][0] > a[2][2]:
+                s = 2 * math.sqrt(1 + a[0][0] - a[1][1] - a[2][2])
+                q.setScalar((a[2][1] - a[1][2]) / s)
+                q.setX(0.25 * s)
+                q.setY((a[0][1] + a[1][0]) / s)
+                q.setZ((a[0][2] + a[2][0]) / s)
+            elif a[1][1] > a[2][2]:
+                s = 2 * math.sqrt(1 + a[1][1] - a[0][0] - a[2][2])
+                q.setScalar((a[0][2] - a[2][0]) / s)
+                q.setX((a[0][1] + a[1][0]) / s)
+                q.setY(0.25 * s)
+                q.setZ((a[1][2] + a[2][1]) / s)
+            else:
+                s = 2 * math.sqrt(1 + a[2][2] - a[0][0] - a[1][1])
+                q.setScalar((a[1][0] - a[0][1]) / s)
+                q.setX((a[0][2] + a[2][0]) / s)
+                q.setY((a[1][2] + a[2][1]) / s)
+                q.setZ(0.25 * s)
+
+        return q
 
     def __str__(self):
         return "MMatrix4x4({0})".format(self.__data)
