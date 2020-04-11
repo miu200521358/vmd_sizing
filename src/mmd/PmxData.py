@@ -1004,10 +1004,19 @@ class PmxModel():
         # 足首より下で、指ではないボーン
         bone_name_list = []
 
+        target_bone_name = None
+        if "{0}足首".format(direction) in self.bones:
+            target_bone_name = "{0}足首".format(direction)
+        elif "{0}足ＩＫ".format(direction) in self.bones:
+            target_bone_name = "{0}足ＩＫ".format(direction)
+        else:
+            # 足末端系ボーンがない場合、処理終了
+            return Vertex(-1, MVector3D(), MVector3D(), [], [], Vertex.Bdef1(-1), -1)
+
         # 足末端系ボーン
         for bk, bv in self.bones.items():
             if ((direction == "右" and bv.position.x() < 0) or (direction == "左" and bv.position.x() > 0)) \
-               and bv.position.y() <= self.bones["{0}足首".format(direction)].position.y() and direction in bk:
+               and bv.position.y() <= self.bones[target_bone_name].position.y() and direction in bk:
                 bone_name_list.append(bk)
         
         if len(bone_name_list) == 0:
@@ -1018,6 +1027,8 @@ class PmxModel():
                 return Vertex(-1, self.bones["{0}つま先ＩＫ".format(direction)].position, MVector3D(), [], [], Vertex.Bdef1(-1), -1)
             elif "{0}足首".format(direction) in self.bones:
                 return Vertex(-1, self.bones["{0}足首".format(direction)].position, MVector3D(), [], [], Vertex.Bdef1(-1), -1)
+            elif "{0}足ＩＫ".format(direction) in self.bones:
+                return Vertex(-1, self.bones["{0}足ＩＫ".format(direction)].position, MVector3D(), [], [], Vertex.Bdef1(-1), -1)
             else:
                 return Vertex(-1, MVector3D(), MVector3D(), [], [], Vertex.Bdef1(-1), -1)
 
@@ -1034,6 +1045,8 @@ class PmxModel():
                 return Vertex(-1, self.bones["{0}つま先ＩＫ".format(direction)].position, MVector3D(), [], [], Vertex.Bdef1(-1), -1)
             elif "{0}足首".format(direction) in self.bones:
                 return Vertex(-1, self.bones["{0}足首".format(direction)].position, MVector3D(), [], [], Vertex.Bdef1(-1), -1)
+            elif "{0}足ＩＫ".format(direction) in self.bones:
+                return Vertex(-1, self.bones["{0}足ＩＫ".format(direction)].position, MVector3D(), [], [], Vertex.Bdef1(-1), -1)
             else:
                 return Vertex(-1, MVector3D(), MVector3D(), [], [], Vertex.Bdef1(-1), -1)
         
@@ -1044,10 +1057,19 @@ class PmxModel():
         # 足首より下で、指ではないボーン
         bone_name_list = []
 
+        target_bone_name = None
+        if "{0}足首".format(direction) in self.bones:
+            target_bone_name = "{0}足首".format(direction)
+        elif "{0}足ＩＫ".format(direction) in self.bones:
+            target_bone_name = "{0}足ＩＫ".format(direction)
+        else:
+            # 足末端系ボーンがない場合、処理終了
+            return Vertex(-1, MVector3D(), MVector3D(), [], [], Vertex.Bdef1(-1), -1)
+
         # 足末端系ボーン
         for bk, bv in self.bones.items():
             if ((direction == "右" and bv.position.x() < 0) or (direction == "左" and bv.position.x() > 0)) \
-               and bv.position.y() <= self.bones["{0}足首".format(direction)].position.y() and direction in bk:
+               and bv.position.y() <= self.bones[target_bone_name].position.y() and direction in bk:
                 bone_name_list.append(bk)
         
         if len(bone_name_list) == 0:

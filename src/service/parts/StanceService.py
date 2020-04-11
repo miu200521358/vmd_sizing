@@ -208,9 +208,6 @@ class StanceService():
                 for fno_idx, fno in enumerate(fnos):
                     # 足ＩＫのbf(この時点では登録するか分からないので、補間曲線リセットなし)
                     ik_bf = data_set.motion.calc_bf("{0}足ＩＫ".format(direction), fno)
-                    ik_parent_bf = data_set.motion.calc_bf("{0}足IK親".format(direction), fno)
-                    # 足ＩＫとIK親のYを加算したものを判定対象とする
-                    target_ik_y = ik_bf.position.y() + ik_parent_bf.position.y()
 
                     # 登録可否
                     is_ik_resist = False
@@ -221,10 +218,11 @@ class StanceService():
                     if org_toe_pos.y() > -org_toe_limit:
                         # つま先が足の甲の長さより大きい場合のみ調整
 
-                        if org_toe_pos.y() < org_toe_limit and toe_diff != 0 and target_ik_y != 0:
+                        if org_toe_pos.y() < org_toe_limit and toe_diff != 0 and ik_bf.position.y() != 0:
                             # 足ＩＫを合わせる
-                            ik_bf.position.setY(ik_bf.position.y() - toe_diff)
-                            logger.debug("f: %s, %sつま先元補正: %s", fno, direction, toe_diff)
+                            adjust_toe_y = ik_bf.position.y() - toe_diff
+                            ik_bf.position.setY(adjust_toe_y)
+                            logger.debug("f: %s, %sつま先元補正: %s", fno, direction, adjust_toe_y)
                             # 登録対象
                             is_ik_resist = True
                         else:
@@ -234,7 +232,7 @@ class StanceService():
                         rep_toe_pos, rep_sole_pos = self.get_toe_entity(data_set_idx, data_set, data_set.rep_model, data_set.motion, rep_toe_links, "{0}足ＩＫ".format(direction), fno)
 
                         # つま先と足底の地面に近い方を近づける
-                        if rep_sole_pos.y() < rep_toe_pos.y() and rep_sole_pos.y() < data_set.rep_model.bones["{0}足底実体".format(direction)].position.y() and target_ik_y != 0:
+                        if rep_sole_pos.y() < rep_toe_pos.y() and rep_sole_pos.y() < data_set.rep_model.bones["{0}足底実体".format(direction)].position.y() and ik_bf.position.y() != 0:
                             # つま先が曲がっていて、足底の方が床に近い場合
                             adjust_toe_y = ik_bf.position.y() - rep_sole_pos.y()
                             # 登録対象

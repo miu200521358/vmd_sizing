@@ -193,8 +193,7 @@ class VmdMotion():
         fill_bf = VmdBoneFrame(fno=fno, name=bone_name)
 
         if bone_name not in self.bones:
-            self.bones[bone_name] = {}
-            self.bones[bone_name][fno] = fill_bf
+            self.bones[bone_name] = {fno: fill_bf}
             return fill_bf
         
         # 条件に合致するフレーム番号を探す

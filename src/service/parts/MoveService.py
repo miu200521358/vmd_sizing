@@ -79,8 +79,17 @@ class MoveService():
             logger.info("IKオフセット(%s): x: %s, z: %s", "左足", leg_ik_offset["左"].x(), leg_ik_offset["左"].z())
             logger.info("IKオフセット(%s): x: %s, z: %s", "右足", leg_ik_offset["右"].x(), leg_ik_offset["右"].z())
 
-            data_set.rep_model.bones["左足ＩＫ"].local_offset = leg_ik_offset["左"]
-            data_set.rep_model.bones["右足ＩＫ"].local_offset = leg_ik_offset["右"]
+            if "左足IK親" in data_set.rep_model.bones and "左足IK親" in data_set.motion.bones:
+                # IK親があって使われている場合、IK親にオフセット設定
+                data_set.rep_model.bones["左足IK親"].local_offset = leg_ik_offset["左"]
+            else:
+                data_set.rep_model.bones["左足ＩＫ"].local_offset = leg_ik_offset["左"]
+
+            if "右足IK親" in data_set.rep_model.bones and "右足IK親" in data_set.motion.bones:
+                # IK親があって使われている場合、IK親にオフセット設定
+                data_set.rep_model.bones["右足IK親"].local_offset = leg_ik_offset["右"]
+            else:
+                data_set.rep_model.bones["右足ＩＫ"].local_offset = leg_ik_offset["右"]
 
             return
 
