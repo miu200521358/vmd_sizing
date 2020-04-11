@@ -62,20 +62,6 @@ class BoneLinks():
                 break
         return new_links
     
-    # 指定されたボーン名までのフレームを取得
-    # それ以上は初期値のボーンを追加する
-    def take_out_frames(self, motion: VmdMotion, bone_name: str, fno: int):
-        new_motion = VmdMotion()
-        for lidx, lkey in enumerate(self.__links.keys()):
-            if lidx <= self.index(bone_name):
-                calc_bone = motion.calc_bf(self.__links[lkey].name, fno)
-                new_motion.bones[calc_bone.name] = {fno: calc_bone}
-            else:
-                calc_bone = VmdBoneFrame(fno=fno, name=lkey)
-                new_motion.bones[calc_bone.name] = {fno: calc_bone}
-        
-        return new_motion
-
     def __str__(self):
         return "<BoneLinks links:{0}".format(self.__links)
 

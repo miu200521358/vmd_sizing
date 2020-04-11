@@ -67,7 +67,7 @@ class StanceServiceTest(unittest.TestCase):
         
         self.assertTrue(True)
 
-    def test_stance_shoulder_02(self):
+    def not_test_stance_shoulder_02(self):
         motion = VmdReader("D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/_VMDサイジング/鳳仙花/鳳仙花mkmk髭切007bミュ第一_0-2000.vmd").read_data()
         model = PmxReader("D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/107_髭切/髭切【刀ミュ】mkmk008d 刀剣乱舞/髭切【刀ミュ】mkmk008d/髭切【刀ミュ3】mkmk008d_鳳仙花.pmx").read_data()
         
@@ -105,7 +105,7 @@ class StanceServiceTest(unittest.TestCase):
 
         self.assertTrue(True)
         
-    def test_stance_shoulder_03(self):
+    def not_test_stance_shoulder_03(self):
         motion = VmdReader("D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/_VMDサイジング/鳳仙花/鳳仙花mkmk髭切007bミュ第一_0-2000.vmd").read_data()
         model = PmxReader("D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/107_髭切/髭切【刀ミュ】mkmk008d 刀剣乱舞/髭切【刀ミュ】mkmk008d/髭切【刀ミュ3】mkmk008d_鳳仙花.pmx").read_data()
         
@@ -138,7 +138,7 @@ class StanceServiceTest(unittest.TestCase):
 
         self.assertTrue(True)
 
-    def test_stance_shoulder_04(self):
+    def not_test_stance_shoulder_04(self):
         motion = VmdReader("D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/_VMDサイジング/鳳仙花/鳳仙花mkmk髭切007bミュ第一_0-2000.vmd").read_data()
         model = PmxReader("D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/107_髭切/髭切【刀ミュ】mkmk008d 刀剣乱舞/髭切【刀ミュ】mkmk008d/髭切【刀ミュ3】mkmk008d_鳳仙花.pmx").read_data()
         
@@ -168,7 +168,7 @@ class StanceServiceTest(unittest.TestCase):
 
         self.assertTrue(True)
 
-    def test_stance_shoulder_05(self):
+    def not_test_stance_shoulder_05(self):
         motion = VmdReader("D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/_VMDサイジング/鳳仙花/鳳仙花mkmk髭切007bミュ第一_0-2000.vmd").read_data()
         model = PmxReader("D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/107_髭切/髭切【刀ミュ】mkmk008d 刀剣乱舞/髭切【刀ミュ】mkmk008d/髭切【刀ミュ3】mkmk008d_鳳仙花.pmx").read_data()
         
@@ -202,7 +202,7 @@ class StanceServiceTest(unittest.TestCase):
 
         self.assertTrue(True)
 
-    def test_stance_shoulder_06(self):
+    def not_test_stance_shoulder_06(self):
         new_rep_to_pos = MVector3D(16.638640587237887, 19.455697325211673, 4.067013732312591)
         rep_base_pos = MVector3D(15.527995423468052, 19.158781645638516, 2.353690174209908)
         up_pos = MVector3D(0.02597404821369409, -0.6341368197928823, 0.7727844735774392)
@@ -258,7 +258,7 @@ class StanceServiceTest(unittest.TestCase):
             from_rotation.normalize()
             print("rot %s" % from_rotation.toEulerAngles4MMD())
 
-    def test_stance_shoulder_07(self):
+    def not_test_stance_shoulder_07(self):
         new_rep_to_pos = MVector3D(16.638640587237894, 19.455697325211673, 4.067013732312591)
         rep_base_pos = MVector3D(15.541596036361701, 18.419343683301417, 2.4565491530944494)
         up_pos = MVector3D(-0.13131308583164614, -0.017769852724240698, 0.10088527183640322)
@@ -322,7 +322,7 @@ class StanceServiceTest(unittest.TestCase):
             print("rot %s" % from_rotation.toEulerAngles4MMD())
             print("original: %s" % MVector3D(21.338723875696445, 15.845333083479046, 37.954108757721826))
 
-    def test_stance_shoulder_08(self):
+    def not_test_stance_shoulder_08(self):
         new_rep_to_pos = MVector3D(16.638640587237894, 19.455697325211673, 4.067013732312591)
         rep_base_pos = MVector3D(15.541596036361701, 18.419343683301417, 2.4565491530944494)
         rep_from_pos = MVector3D(16.07129122417615, 19.252113744303983, 2.952803072461259)

@@ -170,6 +170,22 @@ class VmdMotion():
         # ハッシュ値
         self.digest = None
 
+    # 補間曲線分割ありで登録
+    def regist_bf(self, bf: VmdBoneFrame, bone_name: str, fno: int):
+        # 登録対象の場合のみ、補間曲線リセットで登録する
+        regist_bf = self.calc_bf(bone_name, fno, is_reset_interpolation=True)
+        regist_bf.position = bf.position
+        regist_bf.rotation = bf.rotation
+        # キーを登録
+        regist_bf.key = True
+        self.bones[bone_name][fno] = regist_bf
+        # 補間曲線を設定（有効なキーのみ）
+        prev_fno, next_fno = self.get_bone_prev_next_fno(bone_name, fno=fno, is_key=True)
+
+        prev_bf = self.calc_bf(bone_name, prev_fno)
+        next_bf = self.calc_bf(bone_name, next_fno)
+        self.split_bf_by_fno(bone_name, prev_bf, next_bf, fno)
+
     # 補間曲線を考慮した指定フレーム番号の位置
     # https://www55.atwiki.jp/kumiho_k/pages/15.html
     # https://harigane.at.webry.info/201103/article_1.html

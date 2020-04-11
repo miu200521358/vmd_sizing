@@ -797,7 +797,7 @@ class MQuaternion():
         v = MVector3D(math.degrees(pitch), math.degrees(yaw), math.degrees(roll))
 
         return v
-        
+    
     @classmethod
     def dotProduct(cls, v1, v2):
         dotv = np.sum(copy.deepcopy(v1.__data.components) * copy.deepcopy(v2.__data.components))
@@ -819,7 +819,24 @@ class MQuaternion():
         s = math.sin(a)
         c = math.cos(a)
         return MQuaternion(c, x * s, y * s, z * s).normalized()
-    
+
+    @classmethod
+    def fromAxisAndQuarternion(cls, vec3: MVector3D, qq):
+        x = vec3.x()
+        y = vec3.y()
+        z = vec3.z()
+        length = math.sqrt(x * x + y * y + z * z)
+
+        if not is_almost_null(length - 1.0) and not is_almost_null(length):
+            x /= length
+            y /= length
+            z /= length
+
+        a = math.acos(min(1, max(-1, qq.scalar())))
+        s = math.sin(a)
+        c = math.cos(a)
+        return MQuaternion(c, x * s, y * s, z * s).normalized()
+        
     @classmethod
     def fromDirection(cls, direction, up):
         if direction.is_almost_null():
@@ -964,7 +981,7 @@ class MQuaternion():
 
         # Construct the result quaternion.
         return q1 * factor1 + q2b * factor2
-                
+    
     def x(self):
         return self.__data.x
 
@@ -1188,10 +1205,10 @@ class MMatrix4x4():
         return MVector3D(xyz[0], xyz[1], xyz[2])
     
     def toQuaternion(self):
-        a = [[self.__data[0, 0], self.__data[0, 1], self.__data[0, 3], self.__data[0, 4]],
-             [self.__data[1, 0], self.__data[1, 1], self.__data[1, 3], self.__data[1, 4]],
-             [self.__data[2, 0], self.__data[2, 1], self.__data[2, 3], self.__data[2, 4]],
-             [self.__data[3, 0], self.__data[3, 1], self.__data[3, 3], self.__data[3, 4]]]
+        a = [[self.__data[0, 0], self.__data[0, 1], self.__data[0, 2], self.__data[0, 3]],
+             [self.__data[1, 0], self.__data[1, 1], self.__data[1, 2], self.__data[1, 3]],
+             [self.__data[2, 0], self.__data[2, 1], self.__data[2, 2], self.__data[2, 3]],
+             [self.__data[3, 0], self.__data[3, 1], self.__data[3, 2], self.__data[3, 3]]]
         
         q = MQuaternion()
         

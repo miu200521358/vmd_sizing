@@ -16,6 +16,116 @@ from utils.MLogger import MLogger # noqa
 logger = MLogger(__name__, level=1)
 
 
+# クォータニオンをローカル軸の回転量に分離
+def separate_local_qq(fno: int, bone_name: str, qq: MQuaternion, global_x_axis: MVector3D):
+    # ローカル座標系（ボーンベクトルが（1，0，0）になる空間）の向き
+    local_axis = MVector3D(1, 0, 0)
+    
+    # グローバル座標系（Ａスタンス）からローカル座標系（ボーンベクトルが（1，0，0）になる空間）への変換
+    global2local_qq = MQuaternion.rotationTo(global_x_axis, local_axis)
+    local2global_qq = MQuaternion.rotationTo(local_axis, global_x_axis)
+
+    # X成分を抽出する ------------
+
+    mat_x1 = MMatrix4x4()
+    mat_x1.setToIdentity()              # 初期化
+    mat_x1.rotate(qq)                   # 入力qq
+    mat_x1.translate(global_x_axis)     # グローバル軸方向に伸ばす
+    mat_x1_vec = mat_x1 * MVector3D()
+
+    # YZの回転量（自身のねじれを無視する）
+    yz_qq = MQuaternion.rotationTo(global_x_axis, mat_x1_vec)
+
+    # 除去されたX成分を求める
+    mat_x2 = MMatrix4x4()
+    mat_x2.setToIdentity()              # 初期化
+    mat_x2.rotate(qq)                   # 元々の回転量
+
+    mat_x3 = MMatrix4x4()
+    mat_x3.setToIdentity()              # 初期化
+    mat_x3.rotate(yz_qq)                # YZの回転量
+
+    x_qq = (mat_x2 * mat_x3.inverted()).toQuaternion()
+
+    # YZ回転からZ成分を抽出する --------------
+
+    mat_z1 = MMatrix4x4()
+    mat_z1.setToIdentity()              # 初期化
+    mat_z1.rotate(yz_qq)                # YZの回転量
+    mat_z1.rotate(global2local_qq)      # グローバル軸の回転量からローカルの回転量に変換
+    mat_z1.translate(local_axis)        # ローカル軸方向に伸ばす
+    
+    mat_z1_vec = mat_z1 * MVector3D()
+    mat_z1_vec.setZ(0)                  # Z方向の移動量を潰す
+
+    # ローカル軸からZを潰した移動への回転量
+    local_z_qq = MQuaternion.rotationTo(local_axis, mat_z1_vec)
+
+    # ボーンローカル座標系の回転をグローバル座標系の回転に戻す
+    mat_z2 = MMatrix4x4()
+    mat_z2.setToIdentity()              # 初期化
+    mat_z2.rotate(local_z_qq)           # ローカル軸上のZ回転
+    mat_z2.rotate(local2global_qq)      # ローカル軸上からグローバル軸上に変換
+
+    z_qq = mat_z2.toQuaternion()
+
+    # YZ回転からY成分だけ取り出す -----------
+    
+    mat_y1 = MMatrix4x4()
+    mat_y1.setToIdentity()              # 初期化
+    mat_y1.rotate(yz_qq)                # グローバルYZの回転量
+
+    mat_y2 = MMatrix4x4()
+    mat_y2.setToIdentity()              # 初期化
+    mat_y2.rotate(z_qq)                 # グローバルZの回転量
+    mat_y2_qq = (mat_y1 * mat_y2.inverted()).toQuaternion()
+
+    # X成分の捻れが混入したので、XY回転からYZ回転を取り出すことでXキャンセルをかける。
+    mat_y3 = MMatrix4x4()
+    mat_y3.setToIdentity()
+    mat_y3.rotate(mat_y2_qq)
+    mat_y3.translate(global_x_axis)
+    mat_y3_vec = mat_y3 * MVector3D()
+
+    y_qq = MQuaternion.rotationTo(global_x_axis, mat_y3_vec)
+
+    return x_qq, y_qq, z_qq
+
+
+# 回転を委譲する
+def delegate_qq(fno: int, bone_name: str, twist_qq: MQuaternion, twist_x_axis: MVector3D, \
+                original_child_qq: MQuaternion, child_qq: MQuaternion, child_x_axis: MVector3D):
+
+    # ローカル座標系（ボーンベクトルが（1，0，0）になる空間）の向き
+    local_axis = MVector3D(1, 0, 0)
+    
+    # グローバル座標系（Ａスタンス）からローカル座標系（ボーンベクトルが（1，0，0）になる空間）への変換
+    global2local_qq = MQuaternion.rotationTo(twist_x_axis, local_axis)
+
+    # 軸制限のローカル座標に変換
+    original_mat = MMatrix4x4()                 # オリジナルの回転量に基づく移動量
+    original_mat.setToIdentity()
+    original_mat.rotate(original_child_qq)      # ひじ・手首の回転量
+    original_mat.translate(child_x_axis)        # ひじ・手首のX軸方向の移動量
+    original_mat.rotate(global2local_qq)        # グローバルからローカルへ
+    original_vec = original_mat * MVector3D()
+    original_vec.setX(0)
+
+    separated_mat = MMatrix4x4()                # 分散後の回転量に基づく移動量
+    separated_mat.setToIdentity()
+    separated_mat.rotate(child_qq)              # ひじ・手首の回転量
+    separated_mat.translate(child_x_axis)       # ひじ・手首のX軸方向の移動量
+    separated_mat.rotate(global2local_qq)       # グローバルからローカルへ
+    separated_vec = separated_mat * MVector3D()
+    separated_vec.setX(0)
+
+    # 分散後の回転量からオリジナルの回転量に戻すだけの回転量
+    qq = MQuaternion.rotationTo(separated_vec, original_vec)
+
+    # 回転量を捩りの軸に合わせる
+    return MQuaternion.fromAxisAndQuarternion(twist_x_axis, qq)
+
+
 # 正面向きの情報を含むグローバル位置
 def calc_front_global_pos(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, limit_links=None):
 
@@ -130,63 +240,74 @@ def calc_relative_rotation(model: PmxModel, links: BoneLinks, motion: VmdMotion,
             # 上限リンクでボーンがない場合、ボーンは初期値
             fill_bf = VmdBoneFrame(fno=fno, name=link_bone_name)
         
-        # 回転量
-        rot = fill_bf.rotation
-
-        if link_bone.fixed_axis != MVector3D():
-            # 回転角度を求める
-            if rot == MQuaternion():
-                # 回転なしの場合、角度なし
-                degree = 0
-            else:
-                # 回転補正
-                if "右" in link_bone.name and rot.x() > 0 and link_bone.fixed_axis.x() <= 0:
-                    rot.setX(rot.x() * -1)
-                    rot.setScalar(rot.scalar() * -1)
-                elif "左" in link_bone.name and rot.x() < 0 and link_bone.fixed_axis.x() >= 0:
-                    rot.setX(rot.x() * -1)
-                    rot.setScalar(rot.scalar() * -1)
-                # 回転補正（コロン式ミクさん等軸反転パターン）
-                elif "右" in link_bone.name and rot.x() < 0 and link_bone.fixed_axis.x() > 0:
-                    rot.setX(rot.x() * -1)
-                    rot.setScalar(rot.scalar() * -1)
-                elif "左" in link_bone.name and rot.x() > 0 and link_bone.fixed_axis.x() < 0:
-                    rot.setX(rot.x() * -1)
-                    rot.setScalar(rot.scalar() * -1)
-                
-                rot.normalize()
-
-                degree = math.degrees(2 * math.acos(min(1, max(0, rot.scalar()))))
-            
-            # 軸固定の場合、回転を制限する
-            rot = MQuaternion.fromAxisAndAngle(link_bone.fixed_axis, degree)
-        
-        if link_bone.getExternalRotationFlag() and link_bone.effect_index in model.bone_indexes:
-            
-            effect_bone = model.bones[model.bone_indexes[link_bone.effect_index]]
-            cnt = 0
-
-            while cnt < 10:
-                # 付与親が取得できたら、該当する付与親の回転を取得する
-                effect_bf = motion.calc_bf(effect_bone.name, fno)
-
-                # 自身の回転量に付与親の回転量を付与率を加味して付与する
-                rot = rot * effect_bf.rotation
-                rot.setX(rot.x() * effect_bone.effect_factor)
-                rot.setY(rot.y() * effect_bone.effect_factor)
-                rot.setZ(rot.z() * effect_bone.effect_factor)
-
-                if effect_bone.getExternalRotationFlag() and effect_bone.effect_index in model.bone_indexes:
-                    # 付与親置き換え
-                    effect_bone = model.bones[model.bone_indexes[effect_bone.effect_index]]
-                else:
-                    break
-
-                cnt += 1
+        # 実際の回転量を計算
+        rot = deform_rotation(model, motion, fill_bf)
 
         add_qs.append(rot)
 
     return add_qs
+
+
+# 指定ボーンの実際の回転情報
+def deform_rotation(model: PmxModel, motion: VmdMotion, bf: VmdBoneFrame):
+    if bf.name not in model.bones:
+        return MQuaternion()
+
+    bone = model.bones[bf.name]
+    rot = copy.deepcopy(bf.rotation)
+
+    if bone.fixed_axis != MVector3D():
+        # 回転角度を求める
+        if rot == MQuaternion():
+            # 回転なしの場合、角度なし
+            degree = 0
+        else:
+            # 回転補正
+            if "右" in bone.name and rot.x() > 0 and bone.fixed_axis.x() <= 0:
+                rot.setX(rot.x() * -1)
+                rot.setScalar(rot.scalar() * -1)
+            elif "左" in bone.name and rot.x() < 0 and bone.fixed_axis.x() >= 0:
+                rot.setX(rot.x() * -1)
+                rot.setScalar(rot.scalar() * -1)
+            # 回転補正（コロン式ミクさん等軸反転パターン）
+            elif "右" in bone.name and rot.x() < 0 and bone.fixed_axis.x() > 0:
+                rot.setX(rot.x() * -1)
+                rot.setScalar(rot.scalar() * -1)
+            elif "左" in bone.name and rot.x() > 0 and bone.fixed_axis.x() < 0:
+                rot.setX(rot.x() * -1)
+                rot.setScalar(rot.scalar() * -1)
+            
+            rot.normalize()
+
+            degree = math.degrees(2 * math.acos(min(1, max(0, rot.scalar()))))
+        
+        # 軸固定の場合、回転を制限する
+        rot = MQuaternion.fromAxisAndAngle(bone.fixed_axis, degree)
+    
+    if bone.getExternalRotationFlag() and bone.effect_index in model.bone_indexes:
+        
+        effect_bone = model.bones[model.bone_indexes[bone.effect_index]]
+        cnt = 0
+
+        while cnt < 100:
+            # 付与親が取得できたら、該当する付与親の回転を取得する
+            effect_bf = motion.calc_bf(effect_bone.name, bf.fno)
+
+            # 自身の回転量に付与親の回転量を付与率を加味して付与する
+            rot = rot * effect_bf.rotation
+            rot.setX(rot.x() * effect_bone.effect_factor)
+            rot.setY(rot.y() * effect_bone.effect_factor)
+            rot.setZ(rot.z() * effect_bone.effect_factor)
+
+            if effect_bone.getExternalRotationFlag() and effect_bone.effect_index in model.bone_indexes:
+                # 付与親置き換え
+                effect_bone = model.bones[model.bone_indexes[effect_bone.effect_index]]
+            else:
+                break
+
+            cnt += 1
+
+    return rot
 
 
 # 指定されたボーンまでの回転量
@@ -198,62 +319,6 @@ def calc_direction_qq(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno:
         total_qq *= qq
 
     return total_qq
-
-
-# 上半身のスタンスの違い
-def calc_upper_stance(model: PmxModel, from_bone_name: str, to_bone_name=None):
-    return calc_stance(model, from_bone_name, to_bone_name, MVector3D(0, 1, 0))
-
-
-# 腕のスタンスの違い
-def calc_arm_stance(model: PmxModel, from_bone_name: str, to_bone_name=None):
-    default_pos = MVector3D(1, 0, 0) if "左" in from_bone_name else MVector3D(-1, 0, 0)
-    return calc_stance(model, from_bone_name, to_bone_name, default_pos)
-
-
-# 肩のスタンス
-def calc_shoulder_stance(model: PmxModel, from_bone_name: str, to_bone_name=None):
-    default_pos = MVector3D(1, 0, 0) if "左" in from_bone_name else MVector3D(-1, 0, 0)
-    return calc_stance(model, from_bone_name, to_bone_name, default_pos)
-
-
-# 指定ボーン間のスタンス
-def calc_stance(model: PmxModel, from_bone_name: str, to_bone_name: str, default_pos: MVector3D):
-    from_pos = MVector3D()
-    to_pos = MVector3D()
-
-    if from_bone_name in model.bones:
-        fv = model.bones[from_bone_name]
-        from_pos = fv.position
-        
-        if to_bone_name in model.bones:
-            # TOが指定されている場合、ボーン位置を保持
-            to_pos = model.bones[to_bone_name].position
-        else:
-            # TOの明示が無い場合、表示先からボーン位置取得
-            if fv.tail_position != MVector3D():
-                # 表示先が相対パスの場合、保持
-                to_pos = from_pos + fv.tail_position
-            elif fv.tail_index >= 0:
-                # 表示先がボーンの場合、ボーン位置保持
-                to_pos = model.bones[model.bone_indexes[fv.tail_index]].position
-            else:
-                # ここまで来たらデフォルト加算
-                to_pos = from_pos + default_pos
-
-    from_qq = MQuaternion()
-    if from_pos != MVector3D() and to_pos != MVector3D():
-        logger.test("from_pos: %s", from_pos)
-        logger.test("to_pos: %s", to_pos)
-
-        diff_pos = to_pos - from_pos
-        diff_pos.normalize()
-        logger.test("diff_pos: %s", diff_pos)
-
-        from_qq = MQuaternion.rotationTo(default_pos, diff_pos)
-        logger.test("[z] from_bone_name: %s, from_qq: %s", from_bone_name, from_qq.toEulerAngles())
-
-    return diff_pos, from_qq
 
 
 # 足IKに基づく身体比率

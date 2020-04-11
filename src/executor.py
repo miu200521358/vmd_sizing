@@ -16,7 +16,7 @@ from utils.MException import SizingException
 from utils.MLogger import MLogger
 
 logger = MLogger(__name__)
-VERSION_NAME = "ver5.00_β42"
+VERSION_NAME = "ver5.00_β43"
 
 
 if __name__ == '__main__':
