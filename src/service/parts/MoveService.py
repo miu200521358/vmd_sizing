@@ -7,7 +7,7 @@ from module.MOptions import MOptions, MOptionsDataSet
 from utils import MUtils, MServiceUtils, MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
 
-logger = MLogger(__name__, level=1)
+logger = MLogger(__name__)
 
 
 class MoveService():

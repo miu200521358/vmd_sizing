@@ -53,7 +53,7 @@ def separate_local_qq(fno: int, bone_name: str, qq: MQuaternion, global_x_axis: 
     mat_z1.setToIdentity()              # 初期化
     mat_z1.rotate(yz_qq)                # YZの回転量
     mat_z1.rotate(global2local_qq)      # グローバル軸の回転量からローカルの回転量に変換
-    mat_z1.translate(local_axis)        # ローカル軸方向に伸ばす
+    mat_z1.translate(global_x_axis)     # グローバル軸方向に伸ばす
     
     mat_z1_vec = mat_z1 * MVector3D()
     mat_z1_vec.setZ(0)                  # Z方向の移動量を潰す
@@ -89,12 +89,11 @@ def separate_local_qq(fno: int, bone_name: str, qq: MQuaternion, global_x_axis: 
 
     y_qq = MQuaternion.rotationTo(global_x_axis, mat_y3_vec)
 
-    return x_qq, y_qq, z_qq
+    return x_qq, y_qq, z_qq, yz_qq
 
 
-# 回転を委譲する
-def delegate_qq(fno: int, bone_name: str, twist_qq: MQuaternion, twist_x_axis: MVector3D, \
-                original_child_qq: MQuaternion, child_qq: MQuaternion, child_x_axis: MVector3D):
+# 捩りの回転量を計算する
+def calc_twist_qq(fno: int, bone_name: str, twist_x_axis: MVector3D, original_child_qq: MQuaternion, child_qq: MQuaternion):
 
     # ローカル座標系（ボーンベクトルが（1，0，0）になる空間）の向き
     local_axis = MVector3D(1, 0, 0)
@@ -104,18 +103,18 @@ def delegate_qq(fno: int, bone_name: str, twist_qq: MQuaternion, twist_x_axis: M
 
     # 軸制限のローカル座標に変換
     original_mat = MMatrix4x4()                 # オリジナルの回転量に基づく移動量
-    original_mat.setToIdentity()
-    original_mat.rotate(original_child_qq)      # ひじ・手首の回転量
-    original_mat.translate(child_x_axis)        # ひじ・手首のX軸方向の移動量
+    original_mat.setToIdentity()                # 初期化
+    original_mat.rotate(original_child_qq)      # 元々のひじ・手首の回転量
     original_mat.rotate(global2local_qq)        # グローバルからローカルへ
+    original_mat.translate(local_axis)          # ローカル軸方向の移動量
     original_vec = original_mat * MVector3D()
     original_vec.setX(0)
 
     separated_mat = MMatrix4x4()                # 分散後の回転量に基づく移動量
-    separated_mat.setToIdentity()
+    separated_mat.setToIdentity()               # 初期化
     separated_mat.rotate(child_qq)              # ひじ・手首の回転量
-    separated_mat.translate(child_x_axis)       # ひじ・手首のX軸方向の移動量
     separated_mat.rotate(global2local_qq)       # グローバルからローカルへ
+    separated_mat.translate(local_axis)         # ローカル軸方向の移動量
     separated_vec = separated_mat * MVector3D()
     separated_vec.setX(0)
 
@@ -123,7 +122,9 @@ def delegate_qq(fno: int, bone_name: str, twist_qq: MQuaternion, twist_x_axis: M
     qq = MQuaternion.rotationTo(separated_vec, original_vec)
 
     # 回転量を捩りの軸に合わせる
-    return MQuaternion.fromAxisAndQuarternion(twist_x_axis, qq)
+    result_twist_qq = MQuaternion.fromAxisAndQuaternion(twist_x_axis, qq)
+
+    return result_twist_qq
 
 
 # 正面向きの情報を含むグローバル位置

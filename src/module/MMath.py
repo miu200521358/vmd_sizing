@@ -798,6 +798,9 @@ class MQuaternion():
 
         return v
     
+    def toDegree(self):
+        return math.degrees(2 * math.acos(min(1, max(-1, self.scalar()))))
+    
     @classmethod
     def dotProduct(cls, v1, v2):
         dotv = np.sum(copy.deepcopy(v1.__data.components) * copy.deepcopy(v2.__data.components))
@@ -821,7 +824,9 @@ class MQuaternion():
         return MQuaternion(c, x * s, y * s, z * s).normalized()
 
     @classmethod
-    def fromAxisAndQuarternion(cls, vec3: MVector3D, qq):
+    def fromAxisAndQuaternion(cls, vec3: MVector3D, qq):
+        qq.normalize()
+
         x = vec3.x()
         y = vec3.y()
         z = vec3.z()
@@ -835,8 +840,11 @@ class MQuaternion():
         a = math.acos(min(1, max(-1, qq.scalar())))
         s = math.sin(a)
         c = math.cos(a)
+
+        # logger.test("scalar: %s, a: %s, c: %s, degree: %s", qq.scalar(), a, c, math.degrees(2 * math.acos(min(1, max(-1, qq.scalar())))))
+
         return MQuaternion(c, x * s, y * s, z * s).normalized()
-        
+                
     @classmethod
     def fromDirection(cls, direction, up):
         if direction.is_almost_null():
@@ -902,7 +910,7 @@ class MQuaternion():
                 axis = MVector3D.crossProduct(MVector3D(0.0, 1.0, 0.0), v0)
             axis.normalize()
             # same as MQuaternion.fromAxisAndAngle(axis, 180.0)
-            return MQuaternion(0.0, axis.x(), axis.y(), axis.z())
+            return MQuaternion(0.0, axis.x(), axis.y(), axis.z()).normalized()
 
         d = math.sqrt(2.0 * d)
         axis = MVector3D.crossProduct(v0, v1) / d
@@ -993,7 +1001,10 @@ class MQuaternion():
 
     def scalar(self):
         return self.__data.w
-    
+
+    def vector(self):
+        return MVector3D(self.__data.x, self.__data.y, self.__data.z)
+
     def setX(self, x):
         self.__data.x = x
 

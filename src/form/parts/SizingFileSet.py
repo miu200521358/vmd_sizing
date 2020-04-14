@@ -46,7 +46,7 @@ class SizingFileSet():
         self.set_sizer.Add(self.org_model_file_ctrl.sizer, 1, wx.EXPAND, 0)
 
         # 捩り分散追加FLG
-        twist_flg_ctrl = wx.CheckBox(panel, wx.ID_ANY, u"捩り分散追加", wx.DefaultPosition, wx.DefaultSize, 0)
+        twist_flg_ctrl = wx.CheckBox(panel, wx.ID_ANY, u"捩り分散あり", wx.DefaultPosition, wx.DefaultSize, 0)
         twist_flg_ctrl.SetToolTip(u"チェックを入れると、腕捻り等への分散処理を追加できます。")
         twist_flg_ctrl.Bind(wx.EVT_CHECKBOX, self.set_output_vmd_path)
 
