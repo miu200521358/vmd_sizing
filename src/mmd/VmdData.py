@@ -169,6 +169,20 @@ class VmdMotion():
         self.showiks = []
         # ハッシュ値
         self.digest = None
+    
+    # 指定ボーン名の全打ちキーで登録する
+    def regist_full_bf(self, bone_name: str):
+        fnos = self.get_bone_fnos(bone_name)
+        if len(fnos) > 2:
+            for prev_fno, next_fno in zip(fnos[:-1], fnos[1:]):
+                # キーフレ間を全部埋める(そのまま登録すると、キーが変わるので、別保持)
+                fill_fnos = {}
+                for fno in range(prev_fno + 1, next_fno):
+                    fill_fnos[fno] = self.calc_bf(bone_name, fno)
+                
+                # 保持したのを登録しなおし
+                for fno, bf in fill_fnos.items():
+                    self.bones[bone_name][fno] = bf
 
     # 補間曲線分割ありで登録
     def regist_bf(self, bf: VmdBoneFrame, bone_name: str, fno: int):

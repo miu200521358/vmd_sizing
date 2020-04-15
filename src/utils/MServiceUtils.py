@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-
+import numpy as np
 import copy
 import math
 from collections import OrderedDict
@@ -53,7 +53,7 @@ def separate_local_qq(fno: int, bone_name: str, qq: MQuaternion, global_x_axis: 
     mat_z1.setToIdentity()              # 初期化
     mat_z1.rotate(yz_qq)                # YZの回転量
     mat_z1.rotate(global2local_qq)      # グローバル軸の回転量からローカルの回転量に変換
-    mat_z1.translate(global_x_axis)     # グローバル軸方向に伸ばす
+    mat_z1.translate(local_axis)        # ローカル軸方向に伸ばす
     
     mat_z1_vec = mat_z1 * MVector3D()
     mat_z1_vec.setZ(0)                  # Z方向の移動量を潰す
@@ -90,41 +90,6 @@ def separate_local_qq(fno: int, bone_name: str, qq: MQuaternion, global_x_axis: 
     y_qq = MQuaternion.rotationTo(global_x_axis, mat_y3_vec)
 
     return x_qq, y_qq, z_qq, yz_qq
-
-
-# 捩りの回転量を計算する
-def calc_twist_qq(fno: int, bone_name: str, twist_x_axis: MVector3D, original_child_qq: MQuaternion, child_qq: MQuaternion):
-
-    # ローカル座標系（ボーンベクトルが（1，0，0）になる空間）の向き
-    local_axis = MVector3D(1, 0, 0)
-    
-    # グローバル座標系（Ａスタンス）からローカル座標系（ボーンベクトルが（1，0，0）になる空間）への変換
-    global2local_qq = MQuaternion.rotationTo(twist_x_axis, local_axis)
-
-    # 軸制限のローカル座標に変換
-    original_mat = MMatrix4x4()                 # オリジナルの回転量に基づく移動量
-    original_mat.setToIdentity()                # 初期化
-    original_mat.rotate(original_child_qq)      # 元々のひじ・手首の回転量
-    original_mat.rotate(global2local_qq)        # グローバルからローカルへ
-    original_mat.translate(local_axis)          # ローカル軸方向の移動量
-    original_vec = original_mat * MVector3D()
-    original_vec.setX(0)
-
-    separated_mat = MMatrix4x4()                # 分散後の回転量に基づく移動量
-    separated_mat.setToIdentity()               # 初期化
-    separated_mat.rotate(child_qq)              # ひじ・手首の回転量
-    separated_mat.rotate(global2local_qq)       # グローバルからローカルへ
-    separated_mat.translate(local_axis)         # ローカル軸方向の移動量
-    separated_vec = separated_mat * MVector3D()
-    separated_vec.setX(0)
-
-    # 分散後の回転量からオリジナルの回転量に戻すだけの回転量
-    qq = MQuaternion.rotationTo(separated_vec, original_vec)
-
-    # 回転量を捩りの軸に合わせる
-    result_twist_qq = MQuaternion.fromAxisAndQuaternion(twist_x_axis, qq)
-
-    return result_twist_qq
 
 
 # 正面向きの情報を含むグローバル位置
@@ -259,10 +224,7 @@ def deform_rotation(model: PmxModel, motion: VmdMotion, bf: VmdBoneFrame):
 
     if bone.fixed_axis != MVector3D():
         # 回転角度を求める
-        if rot == MQuaternion():
-            # 回転なしの場合、角度なし
-            degree = 0
-        else:
+        if rot != MQuaternion():
             # 回転補正
             if "右" in bone.name and rot.x() > 0 and bone.fixed_axis.x() <= 0:
                 rot.setX(rot.x() * -1)
@@ -279,11 +241,9 @@ def deform_rotation(model: PmxModel, motion: VmdMotion, bf: VmdBoneFrame):
                 rot.setScalar(rot.scalar() * -1)
             
             rot.normalize()
-
-            degree = math.degrees(2 * math.acos(min(1, max(0, rot.scalar()))))
         
         # 軸固定の場合、回転を制限する
-        rot = MQuaternion.fromAxisAndAngle(bone.fixed_axis, degree)
+        rot = MQuaternion.fromAxisAndAngle(bone.fixed_axis, rot.toDegree())
     
     if bone.getExternalRotationFlag() and bone.effect_index in model.bone_indexes:
         
