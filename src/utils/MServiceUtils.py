@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #
-import numpy as np
 import copy
-import math
+import numpy as np # noqa
+import math # noqa
 from collections import OrderedDict
 
 from mmd.PmxData import PmxModel, Vertex, Material, Bone, Morph, DisplaySlot, RigidBody, Joint # noqa

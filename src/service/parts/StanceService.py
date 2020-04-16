@@ -12,7 +12,8 @@ from module.MParams import BoneLinks
 from utils import MUtils, MServiceUtils, MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
 
-logger = MLogger(__name__, level=1)
+# logger = MLogger(__name__, level=1)
+logger = MLogger(__name__)
 
 
 class StanceService():
@@ -225,9 +226,9 @@ class StanceService():
                     wrist_bf.rotation = wrist_result_qq
                     data_set.motion.regist_bf(wrist_bf, wrist_bone_name, fno)
 
-                    if fno // 500 > prev_sep_fno:
+                    if fno // 200 > prev_sep_fno:
                         logger.info("-- %sフレーム目完了", fno)
-                        prev_sep_fno = fno // 500
+                        prev_sep_fno = fno // 200
 
                 logger.info("%s捩り分散完了", direction)
 
@@ -305,7 +306,7 @@ class StanceService():
                                                  child_x_axis, child_y_axis, original_child_qq, child_qq, original_vec, \
                                                  total_degree, max_dot, max_degree, np.asarray([(x, -x) for x in range(0, 181, 30)]).flatten())
 
-        if max_dot > math.cos(math.radians(5)):
+        if max_dot > math.cos(math.radians(2)):
             return max_dot, MQuaternion.fromAxisAndAngle(twist_x_axis, max_degree)
 
         # 捩りの計算が取れなかった場合、再計算してひじ・手首の位置を確認する
@@ -314,20 +315,20 @@ class StanceService():
                                                  child_x_axis, child_y_axis, original_child_qq, child_qq, original_vec, \
                                                  max_degree, max_dot, max_degree, np.asarray([(x, -x) for x in range(1, 45, 1)]).flatten())
 
-        if max_dot > math.cos(math.radians(5)):
-            return max_dot, MQuaternion.fromAxisAndAngle(twist_x_axis, max_degree)
+        # if max_dot > math.cos(math.radians(4)):
+        #     return max_dot, MQuaternion.fromAxisAndAngle(twist_x_axis, max_degree)
 
-        # 整数で取れなかった場合、小数まで割って調べる
-        max_dot, max_degree = self.test_twist_qq(fno, bone_name, grand_parent_x_axis, grand_parent_qq, grand_parent_twist_qq, \
-                                                 parent_x_axis, parent_qq, twist_x_axis, original_twist_qq, \
-                                                 child_x_axis, child_y_axis, original_child_qq, child_qq, original_vec, \
-                                                 max_degree, max_dot, max_degree, np.asarray([(x * 0.01, -x * 0.01) for x in range(1, 100)]).flatten())
+        # # 整数で取れなかった場合、小数まで割って調べる
+        # max_dot, max_degree = self.test_twist_qq(fno, bone_name, grand_parent_x_axis, grand_parent_qq, grand_parent_twist_qq, \
+        #                                          parent_x_axis, parent_qq, twist_x_axis, original_twist_qq, \
+        #                                          child_x_axis, child_y_axis, original_child_qq, child_qq, original_vec, \
+        #                                          max_degree, max_dot, max_degree, np.asarray([(x * 0.01, -x * 0.01) for x in range(1, 100)]).flatten())
 
-        if max_dot > math.cos(math.radians(5)):
+        if max_dot > math.cos(math.radians(8)):
             return max_dot, MQuaternion.fromAxisAndAngle(twist_x_axis, max_degree)
 
         # 最後まで近似が取れなかった場合最も近いの
-        logger.warning("%sフレーム目%s捩り分散失敗: 角度: %s 近似度: %s", fno, bone_name, max_degree, max_dot)
+        logger.warning("%sフレーム目%s捩り分散失敗: 角度: %s 近似度: %s", fno, bone_name, round(max_degree, 3), round(max_dot, 5))
         return max_dot, MQuaternion.fromAxisAndAngle(twist_x_axis, max_degree)
 
     def test_twist_qq(self, fno: int, bone_name: str, grand_parent_x_axis: MVector3D, grand_parent_qq: MQuaternion, grand_parent_twist_qq: MQuaternion, \
@@ -342,9 +343,9 @@ class StanceService():
                                                            child_x_axis, child_y_axis, original_child_qq, child_qq, original_vec, \
                                                            0, max_dot, max_degree, total_degree + append_degree)
 
-            if max_dot > math.cos(math.radians(5)):
+            if max_dot > math.cos(math.radians(2)):
                 # 充分に近似している場合、このまま終了
-                logger.test("fno: %s, 確定 max_dot: %s, total_degree: %s, append_degree: %s, test_degree: %s, (正＋)", fno, max_dot, total_degree, append_degree, max_degree)
+                logger.debug("fno: %s, 確定 max_dot: %s, total_degree: %s, append_degree: %s, test_degree: %s, (正＋)", fno, max_dot, total_degree, append_degree, max_degree)
                 return max_dot, max_degree
 
             # 逆－方向の捩り角度
@@ -353,9 +354,9 @@ class StanceService():
                                                            child_x_axis, child_y_axis, original_child_qq, child_qq, original_vec, \
                                                            0, max_dot, max_degree, -total_degree - append_degree)
 
-            if max_dot > math.cos(math.radians(5)):
+            if max_dot > math.cos(math.radians(2)):
                 # 充分に近似している場合、このまま終了
-                logger.test("fno: %s, 確定 max_dot: %s, total_degree: %s, append_degree: %s, test_degree: %s, (逆－)", fno, max_dot, total_degree, append_degree, max_degree)
+                logger.debug("fno: %s, 確定 max_dot: %s, total_degree: %s, append_degree: %s, test_degree: %s, (逆－)", fno, max_dot, total_degree, append_degree, max_degree)
                 return max_dot, max_degree
 
             # 正－方向の捩り角度
@@ -364,9 +365,9 @@ class StanceService():
                                                            child_x_axis, child_y_axis, original_child_qq, child_qq, original_vec, \
                                                            0, max_dot, max_degree, total_degree - append_degree)
 
-            if max_dot > math.cos(math.radians(5)):
+            if max_dot > math.cos(math.radians(2)):
                 # 充分に近似している場合、このまま終了
-                logger.test("fno: %s, 確定 max_dot: %s, total_degree: %s, append_degree: %s, test_degree: %s, (正－)", fno, max_dot, total_degree, append_degree, max_degree)
+                logger.debug("fno: %s, 確定 max_dot: %s, total_degree: %s, append_degree: %s, test_degree: %s, (正－)", fno, max_dot, total_degree, append_degree, max_degree)
                 return max_dot, max_degree
 
             # 逆＋方向の捩り角度
@@ -375,9 +376,9 @@ class StanceService():
                                                            child_x_axis, child_y_axis, original_child_qq, child_qq, original_vec, \
                                                            0, max_dot, max_degree, -total_degree + append_degree)
 
-            if max_dot > math.cos(math.radians(5)):
+            if max_dot > math.cos(math.radians(2)):
                 # 充分に近似している場合、このまま終了
-                logger.test("fno: %s, 確定 max_dot: %s, total_degree: %s, append_degree: %s, test_degree: %s, (逆＋)", fno, max_dot, total_degree, append_degree, max_degree)
+                logger.debug("fno: %s, 確定 max_dot: %s, total_degree: %s, append_degree: %s, test_degree: %s, (逆＋)", fno, max_dot, total_degree, append_degree, max_degree)
                 return max_dot, max_degree
 
         # 最後まで取れなければ、最大近似のを返す
@@ -395,7 +396,7 @@ class StanceService():
         # logger.test("fno: %s, 正＋ append_degree: %s, twisted_dot: %s, result_twist_qq: %s, result_twist_qq: %s", \
         #             fno, append_degree, twisted_dot, result_twist_qq.toDegree(), result_twist_qq)
         
-        if twisted_dot > math.cos(math.radians(5)):
+        if twisted_dot > math.cos(math.radians(2)):
             # 充分に近似している場合、このまま終了
             return twisted_dot, test_degree
 
@@ -413,7 +414,7 @@ class StanceService():
             # logger.test("fno: %s, 正＋ append_degree: %s, twisted_dot: %s, result_twist_qq: %s, result_twist_qq: %s", \
             #             fno, append_degree, twisted_dot, result_twist_qq.toDegree(), result_twist_qq)
             
-            if twisted_dot > math.cos(math.radians(5)):
+            if twisted_dot > math.cos(math.radians(2)):
                 # 充分に近似している場合、このまま終了
                 return twisted_dot, test_degree
 
@@ -949,7 +950,7 @@ class StanceService():
     def adjust_shoulder_stance(self, data_set_idx: int, data_set: MOptionsDataSet):
         logger.info("肩スタンス補正　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
 
-        for shoulder_p_name, shoulder_name, arm_name in [("右肩P", "右肩", "右腕"), ("左肩P", "左肩", "左腕")]:
+        for shoulder_p_name, shoulder_name, arm_name in [("左肩P", "左肩", "左腕"), ("右肩P", "右肩", "右腕")]:
             # 肩調整に必要なボーン群(肩Pは含めない)
             shoulder_target_bones = ["頭", "首", "首根元", shoulder_name, arm_name, "{0}下延長".format(arm_name), "上半身"]
 
@@ -1153,7 +1154,7 @@ class StanceService():
             logger.test("f: %s, 近似度: %s", bf.fno, uad)
             if uad < dot_limit:
                 # 内積が離れすぎてたらNG
-                logger.warning("%sフレーム目%sスタンス補正失敗: 角度:%s, 近似度: %s", bf.fno, from_bone_name, from_rotation.toEulerAngles4MMD().to_log(), uad)
+                logger.warning("%sフレーム目%sスタンス補正失敗: 角度:%s, 近似度: %s", bf.fno, from_bone_name, from_rotation.toEulerAngles4MMD().to_log(), round(uad, 5))
             else:
                 # 内積の差が小さい場合、回転適用
                 bf.rotation = from_rotation

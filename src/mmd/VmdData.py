@@ -184,6 +184,80 @@ class VmdMotion():
                 for fno, bf in fill_fnos.items():
                     self.bones[bone_name][fno] = bf
 
+    # 指定ボーンの不要キーを削除する
+    def remove_unnecessary_bf(self, bone_name: str):
+        # キーフレ（全部）を取得する
+        fnos = self.get_bone_fnos(bone_name)
+        prev_sep_fno = 0
+        if len(fnos) > 2:
+            start_fno = fnos[0]     # 開始フレーム番号
+            fno = fnos[1]           # 次のフレーム番号
+            prev_bf = self.calc_bf(bone_name, start_fno)    # 繋ぐ対象のbf
+            fill_bfs = []
+            while fno < fnos[-1]:
+                now_bf = self.calc_bf(bone_name, fno)           # 繋ぐ対象のbf
+                next_bf = self.calc_bf(bone_name, fno + 1)      # 繋ぐ先のbf
+
+                if not now_bf.read:
+                    # 読み込みキーではない場合、結合を試す
+                    
+                    # 現在キーを追加
+                    fill_bfs.append(now_bf)
+
+                    if self.join_bf(prev_bf, fill_bfs, next_bf):
+                        # 全ての補間曲線が繋ぐのに成功した場合、繋ぐ
+                        logger.test("fno: %s, %s, ○補間曲線結合", fno, bone_name)
+
+                        # nowキーを物理的に削除する
+                        del self.bones[bone_name][fno]
+
+                        # startはそのままで、nowだけ動かす
+                        fno = fno + 1       # 現在フレームを次に移す
+                    else:
+                        logger.test("fno: %s, %s, ×補間曲線結合失敗", fno, bone_name)
+                        # どれか失敗してたら、そのまま残す
+                        start_fno = fno     # 開始を現在フレーム
+                        fill_bfs = []       # 中間キーをクリア
+                        fno = fno + 1       # 現在フレームを次に移す
+                else:
+                    # 読み込み時のキーである場合、強制的に残す
+                    start_fno = fno     # 開始を現在フレーム
+                    fill_bfs = []       # 中間キーをクリア
+                    fno = fno + 1       # 現在フレームを次に移す
+
+                if fno // 500 > prev_sep_fno:
+                    logger.info("-- %sフレーム目完了", fno)
+                    prev_sep_fno = fno // 500
+
+    # 補間曲線込みでbfを結合できる場合、結合する
+    def join_bf(self, prev_bf: VmdBoneFrame, fill_bfs: list, next_bf: VmdBoneFrame):
+        # 回転の場合、クォータニオンのthetaを参照する
+
+        if len(fill_bfs) > 0:
+            # 中間がある場合
+            rot_values = [0, prev_bf.rotation.calcTheata(fill_bfs[0].rotation)]    # 最初の変位
+
+            for before_bf, after_bf in zip(fill_bfs[:-1], fill_bfs[1:]):
+                # 前後の変位を測定する
+                rot_values.append(before_bf.rotation.calcTheata(after_bf.rotation))
+
+            rot_values.append(fill_bfs[-1].rotation.calcTheata(next_bf.rotation))    # 最後の変位
+        else:
+            # 間がない場合
+            rot_values = [prev_bf.rotation.calcTheata(next_bf.rotation)]    # 最初の変位
+
+        # 結合したベジェ曲線
+        joined_rot_bzs = MBezierUtils.join_value_2_bezier(rot_values)
+
+        if joined_rot_bzs:
+            # 結合できた場合、補間曲線をnextに設定
+            self.reset_interpolation_parts(prev_bf.name, next_bf, joined_rot_bzs, MBezierUtils.R_x1_idxs, MBezierUtils.R_y1_idxs, MBezierUtils.R_x2_idxs, MBezierUtils.R_y2_idxs)
+
+            return True
+
+        # 結合できなかった場合、False
+        return False
+
     # 補間曲線分割ありで登録
     def regist_bf(self, bf: VmdBoneFrame, bone_name: str, fno: int):
         # 登録対象の場合のみ、補間曲線リセットで登録する
@@ -411,14 +485,14 @@ class VmdMotion():
         self.reset_interpolation_parts(target_bone_name, next_bf, after_bz, x1_idxs, y1_idxs, x2_idxs, y2_idxs)
 
     # 補間曲線の再設定部品
-    def reset_interpolation_parts(self, target_bone_name: str, bf: VmdBoneFrame, bz: list, x1_idxs: list, y1_idxs: list, x2_idxs: list, y2_idxs: list):
+    def reset_interpolation_parts(self, target_bone_name: str, bf: VmdBoneFrame, bzs: list, x1_idxs: list, y1_idxs: list, x2_idxs: list, y2_idxs: list):
         # キーの始点は、B
-        bf.interpolation[x1_idxs[0]] = bf.interpolation[x1_idxs[1]] = bf.interpolation[x1_idxs[2]] = bf.interpolation[x1_idxs[3]] = int(bz[1].x())
-        bf.interpolation[y1_idxs[0]] = bf.interpolation[y1_idxs[1]] = bf.interpolation[y1_idxs[2]] = bf.interpolation[y1_idxs[3]] = int(bz[1].y())
+        bf.interpolation[x1_idxs[0]] = bf.interpolation[x1_idxs[1]] = bf.interpolation[x1_idxs[2]] = bf.interpolation[x1_idxs[3]] = int(bzs[1].x())
+        bf.interpolation[y1_idxs[0]] = bf.interpolation[y1_idxs[1]] = bf.interpolation[y1_idxs[2]] = bf.interpolation[y1_idxs[3]] = int(bzs[1].y())
 
         # キーの終点は、C
-        bf.interpolation[x2_idxs[0]] = bf.interpolation[x2_idxs[1]] = bf.interpolation[x2_idxs[2]] = bf.interpolation[x2_idxs[3]] = int(bz[2].x())
-        bf.interpolation[y2_idxs[0]] = bf.interpolation[y2_idxs[1]] = bf.interpolation[y2_idxs[2]] = bf.interpolation[y2_idxs[3]] = int(bz[2].y())
+        bf.interpolation[x2_idxs[0]] = bf.interpolation[x2_idxs[1]] = bf.interpolation[x2_idxs[2]] = bf.interpolation[x2_idxs[3]] = int(bzs[2].x())
+        bf.interpolation[y2_idxs[0]] = bf.interpolation[y2_idxs[1]] = bf.interpolation[y2_idxs[2]] = bf.interpolation[y2_idxs[3]] = int(bzs[2].y())
 
     # ボーンモーション：フレーム番号リスト
     def get_bone_fnos(self, *bone_names, **kwargs):

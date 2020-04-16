@@ -798,8 +798,15 @@ class MQuaternion():
 
         return v
     
+    # 角度に変換
     def toDegree(self):
         return math.degrees(2 * math.acos(min(1, max(-1, self.scalar()))))
+
+    # 自分ともうひとつの値vとのtheta（変位量）を返す
+    def calcTheata(self, v):
+        dot = MQuaternion.dotProduct(self.normalized(), v.normalized())
+        theta = math.acos(min(1, max(-1, dot)))
+        return theta
     
     @classmethod
     def dotProduct(cls, v1, v2):
