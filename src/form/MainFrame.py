@@ -48,12 +48,20 @@ class MainFrame(wx.Frame):
         bSizer1 = wx.BoxSizer(wx.VERTICAL)
 
         self.note_ctrl = wx.Notebook(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0)
-        if is_out_log:
+        if self.logging_level == MLogger.FULL:
+            # フルデータの場合
+            self.note_ctrl.SetBackgroundColour("RED")
+        elif self.logging_level == MLogger.TEST:
+            # テスト（デバッグ版）の場合
+            self.note_ctrl.SetBackgroundColour("CORAL")
+        elif self.logging_level == MLogger.TIMER:
+            # 時間計測の場合
+            self.note_ctrl.SetBackgroundColour("YELLOW")
+        elif is_out_log:
             # ログありの場合、色変え
             self.note_ctrl.SetBackgroundColour("AQUAMARINE")
         else:
             self.note_ctrl.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_BTNSHADOW))
-        # self.note_ctrl.SetBackgroundColour("BLUE")
 
         # ---------------------------------------------
 

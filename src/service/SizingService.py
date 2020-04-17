@@ -57,13 +57,14 @@ class SizingService():
             # スタンス補正
             result = StanceService(self.options).execute() and result
 
-            # # 最後に全キーフレで繋げるのを除去
-            # for data_set_idx, data_set in enumerate(self.options.data_set_list):
-            #     logger.info("不要キー削除　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
+            # 最後に全キーフレで繋げるのを除去
+            if self.options.logging_level != MLogger.FULL:
+                for data_set_idx, data_set in enumerate(self.options.data_set_list):
+                    logger.info("不要キー削除　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
 
-            #     for bone_name in ["右腕", "右腕捩", "右ひじ", "右手捩", "右手首", "左腕", "左腕捩", "左ひじ", "左手捩", "左手首"]:
-            #         data_set.motion.remove_unnecessary_bf(bone_name)
-            #         logger.info("%s不要キー削除完了", bone_name)
+                    for bone_name in ["右腕", "右腕捩", "右ひじ", "右手捩", "右手首", "左腕", "左腕捩", "左ひじ", "左手捩", "左手首"]:
+                        data_set.motion.remove_unnecessary_bf(bone_name)
+                        logger.info("%s不要キー削除完了", bone_name, data_set.rep_model.bones[bone_name].getRotatable(), data_set.rep_model.bones[bone_name].getTranslatable())
 
             for data_set_idx, data_set in enumerate(self.options.data_set_list):
                 # 実行後、出力ファイル存在チェック

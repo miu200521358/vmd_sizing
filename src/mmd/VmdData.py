@@ -182,10 +182,11 @@ class VmdMotion():
                 
                 # 保持したのを登録しなおし
                 for fno, bf in fill_fnos.items():
+                    bf.key = True
                     self.bones[bone_name][fno] = bf
 
     # 指定ボーンの不要キーを削除する
-    def remove_unnecessary_bf(self, bone_name: str):
+    def remove_unnecessary_bf(self, bone_name: str, is_rot: bool, is_mov: bool):
         # キーフレ（全部）を取得する
         fnos = self.get_bone_fnos(bone_name)
         prev_sep_fno = 0
@@ -204,7 +205,7 @@ class VmdMotion():
                     # 現在キーを追加
                     fill_bfs.append(now_bf)
 
-                    if self.join_bf(prev_bf, fill_bfs, next_bf):
+                    if self.join_bf(prev_bf, fill_bfs, next_bf, is_rot, is_mov):
                         # 全ての補間曲線が繋ぐのに成功した場合、繋ぐ
                         logger.test("fno: %s, %s, ○補間曲線結合", fno, bone_name)
 
@@ -230,12 +231,15 @@ class VmdMotion():
                     prev_sep_fno = fno // 500
 
     # 補間曲線込みでbfを結合できる場合、結合する
-    def join_bf(self, prev_bf: VmdBoneFrame, fill_bfs: list, next_bf: VmdBoneFrame):
-        # 回転の場合、クォータニオンのthetaを参照する
+    def join_bf(self, prev_bf: VmdBoneFrame, fill_bfs: list, next_bf: VmdBoneFrame, is_rot: bool, is_mov: bool):
+        rot_values = []
 
         if len(fill_bfs) > 0:
             # 中間がある場合
-            rot_values = [0, prev_bf.rotation.calcTheata(fill_bfs[0].rotation)]    # 最初の変位
+
+            # 回転の場合、クォータニオンのthetaを参照する
+            rot_values.append(0)                                                    # 開始フレーム自体の変位はなし
+            rot_values.append(prev_bf.rotation.calcTheata(fill_bfs[0].rotation))    # 最初の変位
 
             for before_bf, after_bf in zip(fill_bfs[:-1], fill_bfs[1:]):
                 # 前後の変位を測定する
@@ -247,11 +251,12 @@ class VmdMotion():
             rot_values = [prev_bf.rotation.calcTheata(next_bf.rotation)]    # 最初の変位
 
         # 結合したベジェ曲線
-        joined_rot_bzs = MBezierUtils.join_value_2_bezier(rot_values)
+        joined_rot_bzs = MBezierUtils.join_value_2_bezier(rot_values) if is_rot else True
 
         if joined_rot_bzs:
             # 結合できた場合、補間曲線をnextに設定
-            self.reset_interpolation_parts(prev_bf.name, next_bf, joined_rot_bzs, MBezierUtils.R_x1_idxs, MBezierUtils.R_y1_idxs, MBezierUtils.R_x2_idxs, MBezierUtils.R_y2_idxs)
+            if is_rot:
+                self.reset_interpolation_parts(prev_bf.name, next_bf, joined_rot_bzs, MBezierUtils.R_x1_idxs, MBezierUtils.R_y1_idxs, MBezierUtils.R_x2_idxs, MBezierUtils.R_y2_idxs)
 
             return True
 
@@ -567,7 +572,8 @@ class VmdMotion():
                 if len(fnos) > 1:
                     # キーフレを最後の一つ手前まで登録
                     for fno in fnos[:-1]:
-                        total_bone_frames.append(bone_frames[fno])
+                        if bone_frames[fno].key:
+                            total_bone_frames.append(bone_frames[fno])
         
         return total_bone_frames
     

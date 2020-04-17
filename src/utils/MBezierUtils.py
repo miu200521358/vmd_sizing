@@ -5,8 +5,8 @@ from utils.MLogger import MLogger # noqa
 import numpy as np
 import bezier
 
-logger = MLogger(__name__, level=1)
-# logger = MLogger(__name__)
+# logger = MLogger(__name__, level=1)
+logger = MLogger(__name__)
 
 # MMDでの補間曲線の最大値
 INTERPOLATION_MMD_MAX = 127
@@ -85,7 +85,7 @@ def join_value_2_bezier(values: list):
     logger.test("joined_curve: %s", joined_curve.nodes)
 
     # 全体のキーフレを2倍にしたX（細かく点をチェックする）
-    bezier_x = np.linspace(0, degree, degree * 2)
+    bezier_x = np.linspace(0, len(values), len(values) * 2)
 
     # 元の2つのベジェ曲線との交点を取得する
     full_ys = intersect_by_x(full_curve, bezier_x)
@@ -132,20 +132,31 @@ def convert_catmullrom_2_bezier(xs: list, ys: list):
         p1 = MVector2D(x1, y1)
         p2 = MVector2D(x2, y2)
         p3 = None if not x3 and not y3 else MVector2D(x3, y3)
+        B = None
+        C = None
 
-        if not p0:
+        if not p0 and not p3:
+            # 両方ない場合、無視
+            continue
+
+        if not p0 and p3:
             # p0が空の場合、始点
             B = (p1 * (1 / 2)) - p2 + (p3 * (1 / 2))
             C = (p1 * (-3 / 2)) + (p2 * 2) - (p3 * (1 / 2))
-        elif not p3:
+        
+        if p0 and not p3:
             # p3が空の場合、終点
             B = (p0 * (1 / 2)) - p1 + (p2 * (1 / 2))
             C = (p0 * (-1 / 2)) + (p2 * (1 / 2))
-        else:
+        
+        if p0 and p3:
             # それ以外は通過点
             B = p0 - (p1 * (5 / 2)) + (p2 * (4 / 2)) - (p3 * (1 / 2))
             C = (p0 * (-1 / 2)) + (p2 * (1 / 2))
         
+        if not B or not C:
+            logger.warning("p0: %s, p1: %s, p2: %s, p3: %s", p0, p1, p2, p3)
+
         # ベジェ曲線の制御点
         s1 = (C + (p1 * 3)) / 3
         s2 = (B - (p1 * 3) + (s1 * 6)) / 3
