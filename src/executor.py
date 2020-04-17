@@ -7,6 +7,7 @@ import sys
 import logging
 import argparse
 import winsound
+import numpy as np
 
 from form.MainFrame import MainFrame
 from module.MOptions import MOptions
@@ -17,6 +18,9 @@ from utils.MLogger import MLogger
 
 logger = MLogger(__name__)
 VERSION_NAME = "ver5.00_β45"
+
+# 指数表記なし、有効小数点桁数6、30を超えると省略あり、一行の文字数200
+np.set_printoptions(suppress=True, precision=6, threshold=30, linewidth=200)
 
 
 if __name__ == '__main__':

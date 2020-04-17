@@ -32,7 +32,7 @@
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/馬と鹿 づなうじ/馬と鹿all3.vmd",
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/ドラマツルギー motion 配布用 moka/ドラマツルギー_0-500.vmd",
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/リバーシブル・キャンペーン じゅんこだ/さとく式鶯丸_リバキャン_400-900.vmd",
-                "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/愛言葉III なつき/nac_aikotoba3_545-570.vmd",
+                "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/愛言葉III なつき/nac_aikotoba3_0-500.vmd",
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/響喜乱舞 小怪粉刷月球/響喜乱舞_pickup.vmd",
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/ラストリゾート モーション かすか/ラストリゾート（トレス元音源）_0-300.vmd",
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/Lap Tap Love　モーション 冷凍食品/Lap Tap Love  (コロン式ミクver)モーション_1601.vmd",
@@ -93,7 +93,9 @@
                 "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/_VMDサイジング/8頭身審神者 猫のしもべ/8頭身審神者3_軸制限無し.pmx",
                 "--substitute_model_flg", "1",
                 "--twist_flg", "1",
-                "--verbose", "1",
+                "--verbose", "1",   // 最小
+                // "--verbose", "2",   // FULL
+                // "--verbose", "5",   // TEST
             ],
             "presentation": {
                 "clear": true

@@ -5,8 +5,8 @@ from utils.MLogger import MLogger # noqa
 import numpy as np
 import bezier
 
-# logger = MLogger(__name__, level=1)
-logger = MLogger(__name__)
+logger = MLogger(__name__, level=MLogger.DEBUG)
+# logger = MLogger(__name__)
 
 # MMDでの補間曲線の最大値
 INTERPOLATION_MMD_MAX = 127
@@ -74,7 +74,7 @@ def join_value_2_bezier(values: list):
         fill_curve = bezier.Curve(np.asfortranarray([[bz_x[0], bz_x[1], bz_x[2], bz_x[3], bz_x[4]], [bz_y[0], bz_y[1], bz_y[2], bz_y[3], bz_y[4]]]), degree=4)
         reduced = fill_curve.reduce_()
 
-        for n in range(5, degree):
+        for n in range(5, degree + 1):
             # 3次に到達するまでベジェ曲線の次数を減らす
             fill_curve = bezier.Curve(np.asfortranarray([[reduced.nodes[0][0], reduced.nodes[0][1], reduced.nodes[0][2], reduced.nodes[0][3], bz_x[n]], \
                                                         [reduced.nodes[1][0], reduced.nodes[1][1], reduced.nodes[1][2], reduced.nodes[1][3], bz_y[n]]]), degree=4)
@@ -89,19 +89,20 @@ def join_value_2_bezier(values: list):
 
     # 元の2つのベジェ曲線との交点を取得する
     full_ys = intersect_by_x(full_curve, bezier_x)
-    logger.test("full_ys: %s", full_ys)
+    logger.debug("full_ys: %s", full_ys)
 
     # 次数を減らしたベジェ曲線との交点を取得する
     reduced_ys = intersect_by_x(joined_curve, bezier_x)
-    logger.test("reduced_ys: %s", reduced_ys)
+    logger.debug("reduced_ys: %s", reduced_ys)
 
     # 交点の差を取得する
     diff_ys = np.asfortranarray(full_ys) - np.asfortranarray(reduced_ys)
     logger.test("diff_ys: %s", diff_ys)
 
     # 差が大きい箇所をピックアップする
-    diff_large = np.where(np.abs(diff_ys[:-1]) > (np.max(np.where(full_ys != -99999999)[0]) - np.min(np.where(full_ys != -99999999)[0])) / 1000, 1, 0)
-    logger.test("diff_large: %s", diff_large)
+    diff_limit = np.abs(np.diff([np.max(full_ys), np.min(full_ys)])) / len(values) * 2
+    diff_large = np.where(np.abs(diff_ys[:-1]) > diff_limit, 1, 0)
+    logger.debug("diff_limit: %s, diff_large: %s", diff_limit, diff_large)
 
     if np.count_nonzero(diff_large) > 0:
         # 差が大きい箇所がある場合、分割不可
@@ -110,7 +111,7 @@ def join_value_2_bezier(values: list):
     # 差が一定未満である場合、ベジェ曲線をMMD補間曲線に合わせる
     joined_bz = scale_bezier(MVector2D(joined_curve.nodes[0, 0], joined_curve.nodes[1, 0]), MVector2D(joined_curve.nodes[0, 1], joined_curve.nodes[1, 1]), \
                              MVector2D(joined_curve.nodes[0, 2], joined_curve.nodes[1, 2]), MVector2D(joined_curve.nodes[0, 3], joined_curve.nodes[1, 3]))
-    logger.test("joined_bz: %s, %s", joined_bz[1], joined_bz[2])
+    logger.debug("joined_bz: %s, %s", joined_bz[1], joined_bz[2])
                         
     if not is_fit_bezier_mmd(joined_bz):
         # 補間曲線がMMD補間曲線内に収まらない場合、NG
@@ -189,9 +190,9 @@ def intersect_by_x(curve, xs):
         # 値が取れている場合、その値を設定する
         if es.shape == (2, 1):
             ys.append(es[1][0])
-        # 取れていない場合、あり得ない値
+        # 取れていない場合、無視
         else:
-            ys.append(-99999999)
+            ys.append(0)
     
     return ys
 

@@ -170,20 +170,65 @@ class VmdMotion():
         # ハッシュ値
         self.digest = None
     
-    # 指定ボーン名の全打ちキーで登録する
-    def regist_full_bf(self, bone_name: str):
+    def regist_full_bf(self, bone_name: str, is_rot: bool, is_mov: bool, is_full: bool):
+        prev_sep_fno = 0
+        registed_bfs = []   # 登録対象bfリスト
         fnos = self.get_bone_fnos(bone_name)
         if len(fnos) > 2:
-            for prev_fno, next_fno in zip(fnos[:-1], fnos[1:]):
-                # キーフレ間を全部埋める(そのまま登録すると、キーが変わるので、別保持)
-                fill_fnos = {}
-                for fno in range(prev_fno + 1, next_fno):
-                    fill_fnos[fno] = self.calc_bf(bone_name, fno)
-                
-                # 保持したのを登録しなおし
-                for fno, bf in fill_fnos.items():
-                    bf.key = True
-                    self.bones[bone_name][fno] = bf
+            if is_full:
+                for prev_fno, next_fno in zip(fnos[:-1], fnos[1:]):
+                    # キーフレ間を全部埋める(そのまま登録すると、キーが変わるので、別保持)
+                    for fno in range(prev_fno + 1, next_fno):
+                        bf = self.calc_bf(bone_name, fno)
+                        bf.key = True
+                        registed_bfs.append(bf)
+            else:
+                start_fno = fnos[0]     # 開始フレーム番号
+                fno = fnos[1]           # 次のフレーム番号
+                prev_bf = self.calc_bf(bone_name, start_fno)    # 繋ぐ対象のbf
+                fill_bfs = []
+                while fno < fnos[-1]:
+                    now_bf = self.calc_bf(bone_name, fno)           # 繋ぐ対象のbf
+                    next_bf = self.calc_bf(bone_name, fno + 1)      # 繋ぐ先のbf
+
+                    if not now_bf.read:
+                        # 読み込みキーではない場合、結合を試す
+                        
+                        # 現在キーを追加
+                        fill_bfs.append(now_bf)
+
+                        if self.join_bf(prev_bf, fill_bfs, next_bf, is_rot, is_mov):
+                            # 全ての補間曲線が繋ぐのに成功した場合、繋ぐ
+                            logger.test("fno: %s, %s, ○補間曲線結合", fno, bone_name)
+
+                            # nowキーは有効にしないでそのまま登録だけする
+                            registed_bfs.append(now_bf)
+
+                            # startはそのままで、nowだけ動かす
+                            fno = fno + 1       # 現在フレームを次に移す
+                        else:
+                            logger.test("fno: %s, %s, ×補間曲線結合失敗", fno, bone_name)
+                            # どれか失敗してたら、キーを有効にして残す
+
+                            now_bf.key = True
+                            registed_bfs.append(now_bf)
+
+                            start_fno = fno     # 開始を現在フレーム
+                            fill_bfs = []       # 中間キーをクリア
+                            fno = fno + 1       # 現在フレームを次に移す
+                    else:
+                        # 読み込み時のキーである場合、既に登録されているのでスルー
+                        start_fno = fno     # 開始を現在フレーム
+                        fill_bfs = []       # 中間キーをクリア
+                        fno = fno + 1       # 現在フレームを次に移す
+
+                    if fno // 500 > prev_sep_fno:
+                        logger.info("-- %sフレーム目完了", fno)
+                        prev_sep_fno = fno // 500
+
+            # 保持したのを登録しなおし
+            for bf in registed_bfs:
+                self.bones[bone_name][bf.fno] = bf
 
     # 指定ボーンの不要キーを削除する
     def remove_unnecessary_bf(self, bone_name: str, is_rot: bool, is_mov: bool):
@@ -207,7 +252,7 @@ class VmdMotion():
 
                     if self.join_bf(prev_bf, fill_bfs, next_bf, is_rot, is_mov):
                         # 全ての補間曲線が繋ぐのに成功した場合、繋ぐ
-                        logger.test("fno: %s, %s, ○補間曲線結合", fno, bone_name)
+                        logger.debug("fno: %s, %s, ○補間曲線結合", fno, bone_name)
 
                         # nowキーを物理的に削除する
                         del self.bones[bone_name][fno]
@@ -215,7 +260,7 @@ class VmdMotion():
                         # startはそのままで、nowだけ動かす
                         fno = fno + 1       # 現在フレームを次に移す
                     else:
-                        logger.test("fno: %s, %s, ×補間曲線結合失敗", fno, bone_name)
+                        logger.debug("fno: %s, %s, ×補間曲線結合失敗", fno, bone_name)
                         # どれか失敗してたら、そのまま残す
                         start_fno = fno     # 開始を現在フレーム
                         fill_bfs = []       # 中間キーをクリア
