@@ -31,7 +31,6 @@ log
 data
 build
 dist
-command.txt
 *.zip
 *.log
 src/model_all_test.py
@@ -44,3 +43,4 @@ leg_fk_bone.csv
 leg_fk_camera.csv
 leg_fk_morph.csv
 src/VmdSizingForm3.py.bak
+main.prof

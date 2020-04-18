@@ -9,6 +9,7 @@ import argparse
 import winsound
 import numpy as np
 import traceback
+import multiprocessing
 
 from form.MainFrame import MainFrame
 from module.MOptions import MOptions
@@ -17,11 +18,13 @@ from utils import MFileUtils
 from service.SizingService import SizingService
 from utils.MException import SizingException
 
-VERSION_NAME = "ver5.00_β45"
+VERSION_NAME = "ver5.00_β46"
 
 # 指数表記なし、有効小数点桁数6、30を超えると省略あり、一行の文字数200
 np.set_printoptions(suppress=True, precision=6, threshold=30, linewidth=200)
 
+# Windowsマルチプロセス対策
+multiprocessing.freeze_support()
 
 if __name__ == '__main__':
     mydir_path = MFileUtils.get_mydir_path(sys.argv[0])

@@ -1,0 +1,40 @@
+conda create -n vmdsizing_np pip python=3.7
+
+pip install numpy wxPython numpy-quaternion
+pip install bezier
+pip install pypiwin32
+pip install multiprocessing-logging
+
+https://code.woboq.org/qt5/qtbase/src/gui/math3d/
+
+
+--------------------------
+[32bit]
+
+https://qiita.com/kjmatu/items/d9299651980e9827e891
+
+set CONDA_FORCE_32BIT=1
+conda create -n vmdsizing_np32 pip python=3.7
+
+activate vmdsizing_np32
+
+python
+Python 3.7.6 (default, Jan  8 2020, 16:21:45) [MSC v.1916 32 bit (Intel)] :: Anaconda, Inc. on win32
+Type "help", "copyright", "credits" or "license" for more information.
+>>> exit()
+
+set CONDA_FORCE_32BIT=
+
+pip install numpy wxPython numpy-quaternion
+pip install pyinstaller
+
+--------------------------
+[64bit]
+
+conda create -n vmdsizing_np64 pip python=3.7
+
+pip install numpy wxPython numpy-quaternion pyinstaller
+
+extra-dllの中身のdllを親ディレクトリに配置（下階層だと見つからないため）
+
+--------------------------
