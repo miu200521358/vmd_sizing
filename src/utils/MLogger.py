@@ -4,7 +4,6 @@ from datetime import datetime
 import logging
 import traceback
 import sys
-import multiprocessing
 
 
 class MLogger():
@@ -129,7 +128,7 @@ class MLogger():
                 log_record = self.logger.makeRecord('name', target_level, "(unknown file)", 0, "{0}\n\n{1}".format(msg, traceback.format_exc()), None, None, self.module_name)
             else:
                 log_record = self.logger.makeRecord('name', target_level, "(unknown file)", 0, msg, args, None, self.module_name)
-
+            
             self.logger.handle(log_record)
 
             target_decoration = kwargs.pop("decoration", None)

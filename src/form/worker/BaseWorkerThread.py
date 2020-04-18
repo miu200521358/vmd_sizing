@@ -5,6 +5,7 @@ import wx.xrc
 from abc import ABCMeta, abstractmethod
 from threading import Thread, Event
 
+from module.StdoutQueue import StdoutQueue
 from utils import MFormUtils # noqa
 from utils.MLogger import MLogger # noqa
 
@@ -29,7 +30,8 @@ class BaseWorkerThread(Thread, metaclass=ABCMeta):
         # メイン終了時にもスレッド終了する
         self.daemon = True
         # ログ出力用スレッド
-        self.monitor = Thread(target=monitering, name="MonitorThread", args=(console, frame.queue))
+        self.queue = StdoutQueue()
+        self.monitor = Thread(target=monitering, name="MonitorThread", args=(console, self.queue))
         self.monitor.daemon = True
 
     def stop(self):

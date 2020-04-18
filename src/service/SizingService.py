@@ -4,6 +4,7 @@
 import logging
 import os
 from pathlib import Path
+from multiprocessing_logging import install_mp_handler
 
 from mmd.VmdWriter import VmdWriter
 from module.MOptions import MOptions
@@ -13,6 +14,7 @@ from utils import MServiceUtils
 from utils.MException import SizingException
 from utils.MLogger import MLogger # noqa
 
+install_mp_handler()
 logger = MLogger(__name__)
 
 

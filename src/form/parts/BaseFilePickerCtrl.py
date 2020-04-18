@@ -217,6 +217,10 @@ class BaseFilePickerCtrl():
 
         return True
 
+    # ファイルセットからの読み込み処理
+    def load_from_set(self, target, results):
+        results[target] = self.load()
+
     # ファイル読み込み処理
     def load(self, file_idx=0):
         if not self.is_set_path():

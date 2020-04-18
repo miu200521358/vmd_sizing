@@ -8,6 +8,7 @@ import time
 import wx
 import re
 import _pickle as cPickle
+from module.StdoutQueue import StdoutQueue
 
 from form.worker.BaseWorkerThread import BaseWorkerThread
 from module.MOptions import MOptions, MOptionsDataSet
@@ -67,7 +68,7 @@ class SizingWorkerThread(BaseWorkerThread):
                         version_name=self.frame.version_name, \
                         logging_level=self.frame.logging_level, \
                         data_set_list=data_set_list, \
-                        monitor=self.frame.queue, \
+                        monitor=self.queue, \
                         is_file=False, \
                         outout_datetime=logger.outout_datetime)
                     
