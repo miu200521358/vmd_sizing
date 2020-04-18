@@ -3,7 +3,8 @@
 from datetime import datetime
 import logging
 import traceback
-import os
+import sys
+import multiprocessing
 
 
 class MLogger():
@@ -11,6 +12,7 @@ class MLogger():
     DECORATION_IN_BOX = "in_box"
     DECORATION_BOX = "box"
     DECORATION_LINE = "line"
+    DEFAULT_FORMAT = "%(message)s [%(funcName)s][P-%(process)s](%(asctime)s)"
 
     FULL = 2
     TEST = 5
@@ -24,13 +26,28 @@ class MLogger():
     total_level = logging.INFO
     is_file = False
     outout_datetime = ""
-    app = None
+    
+    logger = None
 
     def __init__(self, module_name, level=logging.INFO):
         self.module_name = module_name
         self.default_level = level
-        self.logger = logging.getLogger("VmdSizing").getChild(module_name)
 
+        # ロガー
+        self.logger = logging.getLogger("VmdSizing").getChild(self.module_name)
+
+        # 標準出力ハンドラ
+        sh = logging.StreamHandler()
+        sh.setLevel(level)
+        sh.setFormatter(logging.Formatter(self.DEFAULT_FORMAT))
+        self.logger.addHandler(sh)
+    
+    def copy(self, options):
+        self.is_file = options.is_file
+        self.default_level = options.logging_level
+        self.outout_datetime = options.outout_datetime
+        sys.stdout = options.monitor
+        
     def time(self, msg, *args, **kwargs):
         if not kwargs:
             kwargs = {}
@@ -85,24 +102,24 @@ class MLogger():
 
     # 実際に出力する実態
     def print_logger(self, msg, *args, **kwargs):
+
         target_level = kwargs.pop("level", logging.INFO)
         # if self.logger.isEnabledFor(target_level) and self.default_level <= target_level:
         if self.total_level <= target_level and self.default_level <= target_level:
 
             if self.is_file:
-                # ファイル出力ありの場合、ハンドラ登録
                 for f in self.logger.handlers:
-                    # 既存のハンドラはすべて削除
-                    if isinstance(f) == logging.FileHandler:
+                    if isinstance(f, logging.FileHandler):
+                        # 既存のファイルハンドラはすべて削除
                         self.logger.removeHandler(f)
-                
-                # ログディレクトリ作成
-                os.makedirs("log", exist_ok=True)
 
                 # ファイル出力ありの場合、ハンドラ紐付け
-                handler = logging.FileHandler("log/VmdSizing_{0}.log".format(self.outout_datetime))
-                self.logger.addHandler(handler)
-            
+                # ファイル出力ハンドラ
+                fh = logging.FileHandler("log/VmdSizing_{0}.log".format(self.outout_datetime))
+                fh.setLevel(self.default_level)
+                fh.setFormatter(logging.Formatter(self.DEFAULT_FORMAT))
+                self.logger.addHandler(fh)
+
             # モジュール名を出力するよう追加
             extra_args = {}
             extra_args["module_name"] = self.module_name
@@ -114,7 +131,6 @@ class MLogger():
                 log_record = self.logger.makeRecord('name', target_level, "(unknown file)", 0, msg, args, None, self.module_name)
 
             self.logger.handle(log_record)
-            # self.logger._log(target_level, log_record.getMessage(), None, extra=extra_args)
 
             target_decoration = kwargs.pop("decoration", None)
             title = kwargs.pop("title", None)
@@ -124,7 +140,7 @@ class MLogger():
                 # 時間表記が必要な場合、表記追加
                 print_msg = "{message} [{funcName}]({now:%H:%M:%S.%f})".format(message=log_record.getMessage(), funcName=self.module_name, now=datetime.now())
             else:
-                print_msg = log_record.getMessage()
+                print_msg = "{message}".format(message=log_record.getMessage())
             
             if not self.is_file:
                 if target_decoration:
@@ -193,7 +209,7 @@ class MLogger():
     @classmethod
     def initialize(cls, level=logging.INFO, is_file=False):
         # logging.basicConfig(level=level)
-        logging.basicConfig(level=level, format="%(message)s [%(funcName)s](%(asctime)s)")
+        logging.basicConfig(level=level, format=cls.DEFAULT_FORMAT)
         cls.total_level = level
         cls.is_file = is_file
         cls.outout_datetime = "{0:%Y%m%d_%H%M%S}".format(datetime.now())

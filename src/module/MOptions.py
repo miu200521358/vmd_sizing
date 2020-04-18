@@ -18,11 +18,13 @@ logger = MLogger(__name__)
 
 class MOptions():
 
-    def __init__(self, version_name, logging_level, data_set_list, monitor):
+    def __init__(self, version_name, logging_level, data_set_list, monitor, is_file, outout_datetime):
         self.version_name = version_name
         self.logging_level = logging_level
         self.data_set_list = data_set_list
         self.monitor = monitor
+        self.is_file = is_file
+        self.outout_datetime = outout_datetime
     
     # 複数件のファイルセットの足IKの比率を再設定する
     def calc_leg_ratio(self):
@@ -71,7 +73,10 @@ class MOptions():
         parser.add_argument("--verbose", default=20, type=int)
 
         args = parser.parse_args()
-        
+
+        # ログディレクトリ作成
+        os.makedirs("log", exist_ok=True)
+
         MLogger.initialize(level=args.verbose, is_file=True)
 
         try:
@@ -141,7 +146,7 @@ class MOptions():
 
                 data_set_list.append(data_set)
 
-            return MOptions(version_name, args.verbose, data_set_list, sys.stdout)
+            return MOptions(version_name, args.verbose, data_set_list, None, True, logger.outout_datetime)
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
         except Exception as e:

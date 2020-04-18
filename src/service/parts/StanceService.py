@@ -3,8 +3,9 @@
 import numpy as np
 import math
 import copy
+import multiprocessing
 import sys
-from multiprocessing import Pool, Queue
+from multiprocessing import Pool
 
 from mmd.PmxData import PmxModel # noqa
 from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
@@ -138,21 +139,26 @@ class StanceService():
                 logger.info("%s捩り分散開始", direction)
 
                 # Poolに渡すリスト
-                pool_args = [(data_set, fno_idx, fno, fnos[-1], arm_bone_name, arm_twist_bone_name, elbow_bone_name, \
+                pool_args = [(data_set_idx, fno_idx, fno, fnos[-1], arm_bone_name, arm_twist_bone_name, elbow_bone_name, \
                               wrist_twist_bone_name, wrist_bone_name, arm_local_x_axis, arm_twist_local_x_axis, elbow_local_x_axis, \
                               elbow_local_y_axis, wrist_twist_local_x_axis, wrist_local_x_axis, wrist_local_y_axis, log_target_idxs \
                               ) for fno_idx, fno in enumerate(range(0, fnos[-1]))]
                 
                 # 並列処理
-                with Pool(processes=4) as p:
+                with Pool(processes=(int(multiprocessing.cpu_count() / 2))) as p:
                     p.starmap(self.spread_twist_pool, pool_args)
                 
                 logger.info("%s捩り分散完了", direction)
 
     # 捩り分散のPool内処理
-    def spread_twist_pool(self, data_set: MOptionsDataSet, fno_idx: int, fno: int, last_fno: int, arm_bone_name: str, arm_twist_bone_name: str, elbow_bone_name: str, \
+    def spread_twist_pool(self, data_set_idx: int, fno_idx: int, fno: int, last_fno: int, arm_bone_name: str, arm_twist_bone_name: str, elbow_bone_name: str, \
                           wrist_twist_bone_name: str, wrist_bone_name: str, arm_local_x_axis: str, arm_twist_local_x_axis: MVector3D, elbow_local_x_axis: MVector3D, \
                           elbow_local_y_axis: MVector3D, wrist_twist_local_x_axis: MVector3D, wrist_local_x_axis: MVector3D, wrist_local_y_axis: MVector3D, log_target_idxs: list):
+        if self.options.monitor:
+            sys.stdout = self.options.monitor
+
+        data_set = self.options.data_set_list[data_set_idx]
+
         logger.info("f: %s start -------------", fno)
 
         # 各ボーンのbf（補間曲線リセットなし）

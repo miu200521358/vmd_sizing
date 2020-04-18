@@ -67,7 +67,9 @@ class SizingWorkerThread(BaseWorkerThread):
                         version_name=self.frame.version_name, \
                         logging_level=self.frame.logging_level, \
                         data_set_list=data_set_list, \
-                        monitor=self.frame.queue)
+                        monitor=self.frame.queue, \
+                        is_file=False, \
+                        outout_datetime=logger.outout_datetime)
                     
                     self.result = SizingService(options).execute() and self.result
 

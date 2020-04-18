@@ -2,9 +2,9 @@
 #
 import logging # noqa
 import numpy as np
-import sys
 import multiprocessing
-from multiprocessing import Pool, Queue
+from multiprocessing import Pool
+from multiprocessing_logging import install_mp_handler
 
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from module.MOptions import MOptions, MOptionsDataSet
@@ -36,28 +36,27 @@ class MoveService():
             # 足IKのオフセットを計算
             self.set_leg_ik_offset(data_set)
 
-            # ボーン名とフレーム番号のペアリスト
-            bone_fnos = []
+            # Poolに渡すリスト
+            pool_args = []
             for bone_name in ["全ての親", "センター", "グルーブ", "右足IK親", "左足IK親", "右足ＩＫ", "左足ＩＫ", "右つま先ＩＫ", "左つま先ＩＫ"]:
                 if bone_name in data_set.motion.bones and bone_name in data_set.rep_model.bones and len(data_set.motion.bones[bone_name].keys()) > 0:
                     fnos = data_set.motion.get_bone_fnos(bone_name)
                     for fno in fnos:
-                        bone_fnos.append((bone_name, fno, fnos[-1]))
+                        pool_args.append((data_set_idx, bone_name, fno, fnos[-1]))
 
-            # Poolに渡すリスト
-            pool_args = [(data_set, self.options.monitor, bone_name, fno, last_fno) for (bone_name, fno, last_fno) in bone_fnos]
-            
             # 並列処理
-            # with Pool(processes=(multiprocessing.cpu_count() - 1)) as p:
-            with Pool(processes=1) as p:
+            install_mp_handler()
+            with Pool(processes=(multiprocessing.cpu_count() - 1)) as p:
                 p.starmap(self.adjust_move, pool_args)
             
         return True
     
-    def adjust_move(self, data_set: MOptionsDataSet, monitor: Queue, bone_name: str, fno: int, last_fno: int):
-        sys.stdout = monitor
+    def adjust_move(self, data_set_idx: int, bone_name: str, fno: int, last_fno: int):
+        logger.copy(self.options)
 
-        logger.test("f: %s, %s", fno, bone_name)
+        data_set = self.options.data_set_list[data_set_idx]
+        
+        logger.info("f: %s, %s", fno, bone_name)
         bf = data_set.motion.bones[bone_name][fno]
 
         # IK比率をそのまま掛ける

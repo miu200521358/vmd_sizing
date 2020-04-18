@@ -8,11 +8,14 @@ import logging
 import argparse
 import winsound
 import numpy as np
+import traceback
 
 from form.MainFrame import MainFrame
 from module.MOptions import MOptions
 from utils.MLogger import MLogger
 from utils import MFileUtils
+from service.SizingService import SizingService
+from utils.MException import SizingException
 
 VERSION_NAME = "ver5.00_β45"
 
@@ -24,18 +27,14 @@ if __name__ == '__main__':
     mydir_path = MFileUtils.get_mydir_path(sys.argv[0])
 
     if len(sys.argv) > 3 and "--motion_path" in sys.argv:
-        from service.SizingService import SizingService
-        from utils.MException import SizingException
-
-        logger = MLogger(__name__)
-
         # 引数指定がある場合、コマンドライン実行
         try:
             SizingService(MOptions.parse(VERSION_NAME)).execute()
         except SizingException as se:
-            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
-        except Exception as e:
-            logger.critical("サイジング処理が意図せぬエラーで終了しました。", e, decoration=MLogger.DECORATION_BOX)
+            print("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
+        except Exception:
+            print("サイジング処理が意図せぬエラーで終了しました。")
+            print(traceback.format_exc())
         finally:
             logging.shutdown()
 

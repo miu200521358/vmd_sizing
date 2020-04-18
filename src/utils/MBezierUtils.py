@@ -5,8 +5,7 @@ from utils.MLogger import MLogger # noqa
 import numpy as np
 import bezier
 
-logger = MLogger(__name__, level=MLogger.DEBUG)
-# logger = MLogger(__name__)
+logger = MLogger(__name__)
 
 # MMDでの補間曲線の最大値
 INTERPOLATION_MMD_MAX = 127

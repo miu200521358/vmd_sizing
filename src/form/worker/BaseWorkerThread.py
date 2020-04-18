@@ -62,7 +62,8 @@ class BaseWorkerThread(Thread, metaclass=ABCMeta):
 def monitering(console, queue):
     while True:
         try:
-            console.write(queue.get(timeout=5))
+            console.write(queue.get(timeout=3))
+            console.flush()
         except Exception:
             pass
 

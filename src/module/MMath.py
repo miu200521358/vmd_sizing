@@ -6,7 +6,7 @@ import numpy as np
 import quaternion # noqa
 from utils.MLogger import MLogger # noqa
 
-logger = MLogger(__name__, level=0)
+logger = MLogger(__name__)
 
 
 class MRect():
