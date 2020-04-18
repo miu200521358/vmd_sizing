@@ -47,7 +47,7 @@ class SizingFileSet():
 
         # 捩り分散追加FLG
         twist_flg_ctrl = wx.CheckBox(panel, wx.ID_ANY, u"捩り分散あり", wx.DefaultPosition, wx.DefaultSize, 0)
-        twist_flg_ctrl.SetToolTip(u"チェックを入れると、腕捻り等への分散処理を追加できます。")
+        twist_flg_ctrl.SetToolTip(u"チェックを入れると、腕捻り等への分散処理を追加できます。\n時間がかかります。")
         twist_flg_ctrl.Bind(wx.EVT_CHECKBOX, self.set_output_vmd_path)
 
         # 変換先PMXファイルコントロール
@@ -205,6 +205,8 @@ class SizingFileSet():
             self.rep_model_file_ctrl.file_ctrl.GetPath(),
             self.org_model_file_ctrl.title_parts_ctrl.GetValue(),
             self.rep_model_file_ctrl.title_parts_ctrl.GetValue(),
+            self.panel.frame.arm_panel_ctrl.arm_process_flg_avoidance.GetValue(),
+            self.panel.frame.arm_panel_ctrl.arm_process_flg_alignment.GetValue(),
             self.output_vmd_file_ctrl.file_ctrl.GetPath(), is_force)
 
         self.output_vmd_file_ctrl.file_ctrl.SetPath(output_vmd_path)

@@ -22,7 +22,7 @@ class SizingWorkerThread(BaseWorkerThread):
     def __init__(self, frame: wx.Frame, result_event: wx.Event, is_out_log: bool):
         self.elapsed_time = 0
         self.is_out_log = is_out_log
-        super().__init__(frame, result_event)
+        super().__init__(frame, result_event, frame.file_panel_ctrl.console_ctrl)
 
     def thread_event(self):
         try:
@@ -66,7 +66,8 @@ class SizingWorkerThread(BaseWorkerThread):
                     options = MOptions(\
                         version_name=self.frame.version_name, \
                         logging_level=self.frame.logging_level, \
-                        data_set_list=data_set_list)
+                        data_set_list=data_set_list, \
+                        monitor=self.frame.queue)
                     
                     self.result = SizingService(options).execute() and self.result
 
@@ -80,9 +81,12 @@ class SizingWorkerThread(BaseWorkerThread):
                     output_vmd_path = self.frame.file_panel_ctrl.file_set.output_vmd_file_ctrl.file_ctrl.GetPath()
                     output_log_path = re.sub(r'\.vmd$', '.log', output_vmd_path)
 
-                    with open(output_log_path, mode='w') as f:
-                        # 出力されたメッセージを全部出力
-                        f.write(self.frame.file_panel_ctrl.console_ctrl.GetValue())
+                    # 出力されたメッセージを全部出力
+                    self.frame.file_panel_ctrl.console_ctrl.SaveFile(filename=output_log_path)
+
+                    # with open(output_log_path, mode='w') as f:
+                    #     # 出力されたメッセージを全部出力
+                    #     f.write(self.frame.file_panel_ctrl.console_ctrl.GetValue())
 
             except Exception:
                 pass

@@ -255,7 +255,8 @@ class VmdMotion():
                         logger.debug("fno: %s, %s, ○補間曲線結合", fno, bone_name)
 
                         # nowキーを物理的に削除する
-                        del self.bones[bone_name][fno]
+                        if fno in self.bones[bone_name]:
+                            del self.bones[bone_name][fno]
 
                         # startはそのままで、nowだけ動かす
                         fno = fno + 1       # 現在フレームを次に移す

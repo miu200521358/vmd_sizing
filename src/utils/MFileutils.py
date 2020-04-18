@@ -87,7 +87,8 @@ def get_dir_path(base_file_path, is_print=True):
 # substitute_model_flg: 代替モデル
 # twist_flg: 捩り分散
 # output_vmd_path: 出力ファイルパス
-def get_output_vmd_path(base_file_path: str, rep_pmx_path: str, substitute_model_flg: bool, twist_flg: bool, output_vmd_path: str, is_force=False):
+def get_output_vmd_path(base_file_path: str, rep_pmx_path: str, substitute_model_flg: bool, twist_flg: bool, \
+                        arm_process_flg_avoidance: bool, arm_process_flg_alignment: bool, output_vmd_path: str, is_force=False):
     # モーションVMDパスの拡張子リスト
     if os.path.exists(base_file_path):
         file_path_list = [base_file_path]
@@ -104,14 +105,16 @@ def get_output_vmd_path(base_file_path: str, rep_pmx_path: str, substitute_model
     # 変換先モデルファイル名・拡張子
     rep_pmx_file_name, _ = os.path.splitext(os.path.basename(rep_pmx_path))
 
-    # 腕
     # モーフ
 
     # 代替モデル
     # 捩り分散
+    # 腕
     suffix = "{0}{1}".format(
         ("S" if substitute_model_flg else ""),
-        ("T" if twist_flg else "")
+        ("T" if twist_flg else ""),
+        ("I" if arm_process_flg_avoidance else ""),
+        ("P" if arm_process_flg_alignment else "")
     )
 
     if len(suffix) > 0:

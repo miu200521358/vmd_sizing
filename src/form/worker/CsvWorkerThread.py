@@ -15,7 +15,7 @@ class CsvWorkerThread(BaseWorkerThread):
         self.frame = frame
         self.result_event = result_event
 
-        super().__init__(frame, self.result_event)
+        super().__init__(frame, self.result_event, frame.csv_panel_ctrl.console_ctrl)
 
     def thread_event(self):
         start = time.time()

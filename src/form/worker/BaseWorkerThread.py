@@ -17,7 +17,7 @@ logger = MLogger(__name__)
 class BaseWorkerThread(Thread, metaclass=ABCMeta):
 
     """Worker Thread Class."""
-    def __init__(self, frame, result_event):
+    def __init__(self, frame, result_event, console):
         """Init Worker Thread Class."""
         Thread.__init__(self)
         self.frame = frame
@@ -28,16 +28,24 @@ class BaseWorkerThread(Thread, metaclass=ABCMeta):
         self.result = True
         # メイン終了時にもスレッド終了する
         self.daemon = True
+        # ログ出力用スレッド
+        self.monitor = Thread(target=monitering, name="MonitorThread", args=(console, frame.queue))
+        self.monitor.daemon = True
 
     def stop(self):
         self.stop_event.set()
 
     def run(self):
+        # モニタリング開始
+        self.monitor.start()
+
         # スレッド実行
         self.thread_event()
 
         # 後処理実行
         self.post_event()
+
+        self.monitor._delete()
     
     def post_event(self):
         wx.PostEvent(self.frame, self.result_event(result=self.result))
@@ -49,4 +57,12 @@ class BaseWorkerThread(Thread, metaclass=ABCMeta):
     def thread_event(self):
         pass
 
+
+# コンソールに文字列を出力する
+def monitering(console, queue):
+    while True:
+        try:
+            console.write(queue.get(timeout=5))
+        except Exception:
+            pass
 

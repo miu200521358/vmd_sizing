@@ -8,10 +8,12 @@ import winsound
 from form.panel.FilePanel import FilePanel
 from form.panel.MorphPanel import MorphPanel
 from form.panel.MultiPanel import MultiPanel
+from form.panel.ArmPanel import ArmPanel
 from form.panel.CsvPanel import CsvPanel
 from form.worker.SizingWorkerThread import SizingWorkerThread
 from form.worker.LoadWorkerThread import LoadWorkerThread
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
+from module.StdoutQueue import StdoutQueue
 from utils import MFormUtils, MFileUtils # noqa
 from utils.MLogger import MLogger # noqa
 
@@ -34,6 +36,7 @@ class MainFrame(wx.Frame):
         
         self.worker = None
         self.load_worker = None
+        self.queue = StdoutQueue()
 
         wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"VMDサイジング ローカル版 {0}".format(self.version_name), \
                           pos=wx.DefaultPosition, size=wx.Size(600, 650), style=wx.DEFAULT_FRAME_STYLE | wx.TAB_TRAVERSAL)
@@ -72,6 +75,10 @@ class MainFrame(wx.Frame):
         # モーフタブ
         self.morph_panel_ctrl = MorphPanel(self, self.note_ctrl, 1)
         self.note_ctrl.AddPage(self.morph_panel_ctrl, u"モーフ", False)
+
+        # 腕タブ
+        self.arm_panel_ctrl = ArmPanel(self, self.note_ctrl, 2)
+        self.note_ctrl.AddPage(self.arm_panel_ctrl, u"腕", False)
 
         # 複数タブ
         self.multi_panel_ctrl = MultiPanel(self, self.note_ctrl, 3, self.file_hitories)

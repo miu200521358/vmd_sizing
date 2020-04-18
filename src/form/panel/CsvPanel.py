@@ -6,6 +6,7 @@ import sys
 
 from form.panel.BasePanel import BasePanel
 from form.parts.BaseFilePickerCtrl import BaseFilePickerCtrl
+from form.parts.ConsoleCtrl import ConsoleCtrl
 from form.worker.CsvWorkerThread import CsvWorkerThread
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from utils import MFormUtils, MFileUtils # noqa
@@ -46,7 +47,7 @@ class CsvPanel(BasePanel):
         self.sizer.Add(btn_sizer, 0, wx.ALIGN_CENTER | wx.SHAPED, 5)
 
         # コンソール
-        self.console_ctrl = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, 420), \
+        self.console_ctrl = ConsoleCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, 420), \
                                         wx.TE_MULTILINE | wx.TE_READONLY | wx.BORDER_NONE | wx.HSCROLL | wx.VSCROLL | wx.WANTS_CHARS)
         self.console_ctrl.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DLIGHT))
         self.console_ctrl.Bind(wx.EVT_CHAR, lambda event: MFormUtils.on_select_all(event, self.console_ctrl))

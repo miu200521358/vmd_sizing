@@ -11,10 +11,8 @@ class LoadWorkerThread(BaseWorkerThread):
     def __init__(self, frame: wx.Frame, result_event: wx.Event, is_exec: bool):
         self.elapsed_time = 0
         self.is_exec = is_exec
-        self.frame = frame
-        self.result_event = result_event
 
-        super().__init__(frame, self.result_event)
+        super().__init__(frame, result_event, frame.file_panel_ctrl.console_ctrl)
 
     def thread_event(self):
         start = time.time()

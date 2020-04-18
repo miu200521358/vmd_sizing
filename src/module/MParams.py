@@ -2,7 +2,7 @@
 #
 import copy
 from collections import OrderedDict
-from mmd.VmdData import VmdMotion, VmdBoneFrame
+from mmd.VmdData import VmdBoneFrame
 
 
 class BoneLinks():

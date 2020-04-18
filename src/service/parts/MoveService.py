@@ -2,10 +2,15 @@
 #
 import logging # noqa
 import numpy as np
+import sys
+import multiprocessing
+from multiprocessing import Pool, Queue
+
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from module.MOptions import MOptions, MOptionsDataSet
 from utils import MUtils, MServiceUtils, MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
+
 
 logger = MLogger(__name__)
 
@@ -31,24 +36,41 @@ class MoveService():
             # 足IKのオフセットを計算
             self.set_leg_ik_offset(data_set)
 
+            # ボーン名とフレーム番号のペアリスト
+            bone_fnos = []
             for bone_name in ["全ての親", "センター", "グルーブ", "右足IK親", "左足IK親", "右足ＩＫ", "左足ＩＫ", "右つま先ＩＫ", "左つま先ＩＫ"]:
-                if bone_name in data_set.motion.bones and bone_name in data_set.rep_model.bones:
-                    for fno in data_set.motion.get_bone_fnos(bone_name):
-                        bf = data_set.motion.bones[bone_name][fno]
+                if bone_name in data_set.motion.bones and bone_name in data_set.rep_model.bones and len(data_set.motion.bones[bone_name].keys()) > 0:
+                    fnos = data_set.motion.get_bone_fnos(bone_name)
+                    for fno in fnos:
+                        bone_fnos.append((bone_name, fno, fnos[-1]))
 
-                        # IK比率をそのまま掛ける
-                        bf.position.setX(bf.position.x() * data_set.xz_ratio)
-                        bf.position.setY(bf.position.y() * data_set.y_ratio)
-                        bf.position.setZ(bf.position.z() * data_set.xz_ratio)
-
-                        # オフセット調整
-                        bf.position += data_set.rep_model.bones[bone_name].local_offset
-
-                    if len(data_set.motion.bones[bone_name].keys()) > 0:
-                        logger.info("移動補正: %s", bone_name)
-                        
+            # Poolに渡すリスト
+            pool_args = [(data_set, self.options.monitor, bone_name, fno, last_fno) for (bone_name, fno, last_fno) in bone_fnos]
+            
+            # 並列処理
+            # with Pool(processes=(multiprocessing.cpu_count() - 1)) as p:
+            with Pool(processes=1) as p:
+                p.starmap(self.adjust_move, pool_args)
+            
         return True
     
+    def adjust_move(self, data_set: MOptionsDataSet, monitor: Queue, bone_name: str, fno: int, last_fno: int):
+        sys.stdout = monitor
+
+        logger.test("f: %s, %s", fno, bone_name)
+        bf = data_set.motion.bones[bone_name][fno]
+
+        # IK比率をそのまま掛ける
+        bf.position.setX(bf.position.x() * data_set.xz_ratio)
+        bf.position.setY(bf.position.y() * data_set.y_ratio)
+        bf.position.setZ(bf.position.z() * data_set.xz_ratio)
+
+        # オフセット調整
+        bf.position += data_set.rep_model.bones[bone_name].local_offset
+
+        if fno == last_fno and fno > 0:
+            logger.info("移動補正: %s", bone_name)
+
     def set_leg_ik_offset(self, data_set: MOptionsDataSet):
         target_bones = ["左足", "左足ＩＫ", "右足ＩＫ"]
 

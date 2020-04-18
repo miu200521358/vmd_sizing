@@ -2,6 +2,7 @@
 #
 import os
 import argparse
+import sys
 import _pickle as cPickle
 
 from mmd.PmxReader import PmxReader
@@ -17,10 +18,11 @@ logger = MLogger(__name__)
 
 class MOptions():
 
-    def __init__(self, version_name, logging_level, data_set_list):
+    def __init__(self, version_name, logging_level, data_set_list, monitor):
         self.version_name = version_name
         self.logging_level = logging_level
         self.data_set_list = data_set_list
+        self.monitor = monitor
     
     # 複数件のファイルセットの足IKの比率を再設定する
     def calc_leg_ratio(self):
@@ -64,6 +66,8 @@ class MOptions():
         parser.add_argument("--rep_model_path", required=True, type=(lambda x: list(map(str, x.split(';')))))
         parser.add_argument("--substitute_model_flg", required=True, type=(lambda x: list(map(int, x.split(';')))))
         parser.add_argument("--twist_flg", required=True, type=(lambda x: list(map(int, x.split(';')))))
+        parser.add_argument("--arm_process_flg_avoidance", required=True, type=(lambda x: list(map(int, x.split(';')))))
+        parser.add_argument("--arm_process_flg_alignment", required=True, type=(lambda x: list(map(int, x.split(';')))))
         parser.add_argument("--verbose", default=20, type=int)
 
         args = parser.parse_args()
@@ -72,8 +76,8 @@ class MOptions():
 
         try:
             data_set_list = []
-            for set_no, (motion_path, org_model_path, rep_model_path, substitute_model_flg_val, twist_flg_val) in enumerate( \
-                zip(args.motion_path, args.org_model_path, args.rep_model_path, args.substitute_model_flg, args.twist_flg)): # noqa
+            for set_no, (motion_path, org_model_path, rep_model_path, substitute_model_flg_val, twist_flg_val, arm_process_flg_avoidance_val, arm_process_flg_alignment_val) in enumerate( \
+                zip(args.motion_path, args.org_model_path, args.rep_model_path, args.substitute_model_flg, args.twist_flg, args.arm_process_flg_avoidance, args.arm_process_flg_alignment)): # noqa
 
                 display_set_no = "【No.{0}】".format(set_no + 1)
 
@@ -120,9 +124,11 @@ class MOptions():
 
                 substitute_model_flg = True if substitute_model_flg_val == 1 else False
                 twist_flg = True if twist_flg_val == 1 else False
+                arm_process_flg_avoidance = True if arm_process_flg_avoidance_val == 1 else False
+                arm_process_flg_alignment = True if arm_process_flg_alignment_val == 1 else False
 
                 # 出力ファイルパス
-                output_vmd_path = MFileUtils.get_output_vmd_path(motion_path, rep_model_path, substitute_model_flg, twist_flg, "", True)
+                output_vmd_path = MFileUtils.get_output_vmd_path(motion_path, rep_model_path, substitute_model_flg, twist_flg, arm_process_flg_avoidance, arm_process_flg_alignment, "", True)
 
                 data_set = MOptionsDataSet(
                     motion,
@@ -135,7 +141,7 @@ class MOptions():
 
                 data_set_list.append(data_set)
 
-            return MOptions(version_name, args.verbose, data_set_list)
+            return MOptions(version_name, args.verbose, data_set_list, sys.stdout)
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
         except Exception as e:

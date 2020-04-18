@@ -91,11 +91,13 @@
                 // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ゲーム/Fate/hoge式源頼光ver1.00/hoge式源頼光ver1.00.pmx",
                 // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/艦隊これくしょん/prinzeugen 鼈(すっぽん)/prinzeugen_剛体追加.pmx",
                 "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/_VMDサイジング/8頭身審神者 猫のしもべ/8頭身審神者3_軸制限無し.pmx",
-                "--substitute_model_flg", "1",
-                "--twist_flg", "1",
-                "--verbose", "1",   // 最小
-                // "--verbose", "2",   // FULL
-                // "--verbose", "5",   // TEST
+                "--substitute_model_flg", "1",          // 代替モデル
+                "--twist_flg", "1",                     // 捩り分散
+                "--arm_process_flg_avoidance", "0",     // 剛体接触回避
+                "--arm_process_flg_alignment", "0",     // 手首位置合わせ
+                "--verbose", "1",                       // 最小
+                // "--verbose", "2",                    // FULL
+                // "--verbose", "5",                    // TEST
             ],
             "presentation": {
                 "clear": true
@@ -159,7 +161,7 @@
             "pythonPath": "${config:python.pythonPath}",
             "stopOnEntry": false,
             "args": [
-                "--verbose", "10",
+                "--verbose", "20",
                 // "--out_log",
             ]
         },
