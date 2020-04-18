@@ -92,7 +92,7 @@
                 // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/艦隊これくしょん/prinzeugen 鼈(すっぽん)/prinzeugen_剛体追加.pmx",
                 "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/_VMDサイジング/8頭身審神者 猫のしもべ/8頭身審神者3_軸制限無し.pmx",
                 "--substitute_model_flg", "1",          // 代替モデル
-                "--twist_flg", "0",                     // 捩り分散
+                "--twist_flg", "1",                     // 捩り分散
                 "--arm_process_flg_avoidance", "0",     // 剛体接触回避
                 "--arm_process_flg_alignment", "0",     // 手首位置合わせ
                 "--verbose", "1",                       // 最小

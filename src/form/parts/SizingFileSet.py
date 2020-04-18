@@ -17,6 +17,7 @@ class SizingFileSet():
 
     def __init__(self, frame: wx.Frame, panel: wx.Panel, file_hitories: dict, set_no):
         self.file_hitories = file_hitories
+        self.frame = frame
         self.panel = panel
         self.set_no = set_no
 
@@ -205,11 +206,12 @@ class SizingFileSet():
             self.rep_model_file_ctrl.file_ctrl.GetPath(),
             self.org_model_file_ctrl.title_parts_ctrl.GetValue(),
             self.rep_model_file_ctrl.title_parts_ctrl.GetValue(),
-            self.panel.frame.arm_panel_ctrl.arm_process_flg_avoidance.GetValue(),
-            self.panel.frame.arm_panel_ctrl.arm_process_flg_alignment.GetValue(),
+            self.frame.arm_panel_ctrl.arm_process_flg_avoidance.GetValue(),
+            self.frame.arm_panel_ctrl.arm_process_flg_alignment.GetValue(),
             self.output_vmd_file_ctrl.file_ctrl.GetPath(), is_force)
 
         self.output_vmd_file_ctrl.file_ctrl.SetPath(output_vmd_path)
 
         if len(output_vmd_path) >= 255 and os.name == "nt":
             logger.error("生成予定のファイルパスがWindowsの制限を超えています。\n生成予定パス: {0}".format(output_vmd_path), decoration=MLogger.DECORATION_BOX)
+

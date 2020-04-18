@@ -231,7 +231,7 @@ class VmdMotion():
                 self.bones[bone_name][bf.fno] = bf
 
     # 指定ボーンの不要キーを削除する
-    def remove_unnecessary_bf(self, bone_name: str, is_rot: bool, is_mov: bool):
+    def remove_unnecessary_bf(self, data_set_no: int, bone_name: str, is_rot: bool, is_mov: bool):
         # キーフレ（全部）を取得する
         fnos = self.get_bone_fnos(bone_name)
         prev_sep_fno = 0
@@ -273,7 +273,7 @@ class VmdMotion():
                     fno = fno + 1       # 現在フレームを次に移す
 
                 if fno // 500 > prev_sep_fno:
-                    logger.info("-- %sフレーム目完了", fno)
+                    logger.info("-- %sフレーム目完了(%s％)【No.%s - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
                     prev_sep_fno = fno // 500
 
     # 補間曲線込みでbfを結合できる場合、結合する

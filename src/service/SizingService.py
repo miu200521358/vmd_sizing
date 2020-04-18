@@ -5,6 +5,7 @@ import logging
 import os
 from pathlib import Path
 from multiprocessing_logging import install_mp_handler
+from concurrent.futures import ThreadPoolExecutor
 
 from mmd.VmdWriter import VmdWriter
 from module.MOptions import MOptions
@@ -61,12 +62,19 @@ class SizingService():
 
             # 最後に全キーフレで繋げるのを除去
             if self.options.logging_level != MLogger.FULL:
+                # Poolに渡すリスト
+                executor_args = {"data_set_idx": [], "bone_name": []}
+
                 for data_set_idx, data_set in enumerate(self.options.data_set_list):
                     logger.info("不要キー削除　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
-
+                    
                     for bone_name in ["右腕", "右腕捩", "右ひじ", "右手捩", "右手首", "左腕", "左腕捩", "左ひじ", "左手捩", "左手首"]:
-                        data_set.motion.remove_unnecessary_bf(bone_name, data_set.rep_model.bones[bone_name].getRotatable(), data_set.rep_model.bones[bone_name].getTranslatable())
-                        logger.info("%s不要キー削除完了", bone_name)
+                        executor_args["data_set_idx"].append(data_set_idx)
+                        executor_args["bone_name"].append(bone_name)
+
+                # 並列処理
+                with ThreadPoolExecutor() as executor:
+                    executor.map(self.remove_unnecessary_bf_pool, executor_args["data_set_idx"], executor_args["bone_name"])
 
             for data_set_idx, data_set in enumerate(self.options.data_set_list):
                 # 実行後、出力ファイル存在チェック
@@ -91,4 +99,10 @@ class SizingService():
             logger.critical("サイジング処理が意図せぬエラーで終了しました。", e, decoration=MLogger.DECORATION_BOX)
         finally:
             logging.shutdown()
+
+    # 不要なbfを削除する
+    def remove_unnecessary_bf_pool(self, data_set_idx: int, bone_name: str):
+        data_set = self.options.data_set_list[data_set_idx]
+        data_set.motion.remove_unnecessary_bf(data_set_idx + 1, bone_name, data_set.rep_model.bones[bone_name].getRotatable(), data_set.rep_model.bones[bone_name].getTranslatable())
+        logger.info(" 不要キー削除完了【No.%s - %s】", data_set_idx + 1, bone_name)
 

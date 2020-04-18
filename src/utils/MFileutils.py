@@ -110,7 +110,7 @@ def get_output_vmd_path(base_file_path: str, rep_pmx_path: str, substitute_model
     # 代替モデル
     # 捩り分散
     # 腕
-    suffix = "{0}{1}".format(
+    suffix = "{0}{1}{2}{3}".format(
         ("S" if substitute_model_flg else ""),
         ("T" if twist_flg else ""),
         ("I" if arm_process_flg_avoidance else ""),
