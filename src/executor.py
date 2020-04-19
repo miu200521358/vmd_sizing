@@ -10,6 +10,7 @@ import winsound
 import numpy as np
 import traceback
 import multiprocessing
+from concurrent.futures import ThreadPoolExecutor
 
 from form.MainFrame import MainFrame
 from module.MOptions import MOptions
@@ -32,7 +33,8 @@ if __name__ == '__main__':
     if len(sys.argv) > 3 and "--motion_path" in sys.argv:
         # 引数指定がある場合、コマンドライン実行
         try:
-            SizingService(MOptions.parse(VERSION_NAME)).execute()
+            with ThreadPoolExecutor(max_workers=5) as executor:
+                SizingService(MOptions.parse(VERSION_NAME, executor)).execute()
         except SizingException as se:
             print("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
         except Exception:

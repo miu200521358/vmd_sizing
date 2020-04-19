@@ -7,8 +7,7 @@ import glob
 import time
 import wx
 import re
-import _pickle as cPickle
-from module.StdoutQueue import StdoutQueue
+from concurrent.futures import ThreadPoolExecutor
 
 from form.worker.BaseWorkerThread import BaseWorkerThread
 from module.MOptions import MOptions, MOptionsDataSet
@@ -42,7 +41,7 @@ class SizingWorkerThread(BaseWorkerThread):
                     
                     # 1件目は必ず読み込む
                     first_data_set = MOptionsDataSet(
-                        motion=cPickle.loads(cPickle.dumps(self.frame.file_panel_ctrl.file_set.motion_vmd_file_ctrl.data, -1)), \
+                        motion=self.frame.file_panel_ctrl.file_set.motion_vmd_file_ctrl.data.copy(), \
                         org_model=self.frame.file_panel_ctrl.file_set.org_model_file_ctrl.data, \
                         rep_model=self.frame.file_panel_ctrl.file_set.rep_model_file_ctrl.data, \
                         output_vmd_path=self.frame.file_panel_ctrl.file_set.output_vmd_file_ctrl.file_ctrl.GetPath(), \
@@ -55,7 +54,7 @@ class SizingWorkerThread(BaseWorkerThread):
                     for file_set in self.frame.multi_panel_ctrl.file_set_list:
                         if file_set.is_loaded():
                             multi_data_set = MOptionsDataSet(
-                                motion=cPickle.loads(cPickle.dumps(file_set.motion_vmd_file_ctrl.data, -1)), \
+                                motion=file_set.motion_vmd_file_ctrl.data.copy(), \
                                 org_model=file_set.org_model_file_ctrl.data, \
                                 rep_model=file_set.rep_model_file_ctrl.data, \
                                 output_vmd_path=file_set.output_vmd_file_ctrl.file_ctrl.GetPath(), \
@@ -64,15 +63,17 @@ class SizingWorkerThread(BaseWorkerThread):
                             )
                             data_set_list.append(multi_data_set)
 
-                    options = MOptions(\
-                        version_name=self.frame.version_name, \
-                        logging_level=self.frame.logging_level, \
-                        data_set_list=data_set_list, \
-                        monitor=self.queue, \
-                        is_file=False, \
-                        outout_datetime=logger.outout_datetime)
-                    
-                    self.result = SizingService(options).execute() and self.result
+                    with ThreadPoolExecutor(max_workers=5) as executor:
+                        options = MOptions(\
+                            version_name=self.frame.version_name, \
+                            logging_level=self.frame.logging_level, \
+                            data_set_list=data_set_list, \
+                            monitor=self.queue, \
+                            executor=executor, \
+                            is_file=False, \
+                            outout_datetime=logger.outout_datetime)
+                        
+                        self.result = SizingService(options).execute() and self.result
 
             self.elapsed_time = time.time() - start
         except Exception as e:

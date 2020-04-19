@@ -2,8 +2,7 @@
 #
 import os
 import argparse
-import sys
-import _pickle as cPickle
+from concurrent.futures import ThreadPoolExecutor
 
 from mmd.PmxReader import PmxReader
 from mmd.VmdReader import VmdReader
@@ -18,11 +17,12 @@ logger = MLogger(__name__)
 
 class MOptions():
 
-    def __init__(self, version_name, logging_level, data_set_list, monitor, is_file, outout_datetime):
+    def __init__(self, version_name, logging_level, data_set_list, monitor, executor, is_file, outout_datetime):
         self.version_name = version_name
         self.logging_level = logging_level
         self.data_set_list = data_set_list
         self.monitor = monitor
+        self.executor = executor
         self.is_file = is_file
         self.outout_datetime = outout_datetime
     
@@ -61,7 +61,7 @@ class MOptions():
         logger.info(log_txt)
 
     @classmethod
-    def parse(cls, version_name):
+    def parse(cls, version_name: str, executor: ThreadPoolExecutor):
         parser = argparse.ArgumentParser()
         parser.add_argument("--motion_path", required=True, type=(lambda x: list(map(str, x.split(';')))))
         parser.add_argument("--org_model_path", required=True, type=(lambda x: list(map(str, x.split(';')))))
@@ -146,7 +146,16 @@ class MOptions():
 
                 data_set_list.append(data_set)
 
-            return MOptions(version_name, args.verbose, data_set_list, None, True, logger.outout_datetime)
+            options = MOptions(\
+                version_name=version_name, \
+                logging_level=args.verbose, \
+                data_set_list=data_set_list, \
+                monitor=None, \
+                executor=executor, \
+                is_file=True, \
+                outout_datetime=logger.outout_datetime)
+
+            return options
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
         except Exception as e:
@@ -154,6 +163,7 @@ class MOptions():
 
 
 class MOptionsDataSet():
+
     def __init__(self, motion, org_model, rep_model, output_vmd_path, substitute_model_flg, twist_flg):
         self.motion = motion
         self.org_model = org_model
@@ -161,7 +171,7 @@ class MOptionsDataSet():
         self.output_vmd_path = output_vmd_path
         self.substitute_model_flg = substitute_model_flg
         self.twist_flg = twist_flg
-        self.org_motion = cPickle.loads(cPickle.dumps(self.motion, -1))
+        self.org_motion = self.motion.copy()
         self.test_params = None
 
         # 本来の足IKの比率

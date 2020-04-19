@@ -3,7 +3,7 @@
 import logging # noqa
 import numpy as np
 from itertools import repeat
-from concurrent.futures import ThreadPoolExecutor
+import concurrent.futures
 
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from module.MOptions import MOptions, MOptionsDataSet
@@ -46,9 +46,10 @@ class MoveService():
                         executor_args["last_fno"].append(fnos[-1])
 
             # 並列処理
-            with ThreadPoolExecutor() as executor:
-                executor.map(self.adjust_move, repeat(data_set_idx), executor_args["bone_name"], executor_args["fno"], executor_args["last_fno"])
-            
+            results = self.options.executor.map(self.adjust_move, repeat(data_set_idx), executor_args["bone_name"], executor_args["fno"], executor_args["last_fno"])
+            for r in results:
+                pass
+
         return True
     
     def adjust_move(self, data_set_idx: int, bone_name: str, fno: int, last_fno: int):
@@ -68,6 +69,8 @@ class MoveService():
 
         if fno == last_fno and fno > 0:
             logger.info("移動補正: %s", bone_name)
+        
+        return True
 
     def set_leg_ik_offset(self, data_set: MOptionsDataSet):
         target_bones = ["左足", "左足ＩＫ", "右足ＩＫ"]

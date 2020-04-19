@@ -97,6 +97,7 @@
                 "--arm_process_flg_avoidance", "0",     // 剛体接触回避
                 "--arm_process_flg_alignment", "0",     // 手首位置合わせ
                 // "--verbose", "1",                       // 最小
+                // "--verbose", "2",                       // DEBUG_FULL
                 "--verbose", "18",                   // FULL
                 // "--verbose", "5",                    // TEST
             ],

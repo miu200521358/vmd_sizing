@@ -331,7 +331,7 @@ class PmxReader():
             # 頭頂ボーン
             head_top_vertex = pmx.get_head_top_vertex()
             pmx.head_top_vertex = head_top_vertex
-            head_top_bone = Bone("頭頂", "head_top", copy.deepcopy(head_top_vertex.position), -1, 0, 0)
+            head_top_bone = Bone("頭頂", "head_top", head_top_vertex.position.copy(), -1, 0, 0)
             head_top_bone.index = len(pmx.bones.keys())
             pmx.bones[head_top_bone.name] = head_top_bone
             pmx.bone_indexes[head_top_bone.index] = head_top_bone.name
@@ -341,7 +341,7 @@ class PmxReader():
                 right_toe_vertex = pmx.get_toe_vertex("右")
                 if right_toe_vertex.index >= 0:
                     pmx.right_toe_vertex = right_toe_vertex
-                    right_toe_bone = Bone("右つま先実体", "right toe entity", copy.deepcopy(right_toe_vertex.position), -1, 0, 0)
+                    right_toe_bone = Bone("右つま先実体", "right toe entity", right_toe_vertex.position.copy(), -1, 0, 0)
                     right_toe_bone.index = len(pmx.bones.keys())
                     pmx.bones[right_toe_bone.name] = right_toe_bone
                     pmx.bone_indexes[right_toe_bone.index] = right_toe_bone.name
@@ -351,7 +351,7 @@ class PmxReader():
                 left_toe_vertex = pmx.get_toe_vertex("左")
                 if left_toe_vertex.index >= 0:
                     pmx.left_toe_vertex = left_toe_vertex
-                    left_toe_bone = Bone("左つま先実体", "left toe entity", copy.deepcopy(left_toe_vertex.position), -1, 0, 0)
+                    left_toe_bone = Bone("左つま先実体", "left toe entity", left_toe_vertex.position.copy(), -1, 0, 0)
                     left_toe_bone.index = len(pmx.bones.keys())
                     pmx.bones[left_toe_bone.name] = left_toe_bone
                     pmx.bone_indexes[left_toe_bone.index] = left_toe_bone.name
@@ -365,7 +365,7 @@ class PmxReader():
                 
                 if right_sole_vertex:
                     pmx.right_sole_vertex = right_sole_vertex
-                    right_sole_bone = Bone("右足底実体", "right sole entity", copy.deepcopy(right_sole_vertex.position), -1, 0, 0)
+                    right_sole_bone = Bone("右足底実体", "right sole entity", right_sole_vertex.position.copy(), -1, 0, 0)
                     right_sole_bone.index = len(pmx.bones.keys())
                     pmx.bones[right_sole_bone.name] = right_sole_bone
                     pmx.bone_indexes[right_sole_bone.index] = right_sole_bone.name
@@ -379,7 +379,7 @@ class PmxReader():
                 
                 if left_sole_vertex:
                     pmx.left_sole_vertex = left_sole_vertex
-                    left_sole_bone = Bone("左足底実体", "left sole entity", copy.deepcopy(left_sole_vertex.position), -1, 0, 0)
+                    left_sole_bone = Bone("左足底実体", "left sole entity", left_sole_vertex.position.copy(), -1, 0, 0)
                     left_sole_bone.index = len(pmx.bones.keys())
                     pmx.bones[left_sole_bone.name] = left_sole_bone
                     pmx.bone_indexes[left_sole_bone.index] = left_sole_bone.name
@@ -388,7 +388,7 @@ class PmxReader():
                 # 右足ＩＫ底実体ボーン
                 right_ik_sole_vertex = Vertex(-1, MVector3D(pmx.bones["右足ＩＫ"].position.x(), 0, pmx.bones["右足ＩＫ"].position.z()), MVector3D(), [], [], Vertex.Bdef1(-1), -1)
                 pmx.right_ik_sole_vertex = right_ik_sole_vertex
-                right_ik_sole_bone = Bone("右足ＩＫ底実体", "right ik ik_sole entity", copy.deepcopy(right_ik_sole_vertex.position), -1, 0, 0)
+                right_ik_sole_bone = Bone("右足ＩＫ底実体", "right ik ik_sole entity", right_ik_sole_vertex.position.copy(), -1, 0, 0)
                 right_ik_sole_bone.index = len(pmx.bones.keys())
                 pmx.bones[right_ik_sole_bone.name] = right_ik_sole_bone
                 pmx.bone_indexes[right_ik_sole_bone.index] = right_ik_sole_bone.name
@@ -397,7 +397,7 @@ class PmxReader():
                 # 左足ＩＫ底実体ボーン
                 left_ik_sole_vertex = Vertex(-1, MVector3D(pmx.bones["左足ＩＫ"].position.x(), 0, pmx.bones["左足ＩＫ"].position.z()), MVector3D(), [], [], Vertex.Bdef1(-1), -1)
                 pmx.left_ik_sole_vertex = left_ik_sole_vertex
-                left_ik_sole_bone = Bone("左足ＩＫ底実体", "left ik ik_sole entity", copy.deepcopy(left_ik_sole_vertex.position), -1, 0, 0)
+                left_ik_sole_bone = Bone("左足ＩＫ底実体", "left ik ik_sole entity", left_ik_sole_vertex.position.copy(), -1, 0, 0)
                 left_ik_sole_bone.index = len(pmx.bones.keys())
                 pmx.bones[left_ik_sole_bone.name] = left_ik_sole_bone
                 pmx.bone_indexes[left_ik_sole_bone.index] = left_ik_sole_bone.name
@@ -406,7 +406,7 @@ class PmxReader():
                 # 右足IK親底実体ボーン
                 right_ik_sole_vertex = Vertex(-1, MVector3D(pmx.bones["右足IK親"].position.x(), 0, pmx.bones["右足IK親"].position.z()), MVector3D(), [], [], Vertex.Bdef1(-1), -1)
                 pmx.right_ik_sole_vertex = right_ik_sole_vertex
-                right_ik_sole_bone = Bone("右足IK親底実体", "right ik ik_sole entity", copy.deepcopy(right_ik_sole_vertex.position), -1, 0, 0)
+                right_ik_sole_bone = Bone("右足IK親底実体", "right ik ik_sole entity", right_ik_sole_vertex.position.copy(), -1, 0, 0)
                 right_ik_sole_bone.index = len(pmx.bones.keys())
                 pmx.bones[right_ik_sole_bone.name] = right_ik_sole_bone
                 pmx.bone_indexes[right_ik_sole_bone.index] = right_ik_sole_bone.name
@@ -415,7 +415,7 @@ class PmxReader():
                 # 左足IK親底実体ボーン
                 left_ik_sole_vertex = Vertex(-1, MVector3D(pmx.bones["左足IK親"].position.x(), 0, pmx.bones["左足IK親"].position.z()), MVector3D(), [], [], Vertex.Bdef1(-1), -1)
                 pmx.left_ik_sole_vertex = left_ik_sole_vertex
-                left_ik_sole_bone = Bone("左足IK親底実体", "left ik ik_sole entity", copy.deepcopy(left_ik_sole_vertex.position), -1, 0, 0)
+                left_ik_sole_bone = Bone("左足IK親底実体", "left ik ik_sole entity", left_ik_sole_vertex.position.copy(), -1, 0, 0)
                 left_ik_sole_bone.index = len(pmx.bones.keys())
                 pmx.bones[left_ik_sole_bone.name] = left_ik_sole_bone
                 pmx.bone_indexes[left_ik_sole_bone.index] = left_ik_sole_bone.name
@@ -424,14 +424,14 @@ class PmxReader():
             if "左腕" in pmx.bones and "右腕" in pmx.bones:
                 neck_base_vertex = Vertex(-1, (pmx.bones["左腕"].position + pmx.bones["右腕"].position) / 2, MVector3D(), [], [], Vertex.Bdef1(-1), -1)
                 neck_base_vertex.position.setX(0)
-                neck_base_bone = Bone("首根元", "base of neck", copy.deepcopy(neck_base_vertex.position), -1, 0, 0)
+                neck_base_bone = Bone("首根元", "base of neck", neck_base_vertex.position.copy(), -1, 0, 0)
                 neck_base_bone.index = len(pmx.bones.keys())
                 pmx.bones[neck_base_bone.name] = neck_base_bone
                 pmx.bone_indexes[neck_base_bone.index] = neck_base_bone.name
 
             if "右腕" in pmx.bones:
                 # 右腕下延長ボーン
-                right_arm_under_pos = copy.deepcopy(pmx.bones["右腕"].position)
+                right_arm_under_pos = pmx.bones["右腕"].position.copy()
                 right_arm_under_pos.setY(right_arm_under_pos.y() - 1)
                 right_arm_under_bone = Bone("右腕下延長", "", right_arm_under_pos, -1, 0, 0)
                 right_arm_under_bone.index = len(pmx.bones.keys())
@@ -440,7 +440,7 @@ class PmxReader():
 
             if "左腕" in pmx.bones:
                 # 左腕下延長ボーン
-                left_arm_under_pos = copy.deepcopy(pmx.bones["左腕"].position)
+                left_arm_under_pos = pmx.bones["左腕"].position.copy()
                 left_arm_under_pos.setY(left_arm_under_pos.y() - 1)
                 left_arm_under_bone = Bone("左腕下延長", "", left_arm_under_pos, -1, 0, 0)
                 left_arm_under_bone.index = len(pmx.bones.keys())

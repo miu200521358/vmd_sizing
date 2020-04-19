@@ -61,7 +61,7 @@ class SizingService():
             result = StanceService(self.options).execute() and result
 
             # 最後に全キーフレで繋げるのを除去
-            if self.options.logging_level != MLogger.FULL:
+            if self.options.logging_level != MLogger.FULL and self.options.logging_level != MLogger.DEBUG_FULL:
                 # Poolに渡すリスト
                 executor_args = {"data_set_idx": [], "bone_name": []}
 
@@ -73,8 +73,7 @@ class SizingService():
                         executor_args["bone_name"].append(bone_name)
 
                 # 並列処理
-                with ThreadPoolExecutor() as executor:
-                    executor.map(self.remove_unnecessary_bf_pool, executor_args["data_set_idx"], executor_args["bone_name"])
+                self.options.executor.map(self.remove_unnecessary_bf_pool, executor_args["data_set_idx"], executor_args["bone_name"])
 
             for data_set_idx, data_set in enumerate(self.options.data_set_list):
                 # 実行後、出力ファイル存在チェック

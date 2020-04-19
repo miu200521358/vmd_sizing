@@ -13,6 +13,7 @@ class MLogger():
     DECORATION_LINE = "line"
     DEFAULT_FORMAT = "%(message)s [%(funcName)s][P-%(process)s](%(asctime)s)"
 
+    DEBUG_FULL = 2
     FULL = 18
     TEST = 5
     TIMER = 12

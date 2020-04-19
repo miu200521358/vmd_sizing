@@ -1,32 +1,183 @@
 # -*- coding: utf-8 -*-
 #
-import copy
 import struct
 from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from utils import MBezierUtils # noqa
 from utils.MLogger import MLogger
+from ctypes import Structure, c_bool, c_wchar_p, c_int
+import _pickle as cPickle
 
 logger = MLogger(__name__)
 
 
-class VmdBoneFrame():
+class VmdBoneFrame(Structure):
+    _fields_ = [('name', c_wchar_p), ('fno', c_int), ('interpolation', c_int * 64), ('key', c_bool), ('read', c_bool)]
+
     def __init__(self, fno=0, name=''):
-        self.name = name
-        self.bname = ''
+        self.name = ascii(name)
+        self.bname = '' if not name else name.encode('cp932').decode('shift_jis').encode('shift_jis')[:15].ljust(15, b'\x00')
         self.fno = fno
         self.position = MVector3D()
         self.rotation = MQuaternion()
         self.org_position = MVector3D()
         self.org_rotation = MQuaternion()
-        self.interpolation = [20, 20, 0, 0, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 20, 20, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 20, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 0, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 0, 0] # noqa
+        self.set_interpolation([20, 20, 0, 0, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 20, 20, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 20, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 0, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 0, 0]) # noqa
         self.org_interpolation = [20, 20, 0, 0, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 20, 20, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 20, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 0, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 0, 0] # noqa
         # 登録対象であるか否か
         self.key = False
         # VMD読み込み処理で読み込んだキーか
         self.read = False
-        # 補間曲線の分割で追加したキーか
-        self.split_interpolation = False
+    
+    def copy(self):
+        bf = VmdBoneFrame()
+        bf.name = self.name
+        bf.bname = self.bname
+        bf.fno = self.fno
+        bf.position = self.position.copy()
+        bf.rotation = self.rotation.copy()
+        bf.org_position = self.org_position.copy()
+        bf.org_rotation = self.org_rotation.copy()
+        bf.set_interpolation(self.get_interpolation())
+        bf.org_interpolation = self.org_interpolation
+        bf.key = self.key
+        bf.read = self.read
 
+        return bf
+
+    def get_interpolation(self):
+        return [
+            self.interpolation[0],
+            self.interpolation[1],
+            self.interpolation[2],
+            self.interpolation[3],
+            self.interpolation[4],
+            self.interpolation[5],
+            self.interpolation[6],
+            self.interpolation[7],
+            self.interpolation[8],
+            self.interpolation[9],
+            self.interpolation[10],
+            self.interpolation[11],
+            self.interpolation[12],
+            self.interpolation[13],
+            self.interpolation[14],
+            self.interpolation[15],
+            self.interpolation[16],
+            self.interpolation[17],
+            self.interpolation[18],
+            self.interpolation[19],
+            self.interpolation[20],
+            self.interpolation[21],
+            self.interpolation[22],
+            self.interpolation[23],
+            self.interpolation[24],
+            self.interpolation[25],
+            self.interpolation[26],
+            self.interpolation[27],
+            self.interpolation[28],
+            self.interpolation[29],
+            self.interpolation[30],
+            self.interpolation[31],
+            self.interpolation[32],
+            self.interpolation[33],
+            self.interpolation[34],
+            self.interpolation[35],
+            self.interpolation[36],
+            self.interpolation[37],
+            self.interpolation[38],
+            self.interpolation[39],
+            self.interpolation[40],
+            self.interpolation[41],
+            self.interpolation[42],
+            self.interpolation[43],
+            self.interpolation[44],
+            self.interpolation[45],
+            self.interpolation[46],
+            self.interpolation[47],
+            self.interpolation[48],
+            self.interpolation[49],
+            self.interpolation[50],
+            self.interpolation[51],
+            self.interpolation[52],
+            self.interpolation[53],
+            self.interpolation[54],
+            self.interpolation[55],
+            self.interpolation[56],
+            self.interpolation[57],
+            self.interpolation[58],
+            self.interpolation[59],
+            self.interpolation[60],
+            self.interpolation[61],
+            self.interpolation[62],
+            self.interpolation[63]
+        ]
+
+    def set_interpolation(self, values):
+        self.interpolation[0] = values[0]
+        self.interpolation[1] = values[1]
+        self.interpolation[2] = values[2]
+        self.interpolation[3] = values[3]
+        self.interpolation[4] = values[4]
+        self.interpolation[5] = values[5]
+        self.interpolation[6] = values[6]
+        self.interpolation[7] = values[7]
+        self.interpolation[8] = values[8]
+        self.interpolation[9] = values[9]
+        self.interpolation[10] = values[10]
+        self.interpolation[11] = values[11]
+        self.interpolation[12] = values[12]
+        self.interpolation[13] = values[13]
+        self.interpolation[14] = values[14]
+        self.interpolation[15] = values[15]
+        self.interpolation[16] = values[16]
+        self.interpolation[17] = values[17]
+        self.interpolation[18] = values[18]
+        self.interpolation[19] = values[19]
+        self.interpolation[20] = values[20]
+        self.interpolation[21] = values[21]
+        self.interpolation[22] = values[22]
+        self.interpolation[23] = values[23]
+        self.interpolation[24] = values[24]
+        self.interpolation[25] = values[25]
+        self.interpolation[26] = values[26]
+        self.interpolation[27] = values[27]
+        self.interpolation[28] = values[28]
+        self.interpolation[29] = values[29]
+        self.interpolation[30] = values[30]
+        self.interpolation[31] = values[31]
+        self.interpolation[32] = values[32]
+        self.interpolation[33] = values[33]
+        self.interpolation[34] = values[34]
+        self.interpolation[35] = values[35]
+        self.interpolation[36] = values[36]
+        self.interpolation[37] = values[37]
+        self.interpolation[38] = values[38]
+        self.interpolation[39] = values[39]
+        self.interpolation[40] = values[40]
+        self.interpolation[41] = values[41]
+        self.interpolation[42] = values[42]
+        self.interpolation[43] = values[43]
+        self.interpolation[44] = values[44]
+        self.interpolation[45] = values[45]
+        self.interpolation[46] = values[46]
+        self.interpolation[47] = values[47]
+        self.interpolation[48] = values[48]
+        self.interpolation[49] = values[49]
+        self.interpolation[50] = values[50]
+        self.interpolation[51] = values[51]
+        self.interpolation[52] = values[52]
+        self.interpolation[53] = values[53]
+        self.interpolation[54] = values[54]
+        self.interpolation[55] = values[55]
+        self.interpolation[56] = values[56]
+        self.interpolation[57] = values[57]
+        self.interpolation[58] = values[58]
+        self.interpolation[59] = values[59]
+        self.interpolation[60] = values[60]
+        self.interpolation[61] = values[61]
+        self.interpolation[62] = values[62]
+        self.interpolation[63] = values[63]
+        
     def __str__(self):
         return "<VmdBoneFrame name:{0}, fno:{1}, position:{2}, rotation:{3}, euler:{4}, interpolation: {5}, key:{6}".format( \
             self.name, self.fno, self.position, self.rotation, self.rotation.toEulerAngles4MMD(), self.interpolation, self.key)
@@ -44,7 +195,7 @@ class VmdBoneFrame():
         fout.write(struct.pack('<f', float(v.y())))
         fout.write(struct.pack('<f', float(v.z())))
         fout.write(struct.pack('<f', float(v.w())))
-        fout.write(bytearray([int(min(127, max(0, x))) for x in self.interpolation]))
+        fout.write(bytearray([int(min(127, max(0, x))) for x in self.get_interpolation()]))
 
 
 class VmdMorphFrame():
@@ -173,16 +324,15 @@ class VmdMotion():
     def regist_full_bf(self, bone_name: str, is_rot: bool, is_mov: bool, is_full: bool):
         prev_sep_fno = 0
         registed_bfs = []   # 登録対象bfリスト
-        fnos = self.get_bone_fnos(bone_name)
-        if len(fnos) > 2:
-            if is_full:
-                for prev_fno, next_fno in zip(fnos[:-1], fnos[1:]):
-                    # キーフレ間を全部埋める(そのまま登録すると、キーが変わるので、別保持)
-                    for fno in range(prev_fno + 1, next_fno):
-                        bf = self.calc_bf(bone_name, fno)
-                        bf.key = True
-                        registed_bfs.append(bf)
-            else:
+
+        if is_full:
+            for fno in range(self.last_motion_frame):
+                bf = self.calc_bf(bone_name, fno)
+                bf.key = True
+                registed_bfs.append(bf)
+        else:
+            fnos = self.get_bone_fnos(bone_name)
+            if len(fnos) > 2:
                 start_fno = fnos[0]     # 開始フレーム番号
                 fno = fnos[1]           # 次のフレーム番号
                 prev_bf = self.calc_bf(bone_name, start_fno)    # 繋ぐ対象のbf
@@ -226,9 +376,9 @@ class VmdMotion():
                         logger.info("-- %sフレーム目完了", fno)
                         prev_sep_fno = fno // 500
 
-            # 保持したのを登録しなおし
-            for bf in registed_bfs:
-                self.bones[bone_name][bf.fno] = bf
+        # 保持したのを登録しなおし
+        for bf in registed_bfs:
+            self.bones[bone_name][bf.fno] = bf
 
     # 指定ボーンの不要キーを削除する
     def remove_unnecessary_bf(self, data_set_no: int, bone_name: str, is_rot: bool, is_mov: bool):
@@ -359,13 +509,13 @@ class VmdMotion():
 
         if len(after_fnos) == 0:
             # 番号より前があって、後のがない場合、前のをコピーして返す
-            fill_bf = copy.deepcopy(self.bones[bone_name][before_fnos[-1]])
+            fill_bf = self.bones[bone_name][before_fnos[-1]].copy()
             fill_bf.fno = fno
             return fill_bf
         
         if len(before_fnos) == 0:
             # 番号より後があって、前がない場合、後のをコピーして返す
-            fill_bf = copy.deepcopy(self.bones[bone_name][after_fnos[0]])
+            fill_bf = self.bones[bone_name][after_fnos[0]].copy()
             fill_bf.fno = fno
             return fill_bf
 
@@ -421,7 +571,7 @@ class VmdMotion():
                                                prev_bf.fno, fill_bf.fno, next_bf.fno)
             return MQuaternion.slerp(prev_bf.rotation, next_bf.rotation, ry)
 
-        return copy.deepcopy(prev_bf.rotation)
+        return prev_bf.rotation.copy()
 
     # 補間曲線を元に移動ボーンの値を求める
     def calc_bf_pos(self, prev_bf: VmdBoneFrame, fill_bf: VmdBoneFrame, next_bf: VmdBoneFrame):
@@ -449,7 +599,7 @@ class VmdMotion():
             
             return fill_pos
         
-        return copy.deepcopy(prev_bf.position)
+        return prev_bf.position.copy()
     
     # キーフレを指定されたフレーム番号の前後で分割する
     def split_bf_by_fno(self, target_bone_name: str, prev_bf: VmdBoneFrame, next_bf: VmdBoneFrame, fill_fno: int):
@@ -670,5 +820,25 @@ class VmdMotion():
         
         self.morphs[frame.name][frame.fno] = frame
 
+    def copy(self):
+        motion = VmdMotion()
 
+        motion.path = cPickle.loads(cPickle.dumps(self.path, -1))
+        motion.signature = cPickle.loads(cPickle.dumps(self.signature, -1))
+        motion.model_name = cPickle.loads(cPickle.dumps(self.model_name, -1))
+        motion.last_motion_frame = cPickle.loads(cPickle.dumps(self.last_motion_frame, -1))
+        motion.motion_cnt = cPickle.loads(cPickle.dumps(self.motion_cnt, -1))
+
+        for bone_name, bf_dict in self.bones.items():
+            motion.bones[bone_name] = {}
+            for bf in bf_dict.values():
+                motion.bones[bone_name][bf.fno] = bf.copy()
+
+        motion.morph_cnt = cPickle.loads(cPickle.dumps(self.morph_cnt, -1))
+        motion.morphs = cPickle.loads(cPickle.dumps(self.morphs, -1))
+        motion.camera_cnt = cPickle.loads(cPickle.dumps(self.camera_cnt, -1))
+        motion.cameras = cPickle.loads(cPickle.dumps(self.cameras, -1))
+        motion.digest = cPickle.loads(cPickle.dumps(self.digest, -1))
+
+        return motion
 

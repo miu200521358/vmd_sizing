@@ -4,6 +4,8 @@ import copy
 import math
 import numpy as np
 import quaternion # noqa
+from ctypes import Structure, POINTER, c_float, c_double
+
 from utils.MLogger import MLogger # noqa
 
 logger = MLogger(__name__)
@@ -212,9 +214,12 @@ class MVector2D():
         self.__data[1] = y
 
 
-class MVector3D():
+class MVector3D(Structure):
+    _fields_ = [("__c_data", POINTER(c_float))]
 
-    def __init__(self, x=0, y=0, z=0):
+    def __init__(self, x=0.0, y=0.0, z=0.0):
+        super(MVector3D, self).__init__()
+
         if isinstance(x, MVector3D):
             # クラスの場合
             self.__data = x.__data
@@ -223,6 +228,11 @@ class MVector3D():
             self.__data = np.array([x[0], x[1], x[2]], dtype=np.float64)
         else:
             self.__data = np.array([x, y, z], dtype=np.float64)
+
+        self.__c_data = np.ctypeslib.as_ctypes(self.__data)
+    
+    def copy(self):
+        return MVector3D(self.x(), self.y(), self.z())
 
     def length(self):
         return np.linalg.norm(self.__data, ord=2)
@@ -481,7 +491,7 @@ class MVector4D():
             self.__data = np.array([x[0], x[1], x[2], x[3]], dtype=np.float64)
         else:
             self.__data = np.array([x, y, z, w], dtype=np.float64)
-
+    
     def length(self):
         return np.linalg.norm(self.__data, ord=2)
 
@@ -674,9 +684,12 @@ class MVector4D():
         self.__data[3] = w
 
 
-class MQuaternion():
+class MQuaternion(Structure):
+    _fields_ = [("__c_components", POINTER(c_double))]
 
     def __init__(self, w=1, x=0, y=0, z=0):
+        super(MQuaternion, self).__init__()
+
         if isinstance(w, MQuaternion):
             # クラスの場合
             self.__data = w.__data
@@ -688,6 +701,11 @@ class MQuaternion():
             self.__data = np.quaternion(w[0], w[1], w[2], w[3])
         else:
             self.__data = np.quaternion(w, x, y, z)
+
+        self.__c_components = np.ctypeslib.as_ctypes(self.__data.components)
+
+    def copy(self):
+        return MQuaternion(self.scalar(), self.x(), self.y(), self.z())
     
     def __str__(self):
         return "MQuaternion({0}, {1}, {2}, {3})".format(self.__data.w, self.__data.x, self.__data.y, self.__data.z)

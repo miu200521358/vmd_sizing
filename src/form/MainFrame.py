@@ -49,7 +49,7 @@ class MainFrame(wx.Frame):
         bSizer1 = wx.BoxSizer(wx.VERTICAL)
 
         self.note_ctrl = wx.Notebook(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0)
-        if self.logging_level == MLogger.FULL:
+        if self.logging_level == MLogger.FULL or self.logging_level == MLogger.DEBUG_FULL:
             # フルデータの場合
             self.note_ctrl.SetBackgroundColour("RED")
         elif self.logging_level == MLogger.TEST:

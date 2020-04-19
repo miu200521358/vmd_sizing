@@ -32,12 +32,14 @@ class StanceService():
             executor_args["data_set_idx"].append(data_set_idx)
 
         # 並列処理
-        with ThreadPoolExecutor(max_workers=5) as executor:
-            executor.map(self.execute_pool, executor_args["data_set_idx"])
-
+        with ThreadPoolExecutor(max_workers=6) as executor2:
+            results = self.options.executor.map(self.execute_pool, executor_args["data_set_idx"], repeat(executor2))
+            for r in results:
+                pass
+    
         return True
-            
-    def execute_pool(self, data_set_idx: int):
+    
+    def execute_pool(self, data_set_idx: int, executor2: ThreadPoolExecutor):
         logger.copy(self.options)
         data_set = self.options.data_set_list[data_set_idx]
 
@@ -50,20 +52,20 @@ class StanceService():
             self.adjust_upper_stance(data_set_idx, data_set)
         
             # つま先補正
-            self.adjust_toe_stance(data_set_idx, data_set)
+            self.adjust_toe_stance(data_set_idx, data_set, executor2)
 
         # 腕系サイジング可能であれば、腕スタンス補正
         if data_set.org_model.can_arm_sizing and data_set.rep_model.can_arm_sizing:
             if not data_set.substitute_model_flg:
                 # 肩スタンス補正
-                self.adjust_shoulder_stance(data_set_idx, data_set)
+                self.adjust_shoulder_stance(data_set_idx, data_set, executor2)
 
             if data_set.twist_flg:
                 # 捩り分散あり
-                self.spread_twist(data_set_idx, data_set)
+                self.spread_twist(data_set_idx, data_set, executor2)
             
             # 腕スタンス補正
-            self.adjust_arm_stance(data_set_idx, data_set)
+            self.adjust_arm_stance(data_set_idx, data_set, executor2)
         else:
             target_model_type = ""
 
@@ -77,17 +79,19 @@ class StanceService():
                 target_model_type = target_model_type + "変換先"
 
             logger.warning("%sモデルの腕構造にサイジングが対応していない為、腕系処理をスキップします。", target_model_type, decoration=MLogger.DECORATION_BOX)
-    
-    # 捩り分散
-    def spread_twist(self, data_set_idx: int, data_set: MOptionsDataSet):
-        logger.info("捩り分散　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
 
-        # 並列処理
-        with ThreadPoolExecutor(max_workers=2) as executor2:
-            executor2.map(self.spread_twist_lr, repeat(data_set_idx), ["左", "右"])
+    # 捩り分散
+    def spread_twist(self, data_set_idx: int, data_set: MOptionsDataSet, executor2: ThreadPoolExecutor):
+        logger.info("捩り分散　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
         
+        # 並列処理
+        with ThreadPoolExecutor() as executor3:
+            results = executor2.map(self.spread_twist_lr, repeat(data_set_idx), ["左", "右"], repeat(executor3))
+            for r in results:
+                pass
+
     # 捩り分散左右
-    def spread_twist_lr(self, data_set_idx: int, direction: str):
+    def spread_twist_lr(self, data_set_idx: int, direction: str, executor3: ThreadPoolExecutor):
         logger.copy(self.options)
         data_set = self.options.data_set_list[data_set_idx]
 
@@ -143,7 +147,7 @@ class StanceService():
             logger.info("-- %s捩り分散準備完了【No.%s】", wrist_bone_name, (data_set_idx + 1))
 
             # 腕系ボーンのfnos
-            fnos = data_set.motion.get_bone_fnos(arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name, is_key=True)
+            fnos = data_set.motion.get_bone_fnos(arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name)
 
             logger.info("%s捩り分散準備完了【No.%s】", direction, (data_set_idx + 1))
             logger.info("%s捩り分散開始【No.%s】", direction, (data_set_idx + 1))
@@ -163,11 +167,12 @@ class StanceService():
                     prev_sep_fno = fno // 200
 
             # 並列処理
-            with ThreadPoolExecutor() as executor3:
-                executor3.map(self.spread_twist_pool, repeat(data_set_idx), executor_args["fno_idx"], executor_args["fno"], executor_args["last_fno"], \
-                              repeat(arm_bone_name), repeat(arm_twist_bone_name), repeat(elbow_bone_name), repeat(wrist_twist_bone_name), repeat(wrist_bone_name), \
-                              repeat(arm_local_x_axis), repeat(arm_twist_local_x_axis), repeat(elbow_local_x_axis), repeat(elbow_local_y_axis), repeat(wrist_twist_local_x_axis), \
-                              repeat(wrist_local_x_axis), repeat(wrist_local_y_axis), repeat(log_target_idxs))
+            results = executor3.map(self.spread_twist_pool, repeat(data_set_idx), executor_args["fno_idx"], executor_args["fno"], executor_args["last_fno"], \
+                                    repeat(arm_bone_name), repeat(arm_twist_bone_name), repeat(elbow_bone_name), repeat(wrist_twist_bone_name), repeat(wrist_bone_name), \
+                                    repeat(arm_local_x_axis), repeat(arm_twist_local_x_axis), repeat(elbow_local_x_axis), repeat(elbow_local_y_axis), repeat(wrist_twist_local_x_axis), \
+                                    repeat(wrist_local_x_axis), repeat(wrist_local_y_axis), repeat(log_target_idxs))
+            for r in results:
+                pass
             
             logger.info("%s捩り分散完了【No.%s】", direction, (data_set_idx + 1))
 
@@ -179,10 +184,6 @@ class StanceService():
         data_set = self.options.data_set_list[data_set_idx]
 
         logger.test("f: %s start -------------", fno)
-
-        # 最後に出すと後回しになってしまうので、先に出してしまう
-        if fno in log_target_idxs:
-            logger.info("-- %sフレーム目完了(%s％)【No.%s - %s】", fno, round((fno / last_fno) * 100, 3), data_set_idx + 1, arm_twist_bone_name)
 
         # 各ボーンのbf（補間曲線リセットなし）
         arm_bf = data_set.motion.calc_bf(arm_bone_name, fno)
@@ -230,7 +231,7 @@ class StanceService():
                                                                        arm_local_x_axis, arm_bf.rotation, arm_result_qq, \
                                                                        arm_twist_local_x_axis, arm_twist_bf.rotation, arm_x_twisted_qq, \
                                                                        elbow_local_x_axis, elbow_local_y_axis, elbow_bf.rotation, elbow_result_qq)
-        logger.time("f: %s, %s: 腕捩り: dot: %s, degree: %s, %s", fno, arm_twist_bone_name, arm_twist_result_dot, arm_twist_result_qq.toDegree(), arm_twist_result_qq)
+        logger.debug("f: %s, %s: 腕捩り: dot: %s, degree: %s, %s", fno, arm_twist_bone_name, arm_twist_result_dot, arm_twist_result_qq.toDegree(), arm_twist_result_qq)
 
         # 手首YZ回転を手首に
         wrist_result_qq = wrist_bf.rotation
@@ -249,25 +250,34 @@ class StanceService():
                                                                            elbow_local_x_axis, elbow_bf.rotation, elbow_result_qq, \
                                                                            wrist_twist_local_x_axis, wrist_twist_bf.rotation, wrist_x_twisted_qq, \
                                                                            wrist_local_x_axis, wrist_local_y_axis, wrist_bf.rotation, wrist_result_qq)
-        logger.time("f: %s, %s: 手捩り: dot: %s, degree: %s, %s", fno, wrist_twist_bone_name, wrist_twist_result_dot, wrist_twist_result_qq.toDegree(), wrist_twist_result_qq)
+        logger.debug("f: %s, %s: 手捩り: dot: %s, degree: %s, %s", fno, wrist_twist_bone_name, wrist_twist_result_dot, wrist_twist_result_qq.toDegree(), wrist_twist_result_qq)
 
         # 全て登録
         arm_bf.rotation = arm_result_qq
-        data_set.motion.regist_bf(arm_bf, arm_bone_name, fno)
+        arm_bf.key = True
+        data_set.motion.bones[arm_bone_name][fno] = arm_bf
 
         arm_twist_bf.rotation = arm_twist_result_qq
-        data_set.motion.regist_bf(arm_twist_bf, arm_twist_bone_name, fno)
+        arm_twist_bf.key = True
+        data_set.motion.bones[arm_twist_bone_name][fno] = arm_twist_bf
 
         elbow_bf.rotation = elbow_result_qq
-        data_set.motion.regist_bf(elbow_bf, elbow_bone_name, fno)
+        elbow_bf.key = True
+        data_set.motion.bones[elbow_bone_name][fno] = elbow_bf
 
         wrist_twist_bf.rotation = wrist_twist_result_qq
-        data_set.motion.regist_bf(wrist_twist_bf, wrist_twist_bone_name, fno)
+        wrist_twist_bf.key = True
+        data_set.motion.bones[wrist_twist_bone_name][fno] = wrist_twist_bf
 
         wrist_bf.rotation = wrist_result_qq
-        data_set.motion.regist_bf(wrist_bf, wrist_bone_name, fno)
+        wrist_bf.key = True
+        data_set.motion.bones[wrist_bone_name][fno] = wrist_bf
 
         logger.time("f: %s, end", fno)
+
+        # 最後に出すと後回しになってしまうので、先に出してしまう
+        if fno in log_target_idxs:
+            logger.info("-- %sフレーム目完了(%s％)【No.%s - %s】", fno, round((fno / last_fno) * 100, 3), data_set_idx + 1, arm_twist_bone_name)
 
     # 捩りの回転量を計算する
     def calc_twist_qq(self, data_set_idx: int, fno: int, bone_name: str, grand_parent_x_axis: MVector3D, original_grand_parent_qq: MQuaternion, \
@@ -358,7 +368,7 @@ class StanceService():
 
         logger.time("fno: %s, %s (03)", fno, bone_name)
 
-        if max_dot > math.cos(math.radians(4)):
+        if max_dot > math.cos(math.radians(2)):
             return max_dot, MQuaternion.fromAxisAndAngle(twist_x_axis, max_degree)
 
         # 整数で取れなかった場合、小数まで割って調べる
@@ -504,12 +514,13 @@ class StanceService():
         return twisted_dot, result_twist_qq
     
     # つま先補正
-    def adjust_toe_stance(self, data_set_idx: int, data_set: MOptionsDataSet):
+    def adjust_toe_stance(self, data_set_idx: int, data_set: MOptionsDataSet, executor2: ThreadPoolExecutor):
         logger.info("つま先補正　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
 
         # 並列処理
-        with ThreadPoolExecutor(max_workers=2) as executor2:
-            executor2.map(self.adjust_toe_stance_lr, repeat(data_set_idx), ["左", "右"])
+        results = executor2.map(self.adjust_toe_stance_lr, repeat(data_set_idx), ["左", "右"])
+        for r in results:
+            pass
         
     # つま先補正
     def adjust_toe_stance_lr(self, data_set_idx: int, direction: str):
@@ -792,7 +803,7 @@ class StanceService():
         # 上半身を原点として回った場合のモーション
         upper_motion = VmdMotion()
         for lidx, lname in enumerate(upper_links.all().keys()):
-            calc_bf = copy.deepcopy(motion.calc_bf(lname, bf.fno))
+            calc_bf = motion.calc_bf(lname, bf.fno).copy()
             
             if lidx == 0:
                 # SIZING_ROOTに上半身とセンターとのズレを加算する
@@ -813,7 +824,7 @@ class StanceService():
         # 下半身を原点として回った場合のモーション
         lower_motion = VmdMotion()
         for lidx, lname in enumerate(lower_links.all().keys()):
-            calc_bf = copy.deepcopy(motion.calc_bf(lname, bf.fno))
+            calc_bf = motion.calc_bf(lname, bf.fno).copy()
             
             if lidx == 0:
                 # SIZING_ROOTに下半身とセンターとのズレを加算する
@@ -1003,12 +1014,12 @@ class StanceService():
                 logger.info("上半身2スタンス補正: 終了【No.%s】", (data_set_idx + 1))
 
     # 肩スタンス補正
-    def adjust_shoulder_stance(self, data_set_idx: int, data_set: MOptionsDataSet):
+    def adjust_shoulder_stance(self, data_set_idx: int, data_set: MOptionsDataSet, executor2: ThreadPoolExecutor):
         logger.info("肩スタンス補正　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
 
-        # 並列処理
-        with ThreadPoolExecutor(max_workers=2) as executor2:
-            executor2.map(self.adjust_shoulder_stance_lr, repeat(data_set_idx), ["左肩P", "右肩P"], ["左肩", "右肩"], ["左腕", "右腕"])
+        results = executor2.map(self.adjust_shoulder_stance_lr, repeat(data_set_idx), ["左肩P", "右肩P"], ["左肩", "右肩"], ["左腕", "右腕"])
+        for r in results:
+            pass
         
     # 肩スタンス補正左右
     def adjust_shoulder_stance_lr(self, data_set_idx: int, shoulder_p_name: str, shoulder_name: str, arm_name: str):
@@ -1291,7 +1302,7 @@ class StanceService():
         logger.test("f: %s, 元rep_front_to_pos: %s", bf.fno, rep_front_to_pos)
 
         # 正面向きの新しいTO位置
-        new_rep_front_to_global_3ds = copy.deepcopy(rep_front_to_global_3ds)
+        new_rep_front_to_global_3ds = {}
         new_rep_front_to_global_3ds[to_bone_name] = new_rep_front_to_pos
 
         # 回転を元に戻した位置
@@ -1322,17 +1333,18 @@ class StanceService():
                     motion.split_bf_by_fno(target_bone_name, prev_bf, bf, half_fno)
 
     # 腕スタンス補正
-    def adjust_arm_stance(self, data_set_idx: int, data_set: MOptionsDataSet):
+    def adjust_arm_stance(self, data_set_idx: int, data_set: MOptionsDataSet, executor2: ThreadPoolExecutor):
         logger.info("腕スタンス補正　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
         
         # 腕のスタンス差
         arm_diff_qq_dic = self.calc_arm_stance(data_set)
 
         # 並列処理
-        with ThreadPoolExecutor(max_workers=6) as executor2:
-            executor2.map(self.adjust_arm_stance_lr, repeat(data_set_idx), repeat(arm_diff_qq_dic), ["左腕", "左ひじ", "左手首", "右腕", "右ひじ", "右手首"])
+        results = executor2.map(self.adjust_arm_stance_lr, repeat(data_set_idx), repeat(arm_diff_qq_dic), ["左腕", "左ひじ", "左手首", "右腕", "右ひじ", "右手首"])
+        for r in results:
+            pass
         
-    # つま先補正
+    # 腕スタンス補正左右
     def adjust_arm_stance_lr(self, data_set_idx: int, arm_diff_qq_dic: dict, bone_name: str):
         logger.copy(self.options)
         data_set = self.options.data_set_list[data_set_idx]

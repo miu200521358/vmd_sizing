@@ -9,6 +9,8 @@ from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdL
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from utils.MException import MParseException # noqa
 from utils.MLogger import MLogger # noqa
+from ctypes import c_bool, c_char_p, c_byte, c_int
+from multiprocessing import Value, Array
 
 logger = MLogger(__name__)
 
@@ -79,23 +81,24 @@ class VmdReader():
                 logger.test("frame.fno %s", frame.fno)
 
                 # 位置X,Y,Z
-                frame.position = self.read_Vector3D()
+                pos = self.read_Vector3D()
+                frame.position = pos
                 logger.test("frame.position %s", frame.position)
                 # オリジナルを保持
-                frame.org_position = copy.deepcopy(frame.position)
+                frame.org_position = frame.position.copy()
 
                 # 回転X,Y,Z,scalar
                 frame.rotation = self.read_Quaternion()
                 logger.test("frame.rotation %s", frame.rotation)
                 logger.test("frame.rotation.euler %s", frame.rotation.toEulerAngles())
                 # オリジナルを保持
-                frame.org_rotation = copy.deepcopy(frame.rotation)
+                frame.org_rotation = frame.rotation.copy()
 
                 # 補間曲線
-                frame.interpolation = list(self.unpack(64, "64B", True))
+                frame.set_interpolation(list(self.unpack(64, "64B", True)))
                 logger.test("interpolation %s", frame.interpolation)
                 # オリジナルの補間曲線を保持しておく
-                frame.org_interpolation = copy.deepcopy(frame.interpolation)
+                frame.org_interpolation = frame.get_interpolation()
                 logger.test("org_interpolation %s", frame.org_interpolation)
 
                 if bone_name not in motion.bones:
