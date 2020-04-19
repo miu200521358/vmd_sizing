@@ -60,20 +60,23 @@ class SizingService():
             # スタンス補正
             result = StanceService(self.options).execute() and result
 
-            # 最後に全キーフレで繋げるのを除去
-            if self.options.logging_level != MLogger.FULL and self.options.logging_level != MLogger.DEBUG_FULL:
-                # Poolに渡すリスト
-                executor_args = {"data_set_idx": [], "bone_name": []}
+            # FIXME
+            # # 最後に全キーフレで繋げるのを除去
+            # if self.options.logging_level != MLogger.FULL and self.options.logging_level != MLogger.DEBUG_FULL:
+            #     # Poolに渡すリスト
+            #     executor_args = {"data_set_idx": [], "bone_name": []}
 
-                for data_set_idx, data_set in enumerate(self.options.data_set_list):
-                    logger.info("不要キー削除　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
+            #     for data_set_idx, data_set in enumerate(self.options.data_set_list):
+            #         logger.info("不要キー削除　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
                     
-                    for bone_name in ["右腕", "右腕捩", "右ひじ", "右手捩", "右手首", "左腕", "左腕捩", "左ひじ", "左手捩", "左手首"]:
-                        executor_args["data_set_idx"].append(data_set_idx)
-                        executor_args["bone_name"].append(bone_name)
+            #         for bone_name in ["右腕", "右腕捩", "右ひじ", "右手捩", "右手首", "左腕", "左腕捩", "左ひじ", "左手捩", "左手首"]:
+            #             executor_args["data_set_idx"].append(data_set_idx)
+            #             executor_args["bone_name"].append(bone_name)
 
-                # 並列処理
-                self.options.executor.map(self.remove_unnecessary_bf_pool, executor_args["data_set_idx"], executor_args["bone_name"])
+            #     # 並列処理
+            #     results = self.options.executor.map(self.remove_unnecessary_bf_pool, executor_args["data_set_idx"], executor_args["bone_name"])
+            #     for r in results:
+            #         pass
 
             for data_set_idx, data_set in enumerate(self.options.data_set_list):
                 # 実行後、出力ファイル存在チェック

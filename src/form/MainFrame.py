@@ -260,11 +260,11 @@ class MainFrame(wx.Frame):
 
     # スレッド実行結果
     def on_exec_result(self, event: wx.Event):
-        # ファイルタブのコンソール
-        sys.stdout = self.file_panel_ctrl.console_ctrl
-
         self.elapsed_time += event.elapsed_time
         logger.info("\n処理時間: %s", self.show_worked_time())
+
+        # ファイルタブのコンソール
+        sys.stdout = self.file_panel_ctrl.console_ctrl
 
         # 終了音を鳴らす
         self.sound_finish()

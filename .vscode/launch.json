@@ -30,10 +30,10 @@
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/アンノウン・マザーグース【フィンガータットモーション】 しぱ/アンノウンマザーグース【フィンガータットモーション】1.00.vmd",
                 // "--motion_path", "C:/MMD/vmd_sizing/vmd/膝丸_初期手合わせ.vmd",
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/馬と鹿 づなうじ/馬と鹿all3.vmd",
-                // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/ドラマツルギー motion 配布用 moka/ドラマツルギー_0-500.vmd",
+                "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/ドラマツルギー motion 配布用 moka/ドラマツルギー_0-500.vmd",
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/リバーシブル・キャンペーン じゅんこだ/さとく式鶯丸_リバキャン_400-900.vmd",
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/愛言葉III なつき/nac_aikotoba3_0-500.vmd",
-                "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/おねがいダーリン_モーションv1.2 hino/おねがいダーリン_Tda式0-64.vmd",
+                // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/おねがいダーリン_モーションv1.2 hino/おねがいダーリン_Tda式0-64.vmd",
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/響喜乱舞 小怪粉刷月球/響喜乱舞_pickup.vmd",
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/ラストリゾート モーション かすか/ラストリゾート（トレス元音源）_0-300.vmd",
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/Lap Tap Love　モーション 冷凍食品/Lap Tap Love  (コロン式ミクver)モーション_1601.vmd",
@@ -98,8 +98,9 @@
                 "--arm_process_flg_alignment", "0",     // 手首位置合わせ
                 // "--verbose", "1",                       // 最小
                 // "--verbose", "2",                       // DEBUG_FULL
-                "--verbose", "18",                   // FULL
+                // "--verbose", "18",                   // FULL
                 // "--verbose", "5",                    // TEST
+                "--verbose", "20",                    // INFO
             ],
             "presentation": {
                 "clear": true
