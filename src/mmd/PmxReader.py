@@ -2,7 +2,6 @@
 #
 import struct
 import hashlib
-import copy
 from collections import OrderedDict
 
 from mmd.PmxData import PmxModel, Vertex, Material, Bone, Morph, DisplaySlot, RigidBody, Joint

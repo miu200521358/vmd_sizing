@@ -2,15 +2,12 @@
 #
 import struct
 import hashlib
-import copy
 import re
 
 from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from utils.MException import MParseException # noqa
 from utils.MLogger import MLogger # noqa
-from ctypes import c_bool, c_char_p, c_byte, c_int
-from multiprocessing import Value, Array
 
 logger = MLogger(__name__)
 

@@ -5,7 +5,6 @@ import logging
 import os
 from pathlib import Path
 from multiprocessing_logging import install_mp_handler
-from concurrent.futures import ThreadPoolExecutor
 
 from mmd.VmdWriter import VmdWriter
 from module.MOptions import MOptions
@@ -60,7 +59,6 @@ class SizingService():
             # スタンス補正
             result = StanceService(self.options).execute() and result
 
-            # FIXME
             # # 最後に全キーフレで繋げるのを除去
             # if self.options.logging_level != MLogger.FULL and self.options.logging_level != MLogger.DEBUG_FULL:
             #     # Poolに渡すリスト

@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 #
+import math
+import numpy as np
 import struct
+from ctypes import Structure, c_bool, c_wchar_p, c_int
+import _pickle as cPickle
+
 from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from utils import MBezierUtils # noqa
 from utils.MLogger import MLogger
-from ctypes import Structure, c_bool, c_wchar_p, c_int
-import _pickle as cPickle
 
 logger = MLogger(__name__)
 
@@ -27,6 +30,10 @@ class VmdBoneFrame(Structure):
         self.key = False
         # VMD読み込み処理で読み込んだキーか
         self.read = False
+    
+    def set_name(self, name):
+        self.name = name
+        self.bname = '' if not name else name.encode('cp932').decode('shift_jis').encode('shift_jis')[:15].ljust(15, b'\x00')
     
     def copy(self):
         bf = VmdBoneFrame()
@@ -321,7 +328,7 @@ class VmdMotion():
         # ハッシュ値
         self.digest = None
     
-    def regist_full_bf(self, bone_name: str, is_rot: bool, is_mov: bool, is_full: bool):
+    def regist_full_bf(self, data_set_no: int, bone_name: str, is_rot: bool, is_mov: bool, is_full: bool):
         prev_sep_fno = 0
         registed_bfs = []   # 登録対象bfリスト
 
@@ -373,12 +380,47 @@ class VmdMotion():
                         fno = fno + 1       # 現在フレームを次に移す
 
                     if fno // 500 > prev_sep_fno:
-                        logger.info("-- %sフレーム目完了", fno)
+                        logger.info("-- %sフレーム目完了(%s％)【No.%s - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
                         prev_sep_fno = fno // 500
 
         # 保持したのを登録しなおし
         for bf in registed_bfs:
             self.bones[bone_name][bf.fno] = bf
+    
+    # 指定ボーンが跳ねてたりするのを回避
+    def smooth_bf(self, data_set_no: int, bone_name: str, is_rot: bool, is_mov: bool, limit_degrees: float):
+        # キーフレ（全部）を取得する
+        fnos = self.get_bone_fnos(bone_name)
+        prev_sep_fno = 0
+        if len(fnos) > 2:
+            for fno in fnos[1:]:
+                for offset in range(0, 4):
+                    prev_bf = self.calc_bf(bone_name, fno - 1)
+                    now_bf = self.calc_bf(bone_name, fno + offset)
+                    next_bf = self.calc_bf(bone_name, fno + 4)
+
+                    if not now_bf.read:
+                        # 読み込みキーではない場合、円滑化を試す
+                        
+                        if is_rot:
+                            # 前後の内積
+                            prev_next_dot = MQuaternion.dotProduct(prev_bf.rotation, next_bf.rotation)
+                            # 自分と後の内積
+                            now_next_dot = MQuaternion.dotProduct(now_bf.rotation, next_bf.rotation)
+                            # 内積差分
+                            diff = np.abs(np.diff([prev_next_dot, now_next_dot]))
+                            logger.test("set: %s, %s, f: %s, offset: %s, diff: %s, prev_next_dot: %s, now_next_dot: %s", data_set_no, bone_name, fno, offset, diff, prev_next_dot, now_next_dot)
+
+                            # 前後と自分の内積の差が一定以上の場合、円滑化
+                            if prev_next_dot > now_next_dot and diff > 1 - math.cos(math.radians(limit_degrees)):
+                                logger.info_debug("★ 円滑化 set: %s, %s, f: %s, offset: %s, diff: %s, prev_next_dot: %s, now_next_dot: %s", \
+                                                  data_set_no, bone_name, fno, offset, diff, prev_next_dot, now_next_dot)
+
+                                now_bf.rotation = MQuaternion.slerp(prev_bf.rotation, next_bf.rotation, ((now_bf.fno - prev_bf.fno) / (next_bf.fno - prev_bf.fno)))
+
+                if fno // 500 > prev_sep_fno:
+                    logger.info("-- %sフレーム目完了(%s％)【No.%s - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
+                    prev_sep_fno = fno // 500
 
     # 指定ボーンの不要キーを削除する
     def remove_unnecessary_bf(self, data_set_no: int, bone_name: str, is_rot: bool, is_mov: bool):
@@ -479,7 +521,8 @@ class VmdMotion():
     # https://www55.atwiki.jp/kumiho_k/pages/15.html
     # https://harigane.at.webry.info/201103/article_1.html
     def calc_bf(self, bone_name: str, fno: int, is_key=False, is_read=False, is_reset_interpolation=False):
-        fill_bf = VmdBoneFrame(fno=fno, name=bone_name)
+        fill_bf = VmdBoneFrame(fno=fno)
+        fill_bf.set_name(bone_name)
 
         if bone_name not in self.bones:
             self.bones[bone_name] = {fno: fill_bf}
@@ -488,7 +531,8 @@ class VmdMotion():
         # 条件に合致するフレーム番号を探す
         # is_key: 登録対象のキーを探す
         # is_read: データ読み込み時のキーを探す
-        fnos = [x for x in sorted(self.bones[bone_name].keys()) if (x == fno) and (not is_key or (is_key and self.bones[x].key)) and (not is_read or (is_read and self.bones[x].read))]
+        fnos = [x for x in sorted(self.bones[bone_name].keys()) if (x == fno) \
+                and (not is_key or (is_key and self.bones[bone_name][x].key)) and (not is_read or (is_read and self.bones[bone_name][x].read))]
         
         if len(fnos) > 0:
             # 合致するキーが見つかった場合、それを返す

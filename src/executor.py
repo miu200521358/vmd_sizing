@@ -6,7 +6,6 @@ import wx
 import sys
 import logging
 import argparse
-import winsound
 import numpy as np
 import traceback
 import multiprocessing
@@ -31,6 +30,9 @@ if __name__ == '__main__':
     mydir_path = MFileUtils.get_mydir_path(sys.argv[0])
 
     if len(sys.argv) > 3 and "--motion_path" in sys.argv:
+        if os.name == "nt":
+            import winsound     # Windows版のみインポート
+
         # 引数指定がある場合、コマンドライン実行
         try:
             with ThreadPoolExecutor(max_workers=5) as executor:
@@ -61,10 +63,29 @@ if __name__ == '__main__':
 
         MLogger.initialize(level=args.verbose, is_file=False)
 
+        log_level_name = ""
+        if args.verbose == MLogger.FULL:
+            # フルデータの場合
+            log_level_name = "（全打ち版）"
+        elif args.verbose == MLogger.DEBUG_FULL:
+            # フルデータの場合
+            log_level_name = "（全打ちデバッグ版）"
+        elif args.verbose == MLogger.TEST:
+            # テスト（デバッグ版）の場合
+            log_level_name = "（デバッグ版）"
+        elif args.verbose == MLogger.TIMER:
+            # 時間計測の場合
+            log_level_name = "（タイマー版）"
+        elif is_out_log:
+            # ログありの場合
+            log_level_name = "（ログあり版）"
+
+        now_version_name = "{0}{1}".format(VERSION_NAME, log_level_name)
+
         # 引数指定がない場合、通常起動
         app = wx.App(False)
         icon = wx.Icon(MFileUtils.resource_path('src/vmdsizing.ico'), wx.BITMAP_TYPE_ICO)
-        frame = MainFrame(None, mydir_path, VERSION_NAME, args.verbose, is_out_log)
+        frame = MainFrame(None, mydir_path, now_version_name, args.verbose, is_out_log)
         frame.SetIcon(icon)
         frame.Show(True)
         app.MainLoop()

@@ -3,7 +3,6 @@
 import os
 import sys
 import wx
-import winsound
 
 from form.panel.FilePanel import FilePanel
 from form.panel.MorphPanel import MorphPanel
@@ -15,6 +14,9 @@ from form.worker.LoadWorkerThread import LoadWorkerThread
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from utils import MFormUtils, MFileUtils # noqa
 from utils.MLogger import MLogger # noqa
+
+if os.name == "nt":
+    import winsound     # Windows版のみインポート
 
 logger = MLogger(__name__)
 

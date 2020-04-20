@@ -14,9 +14,10 @@ class MLogger():
     DEFAULT_FORMAT = "%(message)s [%(funcName)s][P-%(process)s](%(asctime)s)"
 
     DEBUG_FULL = 2
-    FULL = 18
     TEST = 5
     TIMER = 12
+    FULL = 15
+    INFO_DEBUG = 22
     DEBUG = logging.DEBUG
     INFO = logging.INFO
     WARNING = logging.WARNING
@@ -53,6 +54,14 @@ class MLogger():
             kwargs = {}
             
         kwargs["level"] = self.TIMER
+        kwargs["time"] = True
+        self.print_logger(msg, *args, **kwargs)
+
+    def info_debug(self, msg, *args, **kwargs):
+        if not kwargs:
+            kwargs = {}
+            
+        kwargs["level"] = self.INFO_DEBUG
         kwargs["time"] = True
         self.print_logger(msg, *args, **kwargs)
 
@@ -142,7 +151,7 @@ class MLogger():
             else:
                 print_msg = "{message}".format(message=log_record.getMessage())
             
-            if not self.is_file:
+            if not self.is_file and target_level != MLogger.INFO_DEBUG:
                 if target_decoration:
                     if target_decoration == MLogger.DECORATION_BOX:
                         output_msg = self.create_box_message(print_msg, target_level, title)

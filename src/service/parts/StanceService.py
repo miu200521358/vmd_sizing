@@ -2,7 +2,6 @@
 #
 import numpy as np
 import math
-import copy
 from itertools import repeat
 from concurrent.futures import ThreadPoolExecutor
 
@@ -130,20 +129,20 @@ class StanceService():
 
             # 各ボーンのbfを全打ち
             is_full = True
-            # is_full = self.options.logging_level == MLogger.FULL
-            data_set.motion.regist_full_bf(arm_bone_name, data_set.rep_model.bones[arm_bone_name].getRotatable(), data_set.rep_model.bones[arm_bone_name].getTranslatable(), is_full)
+            data_set.motion.regist_full_bf((data_set_idx + 1), arm_bone_name, data_set.rep_model.bones[arm_bone_name].getRotatable(), \
+                                           data_set.rep_model.bones[arm_bone_name].getTranslatable(), is_full)
             logger.info("-- %s捩り分散準備完了【No.%s】", arm_bone_name, (data_set_idx + 1))
-            if arm_twist_bone_name in data_set.motion.bones:
-                data_set.motion.regist_full_bf(arm_twist_bone_name, data_set.rep_model.bones[arm_twist_bone_name].getRotatable(), \
-                                               data_set.rep_model.bones[arm_twist_bone_name].getTranslatable(), is_full)
-                logger.info("-- %s捩り分散準備完了【No.%s】", arm_twist_bone_name, (data_set_idx + 1))
-            data_set.motion.regist_full_bf(elbow_bone_name, data_set.rep_model.bones[elbow_bone_name].getRotatable(), data_set.rep_model.bones[elbow_bone_name].getTranslatable(), is_full)
+            data_set.motion.regist_full_bf((data_set_idx + 1), arm_twist_bone_name, data_set.rep_model.bones[arm_twist_bone_name].getRotatable(), \
+                                           data_set.rep_model.bones[arm_twist_bone_name].getTranslatable(), is_full)
+            logger.info("-- %s捩り分散準備完了【No.%s】", arm_twist_bone_name, (data_set_idx + 1))
+            data_set.motion.regist_full_bf((data_set_idx + 1), elbow_bone_name, data_set.rep_model.bones[elbow_bone_name].getRotatable(), \
+                                           data_set.rep_model.bones[elbow_bone_name].getTranslatable(), is_full)
             logger.info("-- %s捩り分散準備完了【No.%s】", elbow_bone_name, (data_set_idx + 1))
-            if wrist_twist_bone_name in data_set.motion.bones:
-                data_set.motion.regist_full_bf(wrist_twist_bone_name, data_set.rep_model.bones[wrist_twist_bone_name].getRotatable(), \
-                                               data_set.rep_model.bones[wrist_twist_bone_name].getTranslatable(), is_full)
-                logger.info("-- %s捩り分散準備完了【No.%s】", wrist_twist_bone_name, (data_set_idx + 1))
-            data_set.motion.regist_full_bf(wrist_bone_name, data_set.rep_model.bones[wrist_bone_name].getRotatable(), data_set.rep_model.bones[wrist_bone_name].getTranslatable(), is_full)
+            data_set.motion.regist_full_bf((data_set_idx + 1), wrist_twist_bone_name, data_set.rep_model.bones[wrist_twist_bone_name].getRotatable(), \
+                                           data_set.rep_model.bones[wrist_twist_bone_name].getTranslatable(), is_full)
+            logger.info("-- %s捩り分散準備完了【No.%s】", wrist_twist_bone_name, (data_set_idx + 1))
+            data_set.motion.regist_full_bf((data_set_idx + 1), wrist_bone_name, data_set.rep_model.bones[wrist_bone_name].getRotatable(), \
+                                           data_set.rep_model.bones[wrist_bone_name].getTranslatable(), is_full)
             logger.info("-- %s捩り分散準備完了【No.%s】", wrist_bone_name, (data_set_idx + 1))
 
             # 腕系ボーンのfnos
@@ -173,7 +172,24 @@ class StanceService():
                                     repeat(wrist_local_x_axis), repeat(wrist_local_y_axis), repeat(log_target_idxs))
             for r in results:
                 pass
-            
+
+            # 各ボーンのbfを円滑化
+            data_set.motion.smooth_bf(data_set_idx + 1, arm_bone_name, data_set.rep_model.bones[arm_bone_name].getRotatable(),\
+                                      data_set.rep_model.bones[arm_bone_name].getTranslatable(), 2)
+            logger.info("-- %s捩り分散後処理完了【No.%s】", arm_bone_name, (data_set_idx + 1))
+            data_set.motion.smooth_bf(data_set_idx + 1, arm_twist_bone_name, data_set.rep_model.bones[arm_twist_bone_name].getRotatable(), \
+                                      data_set.rep_model.bones[arm_twist_bone_name].getTranslatable(), 2)
+            logger.info("-- %s捩り分散後処理完了【No.%s】", arm_twist_bone_name, (data_set_idx + 1))
+            data_set.motion.smooth_bf(data_set_idx + 1, elbow_bone_name, data_set.rep_model.bones[elbow_bone_name].getRotatable(), \
+                                      data_set.rep_model.bones[elbow_bone_name].getTranslatable(), 2)
+            logger.info("-- %s捩り分散後処理完了【No.%s】", elbow_bone_name, (data_set_idx + 1))
+            data_set.motion.smooth_bf(data_set_idx + 1, wrist_twist_bone_name, data_set.rep_model.bones[wrist_twist_bone_name].getRotatable(), \
+                                      data_set.rep_model.bones[wrist_twist_bone_name].getTranslatable(), 2)
+            logger.info("-- %s捩り分散後処理完了【No.%s】", wrist_twist_bone_name, (data_set_idx + 1))
+            data_set.motion.smooth_bf(data_set_idx + 1, wrist_bone_name, data_set.rep_model.bones[wrist_bone_name].getRotatable(), \
+                                      data_set.rep_model.bones[wrist_bone_name].getTranslatable(), 2)
+            logger.info("-- %s捩り分散後処理完了【No.%s】", wrist_bone_name, (data_set_idx + 1))
+
             logger.info("%s捩り分散完了【No.%s】", direction, (data_set_idx + 1))
 
     # 捩り分散のPool内処理
@@ -275,7 +291,6 @@ class StanceService():
 
         logger.time("f: %s, end", fno)
 
-        # 最後に出すと後回しになってしまうので、先に出してしまう
         if fno in log_target_idxs:
             logger.info("-- %sフレーム目完了(%s％)【No.%s - %s】", fno, round((fno / last_fno) * 100, 3), data_set_idx + 1, arm_twist_bone_name)
 
@@ -918,14 +933,28 @@ class StanceService():
 
             prev_fno = 0
             fnos = data_set.motion.get_bone_fnos("上半身")
-            for fno in fnos:
-                bf = data_set.motion.bones["上半身"][fno]
-                if bf.key:
-                    self.calc_rotation_stance(bf, data_set_idx, data_set, \
+            for fno_idx, fno in enumerate(fnos):
+                upper_bf = data_set.motion.bones["上半身"][fno]
+
+                is_copy = False
+                if fno_idx > 0:
+                    # 1F目以降で、前キーフレの元キーがほぼ同じ角度である場合、それを適用して終了
+                    org_upper_prev_bf = data_set.org_motion.calc_bf("上半身", fnos[fno_idx - 1])
+                    org_upper_bf = data_set.org_motion.calc_bf("上半身", fnos[fno_idx])
+
+                    if MQuaternion.dotProduct(org_upper_prev_bf.rotation, org_upper_bf.rotation) > math.cos(math.radians(1)):
+                        upper_prev_bf = data_set.motion.calc_bf("上半身", fnos[fno_idx - 1])
+                        upper_bf.rotation = upper_prev_bf.rotation.copy()
+
+                        is_copy = True
+                
+                if not is_copy:
+                    self.calc_rotation_stance(upper_bf, data_set_idx, data_set, \
                                               org_upper_links, org_head_links, org_head_links, org_arm_links, \
                                               rep_upper_links, rep_head_links, rep_head_links, rep_arm_links, \
                                               "上半身", "頭", rep_upper_links.get("上半身", offset=-1).name, \
                                               rep_upper_initial_slope_qq, upper_initial_qq, self.def_calc_up_upper, dot_limit)
+
                 if fno // 500 > prev_fno:
                     logger.info("-- %sフレーム目完了(%s％)【No.%s - 上半身】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1)
                     prev_fno = fno // 500
@@ -993,10 +1022,23 @@ class StanceService():
 
                 prev_fno = 0
                 fnos = data_set.motion.get_bone_fnos("上半身2")
-                for fno in fnos:
-                    bf = data_set.motion.bones["上半身2"][fno]
-                    if bf.key:
-                        self.calc_rotation_stance(bf, data_set_idx, data_set, \
+                for fno_idx, fno in enumerate(fnos):
+                    upper2_bf = data_set.motion.bones["上半身2"][fno]
+
+                    is_copy = False
+                    if fno_idx > 0:
+                        # 1F目以降で、前キーフレの元キーがほぼ同じ角度である場合、それを適用して終了
+                        org_upper2_prev_bf = data_set.org_motion.calc_bf("上半身2", fnos[fno_idx - 1])
+                        org_upper2_bf = data_set.org_motion.calc_bf("上半身2", fnos[fno_idx])
+
+                        if MQuaternion.dotProduct(org_upper2_prev_bf.rotation, org_upper2_bf.rotation) > math.cos(math.radians(1)):
+                            upper2_prev_bf = data_set.motion.calc_bf("上半身2", fnos[fno_idx - 1])
+                            upper2_bf.rotation = upper2_prev_bf.rotation.copy()
+
+                            is_copy = True
+                    
+                    if not is_copy:
+                        self.calc_rotation_stance(upper2_bf, data_set_idx, data_set, \
                                                   org_upper2_links, org_head_links, org_head_links, org_arm_links, \
                                                   rep_upper2_links, rep_head_links, rep_head_links, rep_arm_links, \
                                                   "上半身2", "頭", rep_upper2_links.get("上半身2", offset=-1).name, \
@@ -1105,25 +1147,38 @@ class StanceService():
             logger.info("%sスタンス補正: 準備終了【No.%s】", shoulder_name, (data_set_idx + 1))
 
             prev_fno = 0
-            # 肩Pと肩の両方のキーフレリスト
+            # 肩P、肩、腕の全てのキーフレリスト
             fnos = data_set.motion.get_bone_fnos(shoulder_name, shoulder_p_name)
-            for fno in fnos:
+            for fno_idx, fno in enumerate(fnos):
                 # 肩補正
                 shoulder_bf = data_set.motion.calc_bf(shoulder_name, fno)
 
-                self.calc_rotation_stance(shoulder_bf, data_set_idx, data_set, \
-                                          org_shoulder_links, org_arm_links[shoulder_name[0]], org_arm_under_links, org_arm_links, \
-                                          rep_shoulder_links, rep_arm_links[shoulder_name[0]], rep_arm_under_links, rep_arm_links, \
-                                          shoulder_name, arm_name, rep_shoulder_links.get(shoulder_name, offset=-1).name, \
-                                          rep_shoulder_initial_slope_qq, shoulder_initial_qq, self.def_calc_up_shoulder, dot_limit)
+                is_copy = False
+                if fno_idx > 0:
+                    # 1F目以降で、前キーフレの元キーがほぼ同じ角度である場合、それを適用して終了
+                    org_shoulder_prev_bf = data_set.org_motion.calc_bf(shoulder_name, fnos[fno_idx - 1])
+                    org_shoulder_bf = data_set.org_motion.calc_bf(shoulder_name, fnos[fno_idx])
+
+                    if MQuaternion.dotProduct(org_shoulder_prev_bf.rotation, org_shoulder_bf.rotation) > math.cos(math.radians(1)):
+                        shoulder_prev_bf = data_set.motion.calc_bf(shoulder_name, fnos[fno_idx - 1])
+                        shoulder_bf.rotation = shoulder_prev_bf.rotation.copy()
+
+                        is_copy = True
                 
+                if not is_copy:
+                    self.calc_rotation_stance(shoulder_bf, data_set_idx, data_set, \
+                                              org_shoulder_links, org_arm_links[shoulder_name[0]], org_arm_under_links, org_arm_links, \
+                                              rep_shoulder_links, rep_arm_links[shoulder_name[0]], rep_arm_under_links, rep_arm_links, \
+                                              shoulder_name, arm_name, rep_shoulder_links.get(shoulder_name, offset=-1).name, \
+                                              rep_shoulder_initial_slope_qq, shoulder_initial_qq, self.def_calc_up_shoulder, dot_limit)
+                    
                 # bf登録
                 data_set.motion.regist_bf(shoulder_bf, shoulder_name, fno)
                     
                 if fno // 500 > prev_fno:
                     logger.info("-- %sフレーム目完了(%s％)【No.%s - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1, shoulder_name)
                     prev_fno = fno // 500
-            
+
             # 子の角度調整
             self.adjust_rotation_by_parent(data_set_idx, data_set, arm_name, shoulder_name)
 
@@ -1133,18 +1188,18 @@ class StanceService():
     def adjust_rotation_by_parent(self, data_set_idx: int, data_set: MOptionsDataSet, target_bone_name: str, target_parent_name: str):
         for fno in data_set.motion.get_bone_fnos(target_bone_name):
             bf = data_set.motion.bones[target_bone_name][fno]
-            if bf.key:
-                # 元々の親bf
-                org_parent_bf = data_set.org_motion.calc_bf(target_parent_name, fno)
-                # 調整後の親bf
-                rep_parent_bf = data_set.motion.calc_bf(target_parent_name, fno)
 
-                # 元々の親bfのdeformed回転量
-                org_deformed_qq = MServiceUtils.deform_rotation(data_set.org_model, data_set.org_motion, org_parent_bf)
-                # 調整後の親bfのdeformed回転量
-                rep_deformed_qq = MServiceUtils.deform_rotation(data_set.rep_model, data_set.motion, rep_parent_bf)
+            # 元々の親bf
+            org_parent_bf = data_set.org_motion.calc_bf(target_parent_name, fno)
+            # 調整後の親bf
+            rep_parent_bf = data_set.motion.calc_bf(target_parent_name, fno)
 
-                bf.rotation = rep_deformed_qq.inverted() * org_deformed_qq * bf.rotation
+            # 元々の親bfのdeformed回転量
+            org_deformed_qq = MServiceUtils.deform_rotation(data_set.org_model, data_set.org_motion, org_parent_bf)
+            # 調整後の親bfのdeformed回転量
+            rep_deformed_qq = MServiceUtils.deform_rotation(data_set.rep_model, data_set.motion, rep_parent_bf)
+
+            bf.rotation = rep_deformed_qq.inverted() * org_deformed_qq * bf.rotation
 
     # 定義: 傾きを求める方向の位置計算（上半身）
     def def_calc_up_upper(self, bf: VmdBoneFrame, data_set_idx: int, data_set: MOptionsDataSet, \

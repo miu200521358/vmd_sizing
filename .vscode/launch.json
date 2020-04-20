@@ -30,10 +30,10 @@
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/アンノウン・マザーグース【フィンガータットモーション】 しぱ/アンノウンマザーグース【フィンガータットモーション】1.00.vmd",
                 // "--motion_path", "C:/MMD/vmd_sizing/vmd/膝丸_初期手合わせ.vmd",
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/馬と鹿 づなうじ/馬と鹿all3.vmd",
-                "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/ドラマツルギー motion 配布用 moka/ドラマツルギー_0-500.vmd",
+                // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/ドラマツルギー motion 配布用 moka/ドラマツルギー_0-500.vmd",
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/リバーシブル・キャンペーン じゅんこだ/さとく式鶯丸_リバキャン_400-900.vmd",
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/愛言葉III なつき/nac_aikotoba3_0-500.vmd",
-                // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/おねがいダーリン_モーションv1.2 hino/おねがいダーリン_Tda式0-64.vmd",
+                "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/おねがいダーリン_モーションv1.2 hino/おねがいダーリン_Tda式_0-180.vmd",
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/響喜乱舞 小怪粉刷月球/響喜乱舞_pickup.vmd",
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/ラストリゾート モーション かすか/ラストリゾート（トレス元音源）_0-300.vmd",
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/Lap Tap Love　モーション 冷凍食品/Lap Tap Love  (コロン式ミクver)モーション_1601.vmd",
@@ -88,12 +88,12 @@
                 // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/009_岩融/岩融008刀剣乱舞 mkmk式/岩融mkmk式008/岩融【内番】 mkmk007 刀剣乱舞.pmx",
                 // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/Tda式初音ミク・アペンドVer1.10/Tda式初音ミク・アペンド_Ver1.10.pmx",
                 // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/_VMDサイジング/fumizuki_14th_shirt/文月14歳_シャツ_準標準.pmx",
-                // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/107_髭切/髭切mkmk009c 刀剣乱舞/髭切mkmk009c/髭切特3mkmk(Se)009b_準標準.pmx",
+                "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/107_髭切/髭切mkmk009c 刀剣乱舞/髭切mkmk009c/髭切特3mkmk(Se)009b_準標準.pmx",
                 // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ゲーム/Fate/hoge式源頼光ver1.00/hoge式源頼光ver1.00.pmx",
                 // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/艦隊これくしょん/prinzeugen 鼈(すっぽん)/prinzeugen_剛体追加.pmx",
-                "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/_VMDサイジング/8頭身審神者 猫のしもべ/8頭身審神者3_軸制限無し.pmx",
+                // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/_VMDサイジング/8頭身審神者 猫のしもべ/8頭身審神者3_軸制限無し.pmx",
                 "--substitute_model_flg", "0",          // 代替モデル
-                "--twist_flg", "1",                     // 捩り分散
+                "--twist_flg", "0",                     // 捩り分散
                 "--arm_process_flg_avoidance", "0",     // 剛体接触回避
                 "--arm_process_flg_alignment", "0",     // 手首位置合わせ
                 // "--verbose", "1",                       // 最小
