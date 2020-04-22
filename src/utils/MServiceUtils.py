@@ -179,7 +179,8 @@ def calc_relative_position(model: PmxModel, links: BoneLinks, motion: VmdMotion,
             fill_bf = motion.calc_bf(link_bone.name, fno)
         else:
             # 上限リンクでボーンがない場合、ボーンは初期値
-            fill_bf = VmdBoneFrame(fno=fno, name=link_bone_name)
+            fill_bf = VmdBoneFrame(fno=fno)
+            fill_bf.set_name(link_bone_name)
 
         # 位置
         if link_idx == 0:
@@ -204,7 +205,8 @@ def calc_relative_rotation(model: PmxModel, links: BoneLinks, motion: VmdMotion,
             fill_bf = motion.calc_bf(link_bone.name, fno)
         else:
             # 上限リンクでボーンがない場合、ボーンは初期値
-            fill_bf = VmdBoneFrame(fno=fno, name=link_bone_name)
+            fill_bf = VmdBoneFrame(fno=fno)
+            fill_bf.set_name(link_bone_name)
         
         # 実際の回転量を計算
         rot = deform_rotation(model, motion, fill_bf)

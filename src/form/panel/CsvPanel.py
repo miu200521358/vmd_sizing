@@ -32,7 +32,7 @@ class CsvPanel(BasePanel):
 
         # CSVファイルコントロール
         self.vmd_file_ctrl = BaseFilePickerCtrl(frame, self, u"VMDファイル", u"VMDファイルを開く", ("vmd"), wx.FLP_DEFAULT_STYLE, \
-                                                u"CSVに変換したいVMD出力パスを指定してください。", \
+                                                u"CSVに変換したいVMDのファイルパスを指定してください。", \
                                                 is_aster=False, is_save=False, set_no=0)
         self.sizer.Add(self.vmd_file_ctrl.sizer, 1, wx.EXPAND, 0)
 

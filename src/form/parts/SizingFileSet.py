@@ -31,18 +31,18 @@ class SizingFileSet():
         # VMD/VPDファイルコントロール
         self.motion_vmd_file_ctrl = HistoryFilePickerCtrl(frame, panel, u"調整対象モーションVMD/VPD", u"調整対象モーションVMD/VPDファイルを開く", ("vmd", "vpd"), wx.FLP_DEFAULT_STYLE, \
                                                           u"調整したいモーションのVMD/VPDパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。\n{0}".format(able_aster_toottip), \
-                                                          file_model_spacer=8, title_parts_ctrl=None, file_histories_key="vmd", is_change_output=True, is_aster=True, is_save=False, set_no=set_no)
+                                                          file_model_spacer=35, title_parts_ctrl=None, file_histories_key="vmd", is_change_output=True, is_aster=True, is_save=False, set_no=set_no)
         self.set_sizer.Add(self.motion_vmd_file_ctrl.sizer, 1, wx.EXPAND, 0)
 
-        # 作成元の代替モデルFLG
-        substitute_model_flg_ctrl = wx.CheckBox(panel, wx.ID_ANY, u"代替モデル", wx.DefaultPosition, wx.DefaultSize, 0)
-        substitute_model_flg_ctrl.SetToolTip(u"チェックを入れると、センターや上半身などの細かいスタンス補正をスキップできます。")
-        substitute_model_flg_ctrl.Bind(wx.EVT_CHECKBOX, self.set_output_vmd_path)
+        # 作成元のスタンス詳細再現FLG
+        detail_stance_flg_ctrl = wx.CheckBox(panel, wx.ID_ANY, u"スタンス追加補正", wx.DefaultPosition, wx.DefaultSize, 0)
+        detail_stance_flg_ctrl.SetToolTip(u"チェックを入れると、細かいスタンス補正を追加で行う事ができます。\n対象：センター・上半身・肩・つま先")
+        detail_stance_flg_ctrl.Bind(wx.EVT_CHECKBOX, self.set_output_vmd_path)
 
         # 作成元PMXファイルコントロール
         self.org_model_file_ctrl = HistoryFilePickerCtrl(frame, panel, u"モーション作成元モデルPMX", u"モーション作成元モデルPMXファイルを開く", ("pmx"), wx.FLP_DEFAULT_STYLE, \
                                                          u"モーション作成に使用されたモデルのPMXパスを指定してください。\n精度は落ちますが、類似したサイズ・ボーン構造のモデルでも代用できます。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。", \
-                                                         file_model_spacer=2, title_parts_ctrl=substitute_model_flg_ctrl, file_histories_key="org_pmx", is_change_output=False, is_aster=False, \
+                                                         file_model_spacer=1, title_parts_ctrl=detail_stance_flg_ctrl, file_histories_key="org_pmx", is_change_output=False, is_aster=False, \
                                                          is_save=False, set_no=set_no)
         self.set_sizer.Add(self.org_model_file_ctrl.sizer, 1, wx.EXPAND, 0)
 
@@ -54,7 +54,7 @@ class SizingFileSet():
         # 変換先PMXファイルコントロール
         self.rep_model_file_ctrl = HistoryFilePickerCtrl(frame, panel, u"モーション変換先モデルPMX", u"モーション変換先モデルPMXファイルを開く", ("pmx"), wx.FLP_DEFAULT_STYLE, \
                                                          u"実際にモーションを読み込ませたいモデルのPMXパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。", \
-                                                         file_model_spacer=1, title_parts_ctrl=twist_flg_ctrl, file_histories_key="rep_pmx", is_change_output=True, is_aster=False, \
+                                                         file_model_spacer=8, title_parts_ctrl=twist_flg_ctrl, file_histories_key="rep_pmx", is_change_output=True, is_aster=False, \
                                                          is_save=False, set_no=set_no)
         self.set_sizer.Add(self.rep_model_file_ctrl.sizer, 1, wx.EXPAND, 0)
 
@@ -148,6 +148,7 @@ class SizingFileSet():
                     # 1件あればOK
                     break
 
+        for k in motion.morphs.keys():
             morph_fnos = motion.get_morph_fnos(k)
             for fno in morph_fnos:
                 if motion.morphs[k][fno].ratio != 0:
@@ -208,6 +209,7 @@ class SizingFileSet():
             self.rep_model_file_ctrl.title_parts_ctrl.GetValue(),
             self.frame.arm_panel_ctrl.arm_process_flg_avoidance.GetValue(),
             self.frame.arm_panel_ctrl.arm_process_flg_alignment.GetValue(),
+            (self.set_no in self.frame.morph_panel_ctrl.morph_set_dict and self.frame.morph_panel_ctrl.morph_set_dict[self.set_no].is_set_morph),
             self.output_vmd_file_ctrl.file_ctrl.GetPath(), is_force)
 
         self.output_vmd_file_ctrl.file_ctrl.SetPath(output_vmd_path)

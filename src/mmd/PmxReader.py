@@ -237,6 +237,7 @@ class PmxReader():
                     sphere_mode=self.read_int(1),
                     toon_sharing_flag=self.read_int(1)
                 )
+                material.index = material_idx
 
                 if material.toon_sharing_flag == 0:
                     material.toon_texture_index = self.read_texture_index_size()
@@ -248,6 +249,7 @@ class PmxReader():
                 material.vertex_count = self.read_int(4)
 
                 pmx.materials[material.name] = material
+                pmx.material_indexes[material.index] = material.name
             logger.test("len(materials): %s", len(pmx.materials))
 
             logger.info("-- PMX 材質読み込み完了")

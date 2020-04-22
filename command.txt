@@ -1,9 +1,11 @@
-conda create -n vmdsizing_np pip python=3.7
+conda create -n vmdsizing_np pip python=3.8
 
-pip install numpy wxPython numpy-quaternion
+pip install numpy
+pip install wxPython 
+pip install numpy-quaternion
 pip install bezier
-pip install pypiwin32
 pip install multiprocessing-logging
+pip install pypiwin32
 
 https://code.woboq.org/qt5/qtbase/src/gui/math3d/
 
@@ -14,7 +16,7 @@ https://code.woboq.org/qt5/qtbase/src/gui/math3d/
 https://qiita.com/kjmatu/items/d9299651980e9827e891
 
 set CONDA_FORCE_32BIT=1
-conda create -n vmdsizing_np32 pip python=3.7
+conda create -n vmdsizing_np32 pip python=3.8
 
 activate vmdsizing_np32
 
@@ -25,16 +27,13 @@ Type "help", "copyright", "credits" or "license" for more information.
 
 set CONDA_FORCE_32BIT=
 
-pip install numpy wxPython numpy-quaternion
-pip install pyinstaller
-
 --------------------------
 [64bit]
 
-conda create -n vmdsizing_np64 pip python=3.7
+conda create -n vmdsizing_np64_2 pip python=3.8
 
-pip install numpy wxPython numpy-quaternion pyinstaller
+pip install pyinstaller
 
-extra-dllの中身のdllを親ディレクトリに配置（下階層だと見つからないため）
+C:\Development\Anaconda3\envs\vmdsizing_np64\Lib\site-packages\bezier\extra-dllの中身のdllを親ディレクトリに配置（下階層だと見つからないため）
 
 --------------------------

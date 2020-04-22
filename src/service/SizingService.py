@@ -5,11 +5,14 @@ import logging
 import os
 from pathlib import Path
 from multiprocessing_logging import install_mp_handler
+import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
 
 from mmd.VmdWriter import VmdWriter
 from module.MOptions import MOptions
 from service.parts.MoveService import MoveService
 from service.parts.StanceService import StanceService
+from service.parts.MorphService import MorphService
 from utils import MServiceUtils
 from utils.MException import SizingException
 from utils.MLogger import MLogger # noqa
@@ -36,8 +39,8 @@ class SizingService():
                                         trace_model=os.path.basename(data_set.org_model.path), model_name=data_set.org_model.name) # noqa
                 service_data_txt = "{service_data_txt}　　変換先モデル: {replace_model} ({model_name})\n".format(service_data_txt=service_data_txt,
                                         replace_model=os.path.basename(data_set.rep_model.path), model_name=data_set.rep_model.name) # noqa
-                service_data_txt = "{service_data_txt}　　代替モデル有無: {substitute_model_flg}\n".format(service_data_txt=service_data_txt,
-                                        substitute_model_flg=data_set.substitute_model_flg) # noqa
+                service_data_txt = "{service_data_txt}　　スタンス追加補正有無: {detail_stance_flg}\n".format(service_data_txt=service_data_txt,
+                                        detail_stance_flg=data_set.detail_stance_flg) # noqa
                 service_data_txt = "{service_data_txt}　　捩り分散有無: {twist_flg}".format(service_data_txt=service_data_txt,
                                         twist_flg=data_set.twist_flg) # noqa
 
@@ -59,22 +62,43 @@ class SizingService():
             # スタンス補正
             result = StanceService(self.options).execute() and result
 
-            # # 最後に全キーフレで繋げるのを除去
-            # if self.options.logging_level != MLogger.FULL and self.options.logging_level != MLogger.DEBUG_FULL:
-            #     # Poolに渡すリスト
-            #     executor_args = {"data_set_idx": [], "bone_name": []}
+            # モーフ置換
+            result = MorphService(self.options).execute() and result
 
-            #     for data_set_idx, data_set in enumerate(self.options.data_set_list):
-            #         logger.info("不要キー削除　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
-                    
-            #         for bone_name in ["右腕", "右腕捩", "右ひじ", "右手捩", "右手首", "左腕", "左腕捩", "左ひじ", "左手捩", "左手首"]:
-            #             executor_args["data_set_idx"].append(data_set_idx)
-            #             executor_args["bone_name"].append(bone_name)
+            # 最後に全キーフレで繋げるのを除去
+            if self.options.logging_level != MLogger.FULL and self.options.logging_level != MLogger.DEBUG_FULL:
+                futures = []
+                with ThreadPoolExecutor(thread_name_prefix="smooth") as executor:
+                    for data_set_idx, data_set in enumerate(self.options.data_set_list):
+                        if data_set.full_arms:
+                            logger.info("不要キー削除【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
+                            
+                            for bone_name in ["左腕", "左腕捩", "左ひじ", "左手捩", "左手首", "右腕", "右腕捩", "右ひじ", "右手捩", "右手首"]:
+                                # 読み込んだ時のキーフレのみを対象とする
+                                fnos = data_set.motion.get_bone_fnos(bone_name, is_read=True)
+                                if len(fnos) < 2:
+                                    # 前後がない場合、全件キーフレ
+                                    all_fnos = data_set.motion.get_bone_fnos(bone_name)
+                                    fnos = [all_fnos[0], all_fnos[-1]]
 
-            #     # 並列処理
-            #     results = self.options.executor.map(self.remove_unnecessary_bf_pool, executor_args["data_set_idx"], executor_args["bone_name"])
-            #     for r in results:
-            #         pass
+                                prev_sep_fno = 0
+                                log_target_idxs = []
+                                for fno_idx, fno in enumerate(data_set.motion.get_bone_fnos(bone_name)):
+                                    if fno // 500 > prev_sep_fno:
+                                        log_target_idxs.append(fno)
+                                        prev_sep_fno = fno // 500
+                                log_target_idxs.append(fnos[-1])
+
+                                for start_fno, end_fno in zip(fnos[:-1], fnos[1:]):
+                                    futures.append(executor.submit(self.remove_unnecessary_bf_pool_parts, data_set_idx, bone_name, start_fno, end_fno, log_target_idxs))
+                concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
+
+                for f in futures:
+                    result = f.result() and result
+                
+                for data_set_idx, data_set in enumerate(self.options.data_set_list):
+                    if data_set.full_arms:
+                        logger.info(" 不要キー削除:終了【No.%s】", data_set_idx + 1)
 
             for data_set_idx, data_set in enumerate(self.options.data_set_list):
                 # 実行後、出力ファイル存在チェック
@@ -85,9 +109,9 @@ class SizingService():
                     Path(data_set.output_vmd_path).resolve(True)
 
                     if result:
-                        logger.info("【No.%s】 変換出力完了: %s", (data_set_idx + 1), os.path.basename(data_set.output_vmd_path), decoration=MLogger.DECORATION_BOX, title="サイジング成功")
+                        logger.info("【No.%s】 変換出力終了: %s", (data_set_idx + 1), os.path.basename(data_set.output_vmd_path), decoration=MLogger.DECORATION_BOX, title="サイジング成功")
                     else:
-                        logger.warning("【No.%s】 変換出力完了: %s\n※サイジングに失敗している箇所があります。", (data_set_idx + 1), os.path.basename(data_set.output_vmd_path), decoration=MLogger.DECORATION_BOX, title="サイジング成功")
+                        logger.warning("【No.%s】 変換出力終了: %s\n※サイジングに失敗している箇所があります。", (data_set_idx + 1), os.path.basename(data_set.output_vmd_path), decoration=MLogger.DECORATION_BOX, title="サイジング成功")
 
                 except FileNotFoundError as fe:
                     logger.error("【No.%s】出力VMDファイルが正常に作成されなかったようです。\nパスを確認してください。%s\n\n%s", (data_set_idx + 1), data_set.output_vmd_path, fe.message, decoration=MLogger.DECORATION_BOX)
@@ -100,9 +124,17 @@ class SizingService():
         finally:
             logging.shutdown()
 
-    # 不要なbfを削除する
-    def remove_unnecessary_bf_pool(self, data_set_idx: int, bone_name: str):
-        data_set = self.options.data_set_list[data_set_idx]
-        data_set.motion.remove_unnecessary_bf(data_set_idx + 1, bone_name, data_set.rep_model.bones[bone_name].getRotatable(), data_set.rep_model.bones[bone_name].getTranslatable())
-        logger.info(" 不要キー削除完了【No.%s - %s】", data_set_idx + 1, bone_name)
+    def remove_unnecessary_bf_pool_parts(self, data_set_idx: int, bone_name: str, start_fno: int, end_fno: int, log_target_idxs: list):
+        try:
+            data_set = self.options.data_set_list[data_set_idx]
+            data_set.motion.remove_unnecessary_bf(data_set_idx + 1, bone_name, start_fno, end_fno, \
+                                                  data_set.rep_model.bones[bone_name].getRotatable(), data_set.rep_model.bones[bone_name].getTranslatable(), \
+                                                  (end_fno in log_target_idxs))
+
+            return True
+        except SizingException:
+            return False
+        except Exception as e:
+            logger.error("サイジング処理が意図せぬエラーで終了しました。", e)
+            return False
 

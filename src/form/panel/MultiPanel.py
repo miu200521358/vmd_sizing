@@ -6,7 +6,7 @@ import wx.lib.newevent
 from form.panel.BasePanel import BasePanel
 from form.parts.SizingFileSet import SizingFileSet
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
-from utils import MFormUtils, MFileUtils # noqa
+from utils import MFileUtils # noqa
 from utils.MLogger import MLogger # noqa
 
 logger = MLogger(__name__)

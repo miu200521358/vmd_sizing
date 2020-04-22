@@ -23,10 +23,11 @@ class BaseFilePickerCtrl():
         ("vmd", "vpd"): u"VMD/VPDファイル (*.vmd, *.vpd)|*.vmd;*.vpd|すべてのファイル (*.*)|*.*",
         ("pmx"): u"PMXファイル (*.pmx)|*.pmx|すべてのファイル (*.*)|*.*",
         ("vmd"): u"VMDファイル (*.vmd)|*.vmd|すべてのファイル (*.*)|*.*",
+        ("csv"): u"CSVファイル (*.csv)|*.csv|すべてのファイル (*.*)|*.*",
     }
 
     def __init__(self, frame, parent, title, message, file_type, style, tooltip, file_model_spacer=0, \
-                 title_parts_ctrl=None, file_parts_ctrl=None, is_change_output=False, is_aster=False, is_save=False, set_no=0):
+                 title_parts_ctrl=None, file_parts_ctrl=None, is_change_output=False, is_aster=False, is_save=False, set_no=0, required=True):
         super().__init__()
 
         self.frame = frame
@@ -42,6 +43,7 @@ class BaseFilePickerCtrl():
         self.is_aster = is_aster
         self.is_save = is_save
         self.set_no = set_no
+        self.required = required
         self.data = None
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
@@ -167,11 +169,15 @@ class BaseFilePickerCtrl():
             file_path = file_path_list[0]
         else:
             file_path = self.file_ctrl.GetPath()
-
+        
         if not self.is_save and not os.path.exists(file_path):
-            logger.error("{0}{1}が見つかりませんでした。\n入力パス: {2}".format(
-                display_set_no, self.title, self.file_ctrl.GetPath()), decoration=MLogger.DECORATION_BOX)
-            return False
+            if self.required:
+                logger.error("{0}{1}が見つかりませんでした。\n入力パス: {2}".format(
+                    display_set_no, self.title, self.file_ctrl.GetPath()), decoration=MLogger.DECORATION_BOX)
+                return False
+            else:
+                # 任意の場合、ファイルパスがなければスルー
+                return True
 
         if not self.is_save and not os.path.isfile(file_path):
             logger.error("{0}{1}が正常なファイルとして見つかりませんでした。\n入力パス: {2}".format(
@@ -216,6 +222,9 @@ class BaseFilePickerCtrl():
             return False
 
         return True
+    
+    def path(self):
+        return self.file_ctrl.GetPath()
 
     # ファイルセットからの読み込み処理
     def load_from_set(self, target, results):
@@ -304,7 +313,7 @@ class FileModelCtrl():
         self.picker = picker
         self.title = title
         self.set_no = set_no
-        self.spacer_ctrl = wx.StaticText(parent, wx.ID_ANY, "".join(["　" for n in range(spacer_cnt)]))
+        self.spacer_ctrl = wx.StaticText(parent, wx.ID_ANY, "".join([" " for n in range(spacer_cnt)]))
 
         width = 350 if self.set_no == 1 else 250
 

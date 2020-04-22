@@ -2,7 +2,6 @@
 #
 import os
 import argparse
-from concurrent.futures import ThreadPoolExecutor
 
 from mmd.PmxReader import PmxReader
 from mmd.VmdReader import VmdReader
@@ -17,12 +16,11 @@ logger = MLogger(__name__)
 
 class MOptions():
 
-    def __init__(self, version_name, logging_level, data_set_list, monitor, executor, is_file, outout_datetime):
+    def __init__(self, version_name, logging_level, data_set_list, monitor, is_file, outout_datetime):
         self.version_name = version_name
         self.logging_level = logging_level
         self.data_set_list = data_set_list
         self.monitor = monitor
-        self.executor = executor
         self.is_file = is_file
         self.outout_datetime = outout_datetime
     
@@ -31,7 +29,7 @@ class MOptions():
         # まず一番小さいXZ比率と一番大きいXZ比率を取得する
         min_xz_ratio = 99999999999
         max_xz_ratio = -99999999999
-        for data_set in self.data_set_list:
+        for data_set_idx, data_set in enumerate(self.data_set_list):
             if data_set.original_xz_ratio < min_xz_ratio:
                 min_xz_ratio = data_set.original_xz_ratio
             
@@ -46,7 +44,7 @@ class MOptions():
 
         log_txt = "足の長さの比率 ---------\n"
 
-        for n, data_set in enumerate(self.data_set_list):
+        for data_set_idx, data_set in enumerate(self.data_set_list):
             if len(self.data_set_list) > 1:
                 # XZ比率は合計から導き出した比率
                 data_set.xz_ratio = total_xz_ratio
@@ -56,17 +54,17 @@ class MOptions():
                 data_set.xz_ratio = data_set.original_xz_ratio
                 data_set.y_ratio = data_set.original_y_ratio
 
-            log_txt = "{0}【No.{1}】　xz: {2}, y: {3} (元: xz: {4})\n".format(log_txt, (n + 1), data_set.xz_ratio, data_set.y_ratio, data_set.original_xz_ratio)
+            log_txt = "{0}【No.{1}】　xz: {2}, y: {3} (元: xz: {4})\n".format(log_txt, (data_set_idx + 1), data_set.xz_ratio, data_set.y_ratio, data_set.original_xz_ratio)
 
         logger.info(log_txt)
 
     @classmethod
-    def parse(cls, version_name: str, executor: ThreadPoolExecutor):
+    def parse(cls, version_name: str):
         parser = argparse.ArgumentParser()
         parser.add_argument("--motion_path", required=True, type=(lambda x: list(map(str, x.split(';')))))
         parser.add_argument("--org_model_path", required=True, type=(lambda x: list(map(str, x.split(';')))))
         parser.add_argument("--rep_model_path", required=True, type=(lambda x: list(map(str, x.split(';')))))
-        parser.add_argument("--substitute_model_flg", required=True, type=(lambda x: list(map(int, x.split(';')))))
+        parser.add_argument("--detail_stance_flg", required=True, type=(lambda x: list(map(int, x.split(';')))))
         parser.add_argument("--twist_flg", required=True, type=(lambda x: list(map(int, x.split(';')))))
         parser.add_argument("--arm_process_flg_avoidance", required=True, type=(lambda x: list(map(int, x.split(';')))))
         parser.add_argument("--arm_process_flg_alignment", required=True, type=(lambda x: list(map(int, x.split(';')))))
@@ -81,8 +79,8 @@ class MOptions():
 
         try:
             data_set_list = []
-            for set_no, (motion_path, org_model_path, rep_model_path, substitute_model_flg_val, twist_flg_val, arm_process_flg_avoidance_val, arm_process_flg_alignment_val) in enumerate( \
-                zip(args.motion_path, args.org_model_path, args.rep_model_path, args.substitute_model_flg, args.twist_flg, args.arm_process_flg_avoidance, args.arm_process_flg_alignment)): # noqa
+            for set_no, (motion_path, org_model_path, rep_model_path, detail_stance_flg_val, twist_flg_val, arm_process_flg_avoidance_val, arm_process_flg_alignment_val) in enumerate( \
+                zip(args.motion_path, args.org_model_path, args.rep_model_path, args.detail_stance_flg, args.twist_flg, args.arm_process_flg_avoidance, args.arm_process_flg_alignment)): # noqa
 
                 display_set_no = "【No.{0}】".format(set_no + 1)
 
@@ -127,21 +125,22 @@ class MOptions():
 
                 logger.info("%s モーション変換先モデルPMXファイル 読み込み成功 %s", display_set_no, os.path.basename(rep_model_path))
 
-                substitute_model_flg = True if substitute_model_flg_val == 1 else False
+                detail_stance_flg = True if detail_stance_flg_val == 1 else False
                 twist_flg = True if twist_flg_val == 1 else False
                 arm_process_flg_avoidance = True if arm_process_flg_avoidance_val == 1 else False
                 arm_process_flg_alignment = True if arm_process_flg_alignment_val == 1 else False
 
                 # 出力ファイルパス
-                output_vmd_path = MFileUtils.get_output_vmd_path(motion_path, rep_model_path, substitute_model_flg, twist_flg, arm_process_flg_avoidance, arm_process_flg_alignment, "", True)
+                output_vmd_path = MFileUtils.get_output_vmd_path(motion_path, rep_model_path, detail_stance_flg, twist_flg, arm_process_flg_avoidance, arm_process_flg_alignment, False, "", True)
 
                 data_set = MOptionsDataSet(
                     motion,
                     org_model,
                     rep_model,
                     output_vmd_path,
-                    substitute_model_flg,
-                    twist_flg
+                    detail_stance_flg,
+                    twist_flg,
+                    []
                 )
 
                 data_set_list.append(data_set)
@@ -151,7 +150,6 @@ class MOptions():
                 logging_level=args.verbose, \
                 data_set_list=data_set_list, \
                 monitor=None, \
-                executor=executor, \
                 is_file=True, \
                 outout_datetime=logger.outout_datetime)
 
@@ -164,15 +162,17 @@ class MOptions():
 
 class MOptionsDataSet():
 
-    def __init__(self, motion, org_model, rep_model, output_vmd_path, substitute_model_flg, twist_flg):
+    def __init__(self, motion, org_model, rep_model, output_vmd_path, detail_stance_flg, twist_flg, morph_list):
         self.motion = motion
         self.org_model = org_model
         self.rep_model = rep_model
         self.output_vmd_path = output_vmd_path
-        self.substitute_model_flg = substitute_model_flg
+        self.detail_stance_flg = detail_stance_flg
         self.twist_flg = twist_flg
+        self.morph_list = morph_list
         self.org_motion = self.motion.copy()
         self.test_params = None
+        self.full_arms = False
 
         # 本来の足IKの比率
         self.original_xz_ratio = 1
@@ -189,4 +189,16 @@ class MCsvOptions():
         self.version_name = version_name
         self.logging_level = logging_level
         self.motion = motion
+    
+
+class MVmdOptions():
+
+    def __init__(self, version_name, logging_level, bone_csv_path, morph_csv_path, camera_csv_path):
+        self.version_name = version_name
+        self.logging_level = logging_level
+        self.bone_csv_path = bone_csv_path
+        self.morph_csv_path = morph_csv_path
+        self.camera_csv_path = camera_csv_path
+    
+
     

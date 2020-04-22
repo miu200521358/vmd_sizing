@@ -139,7 +139,6 @@ class MServiceUtilsTest(unittest.TestCase):
         
         # ---------
         add_qs = MServiceUtils.calc_relative_rotation(model, links, motion, 414)
-        self.assertEqual(16, len(add_qs))
 
         # SIZING_ROOT_BONE
         self.assertAlmostEqual(add_qs[0].toEulerAngles4MMD().x(), 0, delta=0.1)
@@ -211,15 +210,20 @@ class MServiceUtilsTest(unittest.TestCase):
         self.assertAlmostEqual(add_qs[13].toEulerAngles4MMD().y(), 48.3, delta=0.1)
         self.assertAlmostEqual(add_qs[13].toEulerAngles4MMD().z(), 14.0, delta=0.1)
 
+        # 右ひじ下（スルー）
+        self.assertAlmostEqual(add_qs[14].toEulerAngles4MMD().x(), 0, delta=0.1)
+        self.assertAlmostEqual(add_qs[14].toEulerAngles4MMD().y(), 0, delta=0.1)
+        self.assertAlmostEqual(add_qs[14].toEulerAngles4MMD().z(), 0, delta=0.1)
+
         # 右手捩
-        self.assertAlmostEqual(add_qs[14].toEulerAngles4MMD().x(), -7.1, delta=0.1)
-        self.assertAlmostEqual(add_qs[14].toEulerAngles4MMD().y(), 5.4, delta=0.1)
-        self.assertAlmostEqual(add_qs[14].toEulerAngles4MMD().z(), -0.2, delta=0.1)
+        self.assertAlmostEqual(add_qs[15].toEulerAngles4MMD().x(), -7.1, delta=0.1)
+        self.assertAlmostEqual(add_qs[15].toEulerAngles4MMD().y(), 5.4, delta=0.1)
+        self.assertAlmostEqual(add_qs[15].toEulerAngles4MMD().z(), -0.2, delta=0.1)
 
         # 右手首
-        self.assertAlmostEqual(add_qs[15].toEulerAngles4MMD().x(), 0, delta=0.1)
-        self.assertAlmostEqual(add_qs[15].toEulerAngles4MMD().y(), 0, delta=0.1)
-        self.assertAlmostEqual(add_qs[15].toEulerAngles4MMD().z(), -37.8, delta=0.1)
+        self.assertAlmostEqual(add_qs[16].toEulerAngles4MMD().x(), 0, delta=0.1)
+        self.assertAlmostEqual(add_qs[16].toEulerAngles4MMD().y(), 0, delta=0.1)
+        self.assertAlmostEqual(add_qs[16].toEulerAngles4MMD().z(), -37.8, delta=0.1)
 
     def test_calc_global_pos01(self):
         motion = VmdReader("D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/ドラマツルギー motion 配布用 moka/ドラマツルギー_0-500.vmd").read_data()
@@ -292,7 +296,7 @@ class MServiceUtilsTest(unittest.TestCase):
         
         # ---------
         pos_dic = MServiceUtils.calc_global_pos(model, links, motion, 420)
-        self.assertEqual(16, len(pos_dic.keys()))
+        # self.assertEqual(17, len(pos_dic.keys()))
 
         # SIZING_ROOT_BONE
         print(pos_dic["SIZING_ROOT_BONE"])

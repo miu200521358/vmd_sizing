@@ -3,9 +3,9 @@
 import math
 import numpy as np
 import struct
-from ctypes import Structure, c_bool, c_wchar_p, c_int
 import _pickle as cPickle
 
+from module.OneEuroFilter import OneEuroFilter
 from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from utils import MBezierUtils # noqa
 from utils.MLogger import MLogger
@@ -13,18 +13,17 @@ from utils.MLogger import MLogger
 logger = MLogger(__name__)
 
 
-class VmdBoneFrame(Structure):
-    _fields_ = [('name', c_wchar_p), ('fno', c_int), ('interpolation', c_int * 64), ('key', c_bool), ('read', c_bool)]
+class VmdBoneFrame():
 
-    def __init__(self, fno=0, name=''):
-        self.name = ascii(name)
-        self.bname = '' if not name else name.encode('cp932').decode('shift_jis').encode('shift_jis')[:15].ljust(15, b'\x00')
+    def __init__(self, fno=0):
+        self.name = ''
+        self.bname = ''
         self.fno = fno
         self.position = MVector3D()
         self.rotation = MQuaternion()
         self.org_position = MVector3D()
         self.org_rotation = MQuaternion()
-        self.set_interpolation([20, 20, 0, 0, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 20, 20, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 20, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 0, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 0, 0]) # noqa
+        self.interpolation = [20, 20, 0, 0, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 20, 20, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 20, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 0, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 0, 0] # noqa
         self.org_interpolation = [20, 20, 0, 0, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 20, 20, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 20, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 0, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 0, 0] # noqa
         # 登録対象であるか否か
         self.key = False
@@ -36,158 +35,22 @@ class VmdBoneFrame(Structure):
         self.bname = '' if not name else name.encode('cp932').decode('shift_jis').encode('shift_jis')[:15].ljust(15, b'\x00')
     
     def copy(self):
-        bf = VmdBoneFrame()
+        bf = VmdBoneFrame(self.fno)
         bf.name = self.name
         bf.bname = self.bname
-        bf.fno = self.fno
         bf.position = self.position.copy()
         bf.rotation = self.rotation.copy()
         bf.org_position = self.org_position.copy()
         bf.org_rotation = self.org_rotation.copy()
-        bf.set_interpolation(self.get_interpolation())
-        bf.org_interpolation = self.org_interpolation
+        bf.interpolation = cPickle.loads(cPickle.dumps(self.interpolation, -1))
         bf.key = self.key
         bf.read = self.read
 
         return bf
 
-    def get_interpolation(self):
-        return [
-            self.interpolation[0],
-            self.interpolation[1],
-            self.interpolation[2],
-            self.interpolation[3],
-            self.interpolation[4],
-            self.interpolation[5],
-            self.interpolation[6],
-            self.interpolation[7],
-            self.interpolation[8],
-            self.interpolation[9],
-            self.interpolation[10],
-            self.interpolation[11],
-            self.interpolation[12],
-            self.interpolation[13],
-            self.interpolation[14],
-            self.interpolation[15],
-            self.interpolation[16],
-            self.interpolation[17],
-            self.interpolation[18],
-            self.interpolation[19],
-            self.interpolation[20],
-            self.interpolation[21],
-            self.interpolation[22],
-            self.interpolation[23],
-            self.interpolation[24],
-            self.interpolation[25],
-            self.interpolation[26],
-            self.interpolation[27],
-            self.interpolation[28],
-            self.interpolation[29],
-            self.interpolation[30],
-            self.interpolation[31],
-            self.interpolation[32],
-            self.interpolation[33],
-            self.interpolation[34],
-            self.interpolation[35],
-            self.interpolation[36],
-            self.interpolation[37],
-            self.interpolation[38],
-            self.interpolation[39],
-            self.interpolation[40],
-            self.interpolation[41],
-            self.interpolation[42],
-            self.interpolation[43],
-            self.interpolation[44],
-            self.interpolation[45],
-            self.interpolation[46],
-            self.interpolation[47],
-            self.interpolation[48],
-            self.interpolation[49],
-            self.interpolation[50],
-            self.interpolation[51],
-            self.interpolation[52],
-            self.interpolation[53],
-            self.interpolation[54],
-            self.interpolation[55],
-            self.interpolation[56],
-            self.interpolation[57],
-            self.interpolation[58],
-            self.interpolation[59],
-            self.interpolation[60],
-            self.interpolation[61],
-            self.interpolation[62],
-            self.interpolation[63]
-        ]
-
-    def set_interpolation(self, values):
-        self.interpolation[0] = values[0]
-        self.interpolation[1] = values[1]
-        self.interpolation[2] = values[2]
-        self.interpolation[3] = values[3]
-        self.interpolation[4] = values[4]
-        self.interpolation[5] = values[5]
-        self.interpolation[6] = values[6]
-        self.interpolation[7] = values[7]
-        self.interpolation[8] = values[8]
-        self.interpolation[9] = values[9]
-        self.interpolation[10] = values[10]
-        self.interpolation[11] = values[11]
-        self.interpolation[12] = values[12]
-        self.interpolation[13] = values[13]
-        self.interpolation[14] = values[14]
-        self.interpolation[15] = values[15]
-        self.interpolation[16] = values[16]
-        self.interpolation[17] = values[17]
-        self.interpolation[18] = values[18]
-        self.interpolation[19] = values[19]
-        self.interpolation[20] = values[20]
-        self.interpolation[21] = values[21]
-        self.interpolation[22] = values[22]
-        self.interpolation[23] = values[23]
-        self.interpolation[24] = values[24]
-        self.interpolation[25] = values[25]
-        self.interpolation[26] = values[26]
-        self.interpolation[27] = values[27]
-        self.interpolation[28] = values[28]
-        self.interpolation[29] = values[29]
-        self.interpolation[30] = values[30]
-        self.interpolation[31] = values[31]
-        self.interpolation[32] = values[32]
-        self.interpolation[33] = values[33]
-        self.interpolation[34] = values[34]
-        self.interpolation[35] = values[35]
-        self.interpolation[36] = values[36]
-        self.interpolation[37] = values[37]
-        self.interpolation[38] = values[38]
-        self.interpolation[39] = values[39]
-        self.interpolation[40] = values[40]
-        self.interpolation[41] = values[41]
-        self.interpolation[42] = values[42]
-        self.interpolation[43] = values[43]
-        self.interpolation[44] = values[44]
-        self.interpolation[45] = values[45]
-        self.interpolation[46] = values[46]
-        self.interpolation[47] = values[47]
-        self.interpolation[48] = values[48]
-        self.interpolation[49] = values[49]
-        self.interpolation[50] = values[50]
-        self.interpolation[51] = values[51]
-        self.interpolation[52] = values[52]
-        self.interpolation[53] = values[53]
-        self.interpolation[54] = values[54]
-        self.interpolation[55] = values[55]
-        self.interpolation[56] = values[56]
-        self.interpolation[57] = values[57]
-        self.interpolation[58] = values[58]
-        self.interpolation[59] = values[59]
-        self.interpolation[60] = values[60]
-        self.interpolation[61] = values[61]
-        self.interpolation[62] = values[62]
-        self.interpolation[63] = values[63]
-        
     def __str__(self):
-        return "<VmdBoneFrame name:{0}, fno:{1}, position:{2}, rotation:{3}, euler:{4}, interpolation: {5}, key:{6}".format( \
-            self.name, self.fno, self.position, self.rotation, self.rotation.toEulerAngles4MMD(), self.interpolation, self.key)
+        return "<VmdBoneFrame name:{0}, fno:{1}, position:{2}, rotation:{3}, euler:{4}, key:{5}, read:{6}, interpolation: {7}>".format( \
+            self.name, self.fno, self.position, self.rotation, self.rotation.toEulerAngles4MMD(), self.key, self.read, self.interpolation)
 
     def write(self, fout):
         if not self.bname:
@@ -202,7 +65,7 @@ class VmdBoneFrame(Structure):
         fout.write(struct.pack('<f', float(v.y())))
         fout.write(struct.pack('<f', float(v.z())))
         fout.write(struct.pack('<f', float(v.w())))
-        fout.write(bytearray([int(min(127, max(0, x))) for x in self.get_interpolation()]))
+        fout.write(bytearray([int(min(127, max(0, x))) for x in self.interpolation]))
 
 
 class VmdMorphFrame():
@@ -219,6 +82,10 @@ class VmdMorphFrame():
         fout.write(struct.pack('<L', int(self.fno)))
         fout.write(struct.pack('<f', float(self.ratio)))
 
+    def set_name(self, name):
+        self.name = name
+        self.bname = '' if not name else name.encode('cp932').decode('shift_jis').encode('shift_jis')[:15].ljust(15, b'\x00')
+    
     def __str__(self):
         return "<VmdMorphFrame name:{0}, fno:{1}, ratio:{2}".format(self.name, self.fno, self.ratio)
 
@@ -342,9 +209,9 @@ class VmdMotion():
             if len(fnos) > 2:
                 start_fno = fnos[0]     # 開始フレーム番号
                 fno = fnos[1]           # 次のフレーム番号
-                prev_bf = self.calc_bf(bone_name, start_fno)    # 繋ぐ対象のbf
                 fill_bfs = []
                 while fno < fnos[-1]:
+                    prev_bf = self.calc_bf(bone_name, start_fno)    # 繋ぐ元のbf
                     now_bf = self.calc_bf(bone_name, fno)           # 繋ぐ対象のbf
                     next_bf = self.calc_bf(bone_name, fno + 1)      # 繋ぐ先のbf
 
@@ -379,8 +246,8 @@ class VmdMotion():
                         fill_bfs = []       # 中間キーをクリア
                         fno = fno + 1       # 現在フレームを次に移す
 
-                    if fno // 500 > prev_sep_fno:
-                        logger.info("-- %sフレーム目完了(%s％)【No.%s - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
+                    if fno // 500 > prev_sep_fno and fnos[-1] > 0:
+                        logger.info("-- %sフレーム目:終了(%s％)【No.%s - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
                         prev_sep_fno = fno // 500
 
         # 保持したのを登録しなおし
@@ -388,57 +255,101 @@ class VmdMotion():
             self.bones[bone_name][bf.fno] = bf
     
     # 指定ボーンが跳ねてたりするのを回避
-    def smooth_bf(self, data_set_no: int, bone_name: str, is_rot: bool, is_mov: bool, limit_degrees: float):
-        # キーフレ（全部）を取得する
-        fnos = self.get_bone_fnos(bone_name)
-        prev_sep_fno = 0
+    def smooth_bf(self, data_set_no: int, bone_name: str, start_fno: int, end_fno: int, is_rot: bool, is_mov: bool, limit_degrees: float, is_log: bool):
+        # キーフレを取得する
+        fnos = self.get_bone_fnos(bone_name, start_fno=start_fno)
         if len(fnos) > 2:
-            for fno in fnos[1:]:
-                for offset in range(0, 4):
+            for fno in range(start_fno, end_fno):
+                for offset in range(0, 3):
                     prev_bf = self.calc_bf(bone_name, fno - 1)
                     now_bf = self.calc_bf(bone_name, fno + offset)
-                    next_bf = self.calc_bf(bone_name, fno + 4)
+                    next_bf = self.calc_bf(bone_name, fno + 3)
 
-                    if not now_bf.read:
-                        # 読み込みキーではない場合、円滑化を試す
-                        
-                        if is_rot:
-                            # 前後の内積
-                            prev_next_dot = MQuaternion.dotProduct(prev_bf.rotation, next_bf.rotation)
-                            # 自分と後の内積
-                            now_next_dot = MQuaternion.dotProduct(now_bf.rotation, next_bf.rotation)
-                            # 内積差分
-                            diff = np.abs(np.diff([prev_next_dot, now_next_dot]))
-                            logger.test("set: %s, %s, f: %s, offset: %s, diff: %s, prev_next_dot: %s, now_next_dot: %s", data_set_no, bone_name, fno, offset, diff, prev_next_dot, now_next_dot)
+                    if is_rot:
+                        # 前後の内積
+                        prev_next_dot = MQuaternion.dotProduct(prev_bf.rotation, next_bf.rotation)
+                        # 自分と後の内積
+                        now_next_dot = MQuaternion.dotProduct(now_bf.rotation, next_bf.rotation)
+                        # 内積差分
+                        diff = np.abs(np.diff([prev_next_dot, now_next_dot]))
+                        logger.test("set: %s, %s, f: %s, offset: %s, diff: %s, prev_next_dot: %s, now_next_dot: %s", data_set_no, bone_name, fno, offset, diff, prev_next_dot, now_next_dot)
 
-                            # 前後と自分の内積の差が一定以上の場合、円滑化
-                            if prev_next_dot > now_next_dot and diff > 1 - math.cos(math.radians(limit_degrees)):
-                                logger.info_debug("★ 円滑化 set: %s, %s, f: %s, offset: %s, diff: %s, prev_next_dot: %s, now_next_dot: %s", \
-                                                  data_set_no, bone_name, fno, offset, diff, prev_next_dot, now_next_dot)
+                        # 前後と自分の内積の差が一定以上の場合、円滑化
+                        if prev_next_dot > now_next_dot and diff > 1 - math.cos(math.radians(limit_degrees)):
+                            logger.debug("★ 円滑化 set: %s, %s, f: %s, offset: %s, diff: %s, prev_next_dot: %s, now_next_dot: %s", \
+                                         data_set_no, bone_name, fno, offset, diff, prev_next_dot, now_next_dot)
 
-                                now_bf.rotation = MQuaternion.slerp(prev_bf.rotation, next_bf.rotation, ((now_bf.fno - prev_bf.fno) / (next_bf.fno - prev_bf.fno)))
+                            now_bf.rotation = MQuaternion.slerp(prev_bf.rotation, next_bf.rotation, ((now_bf.fno - prev_bf.fno) / (next_bf.fno - prev_bf.fno)))
 
-                if fno // 500 > prev_sep_fno:
-                    logger.info("-- %sフレーム目完了(%s％)【No.%s - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
-                    prev_sep_fno = fno // 500
+        if is_log and fnos[-1] > 0:
+            logger.info("-- %sフレーム目:終了(%s％)【No.%s - %s】", end_fno, round((end_fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
 
-    # 指定ボーンの不要キーを削除する
-    def remove_unnecessary_bf(self, data_set_no: int, bone_name: str, is_rot: bool, is_mov: bool):
-        # キーフレ（全部）を取得する
+    # フィルターをかける
+    def smooth_filter_bf(self, data_set_no: int, bone_name: str, is_rot: bool, is_mov: bool):
+
+        # フィルタパラメーター
+        config = {"freq": 30, "mincutoff": 0.3, "beta": 0.01, "dcutoff": 0.25}
+
+        # 移動用フィルタ
+        pxfilter = OneEuroFilter(**config)
+        pyfilter = OneEuroFilter(**config)
+        pzfilter = OneEuroFilter(**config)
+
+        # 回転用フィルタ
+        rxfilter = OneEuroFilter(**config)
+        ryfilter = OneEuroFilter(**config)
+        rzfilter = OneEuroFilter(**config)
+
         fnos = self.get_bone_fnos(bone_name)
         prev_sep_fno = 0
+
+        # 全区間をフィルタにかける
+        for fno in fnos:
+            now_bf = self.calc_bf(bone_name, fno)
+
+            if is_mov:
+                # 移動XYZそれぞれにフィルターをかける
+                px = pxfilter(now_bf.position.x(), now_bf.fno)
+                py = pyfilter(now_bf.position.y(), now_bf.fno)
+                pz = pzfilter(now_bf.position.z(), now_bf.fno)
+                now_bf.position = MVector3D(px, py, pz)
+            
+            if is_rot:
+                # 回転XYZそれぞれにフィルターをかける(オイラー角)
+                now_qq = now_bf.rotation
+
+                r = now_qq.toEulerAngles()
+                rx = rxfilter(r.x(), now_bf.fno)
+                ry = ryfilter(r.y(), now_bf.fno)
+                rz = rzfilter(r.z(), now_bf.fno)
+
+                # クォータニオンに戻して保持
+                new_qq = MQuaternion.fromEulerAngles(rx, ry, rz)
+                now_bf.rotation = new_qq
+
+            if fno // 500 > prev_sep_fno and fnos[-1] > 0:
+                logger.info("-- %sフレーム目:終了(%s％)【No.%s - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
+                prev_sep_fno = fno // 500
+
+    # 指定ボーンの不要キーを削除する
+    def remove_unnecessary_bf(self, data_set_no: int, bone_name: str, start_fno: int, end_fno: int, is_rot: bool, is_mov: bool, is_log: bool):
+        # キーフレ（開始フレ以降）を取得する
+        fnos = self.get_bone_fnos(bone_name, start_fno=start_fno)
+        logger.debug("remove_unnecessary_bf prev: %s, %s", bone_name, len(fnos))
+
         if len(fnos) > 2:
             start_fno = fnos[0]     # 開始フレーム番号
             fno = fnos[1]           # 次のフレーム番号
-            prev_bf = self.calc_bf(bone_name, start_fno)    # 繋ぐ対象のbf
             fill_bfs = []
-            while fno < fnos[-1]:
+            while fno < end_fno:
+                prev_bf = self.calc_bf(bone_name, start_fno)    # 繋ぐ元のbf
                 now_bf = self.calc_bf(bone_name, fno)           # 繋ぐ対象のbf
                 next_bf = self.calc_bf(bone_name, fno + 1)      # 繋ぐ先のbf
+                
+                # 読み込みキーではない場合、結合を試す
+                logger.test("now: %s", now_bf)
 
                 if not now_bf.read:
-                    # 読み込みキーではない場合、結合を試す
-                    
                     # 現在キーを追加
                     fill_bfs.append(now_bf)
 
@@ -446,9 +357,8 @@ class VmdMotion():
                         # 全ての補間曲線が繋ぐのに成功した場合、繋ぐ
                         logger.debug("fno: %s, %s, ○補間曲線結合", fno, bone_name)
 
-                        # nowキーを物理的に削除する
-                        if fno in self.bones[bone_name]:
-                            del self.bones[bone_name][fno]
+                        # nowキーをOFFにする
+                        self.bones[bone_name][fno].key = False
 
                         # startはそのままで、nowだけ動かす
                         fno = fno + 1       # 現在フレームを次に移す
@@ -459,14 +369,16 @@ class VmdMotion():
                         fill_bfs = []       # 中間キーをクリア
                         fno = fno + 1       # 現在フレームを次に移す
                 else:
+                    logger.debug("fno: %s, %s, ▲読み込みキー", fno, bone_name)
                     # 読み込み時のキーである場合、強制的に残す
                     start_fno = fno     # 開始を現在フレーム
                     fill_bfs = []       # 中間キーをクリア
-                    fno = fno + 1       # 現在フレームを次に移す
+                    fno = start_fno + 1       # 現在フレームを次に移す
 
-                if fno // 500 > prev_sep_fno:
-                    logger.info("-- %sフレーム目完了(%s％)【No.%s - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
-                    prev_sep_fno = fno // 500
+        if is_log and fnos[-1] > 0:
+            logger.info("-- %sフレーム目:終了(%s％)【No.%s - %s】", end_fno, round((end_fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
+
+        logger.debug("remove_unnecessary_bf after: %s, %s, all: %s", bone_name, len(self.get_bone_fnos(bone_name, is_key=True)), len(fnos))
 
     # 補間曲線込みでbfを結合できる場合、結合する
     def join_bf(self, prev_bf: VmdBoneFrame, fill_bfs: list, next_bf: VmdBoneFrame, is_rot: bool, is_mov: bool):
@@ -488,8 +400,10 @@ class VmdMotion():
             # 間がない場合
             rot_values = [prev_bf.rotation.calcTheata(next_bf.rotation)]    # 最初の変位
 
+        logger.debug("f: %s, %s, join: %s", prev_bf.fno, prev_bf.name, rot_values)
+
         # 結合したベジェ曲線
-        joined_rot_bzs = MBezierUtils.join_value_2_bezier(rot_values) if is_rot else True
+        joined_rot_bzs = MBezierUtils.join_value_2_bezier(prev_bf.fno, prev_bf.name, rot_values) if is_rot else True
 
         if joined_rot_bzs:
             # 結合できた場合、補間曲線をnextに設定
@@ -521,7 +435,7 @@ class VmdMotion():
     # https://www55.atwiki.jp/kumiho_k/pages/15.html
     # https://harigane.at.webry.info/201103/article_1.html
     def calc_bf(self, bone_name: str, fno: int, is_key=False, is_read=False, is_reset_interpolation=False):
-        fill_bf = VmdBoneFrame(fno=fno)
+        fill_bf = VmdBoneFrame(fno)
         fill_bf.set_name(bone_name)
 
         if bone_name not in self.bones:
@@ -555,12 +469,16 @@ class VmdMotion():
             # 番号より前があって、後のがない場合、前のをコピーして返す
             fill_bf = self.bones[bone_name][before_fnos[-1]].copy()
             fill_bf.fno = fno
+            fill_bf.key = False
+            fill_bf.read = False
             return fill_bf
         
         if len(before_fnos) == 0:
             # 番号より後があって、前がない場合、後のをコピーして返す
             fill_bf = self.bones[bone_name][after_fnos[0]].copy()
             fill_bf.fno = fno
+            fill_bf.key = False
+            fill_bf.read = False
             return fill_bf
 
         prev_bf = self.bones[bone_name][before_fnos[-1]]
@@ -741,19 +659,21 @@ class VmdMotion():
 
     # ボーンモーション：フレーム番号リスト
     def get_bone_fnos(self, *bone_names, **kwargs):
-        if not self.bones or self.motion_cnt == 0:
+        if not self.bones:
             return []
         
         # is_key: 登録対象のキーを探す
         # is_read: データ読み込み時のキーを探す
         is_key = True if "is_key" in kwargs and kwargs["is_key"] else False
         is_read = True if "is_read" in kwargs and kwargs["is_read"] else False
+        start_fno = kwargs["start_fno"] if "start_fno" in kwargs and kwargs["start_fno"] else 0
         
         # 条件に合致するフレーム番号を探す
         keys = []
         for bone_name in bone_names:
             if bone_name in self.bones:
-                keys.extend([x for x in self.bones[bone_name].keys() if (not is_key or (is_key and self.bones[bone_name][x].key)) and (not is_read or (is_read and self.bones[bone_name][x].read))])
+                keys.extend([x for x in self.bones[bone_name].keys() if self.bones[bone_name][x].fno >= start_fno and\
+                            (not is_key or (is_key and self.bones[bone_name][x].key)) and (not is_read or (is_read and self.bones[bone_name][x].read))])
         
         # 重複を除いた昇順フレーム番号リストを返す
         return sorted(list(set(keys)))
@@ -779,14 +699,14 @@ class VmdMotion():
 
     # モーフモーション：フレーム番号リスト
     def get_morph_fnos(self, morph_name: str):
-        if not self.morphs or self.morph_cnt == 0 or morph_name not in self.morphs:
+        if not self.morphs or morph_name not in self.morphs:
             return []
         
         return sorted([fno for fno in self.morphs[morph_name].keys()])
 
     # カメラモーション：フレーム番号リスト
     def get_camera_fnos(self):
-        if not self.cameras or self.camera_cnt == 0:
+        if not self.cameras:
             return []
         
         return sorted([fno for fno in self.cameras.keys()])
@@ -795,25 +715,27 @@ class VmdMotion():
     def get_bone_frames(self):
         total_bone_frames = []
 
-        for bone_name, bone_frames in self.bones.items():
-            if bone_name not in ["SIZING_ROOT_BONE", "頭頂", "右つま先実体", "左つま先実体", "右足底辺", "左足底辺"]:
-                # サイジング用ボーンは出力しない
-                fnos = self.get_bone_fnos(bone_name)
-                
-                if len(fnos) > 0:
-                    # 各ボーンの最終キーだけ先に登録
-                    total_bone_frames.append(bone_frames[fnos[-1]])
-        
-        for bone_name, bone_frames in self.bones.items():
-            if bone_name not in ["SIZING_ROOT_BONE", "頭頂", "右つま先実体", "左つま先実体", "右足底辺", "左足底辺"]:
-                # サイジング用ボーンは出力しない
-                fnos = self.get_bone_fnos(bone_name)
+        target_fnos = {}
 
-                if len(fnos) > 1:
-                    # キーフレを最後の一つ手前まで登録
-                    for fno in fnos[:-1]:
-                        if bone_frames[fno].key:
-                            total_bone_frames.append(bone_frames[fno])
+        for bone_name, bone_frames in self.bones.items():
+            if bone_name not in ["SIZING_ROOT_BONE", "頭頂", "右つま先実体", "左つま先実体", "右足底辺", "左足底辺", "右足底実体", "左足底実体", "右足ＩＫ底実体", "左足ＩＫ底実体", "右足IK親底実体", "左足IK親底実体", \
+                                 "首根元", "右腕下延長", "左腕下延長", "右腕垂直", "左腕垂直"]:
+                # サイジング用ボーンは出力しない
+                target_fnos[bone_name] = self.get_bone_fnos(bone_name, is_key=True)
+
+        for bone_name, fnos in target_fnos.items():
+            logger.debug("%s, %s", bone_name, target_fnos[bone_name])
+
+            if len(fnos) > 0:
+                # 各ボーンの最終キーだけ先に登録
+                total_bone_frames.append(self.bones[bone_name][fnos[-1]])
+        
+        for bone_name, fnos in target_fnos.items():
+            if len(fnos) > 1:
+                # キーフレを最後の一つ手前まで登録
+                for fno in fnos[:-1]:
+                    if self.bones[bone_name][fno].key:
+                        total_bone_frames.append(self.bones[bone_name][fno])
         
         return total_bone_frames
     

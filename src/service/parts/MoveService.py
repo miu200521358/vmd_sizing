@@ -2,13 +2,14 @@
 #
 import logging # noqa
 import numpy as np
-from itertools import repeat
 import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
 
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from module.MOptions import MOptions, MOptionsDataSet
 from utils import MUtils, MServiceUtils, MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
+from utils.MException import SizingException
 
 
 logger = MLogger(__name__)
@@ -19,58 +20,63 @@ class MoveService():
         self.options = options
 
     def execute(self):
-        for data_set_idx, data_set in enumerate(self.options.data_set_list):
-            if data_set.motion.motion_cnt <= 0:
-                # モーションデータが無い場合、処理スキップ
-                return True
+        futures = []
+        result = True
 
-            logger.info("移動補正　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
+        with ThreadPoolExecutor(thread_name_prefix="move") as executor:
+            for data_set_idx, data_set in enumerate(self.options.data_set_list):
+                if data_set.motion.motion_cnt <= 0:
+                    # モーションデータが無い場合、処理スキップ
+                    continue
 
-            # センターのY軸オフセットを計算
-            self.set_center_y_offset(data_set)
+                logger.info("移動補正　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
 
-            # センターのZ軸オフセットを計算
-            self.set_center_z_offset(data_set)
+                # センターのY軸オフセットを計算
+                self.set_center_y_offset(data_set)
 
-            # 足IKのオフセットを計算
-            self.set_leg_ik_offset(data_set)
+                # センターのZ軸オフセットを計算
+                self.set_center_z_offset(data_set)
 
-            # Poolに渡すリスト
-            executor_args = {"bone_name": [], "fno": [], "last_fno": []}
-            for bone_name in ["全ての親", "センター", "グルーブ", "右足IK親", "左足IK親", "右足ＩＫ", "左足ＩＫ", "右つま先ＩＫ", "左つま先ＩＫ"]:
-                if bone_name in data_set.motion.bones and bone_name in data_set.rep_model.bones and len(data_set.motion.bones[bone_name].keys()) > 0:
-                    fnos = data_set.motion.get_bone_fnos(bone_name)
-                    for fno in fnos:
-                        executor_args["bone_name"].append(bone_name)
-                        executor_args["fno"].append(fno)
-                        executor_args["last_fno"].append(fnos[-1])
+                # 足IKのオフセットを計算
+                self.set_leg_ik_offset(data_set)
 
-            # 並列処理
-            results = self.options.executor.map(self.adjust_move, repeat(data_set_idx), executor_args["bone_name"], executor_args["fno"], executor_args["last_fno"])
-            for r in results:
-                pass
+                for bone_name in ["全ての親", "センター", "グルーブ", "右足IK親", "左足IK親", "右足ＩＫ", "左足ＩＫ", "右つま先ＩＫ", "左つま先ＩＫ"]:
+                    if bone_name in data_set.motion.bones and bone_name in data_set.rep_model.bones and len(data_set.motion.bones[bone_name].keys()) > 0:
+                        fnos = data_set.motion.get_bone_fnos(bone_name)
+                        for fno in fnos:
+                            futures.append(executor.submit(self.adjust_move, data_set_idx, bone_name, fno, fnos[-1]))
 
-        return True
+            concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
+
+            for f in futures:
+                result = f.result() and result
+    
+        return result
     
     def adjust_move(self, data_set_idx: int, bone_name: str, fno: int, last_fno: int):
-        logger.copy(self.options)
+        try:
+            logger.copy(self.options)
+            data_set = self.options.data_set_list[data_set_idx]
+            
+            bf = data_set.motion.bones[bone_name][fno]
 
-        data_set = self.options.data_set_list[data_set_idx]
-        
-        bf = data_set.motion.bones[bone_name][fno]
+            # IK比率をそのまま掛ける
+            bf.position.setX(bf.position.x() * data_set.xz_ratio)
+            bf.position.setY(bf.position.y() * data_set.y_ratio)
+            bf.position.setZ(bf.position.z() * data_set.xz_ratio)
 
-        # IK比率をそのまま掛ける
-        bf.position.setX(bf.position.x() * data_set.xz_ratio)
-        bf.position.setY(bf.position.y() * data_set.y_ratio)
-        bf.position.setZ(bf.position.z() * data_set.xz_ratio)
+            # オフセット調整
+            bf.position += data_set.rep_model.bones[bone_name].local_offset
 
-        # オフセット調整
-        bf.position += data_set.rep_model.bones[bone_name].local_offset
-
-        if fno == last_fno and fno > 0:
-            logger.info("移動補正: %s", bone_name)
-        
-        return True
+            if fno == last_fno and fno > 0:
+                logger.info("移動補正:終了【No.%s - %s】", data_set_idx + 1, bone_name)
+            
+            return True
+        except SizingException:
+            return False
+        except Exception as e:
+            logger.error("サイジング処理が意図せぬエラーで終了しました。", e)
+            return False
 
     def set_leg_ik_offset(self, data_set: MOptionsDataSet):
         target_bones = ["左足", "左足ＩＫ", "右足ＩＫ"]

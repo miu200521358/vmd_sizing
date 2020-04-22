@@ -9,6 +9,7 @@ from form.panel.MorphPanel import MorphPanel
 from form.panel.MultiPanel import MultiPanel
 from form.panel.ArmPanel import ArmPanel
 from form.panel.CsvPanel import CsvPanel
+from form.panel.VmdPanel import VmdPanel
 from form.worker.SizingWorkerThread import SizingWorkerThread
 from form.worker.LoadWorkerThread import LoadWorkerThread
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
@@ -84,10 +85,14 @@ class MainFrame(wx.Frame):
         self.multi_panel_ctrl = MultiPanel(self, self.note_ctrl, 3, self.file_hitories)
         self.note_ctrl.AddPage(self.multi_panel_ctrl, u"複数", False)
 
-        # 腕タブ
-        self.csv_panel_ctrl = CsvPanel(self, self.note_ctrl, 10)
+        # CSVタブ
+        self.csv_panel_ctrl = CsvPanel(self, self.note_ctrl, 4)
         self.note_ctrl.AddPage(self.csv_panel_ctrl, u"CSV", False)
-    
+
+        # VMDタブ
+        self.vmd_panel_ctrl = VmdPanel(self, self.note_ctrl, 5)
+        self.note_ctrl.AddPage(self.vmd_panel_ctrl, u"VMD", False)
+        
         # ---------------------------------------------
 
         # タブ押下時の処理
@@ -115,6 +120,10 @@ class MainFrame(wx.Frame):
     def on_idle(self, event: wx.Event):
         if self.worker or self.load_worker:
             self.file_panel_ctrl.gauge_ctrl.Pulse()
+        elif self.csv_panel_ctrl.convert_csv_worker:
+            self.csv_panel_ctrl.gauge_ctrl.Pulse()
+        elif self.vmd_panel_ctrl.convert_vmd_worker:
+            self.vmd_panel_ctrl.gauge_ctrl.Pulse()
 
     def on_tab_change(self, event: wx.Event):
         if self.file_panel_ctrl.is_fix_tab:
@@ -123,9 +132,24 @@ class MainFrame(wx.Frame):
             return
 
         elif self.morph_panel_ctrl.is_fix_tab:
-            self.note_ctrl.ChangeSelection(self.morph_panel_ctrl.tab_idx)
+            # モーフタブの固定が指定されている場合、固定はファイルタブ
+            self.note_ctrl.ChangeSelection(self.file_panel_ctrl.tab_idx)
             event.Skip()
             return
+        
+        if self.note_ctrl.GetSelection() == self.morph_panel_ctrl.tab_idx:
+            # コンソールクリア
+            self.file_panel_ctrl.console_ctrl.Clear()
+            wx.GetApp().Yield()
+
+            # 一旦ファイルタブに固定
+            self.note_ctrl.SetSelection(self.file_panel_ctrl.tab_idx)
+            self.morph_panel_ctrl.fix_tab()
+
+            logger.info("モーフタブ表示準備開始\nファイル読み込み処理を実行します。少しお待ちください....", decoration=MLogger.DECORATION_BOX)
+
+            # 読み込み処理実行
+            self.load(is_morph=True)
 
     # タブ移動可
     def release_tab(self):
@@ -171,12 +195,28 @@ class MainFrame(wx.Frame):
         return worked_time
 
     # 読み込み
-    def load(self, is_exec=False):
+    def load(self, is_exec=False, is_morph=False):
+        # フォーム無効化
+        self.file_panel_ctrl.disable()
+        # タブ固定
+        self.file_panel_ctrl.fix_tab()
+
         self.elapsed_time = 0
         result = True
         result = self.is_valid() and result
 
         if not result:
+            if is_morph:
+                # 読み込み出来なかったらエラー
+                logger.error("「ファイル」タブで以下のいずれかのファイルパスが指定されていないため、「モーフ」タブが開けません。" \
+                             + "\n・調整対象VMDファイル" \
+                             + "\n・作成元モデルPMXファイル" \
+                             + "\n・変換先モデルPMXファイル" \
+                             + "\n既に指定済みの場合、現在読み込み中の可能性があります。" \
+                             + "\n特に長いVMDは読み込みに時間がかかります。" \
+                             + "\n調整に必要な３ファイルすべてを指定して、" \
+                             + "\n「■読み込み成功」のログが出てから、「モーフ」タブを開いてください。", decoration=MLogger.DECORATION_BOX)
+
             # タブ移動可
             self.release_tab()
             # フォーム有効化
@@ -189,7 +229,7 @@ class MainFrame(wx.Frame):
             logger.error("まだ処理が実行中です。終了してから再度実行してください。", decoration=MLogger.DECORATION_BOX)
         else:
             # 別スレッドで実行
-            self.load_worker = LoadWorkerThread(self, LoadThreadEvent, is_exec)
+            self.load_worker = LoadWorkerThread(self, LoadThreadEvent, is_exec, is_morph)
             self.load_worker.start()
             self.load_worker.stop_event.set()
 
@@ -250,15 +290,19 @@ class MainFrame(wx.Frame):
                 self.worker.start()
                 self.worker.stop_event.set()
 
-            event.Skip()
-            return True
+        elif event.is_morph:
+            # モーフタブを開く場合、モーフタブ初期化処理実行
+            self.note_ctrl.ChangeSelection(self.morph_panel_ctrl.tab_idx)
+            self.morph_panel_ctrl.initialize(event)
+
         else:
             # 終了音を鳴らす
             self.sound_finish()
 
             logger.info("\n処理時間: %s", self.show_worked_time())
         
-        event.Skip()
+            event.Skip()
+            return True
 
     # スレッド実行結果
     def on_exec_result(self, event: wx.Event):
@@ -288,4 +332,11 @@ class MainFrame(wx.Frame):
                 winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
             except Exception:
                 pass
+
+    def on_wheel_spin_ctrl(self, event: wx.Event, inc=0.1):
+        # スピンコントロール変更時
+        if event.GetWheelRotation() > 0:
+            event.GetEventObject().SetValue(event.GetEventObject().GetValue() + inc)
+        else:
+            event.GetEventObject().SetValue(event.GetEventObject().GetValue() - inc)
 

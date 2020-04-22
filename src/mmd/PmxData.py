@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #
+import numpy as np
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 import math
@@ -315,6 +316,7 @@ class Morph():
         self.offsets = offsets or []
         # 表示枠チェック時にONにするので、デフォルトはFalse
         self.display = False
+        self.related_names = []
 
     def __str__(self):
         return "<Morph name:{0}, english_name:{1}, panel:{2}, morph_type:{3}, offsets(len): {4}".format(
@@ -661,6 +663,8 @@ class PmxModel():
         self.textures = []
         # 材質データ
         self.materials = {}
+        # 材質データ（キー：材質INDEX、値：材質名）
+        self.material_indexes = {}
         # ボーンデータ
         self.bones = {}
         # ボーンINDEXデータ

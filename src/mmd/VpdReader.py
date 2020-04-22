@@ -80,7 +80,8 @@ class VpdReader():
                 bone_name = result_values[0]
                 
                 # キーフレ生成
-                frame = VmdBoneFrame(fno=0, name=bone_name)
+                frame = VmdBoneFrame(0)
+                frame.set_name(bone_name)
                 frame.key = True
                 frame.read = True
 

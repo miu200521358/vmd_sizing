@@ -386,7 +386,7 @@ class VmdDataTest(unittest.TestCase):
 
                 for fill_fno in range(original_motion.get_bone_fnos(target_bone_name)[0] + 1, original_motion.get_bone_fnos(target_bone_name)[-1]):
 
-                    motion = cPickle.loads(cPickle.dumps(original_motion, -1))
+                    motion = original_motion.copy()
 
                     # bfの補間曲線を再設定する
                     next_bf = motion.bones[target_bone_name][motion.get_bone_fnos(target_bone_name)[-1]]
@@ -400,7 +400,7 @@ class VmdDataTest(unittest.TestCase):
                                                      MBezierUtils.MZ_x1_idxs, MBezierUtils.MZ_y1_idxs, MBezierUtils.MZ_x2_idxs, MBezierUtils.MZ_y2_idxs)
                     
                     # 補間曲線を再設定したモーションを再保持
-                    org_motion = cPickle.loads(cPickle.dumps(motion, -1))
+                    org_motion = motion.copy()
 
                     # 間のキーフレをテスト
                     prev_bf = motion.bones[target_bone_name][motion.get_bone_fnos(target_bone_name)[0]]

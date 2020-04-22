@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 #
+import copy
 import struct
 import hashlib
 import re
+from multiprocessing import Manager
 
 from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
@@ -59,9 +61,10 @@ class VmdReader():
             logger.test("motion.motion_cnt %s", motion.motion_cnt)
 
             # 1F分のモーション情報
+
             prev_n = 0
             for n in range(motion.motion_cnt):
-                frame = VmdBoneFrame()
+                frame = VmdBoneFrame(0)
                 frame.key = True
                 frame.read = True
 
@@ -78,8 +81,7 @@ class VmdReader():
                 logger.test("frame.fno %s", frame.fno)
 
                 # 位置X,Y,Z
-                pos = self.read_Vector3D()
-                frame.position = pos
+                frame.position = self.read_Vector3D()
                 logger.test("frame.position %s", frame.position)
                 # オリジナルを保持
                 frame.org_position = frame.position.copy()
@@ -92,10 +94,10 @@ class VmdReader():
                 frame.org_rotation = frame.rotation.copy()
 
                 # 補間曲線
-                frame.set_interpolation(list(self.unpack(64, "64B", True)))
+                frame.interpolation = list(self.unpack(64, "64B", True))
                 logger.test("interpolation %s", frame.interpolation)
                 # オリジナルの補間曲線を保持しておく
-                frame.org_interpolation = frame.get_interpolation()
+                frame.org_interpolation = copy.deepcopy(frame.interpolation)
                 logger.test("org_interpolation %s", frame.org_interpolation)
 
                 if bone_name not in motion.bones:

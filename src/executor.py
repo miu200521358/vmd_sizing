@@ -9,7 +9,6 @@ import argparse
 import numpy as np
 import traceback
 import multiprocessing
-from concurrent.futures import ThreadPoolExecutor
 
 from form.MainFrame import MainFrame
 from module.MOptions import MOptions
@@ -18,7 +17,7 @@ from utils import MFileUtils
 from service.SizingService import SizingService
 from utils.MException import SizingException
 
-VERSION_NAME = "ver5.00_β47"
+VERSION_NAME = "ver5.00_β48"
 
 # 指数表記なし、有効小数点桁数6、30を超えると省略あり、一行の文字数200
 np.set_printoptions(suppress=True, precision=6, threshold=30, linewidth=200)
@@ -35,8 +34,7 @@ if __name__ == '__main__':
 
         # 引数指定がある場合、コマンドライン実行
         try:
-            with ThreadPoolExecutor(max_workers=5) as executor:
-                SizingService(MOptions.parse(VERSION_NAME, executor)).execute()
+            SizingService(MOptions.parse(VERSION_NAME)).execute()
         except SizingException as se:
             print("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
         except Exception:

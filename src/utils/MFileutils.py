@@ -79,16 +79,45 @@ def get_dir_path(base_file_path, is_print=True):
     except Exception as e:
         logger.error("ファイルパスの解析に失敗しました。\nパスに使えない文字がないか確認してください。\nファイルパス: {0}\n\n{1}".format(base_file_path, e.with_traceback(sys.exc_info()[2])))
         raise e
+    
+
+# モーフ置換組み合わせファイル
+def get_output_morph_path(base_file_path: str, org_pmx_path: str, rep_pmx_path: str):
+    # モーションVMDパスの拡張子リスト
+    if os.path.exists(base_file_path):
+        file_path_list = [base_file_path]
+    else:
+        file_path_list = [p for p in glob.glob(base_file_path) if os.path.isfile(p)]
+
+    if len(file_path_list) == 0 or (len(file_path_list) > 0 and not os.path.exists(file_path_list[0])) or not os.path.exists(rep_pmx_path):
+        return ""
+
+    # モーションVMDディレクトリパス
+    motion_vmd_dir_path = get_dir_path(file_path_list[0])
+    # モーションVMDファイル名・拡張子
+    motion_vmd_file_name, motion_vmd_ext = os.path.splitext(os.path.basename(file_path_list[0]))
+    # 作成元モデルファイル名・拡張子
+    org_pmx_file_name, _ = os.path.splitext(os.path.basename(org_pmx_path))
+    # 変換先モデルファイル名・拡張子
+    rep_pmx_file_name, _ = os.path.splitext(os.path.basename(rep_pmx_path))
+
+    # 出力ファイルパス生成
+    new_output_morph_path = os.path.join(motion_vmd_dir_path, "{0}_{1}_{2}{3}".format(motion_vmd_file_name, org_pmx_file_name, rep_pmx_file_name, ".csv"))
+
+    return new_output_morph_path
 
 
 # VMD出力ファイルパス生成
 # base_file_path: モーションVMDパス(アスタリスク込み)
 # rep_pmx_path: 変換先モデルPMXパス
-# substitute_model_flg: 代替モデル
+# detail_stance_flg: スタンス詳細再現FLG
 # twist_flg: 捩り分散
+# arm_process_flg_avoidance: 接触回避
+# arm_process_flg_alignment: 手首位置合わせ
+# is_morphs: モーフ置換有無
 # output_vmd_path: 出力ファイルパス
-def get_output_vmd_path(base_file_path: str, rep_pmx_path: str, substitute_model_flg: bool, twist_flg: bool, \
-                        arm_process_flg_avoidance: bool, arm_process_flg_alignment: bool, output_vmd_path: str, is_force=False):
+def get_output_vmd_path(base_file_path: str, rep_pmx_path: str, detail_stance_flg: bool, twist_flg: bool, \
+                        arm_process_flg_avoidance: bool, arm_process_flg_alignment: bool, is_morphs: bool, output_vmd_path: str, is_force=False):
     # モーションVMDパスの拡張子リスト
     if os.path.exists(base_file_path):
         file_path_list = [base_file_path]
@@ -107,12 +136,13 @@ def get_output_vmd_path(base_file_path: str, rep_pmx_path: str, substitute_model
 
     # モーフ
 
-    # 代替モデル
+    # スタンス追加補正
     # 捩り分散
     # 腕
-    suffix = "{0}{1}{2}{3}".format(
-        ("S" if substitute_model_flg else ""),
+    suffix = "{0}{1}{2}{3}{4}".format(
+        ("S" if detail_stance_flg else ""),
         ("T" if twist_flg else ""),
+        ("M" if is_morphs else ""),
         ("I" if arm_process_flg_avoidance else ""),
         ("P" if arm_process_flg_alignment else "")
     )
