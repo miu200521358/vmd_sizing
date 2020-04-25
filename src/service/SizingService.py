@@ -84,12 +84,12 @@ class SizingService():
             # スタンス補正
             result = StanceService(self.options).execute() and result
 
-            if self.options.arm_options.avoidance:
-                # 剛体接触回避
-                pass
-            elif self.options.arm_options.alignment:
-                # 手首位置合わせ
-                result = ArmAlignmentService(self.options).execute() and result
+            # if self.options.arm_options.avoidance:
+            #     # 剛体接触回避
+            #     pass
+            # elif self.options.arm_options.alignment:
+            #     # 手首位置合わせ
+            #     result = ArmAlignmentService(self.options).execute() and result
 
             # モーフ置換
             result = MorphService(self.options).execute() and result

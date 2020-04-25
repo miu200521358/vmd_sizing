@@ -14,7 +14,7 @@ from utils import MUtils, MServiceUtils, MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
 from utils.MException import SizingException
 
-logger = MLogger(__name__)
+logger = MLogger(__name__, level=1)
 
 
 class StanceService():
@@ -53,8 +53,8 @@ class StanceService():
                 # 上半身スタンス補正
                 self.adjust_upper_stance(data_set_idx, data_set)
             
-                # つま先補正
-                self.adjust_toe_stance(data_set_idx, data_set)
+                # # つま先補正
+                # self.adjust_toe_stance(data_set_idx, data_set)
 
             # 腕系サイジング可能（もしくはチェックスキップ）であれば、腕スタンス補正
             if (data_set.org_model.can_arm_sizing and data_set.rep_model.can_arm_sizing) or self.options.arm_process_option.arm_check_skip_flg:
@@ -1055,24 +1055,43 @@ class StanceService():
             # 初期傾き
             rep_upper_initial_slope_qq = MQuaternion.fromDirection(rep_upper_slope, rep_upper_slope_cross)
 
+            # TOの長さ比率
+
+            # 肩幅比率
+            org_arm_diff = (org_arm_links["左"].get("左腕").position - org_arm_links["右"].get("右腕").position)
+            rep_arm_diff = (rep_arm_links["左"].get("左腕").position - rep_arm_links["右"].get("右腕").position)
+            arm_diff_ratio = rep_arm_diff / org_arm_diff
+            arm_diff_ratio.one()    # 比率なので、0は1に変換する
+
+            # TOの長さ比率
+            org_to_diff = (org_head_links.get("頭").position - org_head_links.get("上半身").position)
+            org_to_diff.one()
+            rep_to_diff = (rep_head_links.get("頭").position - rep_head_links.get("上半身").position)
+            rep_to_diff.one()
+            to_diff_ratio = rep_to_diff / org_to_diff
+            
+            logger.test("arm_diff_ratio: %s", arm_diff_ratio)
+            logger.test("to_diff_ratio: %s", to_diff_ratio)
+
+            ratio = MVector3D(arm_diff_ratio.x(), to_diff_ratio.y(), arm_diff_ratio.x())
+
             # 初期状態の上半身2の傾き
             initial_bf = VmdBoneFrame(fno=0)
             initial_bf.set_name("上半身")
             initial_dataset = MOptionsDataSet(VmdMotion(), data_set.org_model, data_set.rep_model, data_set.output_vmd_path, data_set.detail_stance_flg, data_set.twist_flg, [])
 
-            self.calc_rotation_stance(initial_bf, data_set_idx, initial_dataset, \
-                                      org_upper_links, org_head_links, org_head_links, org_arm_links, \
-                                      rep_upper_links, rep_head_links, rep_head_links, rep_arm_links, \
-                                      "上半身", "頭", rep_upper_links.get("上半身", offset=-1).name, \
-                                      rep_upper_initial_slope_qq, MQuaternion(), MVector3D(1, 0, 1), MVector3D(0, 1, 0), self.def_calc_up_upper, 0)
+            self.calc_rotation_stance_upper(initial_bf, data_set_idx, initial_dataset, \
+                                            org_upper_links, org_head_links, org_arm_links, \
+                                            rep_upper_links, rep_head_links, rep_arm_links, \
+                                            "上半身", "頭", rep_upper_links.get("上半身", offset=-1).name, ratio, \
+                                            rep_upper_initial_slope_qq, MQuaternion(), 0)
 
             # 内積
             dot = MVector3D.dotProduct(org_upper_slope.normalized(), rep_upper_slope.normalized())
 
             if dot >= 0.8:
                 upper_initial_qq = initial_bf.rotation
-                # 肩の傾き度合い - 0.1 を変化量の上限とする
-                dot_limit = dot - 0.1
+                dot_limit = 0.9
             else:
                 # 初期姿勢が違いすぎてる場合、初期姿勢を維持しない（四つ足等）
                 upper_initial_qq = MQuaternion()
@@ -1105,11 +1124,11 @@ class StanceService():
                         is_copy = True
                 
                 if not is_copy:
-                    self.calc_rotation_stance(upper_bf, data_set_idx, data_set, \
-                                              org_upper_links, org_head_links, org_head_links, org_arm_links, \
-                                              rep_upper_links, rep_head_links, rep_head_links, rep_arm_links, \
-                                              "上半身", "頭", rep_upper_links.get("上半身", offset=-1).name, \
-                                              rep_upper_initial_slope_qq, upper_initial_qq, MVector3D(1, 0, 1), MVector3D(0, 1, 0), self.def_calc_up_upper, dot_limit)
+                    self.calc_rotation_stance_upper(upper_bf, data_set_idx, data_set, \
+                                                    org_upper_links, org_head_links, org_arm_links, \
+                                                    rep_upper_links, rep_head_links, rep_arm_links, \
+                                                    "上半身", "頭", rep_upper_links.get("上半身", offset=-1).name, ratio, \
+                                                    rep_upper_initial_slope_qq, upper_initial_qq, dot_limit)
 
                 if fno // 500 > prev_fno and fnos[-1] > 0:
                     logger.info("-- %sフレーム目:終了(%s％)【No.%s - 上半身】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1)
@@ -1145,24 +1164,35 @@ class StanceService():
 
                 rep_upper2_initial_slope_qq = MQuaternion.fromDirection(rep_upper2_slope, rep_upper2_slope_cross)
 
+                # TOの長さ比率
+                org_to_diff = (org_head_links.get("頭").position - org_head_links.get("上半身2").position)
+                org_to_diff.one()
+                rep_to_diff = (rep_head_links.get("頭").position - rep_head_links.get("上半身2").position)
+                rep_to_diff.one()
+                to_diff_ratio = rep_to_diff / org_to_diff
+                
+                logger.test("arm_diff_ratio: %s", arm_diff_ratio)
+                logger.test("to_diff_ratio: %s", to_diff_ratio)
+
+                ratio = MVector3D(arm_diff_ratio.x(), to_diff_ratio.y(), arm_diff_ratio.x())
+
                 # 初期状態の上半身2の傾き
                 initial_bf = VmdBoneFrame(fno=0)
                 initial_bf.set_name("上半身2")
                 initial_dataset = MOptionsDataSet(VmdMotion(), data_set.org_model, data_set.rep_model, data_set.output_vmd_path, data_set.detail_stance_flg, data_set.twist_flg, [])
 
-                self.calc_rotation_stance(initial_bf, data_set_idx, initial_dataset, \
-                                          org_upper2_links, org_head_links, org_head_links, org_arm_links, \
-                                          rep_upper2_links, rep_head_links, rep_head_links, rep_arm_links, \
-                                          "上半身2", "頭", rep_upper2_links.get("上半身2", offset=-1).name, \
-                                          rep_upper2_initial_slope_qq, MQuaternion(), MVector3D(1, 0, 1), MVector3D(0, 1, 0), self.def_calc_up_upper, 0)
+                self.calc_rotation_stance_upper(initial_bf, data_set_idx, initial_dataset, \
+                                                org_upper2_links, org_head_links, org_arm_links, \
+                                                rep_upper2_links, rep_head_links, rep_arm_links, \
+                                                "上半身2", "頭", rep_upper2_links.get("上半身2", offset=-1).name, ratio, \
+                                                rep_upper2_initial_slope_qq, MQuaternion(), 0)
 
                 # 内積
                 dot = MVector3D.dotProduct(org_upper2_slope.normalized(), rep_upper2_slope.normalized())
 
                 if dot >= 0.8:
                     upper2_initial_qq = initial_bf.rotation
-                    # 肩の傾き度合い - 0.1 を変化量の上限とする
-                    dot2_limit = dot - 0.1
+                    dot2_limit = 0.9
                 else:
                     # 初期姿勢が違いすぎてる場合、初期姿勢を維持しない（四つ足等）
                     upper2_initial_qq = MQuaternion()
@@ -1195,11 +1225,11 @@ class StanceService():
                             is_copy = True
                     
                     if not is_copy:
-                        self.calc_rotation_stance(upper2_bf, data_set_idx, data_set, \
-                                                  org_upper2_links, org_head_links, org_head_links, org_arm_links, \
-                                                  rep_upper2_links, rep_head_links, rep_head_links, rep_arm_links, \
-                                                  "上半身2", "頭", rep_upper2_links.get("上半身2", offset=-1).name, \
-                                                  rep_upper2_initial_slope_qq, upper2_initial_qq, MVector3D(1, 0, 1), MVector3D(0, 1, 0), self.def_calc_up_upper, dot2_limit)
+                        self.calc_rotation_stance_upper(upper2_bf, data_set_idx, data_set, \
+                                                        org_upper2_links, org_head_links, org_arm_links, \
+                                                        rep_upper2_links, rep_head_links, rep_arm_links, \
+                                                        "上半身2", "頭", rep_upper2_links.get("上半身2", offset=-1).name, ratio, \
+                                                        rep_upper2_initial_slope_qq, upper2_initial_qq, dot2_limit)
 
                     if fno // 500 > prev_fno and fnos[-1] > 0:
                         logger.info("-- %sフレーム目:終了(%s％)【No.%s - 上半身2】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1)
@@ -1212,12 +1242,126 @@ class StanceService():
 
                 logger.info("上半身2スタンス補正: 終了【No.%s】", (data_set_idx + 1))
 
+    # 上半身スタンス補正
+    def calc_rotation_stance_upper(self, bf: VmdBoneFrame, data_set_idx: int, data_set: MOptionsDataSet, \
+                                   org_from_links: BoneLinks, org_to_links: BoneLinks, org_arm_links: BoneLinks, \
+                                   rep_from_links: BoneLinks, rep_to_links: BoneLinks, rep_arm_links: BoneLinks, \
+                                   from_bone_name: str, to_bone_name: str, rep_parent_bone_name: str, ratio: MVector3D, \
+                                   rep_initial_slope_qq: MQuaternion, cancel_qq: MQuaternion, dot_limit):
+        logger.test("f: %s -----------------------------", bf.fno)
+
+        # 基準より親の回転量
+        parent_qq = MServiceUtils.calc_direction_qq(data_set.rep_model, rep_to_links.from_links(rep_parent_bone_name), data_set.motion, bf.fno)
+
+        # -------------
+        # TO位置の再計算
+
+        # FROMボーンまでの位置
+        org_from_global_3ds, org_front_from_global_3ds, org_from_direction_qq = \
+            MServiceUtils.calc_front_global_pos(data_set.org_model, org_from_links, data_set.org_motion, bf.fno, org_from_links)
+        rep_from_global_3ds, rep_front_from_global_3ds, rep_from_direction_qq = \
+            MServiceUtils.calc_front_global_pos(data_set.rep_model, rep_from_links, data_set.motion, bf.fno, rep_from_links)
+
+        # 正面向きのFROMボーンの位置
+        org_front_from_pos = org_front_from_global_3ds[from_bone_name]
+        rep_front_from_pos = rep_front_from_global_3ds[from_bone_name]
+
+        # -------------
+
+        # TOボーンまでの位置（フレームはFROMまでで、TO自身は初期値として求める）
+        org_to_global_3ds, org_front_to_global_3ds, org_to_direction_qq = \
+            MServiceUtils.calc_front_global_pos(data_set.org_model, org_to_links, data_set.org_motion, bf.fno, org_from_links)
+        rep_to_global_3ds, rep_front_to_global_3ds, rep_to_direction_qq = \
+            MServiceUtils.calc_front_global_pos(data_set.rep_model, rep_to_links, data_set.motion, bf.fno, rep_from_links)
+
+        # TOボーンの正面位置
+        org_front_to_pos = org_front_to_global_3ds[to_bone_name]
+        rep_front_to_pos = rep_front_to_global_3ds[to_bone_name]
+
+        # ---------------
+
+        rep_front_to_x = rep_front_from_pos.x() + ((org_front_to_pos.x() - org_front_from_pos.x()) * ratio.x())
+        rep_front_to_y = rep_front_from_pos.y() + ((org_front_to_pos.y() - org_front_from_pos.y()) * ratio.y())
+        rep_front_to_z = rep_front_from_pos.z() + ((org_front_to_pos.z() - org_front_from_pos.z()) * ratio.z())
+
+        logger.test("f: %s, re rep_front: x: %s, y: %s, z: %s", bf.fno, rep_front_to_x, rep_front_to_y, rep_front_to_z)
+
+        logger.test("f: %s, rep_front_from_pos: %s", bf.fno, rep_front_from_pos)
+        logger.test("f: %s, org_front_to_pos: %s", bf.fno, org_front_to_pos)
+        logger.test("f: %s, org_front_from_pos: %s", bf.fno, org_front_from_pos)
+
+        new_rep_front_to_pos = MVector3D(rep_front_to_x, rep_front_to_y, rep_front_to_z)
+        logger.test("f: %s, 計算new_rep_front_to_pos: %s", bf.fno, new_rep_front_to_pos)
+        logger.test("f: %s, 元rep_front_to_pos: %s", bf.fno, rep_front_to_pos)
+
+        # 正面向きの新しいTO位置
+        new_rep_front_to_global_3ds = {}
+        new_rep_front_to_global_3ds[to_bone_name] = new_rep_front_to_pos
+
+        # 回転を元に戻した位置
+        rotated_to_3ds = MServiceUtils.calc_global_pos_by_direction(rep_to_direction_qq, new_rep_front_to_global_3ds)
+
+        new_rep_to_pos = rotated_to_3ds[to_bone_name]
+        rep_to_pos = rep_to_global_3ds[to_bone_name]
+        rep_from_pos = rep_to_global_3ds[from_bone_name]
+
+        # UP計算 ---------------
+
+        # 左腕ボーンまでの位置
+        org_left_arm_global_3ds = MServiceUtils.calc_global_pos(data_set.org_model, org_arm_links["左"], data_set.org_motion, bf.fno, org_from_links)
+        org_left_arm_pos = org_left_arm_global_3ds["左腕"]
+        logger.test("f: %s, org_left_arm_pos: %s", bf.fno, org_left_arm_pos)
+
+        # 右腕ボーンまでの位置
+        org_right_arm_global_3ds = MServiceUtils.calc_global_pos(data_set.org_model, org_arm_links["右"], data_set.org_motion, bf.fno, org_from_links)
+        org_right_arm_pos = org_right_arm_global_3ds["右腕"]
+        logger.test("f: %s, org_right_arm_pos: %s", bf.fno, org_right_arm_pos)
+        
+        up_pos = org_right_arm_pos - org_left_arm_pos
+
+        # ---------------
+        # FROMの回転量を再計算する
+        direction = new_rep_to_pos - rep_from_pos
+        up = MVector3D.crossProduct(direction, up_pos)
+        from_orientation = MQuaternion.fromDirection(direction.normalized(), up.normalized())
+        initial = rep_initial_slope_qq
+        from_rotation = parent_qq.inverted() * cancel_qq.inverted() * from_orientation * initial.inverted()
+        from_rotation.normalize()
+        logger.test("f: %s, rep_from_pos(%s): %s", bf.fno, from_bone_name, rep_from_pos)
+        logger.test("f: %s, rep_to_pos(%s): %s, 元: %s", bf.fno, to_bone_name, new_rep_to_pos, rep_to_pos)
+        logger.test("f: %s, up_pos: %s", bf.fno, up_pos)
+        logger.test("f: %s, direction(%s): %s", bf.fno, to_bone_name, direction)
+        logger.test("f: %s, up: %s", bf.fno, up)
+        logger.test("f: %s, parent(%s): %s", bf.fno, rep_parent_bone_name, parent_qq.toEulerAngles())
+        logger.test("f: %s, initial: %s", bf.fno, initial.toEulerAngles())
+        logger.test("f: %s, orientation: %s", bf.fno, from_orientation.toEulerAngles())
+
+        logger.debug("f: %s, 補正回転: %s", bf.fno, from_rotation.toEulerAngles4MMD())
+
+        org_bf = data_set.org_motion.calc_bf(from_bone_name, bf.fno)
+        logger.debug("f: %s, 元の回転: %s", bf.fno, org_bf.rotation.toEulerAngles4MMD())
+
+        if org_bf:
+            # 元にもあるキーである場合、内積チェック
+            uad = abs(MQuaternion.dotProduct(from_rotation.normalized(), org_bf.rotation.normalized()))
+            logger.test("f: %s, 近似度: %s", bf.fno, uad)
+            if uad < dot_limit:
+                # 内積が離れすぎてたらNG
+                logger.warning("【No.%s】%sフレーム目:%sスタンス補正失敗: 角度:%s, 近似度: %s", \
+                               (data_set_idx + 1), bf.fno, from_bone_name, from_rotation.toEulerAngles4MMD().to_log(), round(uad, 5))
+            else:
+                # 内積の差が小さい場合、回転適用
+                bf.rotation = from_rotation
+        else:
+            # 元にもない場合（ないはず）、はそのまま設定
+            bf.rotation = from_rotation
+
     # 肩スタンス補正
     def adjust_shoulder_stance(self, data_set_idx: int, data_set: MOptionsDataSet):
         logger.info("肩スタンス補正　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
 
         futures = []
-        with ThreadPoolExecutor(thread_name_prefix="shoulder{0}".format(data_set_idx)) as executor:
+        with ThreadPoolExecutor(thread_name_prefix="shoulder{0}".format(data_set_idx), max_workers=1) as executor:
             for direction in ["左", "右"]:
                 futures.append(executor.submit(self.adjust_shoulder_stance_lr, data_set_idx, "{0}肩P".format(direction), "{0}肩".format(direction), "{0}腕".format(direction)))
         concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
@@ -1233,7 +1377,7 @@ class StanceService():
             data_set = self.options.data_set_list[data_set_idx]
 
             # 肩調整に必要なボーン群(肩Pは含めない)
-            shoulder_target_bones = ["頭", "首", shoulder_name, arm_name, "{0}下延長".format(arm_name), "上半身"]
+            shoulder_target_bones = ["頭", "首", "首根元", shoulder_name, arm_name, "{0}下延長".format(shoulder_name), "上半身"]
 
             if set(shoulder_target_bones).issubset(data_set.org_model.bones) and set(shoulder_target_bones).issubset(data_set.rep_model.bones) and shoulder_name in data_set.motion.bones:
                 # 肩Pを使うかどうか
@@ -1242,12 +1386,12 @@ class StanceService():
                 # 元モデルのリンク生成
                 org_shoulder_links = data_set.org_model.create_link_2_top_one(shoulder_name)
                 org_arm_links = data_set.org_model.create_link_2_top_lr("腕")
-                org_arm_under_links = data_set.org_model.create_link_2_top_one("{0}下延長".format(arm_name))
+                org_shoulder_under_links = data_set.org_model.create_link_2_top_one("{0}下延長".format(shoulder_name))
 
                 # 変換先モデルのリンク生成
                 rep_shoulder_links = data_set.rep_model.create_link_2_top_one(shoulder_name)
                 rep_arm_links = data_set.rep_model.create_link_2_top_lr("腕")
-                rep_arm_under_links = data_set.rep_model.create_link_2_top_one("{0}下延長".format(arm_name))
+                # rep_shoulder_under_links = data_set.rep_model.create_link_2_top_one("{0}下延長".format(shoulder_name))
 
                 logger.test("%s: %s", arm_name, data_set.org_model.bones[arm_name].position)
                 logger.test("%s: %s", shoulder_name, data_set.org_model.bones[shoulder_name].position)
@@ -1266,23 +1410,45 @@ class StanceService():
                 logger.test("肩 slope: %s", rep_shoulder_slope)
                 logger.test("肩 cross: %s", rep_shoulder_slope_cross)
 
+                # 肩幅比率
+                org_arm_diff = (org_arm_links["左"].get("左腕").position - org_arm_links["右"].get("右腕").position)
+                rep_arm_diff = (rep_arm_links["左"].get("左腕").position - rep_arm_links["右"].get("右腕").position)
+                arm_diff_ratio = rep_arm_diff / org_arm_diff
+                arm_diff_ratio.one()    # 比率なので、0は1に変換する
+
+                # TOの長さ比率（いかり肩ボーンとかあるので、絶対値はとらない）
+                org_to_diff = (org_arm_links[shoulder_name[0]].get(arm_name).position - org_arm_links[shoulder_name[0]].get("首根元").position)
+                org_to_diff.one()
+                rep_to_diff = (rep_arm_links[shoulder_name[0]].get(arm_name).position - rep_arm_links[shoulder_name[0]].get("首根元").position)
+                rep_to_diff.one()
+                to_diff_ratio = rep_to_diff / org_to_diff
+                
+                logger.test("arm_diff_ratio: %s", arm_diff_ratio)
+                logger.test("to_diff_ratio: %s", to_diff_ratio)
+
+                ratio = MVector3D(arm_diff_ratio.x(), to_diff_ratio.y(), arm_diff_ratio.x())
+
                 # 初期状態の肩の傾き
                 initial_bf = VmdBoneFrame(fno=0)
                 initial_bf.set_name(shoulder_name)
                 initial_dataset = MOptionsDataSet(VmdMotion(), data_set.org_model, data_set.rep_model, data_set.output_vmd_path, data_set.detail_stance_flg, data_set.twist_flg, [])
 
-                self.calc_rotation_stance(initial_bf, data_set_idx, initial_dataset, \
-                                          org_shoulder_links, org_arm_links[shoulder_name[0]], org_arm_under_links, org_arm_links, \
-                                          rep_shoulder_links, rep_arm_links[shoulder_name[0]], rep_arm_under_links, rep_arm_links, \
-                                          shoulder_name, arm_name, rep_shoulder_links.get(shoulder_name, offset=-1).name, \
-                                          rep_shoulder_initial_slope_qq, MQuaternion(), MVector3D(1, 0, 1), MVector3D(1, 1, 0), self.def_calc_up_shoulder, 0)
+                self.calc_rotation_stance_shoulder(initial_bf, data_set_idx, initial_dataset, \
+                                                   org_shoulder_links, org_arm_links[shoulder_name[0]], rep_shoulder_links, \
+                                                   rep_arm_links[shoulder_name[0]], org_shoulder_under_links, \
+                                                   shoulder_name, arm_name, ratio, rep_shoulder_initial_slope_qq, MQuaternion(), 0)
                 
                 # 内積
                 dot = MVector3D.dotProduct(org_shoulder_slope.normalized(), rep_shoulder_slope.normalized())
 
                 shoulder_initial_qq = initial_bf.rotation
-                # 肩の傾き度合い ＋α を変化量の上限とする
-                dot_limit = max(0.7, dot - 0.1)
+                if dot >= 0.6:
+                    shoulder_initial_qq = initial_bf.rotation
+                    dot_limit = 0.9
+                else:
+                    # 初期姿勢が違いすぎてる場合、初期姿勢を維持しない（四つ足等）
+                    shoulder_initial_qq = MQuaternion()
+                    dot_limit = 0
 
                 logger.debug("dot: %s", dot)
                 logger.debug("shoulder_initial_qq: %s", shoulder_initial_qq)
@@ -1326,11 +1492,10 @@ class StanceService():
                             is_copy = True
                     
                     if not is_copy:
-                        self.calc_rotation_stance(shoulder_bf, data_set_idx, data_set, \
-                                                  org_shoulder_links, org_arm_links[shoulder_name[0]], org_arm_under_links, org_arm_links, \
-                                                  rep_shoulder_links, rep_arm_links[shoulder_name[0]], rep_arm_under_links, rep_arm_links, \
-                                                  shoulder_name, arm_name, rep_shoulder_links.get(shoulder_name, offset=-1).name, \
-                                                  rep_shoulder_initial_slope_qq, shoulder_initial_qq, MVector3D(1, 0, 1), MVector3D(1, 1, 0), self.def_calc_up_shoulder, dot_limit)
+                        self.calc_rotation_stance_shoulder(shoulder_bf, data_set_idx, data_set, \
+                                                           org_shoulder_links, org_arm_links[shoulder_name[0]], rep_shoulder_links, \
+                                                           rep_arm_links[shoulder_name[0]], org_shoulder_under_links, \
+                                                           shoulder_name, arm_name, ratio, rep_shoulder_initial_slope_qq, shoulder_initial_qq, dot_limit)
                         
                     # bf登録
                     data_set.motion.regist_bf(shoulder_bf, shoulder_name, fno)
@@ -1351,6 +1516,114 @@ class StanceService():
             logger.error("サイジング処理が意図せぬエラーで終了しました。", e)
             return False
 
+    # 肩スタンス補正
+    def calc_rotation_stance_shoulder(self, bf: VmdBoneFrame, data_set_idx: int, data_set: MOptionsDataSet, \
+                                      org_from_links: BoneLinks, org_to_links: BoneLinks, rep_from_links: BoneLinks, \
+                                      rep_to_links: BoneLinks, org_shoulder_under_links: BoneLinks, \
+                                      from_bone_name: str, to_bone_name: str, ratio: MVector3D, \
+                                      rep_initial_slope_qq: MQuaternion, cancel_qq: MQuaternion, dot_limit):
+        logger.test("f: %s -----------------------------", bf.fno)
+
+        base_bone_name = "首根元"
+        # 首根元以降のボーンのみを対象とする（体幹の動きは無視）
+        org_limit_links = org_to_links.to_links("首根元")
+        rep_limit_links = rep_to_links.to_links("首根元")
+
+        # -------------
+        # TO位置の再計算
+
+        # TOボーンまでの位置
+        org_to_global_3ds, org_front_to_global_3ds, org_to_direction_qq = \
+            MServiceUtils.calc_front_global_pos(data_set.org_model, org_to_links, data_set.org_motion, bf.fno, org_limit_links)
+        rep_to_global_3ds, rep_front_to_global_3ds, rep_to_direction_qq = \
+            MServiceUtils.calc_front_global_pos(data_set.rep_model, rep_to_links, data_set.motion, bf.fno, rep_limit_links)
+
+        # 正面向きの基準ボーンの位置
+        org_front_base_pos = org_front_to_global_3ds[base_bone_name]
+        rep_front_base_pos = rep_front_to_global_3ds[base_bone_name]
+
+        # TOボーンの正面位置
+        org_front_to_pos = org_front_to_global_3ds[to_bone_name]
+        rep_front_to_pos = rep_front_to_global_3ds[to_bone_name]
+
+        # ---------------
+
+        rep_front_to_x = rep_front_base_pos.x() + ((org_front_to_pos.x() - org_front_base_pos.x()) * ratio.x())
+        rep_front_to_y = rep_front_base_pos.y() + ((org_front_to_pos.y() - org_front_base_pos.y()) * ratio.y())
+        rep_front_to_z = rep_front_base_pos.z() + ((org_front_to_pos.z() - org_front_base_pos.z()) * ratio.x())
+
+        logger.test("f: %s, re rep_front: x: %s, y: %s, z: %s", bf.fno, rep_front_to_x, rep_front_to_y, rep_front_to_z)
+
+        logger.test("f: %s, rep_front_base_pos: %s", bf.fno, rep_front_base_pos)
+        logger.test("f: %s, org_front_to_pos: %s", bf.fno, org_front_to_pos)
+        logger.test("f: %s, org_front_base_pos: %s", bf.fno, org_front_base_pos)
+
+        new_rep_front_to_pos = MVector3D(rep_front_to_x, rep_front_to_y, rep_front_to_z)
+        logger.test("f: %s, 計算new_rep_front_to_pos: %s", bf.fno, new_rep_front_to_pos)
+        logger.test("f: %s, 元rep_front_to_pos: %s", bf.fno, rep_front_to_pos)
+
+        # 正面向きの新しいTO位置
+        new_rep_front_to_global_3ds = {}
+        new_rep_front_to_global_3ds[to_bone_name] = new_rep_front_to_pos
+
+        # 回転を元に戻した位置
+        rotated_to_3ds = MServiceUtils.calc_global_pos_by_direction(rep_to_direction_qq, new_rep_front_to_global_3ds)
+
+        new_rep_to_pos = rotated_to_3ds[to_bone_name]
+        rep_to_pos = rep_to_global_3ds[to_bone_name]
+        rep_from_pos = rep_to_global_3ds[from_bone_name]
+
+        # UP計算 ---------------
+        
+        # 肩下延長ボーンまでの位置
+        org_shoulder_under_global_3ds = MServiceUtils.calc_global_pos(data_set.org_model, org_shoulder_under_links, \
+                                                                      data_set.org_motion, bf.fno, org_limit_links)
+        org_shoulder_under_pos = org_shoulder_under_global_3ds["{0}下延長".format(from_bone_name)]
+        logger.test("f: %s, org_shoulder_under_pos: %s", bf.fno, org_shoulder_under_pos)
+
+        # 肩ボーンまでの位置
+        org_shoulder_pos = org_shoulder_under_global_3ds[from_bone_name]
+        logger.test("f: %s, org_shoulder_pos: %s", bf.fno, org_shoulder_pos)
+
+        up_pos = org_shoulder_under_pos - org_shoulder_pos
+
+        # ---------------
+        # FROMの回転量を再計算する
+        direction = new_rep_to_pos - rep_from_pos
+        up = MVector3D.crossProduct(direction, up_pos)
+        from_orientation = MQuaternion.fromDirection(direction.normalized(), up.normalized())
+        initial = rep_initial_slope_qq
+        from_rotation = cancel_qq.inverted() * from_orientation * initial.inverted()
+        from_rotation.normalize()
+        logger.test("f: %s, rep_from_pos(%s): %s", bf.fno, from_bone_name, rep_from_pos)
+        logger.test("f: %s, rep_to_pos(%s): %s, 元: %s", bf.fno, to_bone_name, new_rep_to_pos, rep_to_pos)
+        logger.test("f: %s, up_pos: %s", bf.fno, up_pos)
+        logger.test("f: %s, direction(%s): %s", bf.fno, to_bone_name, direction)
+        logger.test("f: %s, up: %s", bf.fno, up)
+        # logger.test("f: %s, parent(%s): %s", bf.fno, base_bone_name, parent_qq.toEulerAngles())
+        logger.test("f: %s, initial: %s", bf.fno, initial.toEulerAngles())
+        logger.test("f: %s, orientation: %s", bf.fno, from_orientation.toEulerAngles())
+
+        logger.debug("f: %s, 補正回転: %s", bf.fno, from_rotation.toEulerAngles4MMD())
+
+        org_bf = data_set.org_motion.calc_bf(from_bone_name, bf.fno)
+        logger.debug("f: %s, 元の回転: %s", bf.fno, org_bf.rotation.toEulerAngles4MMD())
+
+        if org_bf:
+            # 元にもあるキーである場合、内積チェック
+            uad = abs(MQuaternion.dotProduct(from_rotation.normalized(), org_bf.rotation.normalized()))
+            logger.test("f: %s, uad: %s, org: %s, result: %s", bf.fno, uad, org_bf.rotation.toEulerAngles4MMD(), from_rotation.toEulerAngles4MMD())
+            if uad < dot_limit:
+                # 内積が離れすぎてたらNG
+                logger.warning("【No.%s】%sフレーム目:%sスタンス補正失敗: 角度:%s, 近似度: %s", \
+                               (data_set_idx + 1), bf.fno, from_bone_name, from_rotation.toEulerAngles4MMD().to_log(), round(uad, 5))
+            else:
+                # 内積の差が小さい場合、回転適用
+                bf.rotation = from_rotation
+        else:
+            # 元にもない場合（ないはず）、はそのまま設定
+            bf.rotation = from_rotation
+
     # 指定したボーンを親ボーンの調整量に合わせてキャンセル
     def adjust_rotation_by_parent(self, data_set_idx: int, data_set: MOptionsDataSet, target_bone_name: str, target_parent_name: str):
         for fno in data_set.motion.get_bone_fnos(target_bone_name):
@@ -1370,180 +1643,6 @@ class StanceService():
                         rep_deformed_qq.toEulerAngles4MMD(), (rep_deformed_qq.inverted() * org_deformed_qq).toEulerAngles4MMD())
 
             bf.rotation = rep_parent_bf.rotation.inverted() * org_parent_bf.rotation * bf.rotation
-
-    # 定義: 傾きを求める方向の位置計算（上半身）
-    def def_calc_up_upper(self, bf: VmdBoneFrame, data_set_idx: int, data_set: MOptionsDataSet, \
-                          org_from_links: BoneLinks, org_to_links: BoneLinks, org_head_links: BoneLinks, org_arm_links: BoneLinks, \
-                          from_bone_name: str, to_bone_name: str):
-        # 左腕ボーンまでの位置
-        org_left_arm_global_3ds = MServiceUtils.calc_global_pos(data_set.org_model, org_arm_links["左"], data_set.org_motion, bf.fno, org_from_links)
-        org_left_arm_pos = org_left_arm_global_3ds["左腕"]
-        logger.test("f: %s, org_left_arm_pos: %s", bf.fno, org_left_arm_pos)
-
-        # 右腕ボーンまでの位置
-        org_right_arm_global_3ds = MServiceUtils.calc_global_pos(data_set.org_model, org_arm_links["右"], data_set.org_motion, bf.fno, org_from_links)
-        org_right_arm_pos = org_right_arm_global_3ds["右腕"]
-        logger.test("f: %s, org_right_arm_pos: %s", bf.fno, org_right_arm_pos)
-        
-        return org_right_arm_pos - org_left_arm_pos
-
-    # 定義: 傾きを求める方向の位置計算（肩）
-    def def_calc_up_shoulder(self, bf: VmdBoneFrame, data_set_idx: int, data_set: MOptionsDataSet, \
-                             org_from_links: BoneLinks, org_to_links: BoneLinks, org_arm_under_links: BoneLinks, org_arm_links: BoneLinks, \
-                             from_bone_name: str, to_bone_name: str):
-        # 腕下延長ボーンまでの位置
-        org_arm_under_global_3ds = MServiceUtils.calc_global_pos(data_set.org_model, org_arm_under_links, data_set.org_motion, bf.fno, org_from_links)
-        org_arm_under_pos = org_arm_under_global_3ds["{0}下延長".format(to_bone_name)]
-        logger.test("f: %s, org_arm_under_pos: %s", bf.fno, org_arm_under_pos)
-
-        # 腕ボーンまでの位置
-        org_arm_global_3ds = MServiceUtils.calc_global_pos(data_set.org_model, org_arm_links[to_bone_name[0]], data_set.org_motion, bf.fno, org_from_links)
-        org_arm_pos = org_arm_global_3ds[to_bone_name]
-        logger.test("f: %s, org_arm_pos: %s", bf.fno, org_arm_pos)
-
-        return org_arm_under_pos - org_arm_pos
-
-    # スタンス補正
-    def calc_rotation_stance(self, bf: VmdBoneFrame, data_set_idx: int, data_set: MOptionsDataSet, \
-                             org_from_links: BoneLinks, org_to_links: BoneLinks, org_head_links: BoneLinks, org_arm_links: BoneLinks, \
-                             rep_from_links: BoneLinks, rep_to_links: BoneLinks, rep_head_links: BoneLinks, rep_arm_links: BoneLinks, \
-                             from_bone_name: str, to_bone_name: str, rep_parent_bone_name: str, \
-                             rep_initial_slope_qq: MQuaternion, cancel_qq: MQuaternion, arm_diff_flg: MVector3D, to_diff_flg: MVector3D, def_calc_up, dot_limit):
-        logger.test("f: %s -----------------------------", bf.fno)
-
-        # 基準より親の回転量
-        parent_qq = MServiceUtils.calc_direction_qq(data_set.rep_model, rep_to_links.from_links(rep_parent_bone_name), data_set.motion, bf.fno)
-
-        # -------------
-
-        # TO位置の再計算
-        new_rep_to_pos, rep_to_pos, rep_from_pos \
-            = self.recalc_to_pos(bf, data_set_idx, data_set, \
-                                 org_from_links, org_to_links, org_arm_links, \
-                                 rep_from_links, rep_to_links, rep_arm_links, \
-                                 from_bone_name, to_bone_name, arm_diff_flg, to_diff_flg)
-
-        # UP方向の再計算（元モデルで計算する）
-        up_pos = def_calc_up(bf, data_set_idx, data_set, org_from_links, org_to_links, org_head_links, org_arm_links, \
-                             from_bone_name, to_bone_name)
-
-        # ---------------
-        # FROMの回転量を再計算する
-        direction = new_rep_to_pos - rep_from_pos
-        up = MVector3D.crossProduct(direction, up_pos)
-        from_orientation = MQuaternion.fromDirection(direction.normalized(), up.normalized())
-        initial = rep_initial_slope_qq
-        from_rotation = parent_qq.inverted() * cancel_qq.inverted() * from_orientation * initial.inverted()
-        from_rotation.normalize()
-        logger.test("f: %s, rep_from_pos(%s): %s", bf.fno, from_bone_name, rep_from_pos)
-        logger.test("f: %s, rep_to_pos(%s): %s", bf.fno, to_bone_name, new_rep_to_pos)
-        logger.test("f: %s, up_pos: %s", bf.fno, up_pos)
-        logger.test("f: %s, direction(%s): %s", bf.fno, to_bone_name, direction)
-        logger.test("f: %s, up: %s", bf.fno, up)
-        logger.test("f: %s, parent(%s): %s", bf.fno, rep_parent_bone_name, parent_qq.toEulerAngles())
-        logger.test("f: %s, initial: %s", bf.fno, initial.toEulerAngles())
-        logger.test("f: %s, orientation: %s", bf.fno, from_orientation.toEulerAngles())
-
-        logger.debug("f: %s, 補正回転: %s", bf.fno, from_rotation.toEulerAngles4MMD())
-
-        org_bf = data_set.org_motion.calc_bf(from_bone_name, bf.fno)
-        logger.debug("f: %s, 元の回転: %s", bf.fno, org_bf.rotation.toEulerAngles4MMD())
-
-        if org_bf:
-            # 元にもあるキーである場合、内積チェック
-            uad = abs(MQuaternion.dotProduct(from_rotation.normalized(), org_bf.rotation.normalized()))
-            logger.test("f: %s, 近似度: %s", bf.fno, uad)
-            if uad < dot_limit:
-                # 内積が離れすぎてたらNG
-                logger.warning("【No.%s】%sフレーム目:%sスタンス補正失敗: 角度:%s, 近似度: %s", \
-                               (data_set_idx + 1), bf.fno, from_bone_name, from_rotation.toEulerAngles4MMD().to_log(), round(uad, 5))
-            else:
-                # 内積の差が小さい場合、回転適用
-                bf.rotation = from_rotation
-        else:
-            # 元にもない場合（ないはず）、はそのまま設定
-            bf.rotation = from_rotation
-
-    # TO位置の再計算処理
-    def recalc_to_pos(self, bf: VmdBoneFrame, data_set_idx: int, data_set: MOptionsDataSet, \
-                      org_from_links: BoneLinks, org_to_links: BoneLinks, org_arm_links: BoneLinks, \
-                      rep_from_links: BoneLinks, rep_to_links: BoneLinks, rep_arm_links: BoneLinks, \
-                      from_bone_name: str, to_bone_name: str, arm_diff_flg: MVector3D, to_diff_flg: MVector3D):
-
-        # FROMボーンまでの位置
-        org_from_global_3ds, org_front_from_global_3ds, org_from_direction_qq = \
-            MServiceUtils.calc_front_global_pos(data_set.org_model, org_from_links, data_set.org_motion, bf.fno, org_from_links)
-        rep_from_global_3ds, rep_front_from_global_3ds, rep_from_direction_qq = \
-            MServiceUtils.calc_front_global_pos(data_set.rep_model, rep_from_links, data_set.motion, bf.fno, rep_from_links)
-
-        # 正面向きのFROMボーンの位置
-        org_front_from_pos = org_front_from_global_3ds[from_bone_name]
-        rep_front_from_pos = rep_front_from_global_3ds[from_bone_name]
-
-        # -------------
-
-        # TOボーンまでの位置（フレームはFROMまでで、TO自身は初期値として求める）
-        org_to_global_3ds, org_front_to_global_3ds, org_to_direction_qq = \
-            MServiceUtils.calc_front_global_pos(data_set.org_model, org_to_links, data_set.org_motion, bf.fno, org_from_links)
-        rep_to_global_3ds, rep_front_to_global_3ds, rep_to_direction_qq = \
-            MServiceUtils.calc_front_global_pos(data_set.rep_model, rep_to_links, data_set.motion, bf.fno, rep_from_links)
-
-        # TOボーンの正面位置
-        org_front_to_pos = org_front_to_global_3ds[to_bone_name]
-        rep_front_to_pos = rep_front_to_global_3ds[to_bone_name]
-
-        # -------------
-
-        # TOの長さ比率
-
-        # 肩幅比率
-        org_arm_diff = (org_arm_links["左"].get("左腕").position - org_arm_links["右"].get("右腕").position)
-        rep_arm_diff = (rep_arm_links["左"].get("左腕").position - rep_arm_links["右"].get("右腕").position)
-        arm_diff_ratio = rep_arm_diff / org_arm_diff
-        arm_diff_ratio.one()    # 比率なので、0は1に変換する
-
-        # TOの長さ比率（いかり肩ボーンとかあるので、絶対値はとらない）
-        org_to_diff = (org_to_links.get(to_bone_name).position - org_from_links.get(from_bone_name).position)
-        rep_to_diff = (rep_to_links.get(to_bone_name).position - rep_from_links.get(from_bone_name).position)
-        to_diff_ratio = rep_to_diff / org_to_diff
-        
-        logger.test("f: %s, arm_diff_ratio: %s", bf.fno, arm_diff_ratio)
-        logger.test("f: %s, to_diff_ratio: %s", bf.fno, to_diff_ratio)
-
-        # ---------------
-
-        rep_front_to_x = rep_front_from_pos.x() + ((org_front_to_pos.x() - org_front_from_pos.x()) * arm_diff_ratio.x())
-        rep_front_to_y = rep_front_from_pos.y() + ((org_front_to_pos.y() - org_front_from_pos.y()) * to_diff_ratio.y())
-        rep_front_to_z = rep_front_from_pos.z() + ((org_front_to_pos.z() - org_front_from_pos.z()) * arm_diff_ratio.x())
-
-        logger.test("f: %s, rep_front: x: %s, y: %s, z: %s", bf.fno, rep_front_to_x, rep_front_to_y, rep_front_to_z)
-
-        # 腕比率による位置と、TO比率による位置の合算を適用
-        rep_front_to_x = rep_front_from_pos.x() + ((org_front_to_pos.x() - org_front_from_pos.x()) * arm_diff_ratio.x() * arm_diff_flg.x()) \
-            + ((org_front_to_pos.x() - org_front_from_pos.x()) * to_diff_ratio.x() * to_diff_flg.x())
-        rep_front_to_y = rep_front_from_pos.y() + ((org_front_to_pos.y() - org_front_from_pos.y()) * arm_diff_ratio.y() * arm_diff_flg.y()) \
-            + ((org_front_to_pos.y() - org_front_from_pos.y()) * to_diff_ratio.y() * to_diff_flg.y())
-        rep_front_to_z = rep_front_from_pos.z() + ((org_front_to_pos.z() - org_front_from_pos.z()) * arm_diff_ratio.x() * arm_diff_flg.z()) \
-            + ((org_front_to_pos.z() - org_front_from_pos.z()) * to_diff_ratio.x() * to_diff_flg.z())
-
-        logger.test("f: %s, re rep_front: x: %s, y: %s, z: %s", bf.fno, rep_front_to_x, rep_front_to_y, rep_front_to_z)
-
-        logger.test("f: %s, rep_front_from_pos: %s", bf.fno, rep_front_from_pos)
-        logger.test("f: %s, org_front_to_pos: %s", bf.fno, org_front_to_pos)
-        logger.test("f: %s, org_front_from_pos: %s", bf.fno, org_front_from_pos)
-
-        new_rep_front_to_pos = MVector3D(rep_front_to_x, rep_front_to_y, rep_front_to_z)
-        logger.test("f: %s, 計算new_rep_front_to_pos: %s", bf.fno, new_rep_front_to_pos)
-        logger.test("f: %s, 元rep_front_to_pos: %s", bf.fno, rep_front_to_pos)
-
-        # 正面向きの新しいTO位置
-        new_rep_front_to_global_3ds = {}
-        new_rep_front_to_global_3ds[to_bone_name] = new_rep_front_to_pos
-
-        # 回転を元に戻した位置
-        rotated_to_3ds = MServiceUtils.calc_global_pos_by_direction(rep_to_direction_qq, new_rep_front_to_global_3ds)
-
-        return rotated_to_3ds[to_bone_name], rep_to_global_3ds[to_bone_name], rep_to_global_3ds[from_bone_name]
 
     # スタンス用細分化
     def prepare_split_stance(self, data_set_idx: int, data_set: MOptionsDataSet, target_bone_name: str):

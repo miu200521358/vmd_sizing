@@ -281,7 +281,7 @@ class StanceServiceTest(unittest.TestCase):
         for params in target_test_params:
             print(params)
 
-            copy_motion = cPickle.loads(cPickle.dumps(motion, -1))
+            copy_motion = motion.copy()
             dataset = MOptionsDataSet(copy_motion, model, model, "", False, False)
             dataset.test_params = params
 
@@ -314,7 +314,7 @@ class StanceServiceTest(unittest.TestCase):
         for params in target_test_params:
             print(params)
 
-            copy_motion = cPickle.loads(cPickle.dumps(motion, -1))
+            copy_motion = motion.copy()
             dataset = MOptionsDataSet(copy_motion, model, model, "", False, False)
             dataset.test_params = params
 
@@ -344,7 +344,7 @@ class StanceServiceTest(unittest.TestCase):
         for params in target_test_params:
             print(params)
 
-            copy_motion = cPickle.loads(cPickle.dumps(motion, -1))
+            copy_motion = motion.copy()
             dataset = MOptionsDataSet(copy_motion, model, model, "", False, False)
             dataset.test_params = params
 
@@ -378,7 +378,7 @@ class StanceServiceTest(unittest.TestCase):
         for params in target_test_params:
             print(params)
 
-            copy_motion = cPickle.loads(cPickle.dumps(motion, -1))
+            copy_motion = motion.copy()
             dataset = MOptionsDataSet(copy_motion, model, model, "", False, False)
             dataset.test_params = params
 
@@ -573,6 +573,70 @@ class StanceServiceTest(unittest.TestCase):
             from_rotation.normalize()
             print("rot %s" % from_rotation.toEulerAngles4MMD())
             print("original: %s" % MVector3D(21.338723875696445, 15.845333083479046, 37.954108757721826))
+
+    def test_stance_shoulder_09(self):
+        # motion = VmdReader("E:/MMD/MikuMikuDance_v926x64/Work/202001_sizing/肩/折岸みつ肩2.vmd").read_data()
+        # org_model = PmxReader("D:/MMD/MikuMikuDance_v926x64/UserFile/Model/オリジナル/折岸みつ つみだんご/折岸みつ.pmx").read_data()
+        # rep_model = PmxReader("D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/055_鶯丸/鶯丸 さばそ式ver1.75配布用/さばそ式鶯丸(通常・刀無)ver1.75.pmx").read_data()
+        motion = VmdReader("D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/運動/バレエっぽいターン グレイ/バレエっぽいターン.vmd").read_data()
+        org_model = PmxReader("D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/あぴミク01_Ver.1.04 アレン・ベルル/Appearance Miku_01_Ver.1.04_準標準.pmx").read_data()
+        rep_model = PmxReader("D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/底辺508式初音ミク_素足モデル せんと(鈍棒P)/miku_v3(素足_袖なし).pmx").read_data()
+
+        # 数値パターン
+        test_number_param = [0, -1, 1]
+        all_number_test_params = list(itertools.product(test_number_param, repeat=3))
+        number_test_params = [(x00, x01, x02) for (x00, x01, x02) in all_number_test_params if x00 == 0 or x01 == 0 or x02 == 0]
+        print(len(number_test_params))
+
+        for params in number_test_params:
+            print(params)
+
+            copy_motion = motion.copy()
+            dataset = MOptionsDataSet(copy_motion, org_model, rep_model, "", True, False, [])
+            dataset.test_params = params
+
+            options = MOptions("", "", [dataset], None, None, False, None)
+
+            service = StanceService(options)
+            service.adjust_shoulder_stance(0, dataset)
+
+            print("right stance: %s" % dataset.motion.bones["右肩"][0].rotation.toEulerAngles())
+            print("right original: %s" % motion.bones["右肩"][0].rotation.toEulerAngles())
+            print("left stance: %s" % dataset.motion.bones["左肩"][0].rotation.toEulerAngles())
+            print("left original: %s" % motion.bones["左肩"][0].rotation.toEulerAngles())
+
+            pass
+
+        self.assertTrue(True)
+
+    def not_test_adjust_upper_stance01(self):
+        motion = VmdReader("D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/運動/バレエっぽいターン グレイ/バレエっぽいターン.vmd").read_data()
+        org_model = PmxReader("D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/あぴミク01_Ver.1.04 アレン・ベルル/Appearance Miku_01_Ver.1.04_準標準.pmx").read_data()
+        rep_model = PmxReader("D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/底辺508式初音ミク_素足モデル せんと(鈍棒P)/miku_v3(素足_袖なし).pmx").read_data()
+
+        # 数値パターン
+        test_number_param = [0, -1, 1]
+        all_number_test_params = list(itertools.product(test_number_param, repeat=3))
+        number_test_params = [(x00, x01, x02) for (x00, x01, x02) in all_number_test_params if x00 == 0 or x01 == 0 or x02 == 0]
+        print(len(number_test_params))
+
+        for params in number_test_params:
+            print(params)
+
+            copy_motion = motion.copy()
+            dataset = MOptionsDataSet(copy_motion, org_model, rep_model, "", True, False, [])
+            dataset.test_params = params
+
+            options = MOptions("", "", [dataset], None, None, False, None)
+
+            service = StanceService(options)
+            service.adjust_upper_stance(0, dataset)
+
+            print("stance: %s" % dataset.motion.bones["上半身"][44].rotation.toEulerAngles())
+            print("original: %s" % motion.bones["上半身"][44].rotation.toEulerAngles())
+            print("original: %s" % motion.bones["上半身"][0].rotation.toEulerAngles())
+
+        self.assertTrue(True)
 
 
 

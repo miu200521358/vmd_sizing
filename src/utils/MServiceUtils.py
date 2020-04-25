@@ -201,7 +201,7 @@ def calc_relative_rotation(model: PmxModel, links: BoneLinks, motion: VmdMotion,
         link_bone = links.get(link_bone_name)
 
         if not limit_links or (limit_links and limit_links.get(link_bone_name)):
-            # 上限リンクがある倍、ボーンが存在している場合のみ、モーション内のキー情報を取得
+            # 上限リンクがある場合、ボーンが存在している場合のみ、モーション内のキー情報を取得
             fill_bf = motion.calc_bf(link_bone.name, fno)
         else:
             # 上限リンクでボーンがない場合、ボーンは初期値
@@ -285,7 +285,7 @@ def calc_direction_qq(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno:
     for qq in add_qs:
         total_qq *= qq
 
-    return total_qq
+    return total_qq.normalized()
 
 
 # 足IKに基づく身体比率

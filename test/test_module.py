@@ -70,3 +70,12 @@ class MMathTest(unittest.TestCase):
         from_rotation = parent_qq.inverted() * from_orientation * initial.inverted() * cancel_qq.inverted()
         print(from_rotation.toEulerAngles4MMD())
 
+    def test_MQuaternion_inverted02(self):
+        initial = MQuaternion.fromEulerAngles(-23.093702434660457, 104.29537469962791, -100.75495862294058)
+        orientation = MQuaternion.fromEulerAngles(2.8645534869583353, 112.98932633880118, -74.65035471978359)
+
+        rot = orientation * initial.inverted()
+        print(rot.toEulerAngles())
+
+        rot = initial.inverted() * orientation
+        print(rot.toEulerAngles())

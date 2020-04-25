@@ -55,7 +55,20 @@ class BoneLinks():
             if lkey == bone_name:
                 break
         return new_links
-    
+
+    # 指定されたボーン名以降のリンクを取得
+    def to_links(self, bone_name: str):
+        new_links = BoneLinks()
+        is_append = False
+        for lidx, lkey in enumerate(self.__links.keys()):
+            if lkey == bone_name:
+                is_append = True
+            
+            if is_append:
+                new_links.append(self.__links[lkey])
+                
+        return new_links
+        
     # 最後のリンク名を取得する
     def last_name(self):
         if not self.__links:

@@ -422,31 +422,40 @@ class PmxReader():
                 pmx.bone_indexes[left_ik_sole_bone.index] = left_ik_sole_bone.name
 
             # 首根元ボーン
-            if "左腕" in pmx.bones and "右腕" in pmx.bones:
-                neck_base_vertex = Vertex(-1, (pmx.bones["左腕"].position + pmx.bones["右腕"].position) / 2, MVector3D(), [], [], Vertex.Bdef1(-1), -1)
+            if "左肩" in pmx.bones and "右肩" in pmx.bones:
+                neck_base_vertex = Vertex(-1, (pmx.bones["左肩"].position + pmx.bones["右肩"].position) / 2, MVector3D(), [], [], Vertex.Bdef1(-1), -1)
                 neck_base_vertex.position.setX(0)
                 neck_base_bone = Bone("首根元", "base of neck", neck_base_vertex.position.copy(), -1, 0, 0)
+
+                if "上半身2" in pmx.bones:
+                    # 上半身2がある場合、表示先は、上半身2
+                    neck_base_bone.parent_index = pmx.bones["上半身2"].index
+                    neck_base_bone.tail_index = pmx.bones["上半身2"].index
+                elif "上半身" in pmx.bones:
+                    neck_base_bone.parent_index = pmx.bones["上半身"].index
+                    neck_base_bone.tail_index = pmx.bones["上半身"].index
+
                 neck_base_bone.index = len(pmx.bones.keys())
                 pmx.bones[neck_base_bone.name] = neck_base_bone
                 pmx.bone_indexes[neck_base_bone.index] = neck_base_bone.name
 
-            if "右腕" in pmx.bones:
-                # 右腕下延長ボーン
-                right_arm_under_pos = pmx.bones["右腕"].position.copy()
-                right_arm_under_pos.setY(right_arm_under_pos.y() - 1)
-                right_arm_under_bone = Bone("右腕下延長", "", right_arm_under_pos, -1, 0, 0)
-                right_arm_under_bone.index = len(pmx.bones.keys())
-                pmx.bones[right_arm_under_bone.name] = right_arm_under_bone
-                pmx.bone_indexes[right_arm_under_bone.index] = right_arm_under_bone.name
+            if "右肩" in pmx.bones:
+                # 右肩下延長ボーン
+                right_shoulder_under_pos = pmx.bones["右肩"].position.copy()
+                right_shoulder_under_pos.setY(right_shoulder_under_pos.y() - 1)
+                right_shoulder_under_bone = Bone("右肩下延長", "", right_shoulder_under_pos, -1, 0, 0)
+                right_shoulder_under_bone.index = len(pmx.bones.keys())
+                pmx.bones[right_shoulder_under_bone.name] = right_shoulder_under_bone
+                pmx.bone_indexes[right_shoulder_under_bone.index] = right_shoulder_under_bone.name
 
-            if "左腕" in pmx.bones:
-                # 左腕下延長ボーン
-                left_arm_under_pos = pmx.bones["左腕"].position.copy()
-                left_arm_under_pos.setY(left_arm_under_pos.y() - 1)
-                left_arm_under_bone = Bone("左腕下延長", "", left_arm_under_pos, -1, 0, 0)
-                left_arm_under_bone.index = len(pmx.bones.keys())
-                pmx.bones[left_arm_under_bone.name] = left_arm_under_bone
-                pmx.bone_indexes[left_arm_under_bone.index] = left_arm_under_bone.name
+            if "左肩" in pmx.bones:
+                # 左肩下延長ボーン
+                left_shoulder_under_pos = pmx.bones["左肩"].position.copy()
+                left_shoulder_under_pos.setY(left_shoulder_under_pos.y() - 1)
+                left_shoulder_under_bone = Bone("左肩下延長", "", left_shoulder_under_pos, -1, 0, 0)
+                left_shoulder_under_bone.index = len(pmx.bones.keys())
+                pmx.bones[left_shoulder_under_bone.name] = left_shoulder_under_bone
+                pmx.bone_indexes[left_shoulder_under_bone.index] = left_shoulder_under_bone.name
 
             # 指先ボーンがない場合、代替で挿入
             for direction in ["左", "右"]:
