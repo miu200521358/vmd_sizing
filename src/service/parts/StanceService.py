@@ -14,8 +14,7 @@ from utils import MUtils, MServiceUtils, MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
 from utils.MException import SizingException
 
-# logger = MLogger(__name__, level=1)
-logger = MLogger(__name__, level=MLogger.TIMER)
+logger = MLogger(__name__)
 
 
 class StanceService():
@@ -57,8 +56,8 @@ class StanceService():
                 # つま先補正
                 self.adjust_toe_stance(data_set_idx, data_set)
 
-            # 腕系サイジング可能であれば、腕スタンス補正
-            if data_set.org_model.can_arm_sizing and data_set.rep_model.can_arm_sizing:
+            # 腕系サイジング可能（もしくはチェックスキップ）であれば、腕スタンス補正
+            if (data_set.org_model.can_arm_sizing and data_set.rep_model.can_arm_sizing) or self.options.arm_process_option.arm_check_skip_flg:
                 if data_set.detail_stance_flg:
                     # 肩スタンス補正
                     self.adjust_shoulder_stance(data_set_idx, data_set)
@@ -95,7 +94,7 @@ class StanceService():
         logger.info("捩り分散　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
         
         futures = []
-        with ThreadPoolExecutor(thread_name_prefix="twist") as executor:
+        with ThreadPoolExecutor(thread_name_prefix="twist{0}".format(data_set_idx)) as executor:
             for direction in ["左", "右"]:
                 futures.append(executor.submit(self.spread_twist_lr, data_set_idx, direction))
         concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
@@ -148,7 +147,7 @@ class StanceService():
 
                 # 全打ち準備
                 futures = []
-                with ThreadPoolExecutor(thread_name_prefix="twist_full") as executor:
+                with ThreadPoolExecutor(thread_name_prefix="twist_full{0}".format(data_set_idx)) as executor:
                     for bone_name in [arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name]:
                         futures.append(executor.submit(self.prepare_spread_twist_pool, data_set_idx, bone_name))
                 concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
@@ -172,7 +171,7 @@ class StanceService():
                 log_target_idxs.append(fnos[-1])
 
                 futures = []
-                with ThreadPoolExecutor(thread_name_prefix="twist_exec") as executor:
+                with ThreadPoolExecutor(thread_name_prefix="twist_exec{0}".format(data_set_idx)) as executor:
                     for fno_idx, fno in enumerate(fnos):
                         futures.append(executor.submit(self.spread_twist_pool, data_set_idx, fno_idx, fno, fnos[-1], \
                                                        arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name, \
@@ -188,7 +187,7 @@ class StanceService():
 
                 # 各ボーンのbfを円滑化
                 futures = []
-                with ThreadPoolExecutor(thread_name_prefix="twist_smooth") as executor:
+                with ThreadPoolExecutor(thread_name_prefix="twist_smooth{0}".format(data_set_idx)) as executor:
                     for bone_name in [arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name]:
                         # 読み込んだ時のキーフレのみを対象とする
                         fnos = data_set.motion.get_bone_fnos(bone_name, is_read=True)
@@ -212,9 +211,42 @@ class StanceService():
                     if not f.result():
                         return False
 
+                # 最後に全キーフレで繋げるのを除去
+                if self.options.logging_level != MLogger.FULL and self.options.logging_level != MLogger.DEBUG_FULL:
+                    futures = []
+                    with ThreadPoolExecutor(thread_name_prefix="smooth{0}".format(data_set_idx)) as executor:
+                        logger.info("不要キー削除【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
+                        
+                        for bone_name in [arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name]:
+                            # 読み込んだ時のキーフレのみを対象とする
+                            fnos = data_set.motion.get_bone_fnos(bone_name, is_read=True)
+                            if len(fnos) < 2:
+                                # 前後がない場合、全件キーフレ
+                                all_fnos = data_set.motion.get_bone_fnos(bone_name)
+                                fnos = [all_fnos[0], all_fnos[-1]]
+
+                            prev_sep_fno = 0
+                            log_target_idxs = []
+                            for fno_idx, fno in enumerate(data_set.motion.get_bone_fnos(bone_name)):
+                                if fno // 500 > prev_sep_fno:
+                                    log_target_idxs.append(fno)
+                                    prev_sep_fno = fno // 500
+                            log_target_idxs.append(fnos[-1])
+
+                            for start_fno, end_fno in zip(fnos[:-1], fnos[1:]):
+                                futures.append(executor.submit(self.remove_unnecessary_bf_pool_parts, data_set_idx, bone_name, start_fno, end_fno, log_target_idxs))
+                    concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
+                    for f in futures:
+                        if not f.result():
+                            return False
+                    
+                    for data_set_idx, data_set in enumerate(self.options.data_set_list):
+                        if data_set.full_arms:
+                            logger.info(" 不要キー削除:終了【No.%s】", data_set_idx + 1)
+
                 # 各ボーンのbfにフィルターをかける
                 futures = []
-                with ThreadPoolExecutor(thread_name_prefix="twist_smooth") as executor:
+                with ThreadPoolExecutor(thread_name_prefix="twist_smooth{0}".format(data_set_idx)) as executor:
                     for bone_name in [arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name]:
                         futures.append(executor.submit(self.smooth_filter_twist, data_set_idx, bone_name))
                 concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
@@ -223,6 +255,21 @@ class StanceService():
                         return False
 
                 logger.info("%s捩り分散:終了【No.%s】", direction, (data_set_idx + 1))
+
+            return True
+        except SizingException:
+            return False
+        except Exception as e:
+            logger.error("サイジング処理が意図せぬエラーで終了しました。", e)
+            return False
+
+    def remove_unnecessary_bf_pool_parts(self, data_set_idx: int, bone_name: str, start_fno: int, end_fno: int, log_target_idxs: list):
+        try:
+            logger.copy(self.options)
+            data_set = self.options.data_set_list[data_set_idx]
+            data_set.motion.remove_unnecessary_bf(data_set_idx + 1, bone_name, start_fno, end_fno, \
+                                                  data_set.rep_model.bones[bone_name].getRotatable(), data_set.rep_model.bones[bone_name].getTranslatable(), \
+                                                  (end_fno in log_target_idxs))
 
             return True
         except SizingException:
@@ -628,7 +675,7 @@ class StanceService():
         logger.info("つま先補正　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
 
         futures = []
-        with ThreadPoolExecutor(thread_name_prefix="toe") as executor:
+        with ThreadPoolExecutor(thread_name_prefix="toe{0}".format(data_set_idx)) as executor:
             for direction in ["左", "右"]:
                 futures.append(executor.submit(self.adjust_toe_stance_lr, data_set_idx, direction))
         concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
@@ -1017,7 +1064,7 @@ class StanceService():
                                       org_upper_links, org_head_links, org_head_links, org_arm_links, \
                                       rep_upper_links, rep_head_links, rep_head_links, rep_arm_links, \
                                       "上半身", "頭", rep_upper_links.get("上半身", offset=-1).name, \
-                                      rep_upper_initial_slope_qq, MQuaternion(), self.def_calc_up_upper, 0)
+                                      rep_upper_initial_slope_qq, MQuaternion(), MVector3D(1, 0, 1), MVector3D(0, 1, 0), self.def_calc_up_upper, 0)
 
             # 内積
             dot = MVector3D.dotProduct(org_upper_slope.normalized(), rep_upper_slope.normalized())
@@ -1062,7 +1109,7 @@ class StanceService():
                                               org_upper_links, org_head_links, org_head_links, org_arm_links, \
                                               rep_upper_links, rep_head_links, rep_head_links, rep_arm_links, \
                                               "上半身", "頭", rep_upper_links.get("上半身", offset=-1).name, \
-                                              rep_upper_initial_slope_qq, upper_initial_qq, self.def_calc_up_upper, dot_limit)
+                                              rep_upper_initial_slope_qq, upper_initial_qq, MVector3D(1, 0, 1), MVector3D(0, 1, 0), self.def_calc_up_upper, dot_limit)
 
                 if fno // 500 > prev_fno and fnos[-1] > 0:
                     logger.info("-- %sフレーム目:終了(%s％)【No.%s - 上半身】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1)
@@ -1107,7 +1154,7 @@ class StanceService():
                                           org_upper2_links, org_head_links, org_head_links, org_arm_links, \
                                           rep_upper2_links, rep_head_links, rep_head_links, rep_arm_links, \
                                           "上半身2", "頭", rep_upper2_links.get("上半身2", offset=-1).name, \
-                                          rep_upper2_initial_slope_qq, MQuaternion(), self.def_calc_up_upper, 0)
+                                          rep_upper2_initial_slope_qq, MQuaternion(), MVector3D(1, 0, 1), MVector3D(0, 1, 0), self.def_calc_up_upper, 0)
 
                 # 内積
                 dot = MVector3D.dotProduct(org_upper2_slope.normalized(), rep_upper2_slope.normalized())
@@ -1152,7 +1199,7 @@ class StanceService():
                                                   org_upper2_links, org_head_links, org_head_links, org_arm_links, \
                                                   rep_upper2_links, rep_head_links, rep_head_links, rep_arm_links, \
                                                   "上半身2", "頭", rep_upper2_links.get("上半身2", offset=-1).name, \
-                                                  rep_upper2_initial_slope_qq, upper2_initial_qq, self.def_calc_up_upper, dot2_limit)
+                                                  rep_upper2_initial_slope_qq, upper2_initial_qq, MVector3D(1, 0, 1), MVector3D(0, 1, 0), self.def_calc_up_upper, dot2_limit)
 
                     if fno // 500 > prev_fno and fnos[-1] > 0:
                         logger.info("-- %sフレーム目:終了(%s％)【No.%s - 上半身2】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1)
@@ -1170,7 +1217,7 @@ class StanceService():
         logger.info("肩スタンス補正　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
 
         futures = []
-        with ThreadPoolExecutor(thread_name_prefix="shoulder") as executor:
+        with ThreadPoolExecutor(thread_name_prefix="shoulder{0}".format(data_set_idx)) as executor:
             for direction in ["左", "右"]:
                 futures.append(executor.submit(self.adjust_shoulder_stance_lr, data_set_idx, "{0}肩P".format(direction), "{0}肩".format(direction), "{0}腕".format(direction)))
         concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
@@ -1186,7 +1233,7 @@ class StanceService():
             data_set = self.options.data_set_list[data_set_idx]
 
             # 肩調整に必要なボーン群(肩Pは含めない)
-            shoulder_target_bones = ["頭", "首", "首根元", shoulder_name, arm_name, "{0}下延長".format(arm_name), "上半身"]
+            shoulder_target_bones = ["頭", "首", shoulder_name, arm_name, "{0}下延長".format(arm_name), "上半身"]
 
             if set(shoulder_target_bones).issubset(data_set.org_model.bones) and set(shoulder_target_bones).issubset(data_set.rep_model.bones) and shoulder_name in data_set.motion.bones:
                 # 肩Pを使うかどうか
@@ -1228,7 +1275,7 @@ class StanceService():
                                           org_shoulder_links, org_arm_links[shoulder_name[0]], org_arm_under_links, org_arm_links, \
                                           rep_shoulder_links, rep_arm_links[shoulder_name[0]], rep_arm_under_links, rep_arm_links, \
                                           shoulder_name, arm_name, rep_shoulder_links.get(shoulder_name, offset=-1).name, \
-                                          rep_shoulder_initial_slope_qq, MQuaternion(), self.def_calc_up_shoulder, 0)
+                                          rep_shoulder_initial_slope_qq, MQuaternion(), MVector3D(1, 0, 1), MVector3D(1, 1, 0), self.def_calc_up_shoulder, 0)
                 
                 # 内積
                 dot = MVector3D.dotProduct(org_shoulder_slope.normalized(), rep_shoulder_slope.normalized())
@@ -1283,7 +1330,7 @@ class StanceService():
                                                   org_shoulder_links, org_arm_links[shoulder_name[0]], org_arm_under_links, org_arm_links, \
                                                   rep_shoulder_links, rep_arm_links[shoulder_name[0]], rep_arm_under_links, rep_arm_links, \
                                                   shoulder_name, arm_name, rep_shoulder_links.get(shoulder_name, offset=-1).name, \
-                                                  rep_shoulder_initial_slope_qq, shoulder_initial_qq, self.def_calc_up_shoulder, dot_limit)
+                                                  rep_shoulder_initial_slope_qq, shoulder_initial_qq, MVector3D(1, 0, 1), MVector3D(1, 1, 0), self.def_calc_up_shoulder, dot_limit)
                         
                     # bf登録
                     data_set.motion.regist_bf(shoulder_bf, shoulder_name, fno)
@@ -1319,7 +1366,10 @@ class StanceService():
             # 調整後の親bfのdeformed回転量
             rep_deformed_qq = MServiceUtils.deform_rotation(data_set.rep_model, data_set.motion, rep_parent_bf)
 
-            bf.rotation = rep_deformed_qq.inverted() * org_deformed_qq * bf.rotation
+            logger.test("f: %s, b: %s, org: %s, rep: %s, diff: %s", fno, target_bone_name, org_deformed_qq.toEulerAngles4MMD(), \
+                        rep_deformed_qq.toEulerAngles4MMD(), (rep_deformed_qq.inverted() * org_deformed_qq).toEulerAngles4MMD())
+
+            bf.rotation = rep_parent_bf.rotation.inverted() * org_parent_bf.rotation * bf.rotation
 
     # 定義: 傾きを求める方向の位置計算（上半身）
     def def_calc_up_upper(self, bf: VmdBoneFrame, data_set_idx: int, data_set: MOptionsDataSet, \
@@ -1358,7 +1408,7 @@ class StanceService():
                              org_from_links: BoneLinks, org_to_links: BoneLinks, org_head_links: BoneLinks, org_arm_links: BoneLinks, \
                              rep_from_links: BoneLinks, rep_to_links: BoneLinks, rep_head_links: BoneLinks, rep_arm_links: BoneLinks, \
                              from_bone_name: str, to_bone_name: str, rep_parent_bone_name: str, \
-                             rep_initial_slope_qq: MQuaternion, cancel_qq: MQuaternion, def_calc_up, dot_limit):
+                             rep_initial_slope_qq: MQuaternion, cancel_qq: MQuaternion, arm_diff_flg: MVector3D, to_diff_flg: MVector3D, def_calc_up, dot_limit):
         logger.test("f: %s -----------------------------", bf.fno)
 
         # 基準より親の回転量
@@ -1371,7 +1421,7 @@ class StanceService():
             = self.recalc_to_pos(bf, data_set_idx, data_set, \
                                  org_from_links, org_to_links, org_arm_links, \
                                  rep_from_links, rep_to_links, rep_arm_links, \
-                                 from_bone_name, to_bone_name)
+                                 from_bone_name, to_bone_name, arm_diff_flg, to_diff_flg)
 
         # UP方向の再計算（元モデルで計算する）
         up_pos = def_calc_up(bf, data_set_idx, data_set, org_from_links, org_to_links, org_head_links, org_arm_links, \
@@ -1418,7 +1468,7 @@ class StanceService():
     def recalc_to_pos(self, bf: VmdBoneFrame, data_set_idx: int, data_set: MOptionsDataSet, \
                       org_from_links: BoneLinks, org_to_links: BoneLinks, org_arm_links: BoneLinks, \
                       rep_from_links: BoneLinks, rep_to_links: BoneLinks, rep_arm_links: BoneLinks, \
-                      from_bone_name: str, to_bone_name: str):
+                      from_bone_name: str, to_bone_name: str, arm_diff_flg: MVector3D, to_diff_flg: MVector3D):
 
         # FROMボーンまでの位置
         org_from_global_3ds, org_front_from_global_3ds, org_from_direction_qq = \
@@ -1452,21 +1502,31 @@ class StanceService():
         arm_diff_ratio = rep_arm_diff / org_arm_diff
         arm_diff_ratio.one()    # 比率なので、0は1に変換する
 
-        # TOの長さ比率
+        # TOの長さ比率（いかり肩ボーンとかあるので、絶対値はとらない）
         org_to_diff = (org_to_links.get(to_bone_name).position - org_from_links.get(from_bone_name).position)
-        org_to_diff.abs()
         rep_to_diff = (rep_to_links.get(to_bone_name).position - rep_from_links.get(from_bone_name).position)
-        rep_to_diff.abs()
         to_diff_ratio = rep_to_diff / org_to_diff
         
         logger.test("f: %s, arm_diff_ratio: %s", bf.fno, arm_diff_ratio)
         logger.test("f: %s, to_diff_ratio: %s", bf.fno, to_diff_ratio)
 
         # ---------------
-        
+
         rep_front_to_x = rep_front_from_pos.x() + ((org_front_to_pos.x() - org_front_from_pos.x()) * arm_diff_ratio.x())
         rep_front_to_y = rep_front_from_pos.y() + ((org_front_to_pos.y() - org_front_from_pos.y()) * to_diff_ratio.y())
         rep_front_to_z = rep_front_from_pos.z() + ((org_front_to_pos.z() - org_front_from_pos.z()) * arm_diff_ratio.x())
+
+        logger.test("f: %s, rep_front: x: %s, y: %s, z: %s", bf.fno, rep_front_to_x, rep_front_to_y, rep_front_to_z)
+
+        # 腕比率による位置と、TO比率による位置の合算を適用
+        rep_front_to_x = rep_front_from_pos.x() + ((org_front_to_pos.x() - org_front_from_pos.x()) * arm_diff_ratio.x() * arm_diff_flg.x()) \
+            + ((org_front_to_pos.x() - org_front_from_pos.x()) * to_diff_ratio.x() * to_diff_flg.x())
+        rep_front_to_y = rep_front_from_pos.y() + ((org_front_to_pos.y() - org_front_from_pos.y()) * arm_diff_ratio.y() * arm_diff_flg.y()) \
+            + ((org_front_to_pos.y() - org_front_from_pos.y()) * to_diff_ratio.y() * to_diff_flg.y())
+        rep_front_to_z = rep_front_from_pos.z() + ((org_front_to_pos.z() - org_front_from_pos.z()) * arm_diff_ratio.x() * arm_diff_flg.z()) \
+            + ((org_front_to_pos.z() - org_front_from_pos.z()) * to_diff_ratio.x() * to_diff_flg.z())
+
+        logger.test("f: %s, re rep_front: x: %s, y: %s, z: %s", bf.fno, rep_front_to_x, rep_front_to_y, rep_front_to_z)
 
         logger.test("f: %s, rep_front_from_pos: %s", bf.fno, rep_front_from_pos)
         logger.test("f: %s, org_front_to_pos: %s", bf.fno, org_front_to_pos)
@@ -1515,17 +1575,48 @@ class StanceService():
         arm_diff_qq_dic = self.calc_arm_stance(data_set)
 
         futures = []
-        with ThreadPoolExecutor(thread_name_prefix="arm") as executor:
+        with ThreadPoolExecutor(thread_name_prefix="arm{0}".format(data_set_idx)) as executor:
             for bone_name in ["左腕", "左ひじ", "左手首", "右腕", "右ひじ", "右手首"]:
-                futures.append(executor.submit(self.adjust_arm_stance_lr, data_set_idx, arm_diff_qq_dic, bone_name))
+                futures.append(executor.submit(self.adjust_arm_stance_pool, data_set_idx, arm_diff_qq_dic, bone_name))
+            for bone_name in ["左腕捩", "左手捩", "右腕捩", "右手捩"]:
+                futures.append(executor.submit(self.adjust_arm_stance_twist_pool, data_set_idx, bone_name))
         concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
         for f in futures:
             if not f.result():
                 return False
+    
+    def adjust_arm_stance_twist_pool(self, data_set_idx: int, bone_name: str):
+        try:
+            logger.copy(self.options)
+            data_set = self.options.data_set_list[data_set_idx]
+
+            if bone_name in data_set.motion.bones and bone_name in data_set.org_model.bones and bone_name in data_set.rep_model.bones:
+                axis = data_set.rep_model.get_local_x_axis(bone_name)
+
+                for bf in data_set.motion.bones[bone_name].values():
+                    if bf.key:
+                        # 元モデルのモーションの回転量
+                        degree = bf.rotation.toDegree()
+
+                        # 先モデルの軸に合わせる（変換先の軸と回転の軸が逆なら逆回転）
+                        rep_qq = MQuaternion.fromAxisAndAngle(axis, degree * (np.sign(bf.rotation.x()) * np.sign(axis.x())))
+
+                        logger.test("f: %s, %s, prev: %s, degree: %s, after: %s", bf.fno, bone_name, bf.rotation, degree, rep_qq)
+
+                        bf.rotation = rep_qq
+                
+                logger.info("腕スタンス補正【No.%s - %s】", (data_set_idx + 1), bone_name)
+
+            return True
+        except SizingException:
+            return False
+        except Exception as e:
+            logger.error("サイジング処理が意図せぬエラーで終了しました。", e)
+            return False
 
     # 腕スタンス補正左右
-    def adjust_arm_stance_lr(self, data_set_idx: int, arm_diff_qq_dic: dict, bone_name: str):
+    def adjust_arm_stance_pool(self, data_set_idx: int, arm_diff_qq_dic: dict, bone_name: str):
         try:
             logger.copy(self.options)
             data_set = self.options.data_set_list[data_set_idx]
@@ -1588,4 +1679,5 @@ class StanceService():
         
         return arm_diff_qq_dic
 
+        
 

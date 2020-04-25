@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-import numpy as np
 import _pickle as cPickle
-from datetime import datetime
 import itertools
 import unittest
 import sys
@@ -404,8 +402,8 @@ class StanceServiceTest(unittest.TestCase):
         shoulder_pos = MVector3D(-0.8141360282897949, 19.6701602935791, 0.4931679964065552)
         neck_base_pos = MVector3D(0.0, 19.6701602935791, 0.4931679517030716)
 
-        stance_shoulder2neck_qq = MQuaternion.fromEulerAngles(0.015789129707102025, -0.040575112727633096, 42.52534119964952)
-        stance_shoulder2arm_qq = MQuaternion.fromEulerAngles(0.011536139571057251, 0.03538278693844499, -36.1158910081693)
+        # stance_shoulder2neck_qq = MQuaternion.fromEulerAngles(0.015789129707102025, -0.040575112727633096, 42.52534119964952)
+        # stance_shoulder2arm_qq = MQuaternion.fromEulerAngles(0.011536139571057251, 0.03538278693844499, -36.1158910081693)
 
         # 傾きパターン
         test_slope_param = [arm_pos, shoulder_pos, neck_base_pos]
@@ -516,7 +514,7 @@ class StanceServiceTest(unittest.TestCase):
 
     def not_test_stance_shoulder_08(self):
         new_rep_to_pos = MVector3D(16.638640587237894, 19.455697325211673, 4.067013732312591)
-        rep_base_pos = MVector3D(15.541596036361701, 18.419343683301417, 2.4565491530944494)
+        # rep_base_pos = MVector3D(15.541596036361701, 18.419343683301417, 2.4565491530944494)
         rep_from_pos = MVector3D(16.07129122417615, 19.252113744303983, 2.952803072461259)
         up_pos = MVector3D(0.02597404821369409, -0.6341368197928823, 0.7727844735774392)
         parent_qq = MQuaternion.fromEulerAngles(4.444080622855673, 131.6889133202979, -6.602768822699441)

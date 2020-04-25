@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 #
-import copy
 from collections import OrderedDict
 from mmd.VmdData import VmdBoneFrame
 
@@ -41,11 +40,6 @@ class BoneLinks():
     def size(self):
         return len(self.__links.keys())
     
-    # 指定されたボーン名を削除する
-    def delete(self, bone_name: str):
-        copy_links = copy.deepcopy(self.__links)
-        del copy_links["bone_name"]
-    
     # 指定されたボーン名までのインデックス
     def index(self, bone_name: str):
         for lidx, lkey in enumerate(self.__links.keys()):
@@ -62,6 +56,20 @@ class BoneLinks():
                 break
         return new_links
     
+    # 最後のリンク名を取得する
+    def last_name(self):
+        if not self.__links:
+            return ""
+
+        return list(self.__links.keys())[-1]
+
+    # 最初のリンク名を取得する
+    def first_name(self):
+        if not self.__links:
+            return ""
+
+        return list(self.__links.keys())[0]
+
     def __str__(self):
         return "<BoneLinks links:{0}".format(self.__links)
 

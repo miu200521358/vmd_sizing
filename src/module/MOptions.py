@@ -16,10 +16,11 @@ logger = MLogger(__name__)
 
 class MOptions():
 
-    def __init__(self, version_name, logging_level, data_set_list, monitor, is_file, outout_datetime):
+    def __init__(self, version_name, logging_level, data_set_list, arm_options, monitor, is_file, outout_datetime):
         self.version_name = version_name
         self.logging_level = logging_level
         self.data_set_list = data_set_list
+        self.arm_options = arm_options
         self.monitor = monitor
         self.is_file = is_file
         self.outout_datetime = outout_datetime
@@ -66,9 +67,16 @@ class MOptions():
         parser.add_argument("--rep_model_path", required=True, type=(lambda x: list(map(str, x.split(';')))))
         parser.add_argument("--detail_stance_flg", required=True, type=(lambda x: list(map(int, x.split(';')))))
         parser.add_argument("--twist_flg", required=True, type=(lambda x: list(map(int, x.split(';')))))
-        parser.add_argument("--arm_process_flg_avoidance", required=True, type=(lambda x: list(map(int, x.split(';')))))
-        parser.add_argument("--arm_process_flg_alignment", required=True, type=(lambda x: list(map(int, x.split(';')))))
-        parser.add_argument("--verbose", default=20, type=int)
+        parser.add_argument("--arm_process_flg_avoidance", type=int, default=0)
+        parser.add_argument("--avoidance_target_list", default=[], type=(lambda x: list(map(str, x.split(';')))))
+        parser.add_argument("--arm_process_flg_alignment", type=int, default=0)
+        parser.add_argument("--alignment_finger_flg", type=int, default=0)
+        parser.add_argument("--alignment_floor_flg", type=int, default=0)
+        parser.add_argument("--alignment_distance_wrist", type=float, default=1.7)
+        parser.add_argument("--alignment_distance_finger", type=float, default=1.4)
+        parser.add_argument("--alignment_distance_floor", type=float, default=1.8)
+        parser.add_argument("--arm_check_skip_flg", type=int, default=0)
+        parser.add_argument("--verbose", type=int, default=20)
 
         args = parser.parse_args()
 
@@ -78,9 +86,27 @@ class MOptions():
         MLogger.initialize(level=args.verbose, is_file=True)
 
         try:
+            arm_process_flg_avoidance = True if args.arm_process_flg_avoidance == 1 else False
+            arm_process_flg_alignment = True if args.arm_process_flg_alignment == 1 else False
+            alignment_finger_flg = True if args.alignment_finger_flg == 1 else False
+            alignment_floor_flg = True if args.alignment_floor_flg == 1 else False
+            arm_check_skip_flg = True if args.arm_check_skip_flg == 1 else False
+
+            arm_options = MArmProcessOptions(
+                arm_process_flg_avoidance, \
+                args.avoidance_target_list, \
+                arm_process_flg_alignment, \
+                alignment_finger_flg, \
+                alignment_floor_flg, \
+                args.alignment_distance_wrist, \
+                args.alignment_distance_finger, \
+                args.alignment_distance_floor, \
+                arm_check_skip_flg
+            )
+
             data_set_list = []
-            for set_no, (motion_path, org_model_path, rep_model_path, detail_stance_flg_val, twist_flg_val, arm_process_flg_avoidance_val, arm_process_flg_alignment_val) in enumerate( \
-                zip(args.motion_path, args.org_model_path, args.rep_model_path, args.detail_stance_flg, args.twist_flg, args.arm_process_flg_avoidance, args.arm_process_flg_alignment)): # noqa
+            for set_no, (motion_path, org_model_path, rep_model_path, detail_stance_flg_val, twist_flg_val) in enumerate( \
+                zip(args.motion_path, args.org_model_path, args.rep_model_path, args.detail_stance_flg, args.twist_flg)): # noqa
 
                 display_set_no = "【No.{0}】".format(set_no + 1)
 
@@ -127,8 +153,6 @@ class MOptions():
 
                 detail_stance_flg = True if detail_stance_flg_val == 1 else False
                 twist_flg = True if twist_flg_val == 1 else False
-                arm_process_flg_avoidance = True if arm_process_flg_avoidance_val == 1 else False
-                arm_process_flg_alignment = True if arm_process_flg_alignment_val == 1 else False
 
                 # 出力ファイルパス
                 output_vmd_path = MFileUtils.get_output_vmd_path(motion_path, rep_model_path, detail_stance_flg, twist_flg, arm_process_flg_avoidance, arm_process_flg_alignment, False, "", True)
@@ -149,6 +173,7 @@ class MOptions():
                 version_name=version_name, \
                 logging_level=args.verbose, \
                 data_set_list=data_set_list, \
+                arm_options=arm_options, \
                 monitor=None, \
                 is_file=True, \
                 outout_datetime=logger.outout_datetime)
@@ -181,6 +206,21 @@ class MOptionsDataSet():
         # 実際に計算に使う足IKの比率
         self.xz_ratio = 1
         self.y_ratio = 1
+
+
+class MArmProcessOptions():
+
+    def __init__(self, avoidance: bool, avoidance_target_list: list, alignment: bool, alignment_finger_flg: bool, alignment_floor_flg: bool, \
+                 alignment_distance_wrist: float, alignment_distance_finger: float, alignment_distance_floor: float, arm_check_skip_flg: bool):
+        self.avoidance = avoidance
+        self.avoidance_target_list = avoidance_target_list
+        self.alignment = alignment
+        self.alignment_finger_flg = alignment_finger_flg
+        self.alignment_floor_flg = alignment_floor_flg
+        self.alignment_distance_wrist = alignment_distance_wrist
+        self.alignment_distance_finger = alignment_distance_finger
+        self.alignment_distance_floor = alignment_distance_floor
+        self.arm_check_skip_flg = arm_check_skip_flg
 
 
 class MCsvOptions():

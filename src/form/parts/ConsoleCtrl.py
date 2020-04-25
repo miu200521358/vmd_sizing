@@ -14,5 +14,5 @@ class ConsoleCtrl(wx.TextCtrl):
 
     def monitor(self, queue):
         while True:
-            super().write(queue.get())
-            wx.GetApp().Yield()
+            # super().write(queue.get())
+            wx.CallAfter(queue.get())

@@ -45,10 +45,9 @@ class MLogger():
     
     def copy(self, options):
         self.is_file = options.is_file
-        self.default_level = options.logging_level
         self.outout_datetime = options.outout_datetime
         sys.stdout = options.monitor
-        
+            
     def time(self, msg, *args, **kwargs):
         if not kwargs:
             kwargs = {}
@@ -69,7 +68,7 @@ class MLogger():
         if not kwargs:
             kwargs = {}
 
-        kwargs["level"] = 5
+        kwargs["level"] = self.TEST
         kwargs["time"] = True
         self.print_logger(msg, *args, **kwargs)
     
@@ -165,7 +164,10 @@ class MLogger():
                     output_msg = self.create_simple_message(print_msg, target_level, title)
                 
                 # 出力
-                print(output_msg)
+                try:
+                    print(output_msg)
+                except Exception as e:
+                    raise e
                 
     def create_box_message(self, msg, level, title=None):
         msg_block = []

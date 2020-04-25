@@ -695,6 +695,8 @@ class PmxModel():
         self.left_toe_vertex = None
         # 右つま先頂点
         self.right_toe_vertex = None
+        # 左右手のひら頂点
+        self.wrist_entity_vertex = {}
     
     # ローカルX軸の取得
     def get_local_x_axis(self, bone_name: str):
@@ -771,7 +773,14 @@ class PmxModel():
 
     # 腕系サイジングが可能かチェック
     def check_arm_bone_can_sizing(self):
-        # 足首より下で、指ではないボーン
+
+        # つま先調整に必要なボーン群
+        target_bones = ["左腕", "左ひじ", "左手首", "右腕", "右ひじ", "右手首"]
+
+        if not set(target_bones).issubset(self.bones.keys()):
+            logger.warning("腕・ひじ・手首の左右ボーンが揃ってないため、腕系処理をスキップします。\nモデル: %s", self.name, decoration=MLogger.DECORATION_BOX)
+            return False
+
         bone_name_list = []
 
         # 左ひじ系ボーン
@@ -833,6 +842,7 @@ class PmxModel():
         # 最後まで回しても取れなかった場合、エラー
         raise SizingException("ボーンリンクの生成に失敗しました。モデル「%s」に「%s」のボーンがあるか確認してください。" % (self.name, ",".join(target_bone_names)))
 
+    # リンク生成
     def create_link_2_top(self, target_bone_name: str, links: BoneLinks, is_defined: bool):
         if not links:
             # まだリンクが生成されていない場合、順序保持辞書生成
@@ -888,20 +898,19 @@ class PmxModel():
         "下半身": ["腰", "グルーブ", "センター"],
         "上半身": ["腰", "グルーブ", "センター"],
         "上半身2": ["上半身"],
-        "首": ["首根元", "上半身2", "上半身"],
-        "首根元": ["上半身2", "上半身"],
+        "首": ["上半身2", "上半身"],
         "頭": ["首"],
         "頭頂": ["頭"],
-        "左肩P": ["首根元", "上半身2", "上半身"],
-        "左肩": ["左肩P", "首根元", "上半身2", "上半身"],
+        "左肩P": ["上半身2", "上半身"],
+        "左肩": ["左肩P", "上半身2", "上半身"],
         "左肩C": ["左肩"],
         "左腕": ["左肩C", "左肩"],
         "左腕下延長": ["左肩C", "左肩"],
         "左腕捩": ["左腕"],
         "左ひじ": ["左腕捩", "左腕"],
-        "左腕垂直": ["左ひじ"],
-        "左手捩": ["左腕垂直", "左ひじ"],
-        "左手首": ["左手捩", "左腕垂直", "左ひじ"],
+        "左手捩": ["左ひじ"],
+        "左手首": ["左手捩", "左ひじ"],
+        "左手首実体": ["左手首"],
         "左親指０": ["左手首"],
         "左親指１": ["左親指０", "左手首"],
         "左親指２": ["左親指１"],
@@ -938,16 +947,16 @@ class PmxModel():
         "左足先EX": ["左つま先ＩＫ", "左足ＩＫ"],
         "左足底実体": ["左足先EX", "左つま先ＩＫ", "左足ＩＫ"],
         "左つま先実体": ["左足底実体", "左足先EX", "左つま先ＩＫ", "左足ＩＫ"],
-        "右肩P": ["首根元", "上半身2", "上半身"],
-        "右肩": ["右肩P", "首根元", "上半身2", "上半身"],
+        "右肩P": ["上半身2", "上半身"],
+        "右肩": ["右肩P", "上半身2", "上半身"],
         "右肩C": ["右肩"],
         "右腕": ["右肩C", "右肩"],
         "右腕下延長": ["右肩C", "右肩"],
         "右腕捩": ["右腕"],
         "右ひじ": ["右腕捩", "右腕"],
-        "右腕垂直": ["右ひじ"],
-        "右手捩": ["右腕垂直", "右ひじ"],
-        "右手首": ["右手捩", "右腕垂直", "右ひじ"],
+        "右手捩": ["右ひじ"],
+        "右手首": ["右手捩", "右ひじ"],
+        "右手首実体": ["右手首"],
         "右親指０": ["右手首"],
         "右親指１": ["右親指０", "右手首"],
         "右親指２": ["右親指１"],
@@ -987,6 +996,12 @@ class PmxModel():
         "左目": ["頭"],
         "右目": ["頭"]
     }
+    
+    # 腕の長さ(x, z: X差, y: y差)
+    def get_arm_diff(self):
+        v = self.bones["右腕"].position - self.bones["右手首"].position
+        v.abs()
+        return np.array([v.x(), v.y(), v.x()])
     
     # 頭頂の頂点を取得
     def get_head_top_vertex(self):
@@ -1099,16 +1114,61 @@ class PmxModel():
         
         return multi_max_vertex
 
+    # 手のひらの厚みをはかる頂点を取得
+    def get_wrist_vertex(self, direction: str):
+        # 足首より下で、指ではないボーン
+        bone_name_list = []
+
+        if "{0}手首".format(direction) in self.bones:
+            # 念のため、「手首」を含むボーンを処理対象とする
+            for bk, bv in self.bones.items():
+                if "{0}手首".format(direction) == bk:
+                    bone_name_list.append(bk)
+        else:
+            # 手首ボーンがない場合、処理終了
+            return Vertex(-1, MVector3D(), MVector3D(), [], [], Vertex.Bdef1(-1), -1)
+        
+        # 腕の傾き（正確にはひじ以降の傾き）
+        _, arm_stance_qq = self.calc_arm_stance("{0}ひじ".format(direction), "{0}手首".format(direction))
+
+        up_max_pos, up_max_vertex, down_max_pos, down_max_vertex, right_max_pos, right_max_vertex, left_max_pos, left_max_vertex, \
+            back_max_pos, back_max_vertex, front_max_pos, front_max_vertex, multi_max_pos, multi_max_vertex \
+            = self.get_bone_end_vertex(bone_name_list, self.def_calc_vertex_pos_horizonal, def_is_target=self.def_is_target_x_limit, \
+                                       def_is_multi_target=self.def_is_multi_target_down_front, multi_target_default_val=MVector3D(0, 99999, 99999), qq4calc=arm_stance_qq)
+
+        if not down_max_vertex:
+            # 手首の下（手のひらの厚み）が取れなかった場合、X制限なしに取得する
+
+            up_max_pos, up_max_vertex, down_max_pos, down_max_vertex, right_max_pos, right_max_vertex, left_max_pos, left_max_vertex, \
+                back_max_pos, back_max_vertex, front_max_pos, front_max_vertex, multi_max_pos, multi_max_vertex \
+                = self.get_bone_end_vertex(bone_name_list, self.def_calc_vertex_pos_horizonal, def_is_target=None, \
+                                           def_is_multi_target=None, multi_target_default_val=None, qq4calc=arm_stance_qq)
+
+            if not down_max_vertex:
+                # それでも取れなければ手首位置
+                return Vertex(-1, self.bones["{0}手首".format(direction)].position.copy(), MVector3D(), [], [], Vertex.Bdef1(-1), -1)
+        
+        return down_max_vertex
+
     # 頂点位置を返す（オリジナルそのまま）
-    def def_calc_vertex_pos_original(self, v: Vertex):
+    def def_calc_vertex_pos_original(self, b: Bone, v: Vertex, qq4calc: MQuaternion):
         return v.position
-    
-    # 最も底面で前面にある頂点であるか
+
+    # 水平にした場合の頂点位置を返す
+    def def_calc_vertex_pos_horizonal(self, b: Bone, v: Vertex, qq4calc: MQuaternion):
+        horzinal_v_pos = qq4calc.inverted() * (v.position - self.bones["{0}ひじ".format(b.name[0])].position)
+        return horzinal_v_pos
+
+    # X軸方向の制限がかかった頂点のみを対象とする
+    def def_is_target_x_limit(self, b: Bone, v: Vertex, v_pos: MVector3D):
+        return v_pos.x() - 0.1 <= b.position.x() <= v_pos.x() + 0.1
+
+    # 最も底面でかつ前面にある頂点であるか
     def def_is_multi_target_down_front(self, multi_max_pos: MVector3D, v_pos: MVector3D):
         return v_pos.y() <= multi_max_pos.y() + 0.1 and v_pos.z() <= multi_max_pos.z()
-
+    
     # 指定ボーンにウェイトが乗っている頂点とそのINDEX
-    def get_bone_end_vertex(self, bone_name_list, def_calc_vertex_pos, def_is_target=None, def_is_multi_target=None, multi_target_default_val=None):
+    def get_bone_end_vertex(self, bone_name_list, def_calc_vertex_pos, def_is_target=None, def_is_multi_target=None, multi_target_default_val=None, qq4calc=None):
         # 指定ボーンにウェイトが乗っているボーンINDEXリスト
         bone_idx_list = []
         for bk, bv in self.bones.items():
@@ -1138,10 +1198,17 @@ class PmxModel():
         multi_max_vertex = None
 
         for bone_idx in bone_idx_list:
-            for v in self.vertices[bone_idx]:
-                v_pos = def_calc_vertex_pos(v)
+            if bone_idx not in self.bone_indexes:
+                continue
 
-                if def_is_target and def_is_target(v) or not def_is_target:
+            # ボーンINDEXに該当するボーン
+            bone = self.bones[self.bone_indexes[bone_idx]]
+
+            for v in self.vertices[bone_idx]:
+                v_pos = def_calc_vertex_pos(bone, v, qq4calc)
+
+                if def_is_target and def_is_target(bone, v, v_pos) or not def_is_target:
+                    # 処理対象頂点である場合のみ判定処理に入る
                     if v_pos.y() < down_max_pos.y():
                         # 指定ボーンにウェイトが乗っていて、かつ最下の頂点より下の場合、保持
                         down_max_pos = v_pos

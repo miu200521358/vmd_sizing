@@ -249,6 +249,7 @@ def deform_rotation(model: PmxModel, motion: VmdMotion, bf: VmdBoneFrame):
     
     if bone.getExternalRotationFlag() and bone.effect_index in model.bone_indexes:
         
+        effect_parent_bone = bone
         effect_bone = model.bones[model.bone_indexes[bone.effect_index]]
         cnt = 0
 
@@ -257,12 +258,15 @@ def deform_rotation(model: PmxModel, motion: VmdMotion, bf: VmdBoneFrame):
             effect_bf = motion.calc_bf(effect_bone.name, bf.fno)
 
             # 自身の回転量に付与親の回転量を付与率を加味して付与する
-            rot = rot * effect_bf.rotation
-            rot.setX(rot.x() * effect_bone.effect_factor)
-            rot.setY(rot.y() * effect_bone.effect_factor)
-            rot.setZ(rot.z() * effect_bone.effect_factor)
+            if effect_parent_bone.effect_factor < 0:
+                # マイナス付与の場合、逆回転
+                rot = rot * (effect_bf.rotation * abs(effect_parent_bone.effect_factor)).inverted()
+            else:
+                rot = rot * (effect_bf.rotation * effect_parent_bone.effect_factor)
 
             if effect_bone.getExternalRotationFlag() and effect_bone.effect_index in model.bone_indexes:
+                # 付与親の親として現在のeffectboneを保持
+                effect_parent_bone = effect_bone
                 # 付与親置き換え
                 effect_bone = model.bones[model.bone_indexes[effect_bone.effect_index]]
             else:

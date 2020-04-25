@@ -448,31 +448,14 @@ class PmxReader():
                 pmx.bones[left_arm_under_bone.name] = left_arm_under_bone
                 pmx.bone_indexes[left_arm_under_bone.index] = left_arm_under_bone.name
 
-            if "右腕" in pmx.bones and "右ひじ" in pmx.bones and "右手首" in pmx.bones:
-                # 右手首垂直ボーン
-                right_arm_cross_pos = pmx.bones["右ひじ"].position + \
-                    (MVector3D.crossProduct((pmx.bones["右ひじ"].position - pmx.bones["右腕"].position).normalized(), MVector3D(0, 0, 1)) * 2)
-                right_arm_cross_bone = Bone("右腕垂直", "", right_arm_cross_pos, -1, 0, 0)
-                right_arm_cross_bone.index = len(pmx.bones.keys())
-                pmx.bones[right_arm_cross_bone.name] = right_arm_cross_bone
-                pmx.bone_indexes[right_arm_cross_bone.index] = right_arm_cross_bone.name
-
-            if "左腕" in pmx.bones and "左ひじ" in pmx.bones and "左手首" in pmx.bones:
-                # 左手首垂直ボーン
-                left_arm_cross_pos = pmx.bones["左ひじ"].position + \
-                    (MVector3D.crossProduct((pmx.bones["左ひじ"].position - pmx.bones["左腕"].position).normalized(), MVector3D(0, 0, 1)) * 2)
-                left_arm_cross_bone = Bone("左腕垂直", "", left_arm_cross_pos, -1, 0, 0)
-                left_arm_cross_bone.index = len(pmx.bones.keys())
-                pmx.bones[left_arm_cross_bone.name] = left_arm_cross_bone
-                pmx.bone_indexes[left_arm_cross_bone.index] = left_arm_cross_bone.name
-
             # 指先ボーンがない場合、代替で挿入
             for direction in ["左", "右"]:
                 for (finger_name, end_joint_name) in [("親指", "２"), ("人指", "３"), ("中指", "３"), ("薬指", "３"), ("小指", "３")]:
                     end_joint_name = "{0}{1}{2}".format(direction, finger_name, end_joint_name)
                     to_joint_name = "{0}{1}{2}".format(direction, finger_name, "先")
 
-                    if to_joint_name not in pmx.bones:
+                    if end_joint_name in pmx.bones and to_joint_name not in pmx.bones:
+                        # 指先端があって、指先がない場合挿入
                         _, to_pos = self.calc_tail_pos(pmx, end_joint_name)
                         to_bone = Bone(to_joint_name, None, to_pos, -1, 0, 0)
 
@@ -921,5 +904,9 @@ class PmxReader():
             elif fv.tail_index >= 0:
                 to_pos = model.bones[model.bone_indexes[fv.tail_index]].position
                 tail_pos = to_pos - from_pos
+
+        # それでも取れなければ、to_posはfrom_posと同じ
+        if to_pos == MVector3D():
+            to_pos = from_pos
 
         return tail_pos, to_pos

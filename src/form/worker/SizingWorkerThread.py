@@ -9,7 +9,7 @@ import wx
 import re
 
 from form.worker.BaseWorkerThread import BaseWorkerThread
-from module.MOptions import MOptions, MOptionsDataSet
+from module.MOptions import MOptions, MOptionsDataSet, MArmProcessOptions
 from service.SizingService import SizingService
 from utils.MLogger import MLogger # noqa
 
@@ -63,11 +63,21 @@ class SizingWorkerThread(BaseWorkerThread):
                                 morph_list=self.frame.morph_panel_ctrl.get_morph_list(file_set.set_no)
                             )
                             data_set_list.append(multi_data_set)
-
             options = MOptions(\
                 version_name=self.frame.version_name, \
                 logging_level=self.frame.logging_level, \
                 data_set_list=data_set_list, \
+                arm_options=MArmProcessOptions( \
+                    self.frame.arm_panel_ctrl.arm_process_flg_avoidance.GetValue(), \
+                    list(map(str, [x.strip() for x in self.frame.arm_panel_ctrl.avoidance_target_txt_ctrl.GetValue().split(',')])), \
+                    self.frame.arm_panel_ctrl.arm_process_flg_alignment.GetValue(), \
+                    self.frame.arm_panel_ctrl.arm_alignment_finger_flg_ctrl.GetValue(), \
+                    self.frame.arm_panel_ctrl.arm_alignment_floor_flg_ctrl.GetValue(), \
+                    self.frame.arm_panel_ctrl.alignment_distance_wrist_slider.GetValue(), \
+                    self.frame.arm_panel_ctrl.alignment_distance_finger_slider.GetValue(), \
+                    self.frame.arm_panel_ctrl.alignment_distance_floor_slider.GetValue(), \
+                    self.frame.arm_panel_ctrl.arm_check_skip_flg_ctrl.GetValue()
+                ), \
                 monitor=self.queue, \
                 is_file=False, \
                 outout_datetime=logger.outout_datetime)
@@ -86,10 +96,6 @@ class SizingWorkerThread(BaseWorkerThread):
 
                     # 出力されたメッセージを全部出力
                     self.frame.file_panel_ctrl.console_ctrl.SaveFile(filename=output_log_path)
-
-                    # with open(output_log_path, mode='w') as f:
-                    #     # 出力されたメッセージを全部出力
-                    #     f.write(self.frame.file_panel_ctrl.console_ctrl.GetValue())
 
             except Exception:
                 pass

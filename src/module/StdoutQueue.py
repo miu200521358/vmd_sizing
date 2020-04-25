@@ -21,11 +21,17 @@ class StdoutQueue():
             raise e
 
     def put(self, obj):
-        self.queue.put(obj)
+        try:
+            self.queue.put(obj)
+        except Exception:
+            return None
 
     # printでの出力
     def write(self, msg):
-        self.queue.put(msg)
+        try:
+            self.queue.put(msg)
+        except Exception:
+            pass
 
     def flush(self):
         sys.__stdout__.flush()

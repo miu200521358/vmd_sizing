@@ -29,6 +29,28 @@ logger = MLogger(__name__, level=1)
 
 class PmxDataTest(unittest.TestCase):
 
+    def test_get_wrist_vertex_01(self):
+        model = PmxReader("D:/MMD/MikuMikuDance_v926x64/UserFile/Model/_VMDサイジング/8頭身審神者 猫のしもべ/8頭身審神者3_軸制限無し.pmx").read_data()
+        
+        left_wrist_vertex = model.get_wrist_vertex("左")
+        print(left_wrist_vertex)
+        self.assertIsNotNone(left_wrist_vertex)
+
+        right_wrist_vertex = model.get_wrist_vertex("右")
+        print(right_wrist_vertex)
+        self.assertIsNotNone(right_wrist_vertex)
+
+    def test_get_wrist_vertex_02(self):
+        model = PmxReader("D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/047_五虎退/五虎退 りっつ式 v1.42/五虎退.pmx").read_data()
+        
+        left_wrist_vertex = model.get_wrist_vertex("左")
+        print(left_wrist_vertex)
+        self.assertIsNotNone(left_wrist_vertex)
+
+        right_wrist_vertex = model.get_wrist_vertex("右")
+        print(right_wrist_vertex)
+        self.assertIsNotNone(right_wrist_vertex)
+
     def test_create_link_2_top_one_01(self):
         pmx_data = PmxModel()
         pmx_data.bones["SIZING_ROOT_BONE"] = Bone("SIZING_ROOT_BONE", "SIZING_ROOT_BONE", MVector3D(), -1, 0, 0)

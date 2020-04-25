@@ -12,6 +12,7 @@ from mmd.VmdWriter import VmdWriter
 from module.MOptions import MOptions
 from service.parts.MoveService import MoveService
 from service.parts.StanceService import StanceService
+from service.parts.ArmAlignmentService import ArmAlignmentService
 from service.parts.MorphService import MorphService
 from utils import MServiceUtils
 from utils.MException import SizingException
@@ -41,8 +42,29 @@ class SizingService():
                                         replace_model=os.path.basename(data_set.rep_model.path), model_name=data_set.rep_model.name) # noqa
                 service_data_txt = "{service_data_txt}　　スタンス追加補正有無: {detail_stance_flg}\n".format(service_data_txt=service_data_txt,
                                         detail_stance_flg=data_set.detail_stance_flg) # noqa
-                service_data_txt = "{service_data_txt}　　捩り分散有無: {twist_flg}".format(service_data_txt=service_data_txt,
+                service_data_txt = "{service_data_txt}　　捩り分散有無: {twist_flg}\n".format(service_data_txt=service_data_txt,
                                         twist_flg=data_set.twist_flg) # noqa
+
+            service_data_txt = "{service_data_txt}\n--------- \n".format(service_data_txt=service_data_txt) # noqa
+
+            if self.options.arm_options.avoidance:
+                service_data_txt = "{service_data_txt}剛体接触回避: {avoidance}\n".format(service_data_txt=service_data_txt,
+                                        avoidance=self.options.arm_options.avoidance) # noqa
+                service_data_txt = "{service_data_txt}対象剛体名: {avoidance_target}\n".format(service_data_txt=service_data_txt,
+                                        avoidance=",".join(self.options.arm_options.avoidance_target_list)) # noqa
+
+            if self.options.arm_options.alignment:
+                service_data_txt = "{service_data_txt}手首位置合わせ: {alignment} ({distance})\n".format(service_data_txt=service_data_txt,
+                                        alignment=self.options.arm_options.alignment, distance=self.options.arm_options.alignment_distance_wrist) # noqa
+                service_data_txt = "{service_data_txt}指位置合わせ: {alignment} ({distance})\n".format(service_data_txt=service_data_txt,
+                                        alignment=self.options.arm_options.alignment_finger_flg, distance=self.options.arm_options.alignment_distance_finger) # noqa
+                service_data_txt = "{service_data_txt}床位置合わせ: {alignment} ({distance})\n".format(service_data_txt=service_data_txt,
+                                        alignment=self.options.arm_options.alignment_floor_flg, distance=self.options.arm_options.alignment_distance_floor) # noqa
+
+            service_data_txt = "{service_data_txt}腕チェックスキップ: {arm_check_skip}\n".format(service_data_txt=service_data_txt,
+                                    arm_check_skip=self.options.arm_options.arm_check_skip_flg) # noqa
+
+            service_data_txt = "{service_data_txt}------------------------".format(service_data_txt=service_data_txt) # noqa
 
             logger.info(service_data_txt, decoration=MLogger.DECORATION_BOX)
 
@@ -62,43 +84,15 @@ class SizingService():
             # スタンス補正
             result = StanceService(self.options).execute() and result
 
+            if self.options.arm_options.avoidance:
+                # 剛体接触回避
+                pass
+            elif self.options.arm_options.alignment:
+                # 手首位置合わせ
+                result = ArmAlignmentService(self.options).execute() and result
+
             # モーフ置換
             result = MorphService(self.options).execute() and result
-
-            # 最後に全キーフレで繋げるのを除去
-            if self.options.logging_level != MLogger.FULL and self.options.logging_level != MLogger.DEBUG_FULL:
-                futures = []
-                with ThreadPoolExecutor(thread_name_prefix="smooth") as executor:
-                    for data_set_idx, data_set in enumerate(self.options.data_set_list):
-                        if data_set.full_arms:
-                            logger.info("不要キー削除【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
-                            
-                            for bone_name in ["左腕", "左腕捩", "左ひじ", "左手捩", "左手首", "右腕", "右腕捩", "右ひじ", "右手捩", "右手首"]:
-                                # 読み込んだ時のキーフレのみを対象とする
-                                fnos = data_set.motion.get_bone_fnos(bone_name, is_read=True)
-                                if len(fnos) < 2:
-                                    # 前後がない場合、全件キーフレ
-                                    all_fnos = data_set.motion.get_bone_fnos(bone_name)
-                                    fnos = [all_fnos[0], all_fnos[-1]]
-
-                                prev_sep_fno = 0
-                                log_target_idxs = []
-                                for fno_idx, fno in enumerate(data_set.motion.get_bone_fnos(bone_name)):
-                                    if fno // 500 > prev_sep_fno:
-                                        log_target_idxs.append(fno)
-                                        prev_sep_fno = fno // 500
-                                log_target_idxs.append(fnos[-1])
-
-                                for start_fno, end_fno in zip(fnos[:-1], fnos[1:]):
-                                    futures.append(executor.submit(self.remove_unnecessary_bf_pool_parts, data_set_idx, bone_name, start_fno, end_fno, log_target_idxs))
-                concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
-
-                for f in futures:
-                    result = f.result() and result
-                
-                for data_set_idx, data_set in enumerate(self.options.data_set_list):
-                    if data_set.full_arms:
-                        logger.info(" 不要キー削除:終了【No.%s】", data_set_idx + 1)
 
             for data_set_idx, data_set in enumerate(self.options.data_set_list):
                 # 実行後、出力ファイル存在チェック
@@ -123,18 +117,3 @@ class SizingService():
             logger.critical("サイジング処理が意図せぬエラーで終了しました。", e, decoration=MLogger.DECORATION_BOX)
         finally:
             logging.shutdown()
-
-    def remove_unnecessary_bf_pool_parts(self, data_set_idx: int, bone_name: str, start_fno: int, end_fno: int, log_target_idxs: list):
-        try:
-            data_set = self.options.data_set_list[data_set_idx]
-            data_set.motion.remove_unnecessary_bf(data_set_idx + 1, bone_name, start_fno, end_fno, \
-                                                  data_set.rep_model.bones[bone_name].getRotatable(), data_set.rep_model.bones[bone_name].getTranslatable(), \
-                                                  (end_fno in log_target_idxs))
-
-            return True
-        except SizingException:
-            return False
-        except Exception as e:
-            logger.error("サイジング処理が意図せぬエラーで終了しました。", e)
-            return False
-
