@@ -781,37 +781,17 @@ class PmxModel():
         # つま先調整に必要なボーン群
         target_bones = ["左腕", "左ひじ", "左手首", "右腕", "右ひじ", "右手首"]
 
+        cannot_sizing = "腕系処理をスキップします。\n腕系処理（腕スタンス補正・接触回避・位置合わせ）を実行したい場合、\n腕タブのチェックスルーFLGをONにして再実行してください。"
+
         if not set(target_bones).issubset(self.bones.keys()):
-            logger.warning("腕・ひじ・手首の左右ボーンが揃ってないため、腕系処理をスキップします。\nモデル: %s", self.name, decoration=MLogger.DECORATION_BOX)
-            return False
-
-        bone_name_list = []
-
-        # 左ひじ系ボーン
-        direction = "左"
-        for bk, bv in self.bones.items():
-            if ("{0}ひじ".format(direction) in bk) and "指" not in bk:
-                bone_name_list.append(bk)
-        
-        if len(bone_name_list) == 0:
-            # そもそも取れなかった場合、NG
-            return False
-
-        up_max_pos, up_max_vertex, down_max_pos, down_max_vertex, right_max_pos, right_max_vertex, left_max_pos, left_max_vertex, \
-            back_max_pos, back_max_vertex, front_max_pos, front_max_vertex, multi_max_pos, multi_max_vertex \
-            = self.get_bone_end_vertex(bone_name_list, self.def_calc_vertex_pos_original, None)
-
-        if not up_max_vertex or not down_max_vertex:
-            # 左ひじウェイト頂点が取れなかった場合、そもそもNG
+            logger.warning("腕・ひじ・手首の左右ボーンが揃ってないため、%s\nモデル: %s", cannot_sizing, self.name, decoration=MLogger.DECORATION_BOX)
             return False
         
-        # 頂点が取れた場合、ひじの頂点がひじボーンの範囲内かチェック
-        left_elbow_pos = self.bones["左ひじ"].position
-
-        if not (down_max_pos.y() <= left_elbow_pos.y() <= up_max_pos.y()):
-            # 上下の範囲内にボーンがなければNG
-            logger.warning("ひじボーンの位置が頂点位置とズレている可能性があるため、腕系処理をスキップします。\nモデル: %s", self.name, decoration=MLogger.DECORATION_BOX)
-            return False
+        for bone_name in ["左腕IK", "左腕ＩＫ", "右腕IK", "右腕ＩＫ"]:
+            # 腕IKが入ってて、かつそれが表示されてる場合、NG
+            if bone_name in self.bones and self.bones[bone_name].getVisibleFlag():
+                logger.warning("モデルに表示された腕IKが含まれているため、%s\nモデル: %s", cannot_sizing, self.name, decoration=MLogger.DECORATION_BOX)
+                return False
 
         return True
     

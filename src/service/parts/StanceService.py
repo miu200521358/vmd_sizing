@@ -57,7 +57,7 @@ class StanceService():
                 # self.adjust_toe_stance(data_set_idx, data_set)
 
             # 腕系サイジング可能（もしくはチェックスキップ）であれば、腕スタンス補正
-            if (data_set.org_model.can_arm_sizing and data_set.rep_model.can_arm_sizing) or self.options.arm_process_option.arm_check_skip_flg:
+            if (data_set.org_model.can_arm_sizing and data_set.rep_model.can_arm_sizing) or self.options.arm_options.arm_check_skip_flg:
                 if data_set.detail_stance_flg:
                     # 肩スタンス補正
                     self.adjust_shoulder_stance(data_set_idx, data_set)
@@ -80,7 +80,7 @@ class StanceService():
                     
                     target_model_type = target_model_type + "変換先"
 
-                logger.warning("%sモデルの腕構造にサイジングが対応していない為、腕系処理をスキップします。", target_model_type, decoration=MLogger.DECORATION_BOX)
+                logger.warning("No.%sの%sモデルの腕構造にサイジングが対応していない為、腕系処理をスキップします。", (data_set_idx + 1), target_model_type, decoration=MLogger.DECORATION_BOX)
 
             return True
         except SizingException:
