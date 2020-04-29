@@ -324,7 +324,7 @@ class MVector3D():
         return self.__data
     
     def to_log(self):
-        return "x: {0}, y: {1} z: {2}".format(self.__data[0], self.__data[1], self.__data[2])
+        return "x: {0}, y: {1} z: {2}".format(round(self.__data[0], 5), round(self.__data[1], 5), round(self.__data[2], 5))
 
     def __str__(self):
         return "MVector3D({0}, {1}, {2})".format(self.__data[0], self.__data[1], self.__data[2])
@@ -1146,13 +1146,20 @@ class MMatrix4x4():
     def __init__(self, m11=1, m12=0, m13=0, m14=0, m21=0, m22=1, m23=0, m24=0, m31=0, m32=0, m33=1, m34=0, m41=0, m42=0, m43=0, m44=1):
         if isinstance(m11, MMatrix4x4):
             # 行列クラスの場合
-            self.__data = m11.__data
+            self.__data = np.array([[m11.__data[0, 0], m11.__data[0, 1], m11.__data[0, 2], m11.__data[0, 3]], \
+                                    [m11.__data[1, 0], m11.__data[1, 1], m11.__data[1, 2], m11.__data[1, 3]], \
+                                    [m11.__data[2, 0], m11.__data[2, 1], m11.__data[2, 2], m11.__data[2, 3]], \
+                                    [m11.__data[3, 0], m11.__data[3, 1], m11.__data[3, 2], m11.__data[3, 3]]], dtype=np.float64)
         elif isinstance(m11, np.ndarray):
             # 行列そのものの場合
-            self.__data = m11
+            self.__data = np.array([[m11[0, 0], m11[0, 1], m11[0, 2], m11[0, 3]], [m11[1, 0], m11[1, 1], m11[1, 2], m11[1, 3]], \
+                                    [m11[2, 0], m11[2, 1], m11[2, 2], m11[2, 3]], [m11[3, 0], m11[3, 1], m11[3, 2], m11[3, 3]]], dtype=np.float64)
         else:
             # べた値の場合
             self.__data = np.array([[m11, m12, m13, m14], [m21, m22, m23, m24], [m31, m32, m33, m34], [m41, m42, m43, m44]], dtype=np.float64)
+
+    def copy(self):
+        return MMatrix4x4(self.__data)
 
     def data(self):
         return self.__data
@@ -1346,29 +1353,7 @@ class MMatrix4x4():
         return self
 
     def __imul__(self, other):
-        v = MMatrix4x4()
-
-        v.__data[0, 0] = np.sum(self.__data[0, :] * other.__data[:, 0])
-        v.__data[0, 1] = np.sum(self.__data[0, :] * other.__data[:, 1])
-        v.__data[0, 2] = np.sum(self.__data[0, :] * other.__data[:, 2])
-        v.__data[0, 3] = np.sum(self.__data[0, :] * other.__data[:, 3])
-
-        v.__data[1, 0] = np.sum(self.__data[1, :] * other.__data[:, 0])
-        v.__data[1, 1] = np.sum(self.__data[1, :] * other.__data[:, 1])
-        v.__data[1, 2] = np.sum(self.__data[1, :] * other.__data[:, 2])
-        v.__data[1, 3] = np.sum(self.__data[1, :] * other.__data[:, 3])
-
-        v.__data[2, 0] = np.sum(self.__data[2, :] * other.__data[:, 0])
-        v.__data[2, 1] = np.sum(self.__data[2, :] * other.__data[:, 1])
-        v.__data[2, 2] = np.sum(self.__data[2, :] * other.__data[:, 2])
-        v.__data[2, 3] = np.sum(self.__data[2, :] * other.__data[:, 3])
-
-        v.__data[3, 0] = np.sum(self.__data[3, :] * other.__data[:, 0])
-        v.__data[3, 1] = np.sum(self.__data[3, :] * other.__data[:, 1])
-        v.__data[3, 2] = np.sum(self.__data[3, :] * other.__data[:, 2])
-        v.__data[3, 3] = np.sum(self.__data[3, :] * other.__data[:, 3])
-                
-        self.__data = v.__data
+        self.__data = np.dot(self.__data, other.__data)
 
         return self
 

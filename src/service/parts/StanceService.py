@@ -14,7 +14,7 @@ from utils import MUtils, MServiceUtils, MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
 from utils.MException import SizingException
 
-logger = MLogger(__name__, level=1)
+logger = MLogger(__name__)
 
 
 class StanceService():
@@ -1258,9 +1258,9 @@ class StanceService():
 
         # FROMボーンまでの位置
         org_from_global_3ds, org_front_from_global_3ds, org_from_direction_qq = \
-            MServiceUtils.calc_front_global_pos(data_set.org_model, org_from_links, data_set.org_motion, bf.fno, org_from_links)
+            MServiceUtils.calc_front_global_pos(data_set.org_model, org_from_links, data_set.org_motion, bf.fno, limit_links=org_from_links)
         rep_from_global_3ds, rep_front_from_global_3ds, rep_from_direction_qq = \
-            MServiceUtils.calc_front_global_pos(data_set.rep_model, rep_from_links, data_set.motion, bf.fno, rep_from_links)
+            MServiceUtils.calc_front_global_pos(data_set.rep_model, rep_from_links, data_set.motion, bf.fno, limit_links=rep_from_links)
 
         # 正面向きのFROMボーンの位置
         org_front_from_pos = org_front_from_global_3ds[from_bone_name]
@@ -1270,9 +1270,9 @@ class StanceService():
 
         # TOボーンまでの位置（フレームはFROMまでで、TO自身は初期値として求める）
         org_to_global_3ds, org_front_to_global_3ds, org_to_direction_qq = \
-            MServiceUtils.calc_front_global_pos(data_set.org_model, org_to_links, data_set.org_motion, bf.fno, org_from_links)
+            MServiceUtils.calc_front_global_pos(data_set.org_model, org_to_links, data_set.org_motion, bf.fno, limit_links=org_from_links)
         rep_to_global_3ds, rep_front_to_global_3ds, rep_to_direction_qq = \
-            MServiceUtils.calc_front_global_pos(data_set.rep_model, rep_to_links, data_set.motion, bf.fno, rep_from_links)
+            MServiceUtils.calc_front_global_pos(data_set.rep_model, rep_to_links, data_set.motion, bf.fno, limit_links=rep_from_links)
 
         # TOボーンの正面位置
         org_front_to_pos = org_front_to_global_3ds[to_bone_name]
@@ -1534,9 +1534,9 @@ class StanceService():
 
         # TOボーンまでの位置
         org_to_global_3ds, org_front_to_global_3ds, org_to_direction_qq = \
-            MServiceUtils.calc_front_global_pos(data_set.org_model, org_to_links, data_set.org_motion, bf.fno, org_limit_links)
+            MServiceUtils.calc_front_global_pos(data_set.org_model, org_to_links, data_set.org_motion, bf.fno, limit_links=org_limit_links)
         rep_to_global_3ds, rep_front_to_global_3ds, rep_to_direction_qq = \
-            MServiceUtils.calc_front_global_pos(data_set.rep_model, rep_to_links, data_set.motion, bf.fno, rep_limit_links)
+            MServiceUtils.calc_front_global_pos(data_set.rep_model, rep_to_links, data_set.motion, bf.fno, limit_links=rep_limit_links)
 
         # 正面向きの基準ボーンの位置
         org_front_base_pos = org_front_to_global_3ds[base_bone_name]

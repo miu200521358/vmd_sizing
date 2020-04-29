@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 #
-import numpy as np
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 import math
@@ -215,6 +214,10 @@ class Bone():
         # IKオフセット(グローバル)
         self.global_ik_offset = MVector3D()
         
+        # IK制限角度
+        self.ik_limit_min = MVector3D()
+        self.ik_limit_max = MVector3D()
+
         self.BONEFLAG_TAILPOS_IS_BONE = 0x0001
         self.BONEFLAG_CAN_ROTATE = 0x0002
         self.BONEFLAG_CAN_TRANSLATE = 0x0004
@@ -998,12 +1001,6 @@ class PmxModel():
         "左目": ["頭"],
         "右目": ["頭"]
     }
-    
-    # 腕の長さ(x, z: X差, y: y差)
-    def get_arm_diff(self):
-        v = self.bones["右腕"].position - self.bones["右手首"].position
-        v.abs()
-        return np.array([v.x(), v.y(), v.x()])
     
     # 頭頂の頂点を取得
     def get_head_top_vertex(self):

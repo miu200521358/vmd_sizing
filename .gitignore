@@ -18,6 +18,7 @@ VmdSizingSelf.bat
 VmdSizingSelfAll.bat
 replace_model_all.txt
 memo.txt
+profile.bat
 
 born/*
 !あにまさ式ミク.csv
@@ -44,3 +45,4 @@ leg_fk_camera.csv
 leg_fk_morph.csv
 src/VmdSizingForm3.py.bak
 main.prof
+executor.py.lprof

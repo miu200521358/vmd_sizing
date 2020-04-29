@@ -13,18 +13,18 @@
             "pythonPath": "${config:python.pythonPath}",
             "stopOnEntry": false,
             "args": [
-                "--motion_path", "E:/MMD/MikuMikuDance_v926x64/Work/202001_sizing/肩/折岸みつ肩2.vmd",
-                "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/オリジナル/折岸みつ つみだんご/折岸みつ.pmx",
-                "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/055_鶯丸/鶯丸 さばそ式ver1.75配布用/さばそ式鶯丸(通常・刀無)ver1.75.pmx",
+                // "--motion_path", "E:/MMD/MikuMikuDance_v926x64/Work/202001_sizing/肩/折岸みつ肩2.vmd",
+                // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/オリジナル/折岸みつ つみだんご/折岸みつ.pmx",
+                // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/055_鶯丸/鶯丸 さばそ式ver1.75配布用/さばそ式鶯丸(通常・刀無)ver1.75.pmx",
 
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/運動/バレエっぽいターン グレイ/バレエっぽいターン.vmd",
                 // // "--motion_path", "E:/MMD/MikuMikuDance_v926x64/Work/202001_sizing/肩/あぴミク肩.vmd",
                 // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/あぴミク01_Ver.1.04 アレン・ベルル/Appearance Miku_01_Ver.1.04_準標準.pmx",
                 // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/底辺508式初音ミク_素足モデル せんと(鈍棒P)/miku_v3(素足_袖なし).pmx",
                 
-                // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_2人/ニア_vmd P.I.P/汎用_原曲音源/ニア_いくら汎用_1377-1498.vmd;D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_2人/ニア_vmd P.I.P/汎用_原曲音源/ニア_やっこ汎用_1377-1498.vmd",
-                // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/Tac式ミク配布用/Tac式ミクVer1.3.1/ver1.3.1_ノーマル/Tac式ミクver1.3.1（ノーマル服）.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/Tac式ミク配布用/Tac式ミクVer1.3.1/ver1.3.1_ノーマル/Tac式ミクver1.3.1（ノーマル服）.pmx",
-                // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/025_一期一振/一期一振 ひわこ式 ver.2.0/一期一振(ひわこ式) ver.2.0.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/047_五虎退/五虎退 りっつ式 v1.42/五虎退.pmx",
+                "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_2人/ニア_vmd P.I.P/汎用_原曲音源/ニア_いくら汎用_1377-1498.vmd;D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_2人/ニア_vmd P.I.P/汎用_原曲音源/ニア_やっこ汎用_1377-1498.vmd",
+                "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/Tac式ミク配布用/Tac式ミクVer1.3.1/ver1.3.1_ノーマル/Tac式ミクver1.3.1（ノーマル服）.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/Tac式ミク配布用/Tac式ミクVer1.3.1/ver1.3.1_ノーマル/Tac式ミクver1.3.1（ノーマル服）.pmx",
+                "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/025_一期一振/一期一振 ひわこ式 ver.2.0/一期一振(ひわこ式) ver.2.0.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/047_五虎退/五虎退 りっつ式 v1.42/五虎退.pmx",
                 
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/愛言葉III なつき/nac_aikotoba3_0-500.vmd",
                 // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/らぶ式ミク/らぶ式ミク_準標準.pmx",
@@ -104,11 +104,11 @@
                 // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/_VMDサイジング/8頭身審神者 猫のしもべ/8頭身審神者3_軸制限無し.pmx",
                 // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ゲーム/ドラクエ/竜酸式グレイグ配布用_1.09.3/竜酸式グレイグ_1.09.3.pmx",
                 // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/017_数珠丸恒次/数珠丸恒次 hzeo式 ver0.5/hzeo式数珠丸恒次ver0.5_準標準.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/019_にっかり青江/にっかり青江ver1.2 azure式/にっかり青江ver1.2.pmx",
-                "--detail_stance_flg", "1;0",           // スタンス追加補正FLG
+                "--detail_stance_flg", "0;0",           // スタンス追加補正FLG
                 "--twist_flg", "0;0",                   // 捩り分散
                 "--arm_process_flg_avoidance", "0",     // 剛体接触回避
                 "--avoidance_target_list", "",          // 対象剛体名
-                "--arm_process_flg_alignment", "0",     // 手首位置合わせ
+                "--arm_process_flg_alignment", "1",     // 手首位置合わせ
                 "--alignment_finger_flg", "0",          // 指位置合わせ
                 "--alignment_floor_flg", "0",           // 床位置合わせ
                 "--alignment_distance_wrist", "1.7",    // 手首距離

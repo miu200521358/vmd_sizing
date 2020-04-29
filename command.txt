@@ -7,6 +7,9 @@ pip install bezier
 pip install multiprocessing-logging
 pip install pypiwin32
 
+np‚Ì‚Ý
+pip install line_profiler
+
 https://code.woboq.org/qt5/qtbase/src/gui/math3d/
 
 

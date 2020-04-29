@@ -16,6 +16,86 @@ from utils.MLogger import MLogger # noqa
 logger = MLogger(__name__, level=1)
 
 
+# IK計算
+# target_pos: IKリンクの目的位置
+# ik_links: IKリンク
+def calc_IK(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, target_pos: MVector3D, ik_links: BoneLinks, max_count=10):
+    for bone_name in list(ik_links.all().keys())[1:]:
+        # bfをモーションに登録
+        bf = motion.calc_bf(bone_name, fno)
+        motion.regist_bf(bf, bone_name, fno)
+
+    for cnt in range(max_count):
+        # 規定回数ループ
+        for ik_idx, joint_name in enumerate(list(ik_links.all().keys())[1:]):
+            # 処理対象IKボーン
+            ik_bone = ik_links.get(joint_name)
+
+            # 現在のボーングローバル位置と行列を取得
+            global_3ds_dic, total_mats = calc_global_pos(model, links, motion, fno, return_matrix=True)
+
+            # エフェクタ（末端）
+            global_effector_pos = global_3ds_dic[ik_links.first_name()]
+
+            # 注目ノード（実際に動かすボーン）
+            joint_mat = total_mats[joint_name]
+
+            # ワールド座標系から注目ノードの局所座標系への変換
+            inv_coord = joint_mat.inverted()
+
+            # 注目ノードを起点とした、エフェクタのローカル位置
+            local_effector_pos = inv_coord * global_effector_pos
+            local_target_pos = inv_coord * target_pos
+
+            #  (1) 基準関節→エフェクタ位置への方向ベクトル
+            basis2_effector = local_effector_pos.normalized()
+            #  (2) 基準関節→目標位置への方向ベクトル
+            basis2_target = local_target_pos.normalized()
+
+            # ベクトル (1) を (2) に一致させるための最短回転量（Axis-Angle）
+            # 回転角
+            rotation_dot = MVector3D.dotProduct(basis2_effector, basis2_target)
+            # 回転角度
+            rotation_radian = math.acos(max(-1, min(1, rotation_dot)))
+
+            if abs(rotation_radian) > 0.0001:
+                # 一定角度以上の場合
+
+                # 回転軸
+                rotation_axis = MVector3D.crossProduct(basis2_effector, basis2_target).normalized()
+                # 回転角度
+                rotation_degree = math.degrees(rotation_radian)
+
+                # 関節回転量の補正
+                correct_qq = MQuaternion.fromAxisAndAngle(rotation_axis, rotation_degree)
+
+                # ジョイントに補正をかける
+                bf = motion.calc_bf(joint_name, fno)
+                new_ik_qq = correct_qq * bf.rotation
+
+                # IK軸制限がある場合、上限下限をチェック
+                if ik_bone.ik_limit_min != MVector3D() and ik_bone.ik_limit_max != MVector3D():
+                    new_ik_euler = new_ik_qq.toEulerAngles()
+
+                    # logger.test("new_ik_euler before: %s", new_ik_euler)
+
+                    euler_x = min(ik_bone.ik_limit_max.x(), max(ik_bone.ik_limit_min.x(), new_ik_euler.x()))
+                    euler_y = min(ik_bone.ik_limit_max.y(), max(ik_bone.ik_limit_min.y(), new_ik_euler.y()))
+                    euler_z = min(ik_bone.ik_limit_max.z(), max(ik_bone.ik_limit_min.z(), new_ik_euler.z()))
+
+                    # logger.test("new_ik_euler after: %s, %s, %s", euler_x, euler_y, euler_z)
+
+                    new_ik_qq = MQuaternion.fromEulerAngles(euler_x, euler_y, euler_z)
+                
+                bf.rotation = new_ik_qq
+
+        # 回転の差がほとんどない場合、終了
+        if (local_effector_pos - local_target_pos).lengthSquared() < 0.0001:
+            return
+        
+    return
+
+
 # クォータニオンをローカル軸の回転量に分離
 def separate_local_qq(fno: int, bone_name: str, qq: MQuaternion, global_x_axis: MVector3D):
     # ローカル座標系（ボーンベクトルが（1，0，0）になる空間）の向き
@@ -93,13 +173,13 @@ def separate_local_qq(fno: int, bone_name: str, qq: MQuaternion, global_x_axis: 
 
 
 # 正面向きの情報を含むグローバル位置
-def calc_front_global_pos(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, limit_links=None):
+def calc_front_global_pos(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, limit_links=None, direction_limit_links=None):
 
     # グローバル位置
     global_3ds = org_center_global_3ds = calc_global_pos(model, links, motion, fno, limit_links)
 
-    # 指定ボーンまでの向いている回転量
-    direction_qq = calc_direction_qq(model, links, motion, fno, limit_links)
+    # 指定ボーンまでの向いている回転量（回転のみの制限がかかっている場合、それを優先）
+    direction_qq = calc_direction_qq(model, links, motion, fno, (limit_links if not direction_limit_links else direction_limit_links))
 
     # 正面向きのグローバル位置
     front_global_3ds = calc_global_pos_by_direction(direction_qq.inverted(), org_center_global_3ds)
@@ -108,7 +188,7 @@ def calc_front_global_pos(model: PmxModel, links: BoneLinks, motion: VmdMotion, 
 
 
 # グローバル位置算出
-def calc_global_pos(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, limit_links=None):
+def calc_global_pos(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, limit_links=None, return_matrix=False):
     trans_vs = calc_relative_position(model, links, motion, fno, limit_links)
     add_qs = calc_relative_rotation(model, links, motion, fno, limit_links)
 
@@ -125,21 +205,29 @@ def calc_global_pos(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: i
         # 回転
         matrixs[n].rotate(q)
 
-    total_mat = [MMatrix4x4() for i in range(links.size())]
+    total_mats = {}
     global_3ds_dic = OrderedDict()
 
     for n, (lname, v) in enumerate(zip(links.all().keys(), trans_vs)):
+        if n == 0:
+            total_mats[lname] = MMatrix4x4()
+            total_mats[lname].setToIdentity()
+
         for m in range(n):
             # 最後のひとつ手前までループ
             if m == 0:
                 # 0番目の位置を初期値とする
-                total_mat[n] = copy.deepcopy(matrixs[0])
+                total_mats[lname] = matrixs[0].copy()
             else:
                 # 自分より前の行列結果を掛け算する
-                total_mat[n] *= copy.deepcopy(matrixs[m])
+                total_mats[lname] *= matrixs[m].copy()
         
         # 自分は、位置だけ掛ける
-        global_3ds_dic[lname] = total_mat[n] * v
+        global_3ds_dic[lname] = total_mats[lname] * v
+
+    if return_matrix:
+        # 行列も返す場合
+        return global_3ds_dic, total_mats
 
     return global_3ds_dic
 
@@ -149,17 +237,17 @@ def calc_global_pos_by_direction(direction_qq: MQuaternion, target_pos_3ds_dic: 
     direction_pos_dic = OrderedDict()
 
     for bone_name, target_pos in target_pos_3ds_dic.items():
-        mat = MMatrix4x4()
-        # 初期化
-        mat.setToIdentity()
-        # 指定位置
-        mat.translate(target_pos)
-        # 回転させる
-        mat.rotate(direction_qq)
         # その地点の回転後の位置
-        direction_pos_dic[bone_name] = mat * MVector3D()
-
-        # # direction_pos_dic[bone_name] = direction_qq * target_pos
+        direction_pos_dic[bone_name] = direction_qq * target_pos
+        # mat = MMatrix4x4()
+        # # 初期化
+        # mat.setToIdentity()
+        # # 指定位置
+        # mat.translate(target_pos)
+        # # 回転させる
+        # mat.rotate(direction_qq)
+        # # その地点の回転後の位置
+        # direction_pos_dic[bone_name] = mat * MVector3D()
         # logger.test("f: %s, direction_qq: %s", bone_name, direction_qq.toEulerAngles4MMD())
         # logger.test("f: %s, target_pos: %s", bone_name, target_pos)
         # logger.test("f: %s, direction_pos_dic: %s", bone_name, direction_pos_dic[bone_name])
