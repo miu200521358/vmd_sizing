@@ -49,20 +49,16 @@ class ArmAlignmentService():
 
         result = True
 
-        if self.options.arm_options.alignment_finger_flg:
-            # 指位置合わせ実行
-            pass
-        else:
-            all_prev_org_effector_poses_indexes = {}
-            all_prev_rep_effector_poses_indexes = {}
-            all_prev_org_tip_poses_indexes = {}
-            all_prev_rep_tip_poses_indexes = {}
-            # 手首位置合わせ実行（先頭からキーフレ単位で見ていく必要があるので、並列化不可）
-            for fno in self.target_fnos:
-                all_prev_org_effector_poses_indexes, all_prev_rep_effector_poses_indexes, \
-                    all_prev_org_tip_poses_indexes, all_prev_rep_tip_poses_indexes = \
-                    self.execute_alignment(fno, all_prev_org_effector_poses_indexes, all_prev_rep_effector_poses_indexes, \
-                                           all_prev_org_tip_poses_indexes, all_prev_rep_tip_poses_indexes)
+        all_prev_org_effector_poses_indexes = {}
+        all_prev_rep_effector_poses_indexes = {}
+        all_prev_org_tip_poses_indexes = {}
+        all_prev_rep_tip_poses_indexes = {}
+        # 手首位置合わせ実行（先頭からキーフレ単位で見ていく必要があるので、並列化不可）
+        for fno in self.target_fnos:
+            all_prev_org_effector_poses_indexes, all_prev_rep_effector_poses_indexes, \
+                all_prev_org_tip_poses_indexes, all_prev_rep_tip_poses_indexes = \
+                self.execute_alignment(fno, all_prev_org_effector_poses_indexes, all_prev_rep_effector_poses_indexes, \
+                                       all_prev_org_tip_poses_indexes, all_prev_rep_tip_poses_indexes)
     
         return result
 
@@ -111,18 +107,18 @@ class ArmAlignmentService():
         # それぞれの距離を算出
         # 起点となるボーン
         for (from_data_set_idx, from_alignment_idx), org_from_global_3ds in all_org_global_3ds.items():
-            for (to_data_set_idx, to_alignment_idx), org_from_to_global_3ds in all_org_global_3ds.items():
+            for (to_data_set_idx, to_alignment_idx), org_from_effector_global_3ds in all_org_global_3ds.items():
                 if (from_data_set_idx, from_alignment_idx) == (to_data_set_idx, to_alignment_idx) or from_data_set_idx > to_data_set_idx or \
                         (from_data_set_idx == to_data_set_idx and \
                             (from_alignment_idx > to_alignment_idx or \
-                             self.target_links[from_data_set_idx][from_alignment_idx].effector_bone_name == self.target_links[to_data_set_idx][to_alignment_idx].effector_bone_name)):
+                             self.target_links[from_data_set_idx][from_alignment_idx].start_bone_name == self.target_links[to_data_set_idx][to_alignment_idx].start_bone_name)):
                     # 同じINDEXか前のINDEX、同じ計算対象は計算不要
                     continue
 
                 # 2点間の距離を算出
                 distances[(from_data_set_idx, from_alignment_idx, to_data_set_idx, to_alignment_idx)] \
                     = org_from_global_3ds[self.target_links[from_data_set_idx][from_alignment_idx].effector_bone_name].distanceToPoint(\
-                        org_from_to_global_3ds[self.target_links[to_data_set_idx][to_alignment_idx].effector_bone_name])
+                        org_from_effector_global_3ds[self.target_links[to_data_set_idx][to_alignment_idx].effector_bone_name])
 
         all_target_distances = {}
         for (from_data_set_idx, from_alignment_idx, to_data_set_idx, to_alignment_idx), distance in distances.items():
@@ -134,10 +130,7 @@ class ArmAlignmentService():
             base_distance = self.target_links[from_data_set_idx][from_alignment_idx].distance
             if 0 < distance_ratio <= base_distance or base_distance == 10:
                 # 基準距離以内か常に位置合わせを行うかの場合、位置合わせ処理実行
-                logger.info("○近接あり: f: %s(%s-%s:%s-%s), 境界: %s, 手首間の距離: %s", fno, \
-                            (from_data_set_idx + 1), self.target_links[from_data_set_idx][from_alignment_idx].effector_bone_name, \
-                            (to_data_set_idx + 1), self.target_links[to_data_set_idx][to_alignment_idx].effector_bone_name, round(distance_ratio, 5), base_distance)
-                
+
                 # 距離をキーにして、INDEXの組合せを登録
                 if distance_ratio not in all_target_distances:
                     all_target_distances[distance_ratio] = []
@@ -146,8 +139,8 @@ class ArmAlignmentService():
             elif base_distance < distance_ratio <= base_distance * 1.5:
                 # 基準距離に近い場合、ログだけ出す
                 logger.info("－近接なし: f: %s(%s-%s:%s-%s), 境界: %s, 手首間の距離: %s", fno, \
-                            (from_data_set_idx + 1), self.target_links[from_data_set_idx][from_alignment_idx].effector_bone_name, \
-                            (to_data_set_idx + 1), self.target_links[to_data_set_idx][to_alignment_idx].effector_bone_name, round(distance_ratio, 5), base_distance)
+                            (from_data_set_idx + 1), self.target_links[from_data_set_idx][from_alignment_idx].effector_display_bone_name, \
+                            (to_data_set_idx + 1), self.target_links[to_data_set_idx][to_alignment_idx].effector_display_bone_name, round(distance_ratio, 5), base_distance)
 
         # 距離の近いものからINDEXの組合せを登録
         # 基本的には全部の中心点を算出するが、それぞれのモデルの両手のみが近かった場合を想定
@@ -156,6 +149,7 @@ class ArmAlignmentService():
         for distance_ratio in sorted(all_target_distances.keys()):
             for from_data_set_idx, from_alignment_idx, to_data_set_idx, to_alignment_idx in all_target_distances[distance_ratio]:
                 
+                is_target = False
                 if from_data_set_idx not in all_index_reversed:
                     # まだFROMが登録されていない場合
                     if to_data_set_idx not in all_index_reversed:
@@ -175,6 +169,8 @@ class ArmAlignmentService():
                         if (from_data_set_idx, from_alignment_idx) not in all_index_group[group_idx]:
                             all_index_group[group_idx].append((from_data_set_idx, from_alignment_idx))
                             all_index_reversed[from_data_set_idx] = group_idx
+                    
+                    is_target = True
                 else:
                     # FROMが登録されている場合
                     if to_data_set_idx not in all_index_reversed:
@@ -183,15 +179,26 @@ class ArmAlignmentService():
                         if (to_data_set_idx, to_alignment_idx) not in all_index_group[group_idx]:
                             all_index_group[group_idx].append((to_data_set_idx, to_alignment_idx))
                             all_index_reversed[to_data_set_idx] = group_idx
+   
+                        is_target = True
                     else:
-                        # FROMもTOも登録済みの場合、データがまだなければ登録
-                        from_group_idx = all_index_reversed[from_data_set_idx]
-                        if (from_data_set_idx, from_alignment_idx) not in all_index_group[from_group_idx]:
-                            all_index_group[from_group_idx].append((from_data_set_idx, from_alignment_idx))
+                        # FROMもTOも登録済みの場合、他データセットとの組み合わせかつデータがまだなければ登録
+                        if from_data_set_idx != to_data_set_idx:
+                            from_group_idx = all_index_reversed[from_data_set_idx]
+                            if (from_data_set_idx, from_alignment_idx) not in all_index_group[from_group_idx]:
+                                all_index_group[from_group_idx].append((from_data_set_idx, from_alignment_idx))
 
-                        to_group_idx = all_index_reversed[to_data_set_idx]
-                        if (to_data_set_idx, to_alignment_idx) not in all_index_group[to_group_idx]:
-                            all_index_group[to_group_idx].append((to_data_set_idx, to_alignment_idx))
+                            to_group_idx = all_index_reversed[to_data_set_idx]
+                            if (to_data_set_idx, to_alignment_idx) not in all_index_group[to_group_idx]:
+                                all_index_group[to_group_idx].append((to_data_set_idx, to_alignment_idx))
+                            
+                            is_target = True
+                
+                if is_target:
+                    # 対象の場合、ログ表示
+                    logger.info("○近接あり: f: %s(%s-%s:%s-%s), 境界: %s, 手首間の距離: %s", fno, \
+                                (from_data_set_idx + 1), self.target_links[from_data_set_idx][from_alignment_idx].effector_display_bone_name, \
+                                (to_data_set_idx + 1), self.target_links[to_data_set_idx][to_alignment_idx].effector_display_bone_name[:3], round(distance_ratio, 5), base_distance)
 
         logger.test("fno: %s, index_group: %s", fno, all_index_group)
 
@@ -208,6 +215,7 @@ class ArmAlignmentService():
             org_tip_poses_indexes = {}
             rep_tip_poses_indexes = {}
             ratio_indexes = {}
+            entity_ratio_indexes = {}
             prev_org_effector_poses_indexes = None
             prev_rep_effector_poses_indexes = None
             prev_org_tip_poses_indexes = None
@@ -231,6 +239,9 @@ class ArmAlignmentService():
                     ratio_indexes[(data_set_idx, alignment_idx)] = target_link.multi_ratio
                 else:
                     ratio_indexes[(data_set_idx, alignment_idx)] = target_link.ratio
+                
+                # 手首の厚み比率
+                entity_ratio_indexes[(data_set_idx, alignment_idx)] = target_link.entity_ratio
 
                 # 元モデルのエフェクタ位置（numpyデータ）
                 org_effector_poses_indexes[(data_set_idx, alignment_idx)] = all_org_effector_poses_indexes[(data_set_idx, alignment_idx)]
@@ -311,6 +322,8 @@ class ArmAlignmentService():
             # 元モデルの中心点からの差分
             org_diffs = org_effector_poses - org_mean
             logger.test("fno: %s, org diff: %s", fno, org_diffs)
+
+            logger.test("entity: %s", np.array(list(entity_ratio_indexes.values())))
                
             # 差を先モデルの位置に加算する（元モデルと同じ位置にエフェクタを配置）
             new_rep_effector_poses = org_diffs + rep_mean
@@ -504,13 +517,15 @@ class ArmAlignmentService():
 
                             if dot < 0.6:
                                 # 内積もNGなら元に戻す
-                                logger.info("×位置合わせ失敗: f: %s(%s-%s), 近似度: %s", fno, (data_set_idx + 1), target_link.effector_bone_name, round(dot, 5))
+                                logger.info("×位置合わせ失敗: f: %s(%s-%s), 近似度: %s", fno, (data_set_idx + 1), target_link.effector_display_bone_name, round(dot, 5))
                                 bf.rotation = org_bfs[(data_set_idx, alignment_idx, link_name)].rotation
                             else:
                                 # 最後まで回して内積OKならとりあえずFLG=ON
                                 is_success[group_cnt] = True
 
-                if is_success[group_cnt]:
+                if is_success[group_cnt] and target_link.tip_ik_links:
+                    # IK処理が成功していて、かつ先端リンクがある場合、先端調整
+
                     new_rep_tip_pos = new_rep_tip_poses_indexes[(data_set_idx, alignment_idx)]
                     tip_vec = MVector3D(new_rep_tip_pos)
 
@@ -525,7 +540,7 @@ class ArmAlignmentService():
 
                     if dot < 0.6:
                         # 内積NGなら元に戻す
-                        logger.info("×先端位置合わせ失敗: f: %s(%s-%s), 近似度: %s", fno, (data_set_idx + 1), target_link.effector_bone_name, round(dot, 5))
+                        logger.info("×先端位置合わせ失敗: f: %s(%s-%s), 近似度: %s", fno, (data_set_idx + 1), target_link.effector_display_bone_name, round(dot, 5))
                         bf.rotation = org_bfs[(data_set_idx, alignment_idx, target_link.effector_bone_name)].rotation
 
                 # どっちにしろbf確定(手首もここで確定)
@@ -548,17 +563,19 @@ class ArmAlignmentService():
 
         fnos = []
 
-        org_arm_links = data_set.org_model.create_link_2_top_lr("手首")
-        rep_arm_links = data_set.rep_model.create_link_2_top_lr("手首")
-
         for direction in ["左", "右"]:
             # 手のひら頂点計算
             self.calc_wrist_entity_vertex(data_set_idx, data_set.org_model, "作成元", direction)
             self.calc_wrist_entity_vertex(data_set_idx, data_set.rep_model, "変換先", direction)
 
+            tip_bone_name = "{0}人指先".format(direction)
+            if tip_bone_name not in data_set.org_model.bones or tip_bone_name not in data_set.rep_model.bones:
+                # 指先がどっちかにない場合、手首を対象とする
+                tip_bone_name = "{0}手首".format(direction)
+
             # 指先までのリンク
-            org_wrist_links = data_set.org_model.create_link_2_top_one("{0}人指先".format(direction))
-            rep_wrist_links = data_set.rep_model.create_link_2_top_one("{0}人指先".format(direction))
+            org_wrist_links = data_set.org_model.create_link_2_top_one(tip_bone_name)
+            rep_wrist_links = data_set.rep_model.create_link_2_top_one(tip_bone_name)
 
             # IK用リンク（エフェクタから追加していく）
             ik_links_list = []
@@ -588,19 +605,25 @@ class ArmAlignmentService():
             ik_links_list.append(ik_links)
             ik_count_list.append(3)
 
-            tip_ik_links = BoneLinks()
-            tip_ik_links.append(rep_wrist_links.get("{0}人指先".format(direction)))
-            tip_ik_links.append(rep_wrist_links.get("{0}手首".format(direction)))
-
-            # 手のひらの長さ
-            org_palm_length = (data_set.org_model.bones["{0}手首".format(direction)].position - data_set.org_model.bones["{0}人指先".format(direction)].position).length()
-            rep_palm_length = (data_set.rep_model.bones["{0}手首".format(direction)].position - data_set.rep_model.bones["{0}人指先".format(direction)].position).length()
+            if tip_bone_name == "{0}手首".format(direction):
+                # 位置合わせが手首の場合、先端調整不要
+                tip_ik_links = None
+                # 手のひらの長さ（指のないモデルである場合、仮に1を設定）
+                org_palm_length = 1
+                rep_palm_length = 1
+            else:
+                tip_ik_links = BoneLinks()
+                tip_ik_links.append(rep_wrist_links.get(tip_bone_name))
+                tip_ik_links.append(rep_wrist_links.get("{0}手首".format(direction)))
+                # 手のひらの長さ
+                org_palm_length = (data_set.org_model.bones["{0}手首".format(direction)].position - data_set.org_model.bones[tip_bone_name].position).length()
+                rep_palm_length = (data_set.rep_model.bones["{0}手首".format(direction)].position - data_set.rep_model.bones[tip_bone_name].position).length()
 
             # 手首リンク登録
             self.target_links[data_set_idx].append( \
                 ArmAlignmentOption(org_wrist_links, rep_wrist_links, ik_links_list, ik_count_list, tip_ik_links, \
-                                   org_palm_length, rep_palm_length, org_arm_links, rep_arm_links, "{0}腕".format(direction), \
-                                   "{0}手首".format(direction), "{0}人指先".format(direction), self.options.arm_options.alignment_distance_wrist, data_set.xz_ratio))
+                                   org_palm_length, rep_palm_length, data_set.org_model, data_set.rep_model, "{0}腕".format(direction), \
+                                   "{0}手首".format(direction), "{0}手首".format(direction), tip_bone_name, self.options.arm_options.alignment_distance_wrist, data_set.xz_ratio))
 
             # 腕・ひじ・手首のキーフレ
             fnos.extend(data_set.motion.get_bone_fnos("{0}腕".format(direction), "{0}ひじ".format(direction), "{0}手首".format(direction)))
@@ -613,38 +636,74 @@ class ArmAlignmentService():
 
         fnos = []
 
-        org_arm_links = data_set.org_model.create_link_2_top_lr("手首")
-        rep_arm_links = data_set.rep_model.create_link_2_top_lr("手首")
+        # ボーンセット確認
+        finger_name_list = []
+        for direction in ["左", "右"]:
+            for finger_name in ["親指", "人指", "中指", "薬指", "小指"]:
+                finger_name_list.append("{0}{1}".format(direction, finger_name))
+                finger_name_list.append("{0}{1}先".format(direction, finger_name))
+        
+        if not set(finger_name_list).issubset(data_set.org_model.bones) or not set(finger_name_list).issubset(data_set.org_model.bones):
+            logger.warning("指ボーンが不足しているため、指位置合わせはスキップします。", decoration=MLogger.DECORATION_BOX)
+            return fnos
 
         for direction in ["左", "右"]:
-            rep_wrist_links = data_set.rep_model.create_link_2_top_one("{0}手首".format(direction))
-
-            # IK用リンク（エフェクタから追加していく）
-            ik_links_list = BoneLinks()
-            ik_links_list.append(rep_wrist_links.get("{0}手首".format(direction)))
-            ik_links_list.append(rep_wrist_links.get("{0}ひじ".format(direction)))
-            ik_links_list.append(rep_wrist_links.get("{0}腕".format(direction)))
-
-            # 手のひらの長さ
-            org_palm_length = (data_set.org_model.bones["{0}手首".format(direction)].position - data_set.org_model.bones["{0}人指先".format(direction)].position).length()
-            rep_palm_length = (data_set.rep_model.bones["{0}手首".format(direction)].position - data_set.rep_model.bones["{0}人指先".format(direction)].position).length()
-
-            # グルーブが処理対象であるか
-            is_groove = ("グルーブ" in data_set.rep_model.bones and "グルーブ" in data_set.motion.bones)
-
             for finger_name in ["親指", "人指", "中指", "薬指", "小指"]:
+                total_finger_name = "{0}{1}先".format(direction, finger_name)
+
+                # 手のひらの長さ
+                org_palm_length = (data_set.org_model.bones["{0}手首".format(direction)].position - data_set.org_model.bones[total_finger_name].position).length()
+                rep_palm_length = (data_set.rep_model.bones["{0}手首".format(direction)].position - data_set.rep_model.bones[total_finger_name].position).length()
+
                 # 指リンク
-                org_finger_links = data_set.org_model.create_link_2_top_one("{0}{1}先".format(direction, finger_name))
-                rep_finger_links = data_set.rep_model.create_link_2_top_one("{0}{1}先".format(direction, finger_name))
+                org_finger_links = data_set.org_model.create_link_2_top_one(total_finger_name)
+                rep_finger_links = data_set.rep_model.create_link_2_top_one(total_finger_name)
+
+                # IK用リンク（エフェクタから追加していく）
+                ik_links_list = []
+                ik_count_list = []
+
+                # ひじは角度制限をつける
+                elbow_bone = rep_finger_links.get("{0}ひじ".format(direction))
+                elbow_bone.ik_limit_min = MVector3D(-180, -0.5, 0)
+                elbow_bone.ik_limit_min = MVector3D(180, 180, 0)
+
+                ik_links = BoneLinks()
+                ik_links.append(rep_finger_links.get(total_finger_name))
+                ik_links.append(rep_finger_links.get("{0}腕".format(direction)))
+                ik_links_list.append(ik_links)
+                ik_count_list.append(2)
+                            
+                ik_links = BoneLinks()
+                ik_links.append(rep_finger_links.get(total_finger_name))
+                ik_links.append(elbow_bone)
+                ik_links_list.append(ik_links)
+                ik_count_list.append(2)
+
+                ik_links = BoneLinks()
+                ik_links.append(rep_finger_links.get(total_finger_name))
+                ik_links.append(elbow_bone)
+                ik_links.append(rep_finger_links.get("{0}腕".format(direction)))
+                ik_links_list.append(ik_links)
+                ik_count_list.append(3)
+
+                # 先端リンク
+                tip_ik_links = BoneLinks()
+                tip_ik_links.append(rep_finger_links.get(total_finger_name))
+                tip_ik_links.append(rep_finger_links.get("{0}手首".format(direction)))
 
                 # 指リンク登録
-                self.target_links[data_set_idx].append(ArmAlignmentOption(org_finger_links, rep_finger_links, ik_links_list, org_palm_length, rep_palm_length, \
-                                                                          org_arm_links, rep_arm_links, "{0}腕".format(direction), "{0}{1}".format(direction, finger_name), \
-                                                                          self.options.arm_options.alignment_distance_finger, is_groove))
+                self.target_links[data_set_idx].append( \
+                    ArmAlignmentOption(org_finger_links, rep_finger_links, ik_links_list, ik_count_list, tip_ik_links, \
+                                       org_palm_length, rep_palm_length, data_set.org_model, data_set.rep_model, "{0}腕".format(direction), \
+                                       total_finger_name, total_finger_name[:3], total_finger_name, self.options.arm_options.alignment_distance_finger, data_set.xz_ratio))
 
-                # 腕・ひじ・手首・指のキーフレ（なければスルー）
-                fnos.extend(data_set.motion.get_bone_fnos("{0}腕".format(direction), "{0}ひじ".format(direction), "{0}手首".format(direction), "{0}{1}０".format(direction, finger_name), \
-                                                          "{0}{1}１".format(direction, finger_name), "{0}{1}２".format(direction, finger_name), "{0}{1}３".format(direction, finger_name)))
+            # 腕・ひじ・手首のキーフレ
+            fnos.extend(data_set.motion.get_bone_fnos("{0}腕".format(direction), "{0}ひじ".format(direction), "{0}手首".format(direction)))
+
+            # # 腕・ひじ・手首・指のキーフレ（なければスルー）
+            # fnos.extend(data_set.motion.get_bone_fnos("{0}腕".format(direction), "{0}ひじ".format(direction), "{0}手首".format(direction), "{0}{1}０".format(direction, finger_name), \
+            #                                             "{0}{1}１".format(direction, finger_name), "{0}{1}２".format(direction, finger_name), "{0}{1}３".format(direction, finger_name)))
 
         return fnos
 
@@ -685,8 +744,8 @@ class ArmAlignmentService():
 class ArmAlignmentOption():
 
     def __init__(self, org_links: BoneLinks, rep_links: BoneLinks, ik_links_list: BoneLinks, ik_count_list: list, \
-                 tip_ik_links: BoneLinks, org_palm_length: float, rep_palm_length: float, org_arm_links: BoneLinks, rep_arm_links: BoneLinks, \
-                 start_bone_name: str, effector_bone_name: str, tip_bone_name: str, distance: float, xz_ratio: float):
+                 tip_ik_links: BoneLinks, org_palm_length: float, rep_palm_length: float, org_model: PmxModel, rep_model: PmxModel, \
+                 start_bone_name: str, effector_bone_name: str, effector_display_bone_name: str, tip_bone_name: str, distance: float, xz_ratio: float):
         super().__init__()
 
         self.org_links = org_links
@@ -698,25 +757,30 @@ class ArmAlignmentOption():
         self.rep_palm_length = rep_palm_length
         self.start_bone_name = start_bone_name
         self.effector_bone_name = effector_bone_name
+        self.effector_display_bone_name = effector_display_bone_name
         self.distance = distance
         self.tip_bone_name = tip_bone_name
 
-        # 肩幅比率
-        org_arm_diff = (org_arm_links["左"].get("左腕").position - org_arm_links["右"].get("右腕").position)
-        rep_arm_diff = (rep_arm_links["左"].get("左腕").position - rep_arm_links["右"].get("右腕").position)
-        arm_diff_ratio = rep_arm_diff / org_arm_diff
-        arm_diff_ratio.one()    # 比率なので、0は1に変換する
-
-        # TOの長さ比率
-        org_to_diff = (org_links.get(effector_bone_name).position - org_links.get(start_bone_name).position)
-        org_to_diff.abs()
-        rep_to_diff = (rep_links.get(effector_bone_name).position - rep_links.get(start_bone_name).position)
-        rep_to_diff.abs()
-        to_diff_ratio = rep_to_diff.length() / org_to_diff.length()
+        # エフェクタまでの長さ比率
+        org_effector_diff = (org_model.bones[effector_bone_name].position - org_model.bones[start_bone_name].position)
+        org_effector_diff.one()
+        rep_effector_diff = (rep_model.bones[effector_bone_name].position - rep_model.bones[start_bone_name].position)
+        rep_effector_diff.one()
+        effector_diff_ratio = rep_effector_diff.length() / org_effector_diff.length()
 
         # 元と先の比率
-        self.ratio = to_diff_ratio
+        self.ratio = effector_diff_ratio
         # 元と先の比率（複数モーション時）
         self.multi_ratio = xz_ratio
         
+        # 手首実体の厚み比
+        org_wrist_entity_diff = org_model.bones["{0}手首実体".format(effector_bone_name[0])].position - org_model.bones["{0}手首".format(effector_bone_name[0])].position
+        org_wrist_entity_diff.one()
+        rep_wrist_entity_diff = rep_model.bones["{0}手首実体".format(effector_bone_name[0])].position - rep_model.bones["{0}手首".format(effector_bone_name[0])].position
+        rep_wrist_entity_diff.one()
+        effector_diff_ratio = rep_wrist_entity_diff.length() / org_wrist_entity_diff.length()
+
+        self.entity_ratio = np.array([effector_diff_ratio, effector_diff_ratio, effector_diff_ratio])
+
+
 

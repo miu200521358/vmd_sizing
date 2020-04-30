@@ -465,7 +465,7 @@ class PmxReader():
 
                     if end_joint_name in pmx.bones and to_joint_name not in pmx.bones:
                         # 指先端があって、指先がない場合挿入
-                        _, to_pos = self.calc_tail_pos(pmx, end_joint_name)
+                        to_pos = self.calc_tail_pos(pmx, end_joint_name)
                         to_bone = Bone(to_joint_name, None, to_pos, -1, 0, 0)
 
                         # ボーンのINDEX
@@ -898,24 +898,25 @@ class PmxReader():
         return result
 
     # 指定されたボーンの先を取得する
-    def calc_tail_pos(self, model, fbone):
-        from_pos = MVector3D()
-        tail_pos = MVector3D()
+    def calc_tail_pos(self, model, bone_name: str):
+        if bone_name not in model.bones:
+            return MVector3D()
+        
+        bone = model.bones[bone_name]
         to_pos = MVector3D()
 
-        if fbone in model.bones:
-            fv = model.bones[fbone]
-            from_pos = fv.position
-            if fv.tail_position != MVector3D():
-                # 表示先が相対パスの場合、保持
-                tail_pos = fv.tail_position
-                to_pos = from_pos + tail_pos
-            elif fv.tail_index >= 0:
-                to_pos = model.bones[model.bone_indexes[fv.tail_index]].position
-                tail_pos = to_pos - from_pos
+        from_pos = model.bones[bone.name].position
+        if bone.tail_position != MVector3D():
+            # 表示先が相対パスの場合、保持
+            to_pos = from_pos + bone.tail_position
+        elif bone.tail_index >= 0 and bone.tail_index in model.bone_indexes and model.bones[model.bone_indexes[bone.tail_index]].position != bone.position:
+            # 表示先が指定されているの場合、保持
+            to_pos = model.bones[model.bone_indexes[bone.tail_index]].position
+        else:
+            # 表示先がない場合、とりあえず子ボーンのどれかを選択
+            for b in model.bones.values():
+                if b.parent_index == bone.index and model.bones[model.bone_indexes[b.index]].position != bone.position:
+                    to_pos = model.bones[model.bone_indexes[b.index]].position
+                    break
 
-        # それでも取れなければ、to_posはfrom_posと同じ
-        if to_pos == MVector3D():
-            to_pos = from_pos
-
-        return tail_pos, to_pos
+        return to_pos
