@@ -73,17 +73,17 @@ class MainFrame(wx.Frame):
         self.file_panel_ctrl = FilePanel(self, self.note_ctrl, 0, self.file_hitories)
         self.note_ctrl.AddPage(self.file_panel_ctrl, u"ファイル", True)
 
+        # 複数タブ
+        self.multi_panel_ctrl = MultiPanel(self, self.note_ctrl, 1, self.file_hitories)
+        self.note_ctrl.AddPage(self.multi_panel_ctrl, u"複数", False)
+
         # モーフタブ
-        self.morph_panel_ctrl = MorphPanel(self, self.note_ctrl, 1)
+        self.morph_panel_ctrl = MorphPanel(self, self.note_ctrl, 2)
         self.note_ctrl.AddPage(self.morph_panel_ctrl, u"モーフ", False)
 
         # 腕タブ
-        self.arm_panel_ctrl = ArmPanel(self, self.note_ctrl, 2)
+        self.arm_panel_ctrl = ArmPanel(self, self.note_ctrl, 3)
         self.note_ctrl.AddPage(self.arm_panel_ctrl, u"腕", False)
-
-        # 複数タブ
-        self.multi_panel_ctrl = MultiPanel(self, self.note_ctrl, 3, self.file_hitories)
-        self.note_ctrl.AddPage(self.multi_panel_ctrl, u"複数", False)
 
         # CSVタブ
         self.csv_panel_ctrl = CsvPanel(self, self.note_ctrl, 4)

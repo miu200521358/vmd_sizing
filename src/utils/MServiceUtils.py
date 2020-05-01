@@ -237,17 +237,17 @@ def calc_global_pos_by_direction(direction_qq: MQuaternion, target_pos_3ds_dic: 
     direction_pos_dic = OrderedDict()
 
     for bone_name, target_pos in target_pos_3ds_dic.items():
-        # その地点の回転後の位置
-        direction_pos_dic[bone_name] = direction_qq * target_pos
-        # mat = MMatrix4x4()
-        # # 初期化
-        # mat.setToIdentity()
-        # # 指定位置
-        # mat.translate(target_pos)
-        # # 回転させる
-        # mat.rotate(direction_qq)
         # # その地点の回転後の位置
-        # direction_pos_dic[bone_name] = mat * MVector3D()
+        # direction_pos_dic[bone_name] = direction_qq * target_pos
+        mat = MMatrix4x4()
+        # 初期化
+        mat.setToIdentity()
+        # 指定位置
+        mat.translate(target_pos)
+        # 回転させる
+        mat.rotate(direction_qq)
+        # その地点の回転後の位置
+        direction_pos_dic[bone_name] = mat * MVector3D()
         # logger.test("f: %s, direction_qq: %s", bone_name, direction_qq.toEulerAngles4MMD())
         # logger.test("f: %s, target_pos: %s", bone_name, target_pos)
         # logger.test("f: %s, direction_pos_dic: %s", bone_name, direction_pos_dic[bone_name])

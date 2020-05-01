@@ -217,6 +217,8 @@ class Bone():
         # IK制限角度
         self.ik_limit_min = MVector3D()
         self.ik_limit_max = MVector3D()
+        # IK内積上限値
+        self.dot_limit = 0
 
         self.BONEFLAG_TAILPOS_IS_BONE = 0x0001
         self.BONEFLAG_CAN_ROTATE = 0x0002
@@ -781,7 +783,7 @@ class PmxModel():
         # つま先調整に必要なボーン群
         target_bones = ["左腕", "左ひじ", "左手首", "右腕", "右ひじ", "右手首"]
 
-        cannot_sizing = "腕系処理をスキップします。\n腕系処理（腕スタンス補正・接触回避・位置合わせ）を実行したい場合、\n腕タブのチェックスルーFLGをONにして再実行してください。"
+        cannot_sizing = "腕系処理をスキップします。\n腕系処理（腕スタンス補正・接触回避・位置合わせ）を実行したい場合、\n腕タブのチェックスキップFLGをONにして再実行してください。"
 
         if not set(target_bones).issubset(self.bones.keys()):
             logger.warning("腕・ひじ・手首の左右ボーンが揃ってないため、%s\nモデル: %s", cannot_sizing, self.name, decoration=MLogger.DECORATION_BOX)
@@ -878,9 +880,10 @@ class PmxModel():
         "全ての親": ["SIZING_ROOT_BONE"],
         "センター": ["全ての親", "SIZING_ROOT_BONE"],
         "グルーブ": ["センター"],
-        "腰": ["グルーブ", "センター"],
-        "下半身": ["腰", "グルーブ", "センター"],
-        "上半身": ["腰", "グルーブ", "センター"],
+        "センター実体": ["グルーブ", "センター"],
+        "腰": ["センター実体", "グルーブ", "センター"],
+        "下半身": ["腰", "センター実体", "グルーブ", "センター"],
+        "上半身": ["腰", "センター実体", "グルーブ", "センター"],
         "上半身2": ["上半身"],
         "首": ["上半身2", "上半身"],
         "頭": ["首"],

@@ -719,7 +719,7 @@ class VmdMotion():
 
         for bone_name, bone_frames in self.bones.items():
             if bone_name not in ["SIZING_ROOT_BONE", "頭頂", "右つま先実体", "左つま先実体", "右足底辺", "左足底辺", "右足底実体", "左足底実体", "右足ＩＫ底実体", "左足ＩＫ底実体", "右足IK親底実体", "左足IK親底実体", \
-                                 "首根元", "右腕下延長", "左腕下延長", "右腕垂直", "左腕垂直"]:
+                                 "首根元", "右腕下延長", "左腕下延長", "右腕垂直", "左腕垂直", "センター実体"]:
                 # サイジング用ボーンは出力しない
                 target_fnos[bone_name] = self.get_bone_fnos(bone_name, is_key=True)
 
@@ -786,6 +786,15 @@ class VmdMotion():
         
         self.morphs[frame.name][frame.fno] = frame
 
+    # 指定fnoのみのモーションデータを生成する
+    def copy_bone_motion(self, fno: int):
+        new_motion = VmdMotion()
+
+        for bone_name in self.bones.keys():
+            new_motion.bones[bone_name] = {fno: self.calc_bf(bone_name, fno).copy()}
+        
+        return new_motion
+
     def copy(self):
         motion = VmdMotion()
 
@@ -804,7 +813,14 @@ class VmdMotion():
         motion.morphs = cPickle.loads(cPickle.dumps(self.morphs, -1))
         motion.camera_cnt = cPickle.loads(cPickle.dumps(self.camera_cnt, -1))
         motion.cameras = cPickle.loads(cPickle.dumps(self.cameras, -1))
+
+        motion.light_cnt = cPickle.loads(cPickle.dumps(self.light_cnt, -1))
+        motion.lights = cPickle.loads(cPickle.dumps(self.lights, -1))
+        motion.shadow_cnt = cPickle.loads(cPickle.dumps(self.shadow_cnt, -1))
+        motion.shadows = cPickle.loads(cPickle.dumps(self.shadows, -1))
+        motion.ik_cnt = cPickle.loads(cPickle.dumps(self.ik_cnt, -1))
+        motion.showiks = cPickle.loads(cPickle.dumps(self.showiks, -1))
+        
         motion.digest = cPickle.loads(cPickle.dumps(self.digest, -1))
 
         return motion
-

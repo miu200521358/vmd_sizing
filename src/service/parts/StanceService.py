@@ -14,7 +14,7 @@ from utils import MUtils, MServiceUtils, MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
 from utils.MException import SizingException
 
-logger = MLogger(__name__)
+logger = MLogger(__name__, level=MLogger.DEBUG)
 
 
 class StanceService():
@@ -53,8 +53,8 @@ class StanceService():
                 # 上半身スタンス補正
                 self.adjust_upper_stance(data_set_idx, data_set)
             
-                # # つま先補正
-                # self.adjust_toe_stance(data_set_idx, data_set)
+                # つま先補正
+                self.adjust_toe_stance(data_set_idx, data_set)
 
             # 腕系サイジング可能（もしくはチェックスキップ）であれば、腕スタンス補正
             if (data_set.org_model.can_arm_sizing and data_set.rep_model.can_arm_sizing) or self.options.arm_options.arm_check_skip_flg:
@@ -83,7 +83,8 @@ class StanceService():
                 logger.warning("No.%sの%sモデルの腕構造にサイジングが対応していない為、腕系処理をスキップします。", (data_set_idx + 1), target_model_type, decoration=MLogger.DECORATION_BOX)
 
             return True
-        except SizingException:
+        except SizingException as se:
+            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
             return False
         except Exception as e:
             logger.error("サイジング処理が意図せぬエラーで終了しました。", e)
@@ -233,8 +234,7 @@ class StanceService():
                                     prev_sep_fno = fno // 500
                             log_target_idxs.append(fnos[-1])
 
-                            for start_fno, end_fno in zip(fnos[:-1], fnos[1:]):
-                                futures.append(executor.submit(self.remove_unnecessary_bf_pool_parts, data_set_idx, bone_name, start_fno, end_fno, log_target_idxs))
+                            futures.append(executor.submit(self.remove_unnecessary_bf_pool_parts, data_set_idx, bone_name, fnos[1], fnos[-1], log_target_idxs))
                     concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
                     for f in futures:
                         if not f.result():
@@ -257,7 +257,8 @@ class StanceService():
                 logger.info("%s捩り分散:終了【No.%s】", direction, (data_set_idx + 1))
 
             return True
-        except SizingException:
+        except SizingException as se:
+            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
             return False
         except Exception as e:
             logger.error("サイジング処理が意図せぬエラーで終了しました。", e)
@@ -272,7 +273,8 @@ class StanceService():
                                                   (end_fno in log_target_idxs))
 
             return True
-        except SizingException:
+        except SizingException as se:
+            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
             return False
         except Exception as e:
             logger.error("サイジング処理が意図せぬエラーで終了しました。", e)
@@ -287,7 +289,8 @@ class StanceService():
                                       data_set.rep_model.bones[bone_name].getTranslatable(), 2, (end_fno in log_target_idxs))
 
             return True
-        except SizingException:
+        except SizingException as se:
+            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
             return False
         except Exception as e:
             logger.error("サイジング処理が意図せぬエラーで終了しました。", e)
@@ -302,7 +305,8 @@ class StanceService():
                                              data_set.rep_model.bones[bone_name].getTranslatable())
 
             return True
-        except SizingException:
+        except SizingException as se:
+            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
             return False
         except Exception as e:
             logger.error("サイジング処理が意図せぬエラーで終了しました。", e)
@@ -320,7 +324,8 @@ class StanceService():
             logger.info("-- %s捩り分散準備:終了【No.%s】", bone_name, (data_set_idx + 1))
 
             return True
-        except SizingException:
+        except SizingException as se:
+            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
             return False
         except Exception as e:
             logger.error("サイジング処理が意図せぬエラーで終了しました。", e)
@@ -430,7 +435,8 @@ class StanceService():
                 logger.info("-- %sフレーム目:終了(%s％)【No.%s - %s】", fno, round((fno / last_fno) * 100, 3), data_set_idx + 1, arm_twist_bone_name)
 
             return True
-        except SizingException:
+        except SizingException as se:
+            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
             return False
         except Exception as e:
             logger.error("サイジング処理が意図せぬエラーで終了しました。", e)
@@ -718,6 +724,9 @@ class StanceService():
                     # 足ＩＫのbf(この時点では登録するか分からないので、補間曲線リセットなし)
                     ik_bf = data_set.motion.calc_bf("{0}足ＩＫ".format(direction), fno)
 
+                    if ik_bf.position.y() == 0:
+                        continue
+
                     # 登録可否
                     is_ik_resist = False
 
@@ -769,7 +778,8 @@ class StanceService():
                 logger.info("%sつま先補正:終了【No.%s】", direction, (data_set_idx + 1))
 
             return True
-        except SizingException:
+        except SizingException as se:
+            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
             return False
         except Exception as e:
             logger.error("サイジング処理が意図せぬエラーで終了しました。", e)
@@ -1442,13 +1452,16 @@ class StanceService():
                 dot = MVector3D.dotProduct(org_shoulder_slope.normalized(), rep_shoulder_slope.normalized())
 
                 shoulder_initial_qq = initial_bf.rotation
-                if dot >= 0.6:
+                if dot >= 0.7:
                     shoulder_initial_qq = initial_bf.rotation
                     dot_limit = 0.9
+                elif 0.5 <= dot < 0.7:
+                    shoulder_initial_qq = initial_bf.rotation
+                    dot_limit = 0.8
                 else:
-                    # 初期姿勢が違いすぎてる場合、初期姿勢を維持しない（四つ足等）
-                    shoulder_initial_qq = MQuaternion()
-                    dot_limit = 0
+                    # 初期姿勢が違いすぎてる場合、肩補正をスルーする
+                    logger.warning("%sの初期スタンスの角度が違いすぎるため、肩スタンス補正をスキップします【No.%s】", shoulder_name, (data_set_idx + 1))
+                    return
 
                 logger.debug("dot: %s", dot)
                 logger.debug("shoulder_initial_qq: %s", shoulder_initial_qq)
@@ -1510,7 +1523,8 @@ class StanceService():
                 logger.info("%sスタンス補正: 終了【No.%s】", shoulder_name, (data_set_idx + 1))
 
             return True
-        except SizingException:
+        except SizingException as se:
+            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
             return False
         except Exception as e:
             logger.error("サイジング処理が意図せぬエラーで終了しました。", e)
@@ -1708,7 +1722,8 @@ class StanceService():
                 logger.info("腕スタンス補正【No.%s - %s】", (data_set_idx + 1), bone_name)
 
             return True
-        except SizingException:
+        except SizingException as se:
+            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
             return False
         except Exception as e:
             logger.error("サイジング処理が意図せぬエラーで終了しました。", e)
@@ -1734,7 +1749,8 @@ class StanceService():
                 logger.test("to: %s", arm_diff_qq_dic[bone_name]["to"].toEulerAngles())
 
             return True
-        except SizingException:
+        except SizingException as se:
+            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
             return False
         except Exception as e:
             logger.error("サイジング処理が意図せぬエラーで終了しました。", e)

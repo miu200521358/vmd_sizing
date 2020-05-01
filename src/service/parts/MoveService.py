@@ -42,37 +42,38 @@ class MoveService():
 
                 for bone_name in ["全ての親", "センター", "グルーブ", "右足IK親", "左足IK親", "右足ＩＫ", "左足ＩＫ", "右つま先ＩＫ", "左つま先ＩＫ"]:
                     if bone_name in data_set.motion.bones and bone_name in data_set.rep_model.bones and len(data_set.motion.bones[bone_name].keys()) > 0:
-                        fnos = data_set.motion.get_bone_fnos(bone_name)
-                        for fno in fnos:
-                            futures.append(executor.submit(self.adjust_move, data_set_idx, bone_name, fno, fnos[-1]))
+                        futures.append(executor.submit(self.adjust_move, data_set_idx, bone_name))
 
             concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
             for f in futures:
                 result = f.result() and result
-    
+
         return result
     
-    def adjust_move(self, data_set_idx: int, bone_name: str, fno: int, last_fno: int):
+    def adjust_move(self, data_set_idx: int, bone_name: str):
         try:
             logger.copy(self.options)
             data_set = self.options.data_set_list[data_set_idx]
-            
-            bf = data_set.motion.bones[bone_name][fno]
+            fnos = data_set.motion.get_bone_fnos(bone_name)
 
-            # IK比率をそのまま掛ける
-            bf.position.setX(bf.position.x() * data_set.xz_ratio)
-            bf.position.setY(bf.position.y() * data_set.y_ratio)
-            bf.position.setZ(bf.position.z() * data_set.xz_ratio)
+            for fno in fnos:
+                bf = data_set.motion.bones[bone_name][fno]
 
-            # オフセット調整
-            bf.position += data_set.rep_model.bones[bone_name].local_offset
+                # 一旦IK比率をそのまま掛ける
+                bf.position.setX(bf.position.x() * data_set.xz_ratio)
+                bf.position.setY(bf.position.y() * data_set.y_ratio)
+                bf.position.setZ(bf.position.z() * data_set.xz_ratio)
 
-            if fno == last_fno and fno > 0:
+                # オフセット調整
+                bf.position += data_set.rep_model.bones[bone_name].local_offset
+
+            if len(fnos) > 0:
                 logger.info("移動補正:終了【No.%s - %s】", data_set_idx + 1, bone_name)
             
             return True
-        except SizingException:
+        except SizingException as se:
+            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
             return False
         except Exception as e:
             logger.error("サイジング処理が意図せぬエラーで終了しました。", e)

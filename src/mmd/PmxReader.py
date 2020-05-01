@@ -457,6 +457,12 @@ class PmxReader():
                 pmx.bones[left_shoulder_under_bone.name] = left_shoulder_under_bone
                 pmx.bone_indexes[left_shoulder_under_bone.index] = left_shoulder_under_bone.name
 
+            # センター実体
+            center_entity_bone = Bone("センター実体", "", MVector3D(), -1, 0, 0)
+            center_entity_bone.index = len(pmx.bones.keys())
+            pmx.bones[center_entity_bone.name] = center_entity_bone
+            pmx.bone_indexes[center_entity_bone.index] = center_entity_bone.name
+
             # 指先ボーンがない場合、代替で挿入
             for direction in ["左", "右"]:
                 for (finger_name, end_joint_name) in [("親指", "２"), ("人指", "３"), ("中指", "３"), ("薬指", "３"), ("小指", "３")]:

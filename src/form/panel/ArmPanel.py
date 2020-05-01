@@ -157,12 +157,12 @@ class ArmPanel(BasePanel):
         self.alignment_distance_floor_txt.Wrap(-1)
         self.alignment_distance_floor_sizer.Add(self.alignment_distance_floor_txt, 0, wx.ALL, 5)
 
-        self.alignment_distance_floor_label = wx.StaticText(self, wx.ID_ANY, u"（1.8）", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.alignment_distance_floor_label = wx.StaticText(self, wx.ID_ANY, u"（1.2）", wx.DefaultPosition, wx.DefaultSize, 0)
         self.alignment_distance_floor_label.SetToolTip(u"現在指定されている手首と床との間の距離です。元モデルの両手首と床との距離がこの範囲内である場合、手首と床との位置合わせを行います。")
         self.alignment_distance_floor_label.Wrap(-1)
         self.alignment_distance_floor_sizer.Add(self.alignment_distance_floor_label, 0, wx.ALL, 5)
 
-        self.alignment_distance_floor_slider = FloatSliderCtrl(self, wx.ID_ANY, 1.8, 0, 10, 0.1, self.alignment_distance_floor_label, wx.DefaultPosition, wx.DefaultSize, wx.SL_HORIZONTAL)
+        self.alignment_distance_floor_slider = FloatSliderCtrl(self, wx.ID_ANY, 1.2, 0, 10, 0.1, self.alignment_distance_floor_label, wx.DefaultPosition, wx.DefaultSize, wx.SL_HORIZONTAL)
         self.alignment_distance_floor_slider.Bind(wx.EVT_SCROLL_CHANGED, self.on_change_arm_process_alignment)
         self.alignment_distance_floor_sizer.Add(self.alignment_distance_floor_slider, 1, wx.ALL | wx.EXPAND, 5)
 

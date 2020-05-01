@@ -4,7 +4,6 @@ import copy
 import struct
 import hashlib
 import re
-from multiprocessing import Manager
 
 from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
@@ -198,7 +197,8 @@ class VmdReader():
                         prev_n = n // 10000
                         logger.info("VMDカメラ読み込み キー: %s" % n)
 
-            except Exception:
+            except Exception as e:
+                logger.info("camera", e)
                 # 情報がない場合、catchして握りつぶす
                 motion.camera_cnt = 0
 
@@ -206,28 +206,30 @@ class VmdReader():
             try:
                 motion.light_cnt = self.read_uint(4)
                 logger.test("motion.light_cnt %s", motion.light_cnt)
-            except Exception:
+
+                # 1F分の照明情報
+                for _ in range(motion.light_cnt):
+                    light = VmdLightFrame()
+
+                    # フレームIDX
+                    light.fno = self.read_uint(4)
+                    logger.test("light.fno %s", light.fno)
+
+                    # 照明色(RGBだが、下手に数値が変わるのも怖いのでV3D)
+                    light.color = self.read_Vector3D()
+                    logger.test("light.color %s", light.color)
+
+                    # 照明位置
+                    light.position = self.read_Vector3D()
+                    logger.test("light.position %s", light.position)
+
+                    # 追加
+                    motion.lights.append(light)
+
+            except Exception as e:
+                logger.info("light", e)
                 # 情報がない場合、catchして握りつぶす
                 motion.light_cnt = 0
-
-            # 1F分の照明情報
-            for _ in range(motion.light_cnt):
-                light = VmdLightFrame()
-
-                # フレームIDX
-                light.fno = self.read_uint(4)
-                logger.test("light.fno %s", light.fno)
-
-                # 照明色(RGBだが、下手に数値が変わるのも怖いのでV3D)
-                light.color = self.read_Vector3D()
-                logger.test("light.color %s", light.color)
-
-                # 照明位置
-                light.position = self.read_Vector3D()
-                logger.test("light.position %s", light.position)
-
-                # 追加
-                motion.lights.append(light)
 
             # セルフシャドウ数
             try:
@@ -253,7 +255,8 @@ class VmdReader():
                     # 追加
                     motion.shadows.append(shadow)
 
-            except Exception:
+            except Exception as e:
+                logger.info("shadow", e)
                 # 情報がない場合、catchして握りつぶす
                 motion.shadow_cnt = 0
 
@@ -264,21 +267,21 @@ class VmdReader():
 
                 # 1F分のIK情報
                 for _ in range(motion.ik_cnt):
-                    ik = VmdShowIkFrame()
+                    show_ik = VmdShowIkFrame()
 
                     # フレームIDX
-                    ik.fno = self.read_uint(4)
-                    logger.test("ik.fno %s", ik.fno)
+                    show_ik.fno = self.read_uint(4)
+                    logger.test("ik.fno %s", show_ik.fno)
 
                     # モデル表示, 0:OFF, 1:ON
-                    ik.show = self.read_uint(1)
-                    logger.test("ik.show %s", ik.show)
+                    show_ik.show = self.read_uint(1)
+                    logger.test("ik.show %s", show_ik.show)
 
                     # 記録するIKの数
-                    ik.ik_count = self.read_uint(4)
-                    logger.test("ik.ik_count %s", ik.ik_count)
+                    show_ik.ik_count = self.read_uint(4)
+                    logger.test("ik.ik_count %s", show_ik.ik_count)
 
-                    for _ in range(ik.ik_count):
+                    for _ in range(show_ik.ik_count):
                         ik_info = VmdInfoIk()
 
                         # IK名
@@ -290,12 +293,13 @@ class VmdReader():
                         ik_info.onoff = self.read_uint(1)
                         logger.test("ik_info.onoff %s", ik_info.onoff)
 
-                        ik.ik.append(ik_info)
+                        show_ik.ik.append(ik_info)
 
                     # 追加
-                    motion.showiks.append(ik)
+                    motion.showiks.append(show_ik)
 
-            except Exception:
+            except Exception as e:
+                logger.info("showik", e)
                 # 昔のMMD（MMDv7.39.x64以前）はIK情報がないため、catchして握りつぶす
                 motion.ik_cnt = 0
 
