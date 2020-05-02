@@ -32,22 +32,22 @@ class MoveService():
                 logger.info("移動補正　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
 
                 # センターのY軸オフセットを計算
-                self.set_center_y_offset(data_set)
+                self.set_center_y_offset(data_set_idx, data_set)
 
                 # センターのZ軸オフセットを計算
-                self.set_center_z_offset(data_set)
+                self.set_center_z_offset(data_set_idx, data_set)
 
                 # 足IKのオフセットを計算
-                self.set_leg_ik_offset(data_set)
+                self.set_leg_ik_offset(data_set_idx, data_set)
 
                 for bone_name in ["全ての親", "センター", "グルーブ", "右足IK親", "左足IK親", "右足ＩＫ", "左足ＩＫ", "右つま先ＩＫ", "左つま先ＩＫ"]:
                     if bone_name in data_set.motion.bones and bone_name in data_set.rep_model.bones and len(data_set.motion.bones[bone_name].keys()) > 0:
                         futures.append(executor.submit(self.adjust_move, data_set_idx, bone_name))
 
-            concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
+        concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
-            for f in futures:
-                result = f.result() and result
+        for f in futures:
+            result = f.result() and result
 
         return result
     
@@ -79,7 +79,7 @@ class MoveService():
             logger.error("サイジング処理が意図せぬエラーで終了しました。", e)
             return False
 
-    def set_leg_ik_offset(self, data_set: MOptionsDataSet):
+    def set_leg_ik_offset(self, data_set_idx: int, data_set: MOptionsDataSet):
         target_bones = ["左足", "左足ＩＫ", "右足ＩＫ"]
 
         if set(target_bones).issubset(data_set.org_model.bones) and set(target_bones).issubset(data_set.rep_model.bones):
@@ -106,8 +106,8 @@ class MoveService():
                     # オフセットの広がり具合が、元々と同じ場合は正、反対の場合、負
                     leg_ik_offset[direction].setX(re_x * (1 if np.sign(leg_ik_offset[direction].x()) == np.sign(rep_leg_ik_global_pos.x()) else -1))
 
-            logger.info("IKオフセット(%s): x: %s, z: %s", "左足", leg_ik_offset["左"].x(), leg_ik_offset["左"].z())
-            logger.info("IKオフセット(%s): x: %s, z: %s", "右足", leg_ik_offset["右"].x(), leg_ik_offset["右"].z())
+            logger.info("【No.%s】IKオフセット(%s): x: %s, z: %s", (data_set_idx + 1), "左足", leg_ik_offset["左"].x(), leg_ik_offset["左"].z())
+            logger.info("【No.%s】IKオフセット(%s): x: %s, z: %s", (data_set_idx + 1), "右足", leg_ik_offset["右"].x(), leg_ik_offset["右"].z())
 
             if "左足IK親" in data_set.rep_model.bones and "左足IK親" in data_set.motion.bones:
                 # IK親があって使われている場合、IK親にオフセット設定
@@ -126,7 +126,7 @@ class MoveService():
         logger.info("IKオフセットなし")
 
     # センターYオフセット計算
-    def set_center_y_offset(self, data_set: MOptionsDataSet):
+    def set_center_y_offset(self, data_set_idx: int, data_set: MOptionsDataSet):
         target_bones = ["左足", "左ひざ", "左足首", "センター"]
 
         if set(target_bones).issubset(data_set.org_model.bones) and set(target_bones).issubset(data_set.rep_model.bones):
@@ -163,14 +163,14 @@ class MoveService():
                 data_set.rep_model.bones["センター"].local_offset.setY(offset_y)
                 logger.test("local_offset %s", data_set.rep_model.bones["センター"].local_offset)
 
-                logger.info("センターYオフセット: %s", offset_y)
+                logger.info("【No.%s】センターYオフセット: %s", (data_set_idx + 1), offset_y)
 
                 return
 
-            logger.info("センターYオフセットなし")
+            logger.info("【No.%s】センターYオフセットなし", (data_set_idx + 1))
 
     # センターZオフセット計算
-    def set_center_z_offset(self, data_set: MOptionsDataSet):
+    def set_center_z_offset(self, data_set_idx: int, data_set: MOptionsDataSet):
         target_bones = ["左つま先ＩＫ", "左足", "左足首", "センター"]
 
         if set(target_bones).issubset(data_set.org_model.bones) and set(target_bones).issubset(data_set.rep_model.bones):
@@ -216,11 +216,11 @@ class MoveService():
             data_set.rep_model.bones["センター"].local_offset.setZ(local_offset_z)
             logger.test("local_offset %s", data_set.rep_model.bones["センター"].local_offset)
 
-            logger.info("センターZオフセット: %s", local_offset_z)
+            logger.info("【No.%s】センターZオフセット: %s", (data_set_idx + 1), local_offset_z)
 
             return
 
-        logger.info("センターZオフセットなし")
+        logger.info("【No.%s】センターZオフセットなし", (data_set_idx + 1))
 
 
 

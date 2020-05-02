@@ -197,8 +197,7 @@ class VmdReader():
                         prev_n = n // 10000
                         logger.info("VMDカメラ読み込み キー: %s" % n)
 
-            except Exception as e:
-                logger.info("camera", e)
+            except Exception:
                 # 情報がない場合、catchして握りつぶす
                 motion.camera_cnt = 0
 
@@ -226,8 +225,7 @@ class VmdReader():
                     # 追加
                     motion.lights.append(light)
 
-            except Exception as e:
-                logger.info("light", e)
+            except Exception:
                 # 情報がない場合、catchして握りつぶす
                 motion.light_cnt = 0
 
@@ -255,8 +253,7 @@ class VmdReader():
                     # 追加
                     motion.shadows.append(shadow)
 
-            except Exception as e:
-                logger.info("shadow", e)
+            except Exception:
                 # 情報がない場合、catchして握りつぶす
                 motion.shadow_cnt = 0
 
@@ -298,8 +295,7 @@ class VmdReader():
                     # 追加
                     motion.showiks.append(show_ik)
 
-            except Exception as e:
-                logger.info("showik", e)
+            except Exception:
                 # 昔のMMD（MMDv7.39.x64以前）はIK情報がないため、catchして握りつぶす
                 motion.ik_cnt = 0
 

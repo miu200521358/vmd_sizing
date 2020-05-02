@@ -14,7 +14,7 @@ from utils import MUtils, MServiceUtils, MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
 from utils.MException import SizingException
 
-logger = MLogger(__name__, level=MLogger.DEBUG)
+logger = MLogger(__name__)
 
 
 class StanceService():

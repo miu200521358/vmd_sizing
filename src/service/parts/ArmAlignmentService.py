@@ -36,6 +36,8 @@ class ArmAlignmentService():
         # 処理対象キーフレ
         fnos = []
 
+        logger.info("手首位置合わせ　", decoration=MLogger.DECORATION_LINE)
+
         for data_set_idx in self.target_data_set_idxs:
             # 処理対象データセットに対して、準備実行
 
@@ -77,15 +79,13 @@ class ArmAlignmentService():
 
         # 処理対象キーフレを先頭からひとつずつチェックしていく
         for data_set_idx, alignment_options in self.target_links.items():
-            for alignment_idx, alignment_option in alignment_options.items():
+            for alignment_idx, target_link in alignment_options.items():
                 # 処理対象データセット
                 data_set = self.options.data_set_list[data_set_idx]
-                # 処理対象
-                target_link = self.target_links[data_set_idx][alignment_idx]
 
                 # 元モデルのそれぞれのグローバル位置
                 all_org_global_3ds[(data_set_idx, alignment_idx)] = \
-                    MServiceUtils.calc_global_pos(data_set.org_model, alignment_option.org_links, data_set.org_motion, fno)
+                    MServiceUtils.calc_global_pos(data_set.org_model, target_link.org_links, data_set.org_motion, fno)
 
                 # 元モデルのエフェクタ位置（numpyデータ）
                 all_org_effector_poses_indexes[(data_set_idx, alignment_idx)] = \
@@ -97,9 +97,6 @@ class ArmAlignmentService():
 
                 if alignment_idx < 0:
                     # 床の位置は各位置のY0をvectorの場合のみ定義し直す（距離を測る用）
-                    all_org_global_3ds[(data_set_idx, alignment_idx)] = \
-                        MServiceUtils.calc_global_pos(data_set.org_model, alignment_option.org_links, data_set.org_motion, fno)
-                    
                     for org_global_vec in all_org_global_3ds[(data_set_idx, alignment_idx)].values():
                         org_global_vec.setY(0)
 
@@ -142,7 +139,7 @@ class ArmAlignmentService():
                     all_target_distances[distance_ratio] = []
                 all_target_distances[distance_ratio].append((from_data_set_idx, from_alignment_idx, to_data_set_idx, to_alignment_idx))
 
-            elif base_distance < distance_ratio <= base_distance * 1.5:
+            elif base_distance < distance_ratio <= base_distance * 3:
                 # 基準距離に近い場合、ログだけ出す
                 logger.info("－近接なし: f: %s(%s-%s:%s-%s), 境界: %s, 2点間の距離: %s", fno, \
                             (from_data_set_idx + 1), self.target_links[from_data_set_idx][from_alignment_idx].effector_display_bone_name, \
@@ -664,8 +661,11 @@ class ArmAlignmentService():
                 tip_ik_links.append(rep_wrist_links.get(tip_bone_name))
                 tip_ik_links.append(rep_wrist_links.get("{0}手首".format(direction)))
                 # 手のひらの長さ
-                org_palm_length = (data_set.org_model.bones["{0}手首".format(direction)].position - data_set.org_model.bones[tip_bone_name].position).length()
-                rep_palm_length = (data_set.rep_model.bones["{0}手首".format(direction)].position - data_set.rep_model.bones[tip_bone_name].position).length()
+                org_palm_length = (data_set.org_model.bones["{0}手首".format(direction)].position.distanceToPoint(data_set.org_model.bones[tip_bone_name].position))
+                rep_palm_length = (data_set.rep_model.bones["{0}手首".format(direction)].position.distanceToPoint(data_set.rep_model.bones[tip_bone_name].position))
+
+            logger.info("【No.%s】作成元モデルの%s手のひらの大きさ: %s", (data_set_idx + 1), direction, org_palm_length)
+            logger.info("【No.%s】変換先モデルの%s手のひらの大きさ: %s", (data_set_idx + 1), direction, rep_palm_length)
 
             # 手首リンク登録
             self.target_links[data_set_idx][alignment_idx] = \
@@ -730,8 +730,8 @@ class ArmAlignmentService():
                 total_finger_name = "{0}{1}先".format(direction, finger_name)
 
                 # 手のひらの長さ
-                org_palm_length = (data_set.org_model.bones["{0}手首".format(direction)].position - data_set.org_model.bones[total_finger_name].position).length()
-                rep_palm_length = (data_set.rep_model.bones["{0}手首".format(direction)].position - data_set.rep_model.bones[total_finger_name].position).length()
+                org_palm_length = (data_set.org_model.bones["{0}手首".format(direction)].position.distanceToPoint(data_set.org_model.bones[total_finger_name].position))
+                rep_palm_length = (data_set.rep_model.bones["{0}手首".format(direction)].position.distanceToPoint(data_set.rep_model.bones[total_finger_name].position))
 
                 # 指リンク
                 org_finger_links = data_set.org_model.create_link_2_top_one(total_finger_name)
