@@ -87,6 +87,9 @@ class FilePanel(BasePanel):
         for file_set in self.frame.multi_panel_ctrl.file_set_list:
             file_set.save()
 
+        # カメラ履歴保持
+        self.frame.camera_panel_ctrl.save()
+
         # JSON出力
         MFileUtils.save_history(self.frame.mydir_path, self.frame.file_hitories)
 
@@ -112,6 +115,9 @@ class FilePanel(BasePanel):
         for file_set in self.frame.multi_panel_ctrl.file_set_list:
             file_set.save()
 
+        # カメラ履歴保持
+        self.frame.camera_panel_ctrl.save()
+
         # JSON出力
         MFileUtils.save_history(self.frame.mydir_path, self.frame.file_hitories)
 
@@ -122,5 +128,6 @@ class FilePanel(BasePanel):
 
     def set_output_vmd_path(self, is_force=False):
         self.file_set.set_output_vmd_path(is_force)
-
+        # カメラ出力パスも一緒に変更する
+        self.frame.camera_panel_ctrl.header_panel.set_output_vmd_path()
 

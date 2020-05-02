@@ -139,7 +139,7 @@ class ArmAlignmentService():
                     all_target_distances[distance_ratio] = []
                 all_target_distances[distance_ratio].append((from_data_set_idx, from_alignment_idx, to_data_set_idx, to_alignment_idx))
 
-            elif base_distance < distance_ratio <= base_distance * 3:
+            elif base_distance < distance_ratio <= base_distance * 5:
                 # 基準距離に近い場合、ログだけ出す
                 logger.info("－近接なし: f: %s(%s-%s:%s-%s), 境界: %s, 2点間の距離: %s", fno, \
                             (from_data_set_idx + 1), self.target_links[from_data_set_idx][from_alignment_idx].effector_display_bone_name, \

@@ -8,6 +8,7 @@ from form.panel.FilePanel import FilePanel
 from form.panel.MorphPanel import MorphPanel
 from form.panel.MultiPanel import MultiPanel
 from form.panel.ArmPanel import ArmPanel
+from form.panel.CameraPanel import CameraPanel
 from form.panel.CsvPanel import CsvPanel
 from form.panel.VmdPanel import VmdPanel
 from form.worker.SizingWorkerThread import SizingWorkerThread
@@ -85,12 +86,16 @@ class MainFrame(wx.Frame):
         self.arm_panel_ctrl = ArmPanel(self, self.note_ctrl, 3)
         self.note_ctrl.AddPage(self.arm_panel_ctrl, u"腕", False)
 
+        # カメラタブ
+        self.camera_panel_ctrl = CameraPanel(self, self.note_ctrl, 4)
+        self.note_ctrl.AddPage(self.camera_panel_ctrl, u"カメラ", False)
+
         # CSVタブ
-        self.csv_panel_ctrl = CsvPanel(self, self.note_ctrl, 4)
+        self.csv_panel_ctrl = CsvPanel(self, self.note_ctrl, 5)
         self.note_ctrl.AddPage(self.csv_panel_ctrl, u"CSV", False)
 
         # VMDタブ
-        self.vmd_panel_ctrl = VmdPanel(self, self.note_ctrl, 5)
+        self.vmd_panel_ctrl = VmdPanel(self, self.note_ctrl, 6)
         self.note_ctrl.AddPage(self.vmd_panel_ctrl, u"VMD", False)
         
         # ---------------------------------------------
@@ -150,6 +155,11 @@ class MainFrame(wx.Frame):
 
             # 読み込み処理実行
             self.load(is_morph=True)
+        
+        if self.note_ctrl.GetSelection() == self.camera_panel_ctrl.tab_idx:
+            # カメラタブを開く場合、カメラタブ初期化処理実行
+            self.note_ctrl.ChangeSelection(self.camera_panel_ctrl.tab_idx)
+            self.camera_panel_ctrl.initialize(event)
 
     # タブ移動可
     def release_tab(self):

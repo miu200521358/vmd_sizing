@@ -20,7 +20,7 @@ class HistoryFilePickerCtrl(BaseFilePickerCtrl):
         # logger.test(self.frame.file_hitories)
 
         self.histroy_btn_ctrl = wx.Button(parent, wx.ID_ANY, u"履歴", wx.DefaultPosition, wx.DefaultSize, 0)
-        self.histroy_btn_ctrl.SetToolTip(u"これまで指定された{0}が再指定できます。".format(title))
+        self.histroy_btn_ctrl.SetToolTip(u"これまで指定された{0}を再指定できます。".format(title))
 
         super().__init__(frame, parent, title, message, wildcard, style, tooltip, file_model_spacer=file_model_spacer, title_parts_ctrl=title_parts_ctrl, \
                          file_parts_ctrl=self.histroy_btn_ctrl, is_change_output=is_change_output, is_aster=is_aster, is_save=is_save, set_no=set_no)
@@ -39,6 +39,9 @@ class HistoryFilePickerCtrl(BaseFilePickerCtrl):
         # 改めて先頭に登録
         if len(self.file_ctrl.GetPath()) > 0:
             self.frame.file_hitories[self.file_histories_key].insert(0, self.file_ctrl.GetPath())
+        
+        # 上限50件
+        self.frame.file_hitories[self.file_histories_key] = self.frame.file_hitories[self.file_histories_key][:50]
 
     # 履歴ボタンのあるファイルコントロールは直近のパスを開く
     def on_pick_file(self, event):
