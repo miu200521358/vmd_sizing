@@ -190,6 +190,10 @@ class VmdReader():
                     camera.perspective = self.unpack(1, "B")
                     logger.test("camera.perspective %s", camera.perspective)
 
+                    # オリジナルを保持
+                    camera.org_length = camera.org_length
+                    camera.org_position = camera.org_position.copy()
+
                     # カメラを追加
                     motion.cameras[camera.fno] = camera
 

@@ -241,6 +241,7 @@ class MVector3D():
         return MVector3D(normv[0], normv[1], normv[2])
 
     def normalize(self):
+        self.effective()
         l2 = np.linalg.norm(self.__data, ord=2, axis=-1, keepdims=True)
         l2[l2 == 0] = 1
         normv = self.__data / l2
@@ -710,12 +711,19 @@ class MQuaternion():
         return self.__data.abs()**2
 
     def normalized(self):
+        self.effective()
         v = self.__data.normalized()
         return MQuaternion(v.w, v.x, v.y, v.z)
 
     def normalize(self):
         self.__data = self.__data.normalized()
-    
+
+    def effective(self):
+        self.setX(get_effective_value(self.x()))
+        self.setY(get_effective_value(self.y()))
+        self.setZ(get_effective_value(self.z()))
+        self.setScalar((1 if get_effective_value(self.scalar()) == 0 else self.scalar()))
+
     def toMatrix4x4(self):
         mat = MMatrix4x4()
         m = mat.data()

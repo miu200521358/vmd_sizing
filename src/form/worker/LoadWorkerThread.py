@@ -4,6 +4,7 @@
 import wx
 import time
 from form.worker.BaseWorkerThread import BaseWorkerThread
+from form.panel.CameraPanel import CameraSet
 
 
 class LoadWorkerThread(BaseWorkerThread):
@@ -18,11 +19,22 @@ class LoadWorkerThread(BaseWorkerThread):
     def thread_event(self):
         start = time.time()
 
+        # メインセットの読み込み
         self.result = self.frame.file_panel_ctrl.file_set.load() and self.result
 
+        # 複数セットの読み込み
         for file_set in self.frame.multi_panel_ctrl.file_set_list:
             self.result = file_set.load() and self.result
-
+            
+        # カメラモーションの読み込み
+        if self.frame.camera_panel_ctrl.camera_vmd_file_ctrl.is_set_path():
+            self.result = self.frame.camera_panel_ctrl.camera_vmd_file_ctrl.load() and self.result
+        
+        # カメラ元モデルの読み込み
+        for camera_set in self.frame.camera_panel_ctrl.camera_set_dict.values():
+            if camera_set.camera_model_file_ctrl.is_set_path():
+                self.result = camera_set.camera_model_file_ctrl.load() and self.result
+        
         self.elapsed_time = time.time() - start
 
     def post_event(self):

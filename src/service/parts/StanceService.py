@@ -1088,7 +1088,7 @@ class StanceService():
             # 初期状態の上半身2の傾き
             initial_bf = VmdBoneFrame(fno=0)
             initial_bf.set_name("上半身")
-            initial_dataset = MOptionsDataSet(VmdMotion(), data_set.org_model, data_set.rep_model, data_set.output_vmd_path, data_set.detail_stance_flg, data_set.twist_flg, [])
+            initial_dataset = MOptionsDataSet(VmdMotion(), data_set.org_model, data_set.rep_model, data_set.output_vmd_path, data_set.detail_stance_flg, data_set.twist_flg, [], None, 0)
 
             self.calc_rotation_stance_upper(initial_bf, data_set_idx, initial_dataset, \
                                             org_upper_links, org_head_links, org_arm_links, \
@@ -1189,7 +1189,7 @@ class StanceService():
                 # 初期状態の上半身2の傾き
                 initial_bf = VmdBoneFrame(fno=0)
                 initial_bf.set_name("上半身2")
-                initial_dataset = MOptionsDataSet(VmdMotion(), data_set.org_model, data_set.rep_model, data_set.output_vmd_path, data_set.detail_stance_flg, data_set.twist_flg, [])
+                initial_dataset = MOptionsDataSet(VmdMotion(), data_set.org_model, data_set.rep_model, data_set.output_vmd_path, data_set.detail_stance_flg, data_set.twist_flg, [], None, 0)
 
                 self.calc_rotation_stance_upper(initial_bf, data_set_idx, initial_dataset, \
                                                 org_upper2_links, org_head_links, org_arm_links, \
@@ -1441,7 +1441,7 @@ class StanceService():
                 # 初期状態の肩の傾き
                 initial_bf = VmdBoneFrame(fno=0)
                 initial_bf.set_name(shoulder_name)
-                initial_dataset = MOptionsDataSet(VmdMotion(), data_set.org_model, data_set.rep_model, data_set.output_vmd_path, data_set.detail_stance_flg, data_set.twist_flg, [])
+                initial_dataset = MOptionsDataSet(VmdMotion(), data_set.org_model, data_set.rep_model, data_set.output_vmd_path, data_set.detail_stance_flg, data_set.twist_flg, [], None, 0)
 
                 self.calc_rotation_stance_shoulder(initial_bf, data_set_idx, initial_dataset, \
                                                    org_shoulder_links, org_arm_links[shoulder_name[0]], rep_shoulder_links, \

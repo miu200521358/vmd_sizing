@@ -310,7 +310,7 @@ def deform_rotation(model: PmxModel, motion: VmdMotion, bf: VmdBoneFrame):
         return MQuaternion()
 
     bone = model.bones[bf.name]
-    rot = bf.rotation.copy()
+    rot = bf.rotation.normalized().copy()
 
     if bone.fixed_axis != MVector3D():
         # 回転角度を求める

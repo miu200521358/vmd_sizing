@@ -81,17 +81,7 @@ class FilePanel(BasePanel):
         wx.GetApp().Yield()
 
         # 履歴保持
-        self.frame.file_panel_ctrl.file_set.save()
-
-        # multiのも全部保持
-        for file_set in self.frame.multi_panel_ctrl.file_set_list:
-            file_set.save()
-
-        # カメラ履歴保持
-        self.frame.camera_panel_ctrl.save()
-
-        # JSON出力
-        MFileUtils.save_history(self.frame.mydir_path, self.frame.file_hitories)
+        self.save()
 
         # 一旦読み込み(そのままチェック)
         self.frame.load()
@@ -109,17 +99,7 @@ class FilePanel(BasePanel):
         wx.GetApp().Yield()
 
         # 履歴保持
-        self.frame.file_panel_ctrl.file_set.save()
-
-        # multiのも全部保持
-        for file_set in self.frame.multi_panel_ctrl.file_set_list:
-            file_set.save()
-
-        # カメラ履歴保持
-        self.frame.camera_panel_ctrl.save()
-
-        # JSON出力
-        MFileUtils.save_history(self.frame.mydir_path, self.frame.file_hitories)
+        self.save()
 
         # サイジング可否チェックの後に実行
         self.frame.load(is_exec=True)
@@ -131,3 +111,21 @@ class FilePanel(BasePanel):
         # カメラ出力パスも一緒に変更する
         self.frame.camera_panel_ctrl.header_panel.set_output_vmd_path()
 
+    def save(self):
+
+        # 履歴保持
+        self.frame.file_panel_ctrl.file_set.save()
+
+        # multiのも全部保持
+        for file_set in self.frame.multi_panel_ctrl.file_set_list:
+            file_set.save()
+
+        # カメラ履歴保持
+        self.frame.camera_panel_ctrl.save()
+
+        # カメラ元モデル保持
+        for camera_set in self.frame.camera_panel_ctrl.camera_set_dict.values():
+            camera_set.camera_model_file_ctrl.save()
+
+        # JSON出力
+        MFileUtils.save_history(self.frame.mydir_path, self.frame.file_hitories)

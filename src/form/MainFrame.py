@@ -56,7 +56,7 @@ class MainFrame(wx.Frame):
         if self.logging_level == MLogger.FULL or self.logging_level == MLogger.DEBUG_FULL:
             # フルデータの場合
             self.note_ctrl.SetBackgroundColour("RED")
-        elif self.logging_level == MLogger.TEST:
+        elif self.logging_level == MLogger.DEBUG:
             # テスト（デバッグ版）の場合
             self.note_ctrl.SetBackgroundColour("CORAL")
         elif self.logging_level == MLogger.TIMER:

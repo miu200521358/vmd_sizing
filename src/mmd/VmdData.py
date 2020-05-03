@@ -60,7 +60,7 @@ class VmdBoneFrame():
         fout.write(struct.pack('<f', float(self.position.x())))
         fout.write(struct.pack('<f', float(self.position.y())))
         fout.write(struct.pack('<f', float(self.position.z())))
-        v = self.rotation.toVector4D()
+        v = self.rotation.normalized().toVector4D()
         fout.write(struct.pack('<f', float(v.x())))
         fout.write(struct.pack('<f', float(v.y())))
         fout.write(struct.pack('<f', float(v.z())))
@@ -99,6 +99,8 @@ class VmdCameraFrame():
         self.interpolation = [20, 107, 20, 107, 20, 107, 20, 107, 20, 107, 20, 107, 20, 107, 20, 107, 20, 107, 20, 107, 20, 107, 20, 107]
         self.angle = 0
         self.perspective = 0
+        self.org_length = 0
+        self.org_position = MVector3D(0, 0, 0)
 
     def write(self, fout):
         fout.write(struct.pack('<L', int(self.fno)))

@@ -332,7 +332,7 @@ class PmxReader():
             # 頭頂ボーン
             head_top_vertex = pmx.get_head_top_vertex()
             pmx.head_top_vertex = head_top_vertex
-            head_top_bone = Bone("頭頂", "head_top", head_top_vertex.position.copy(), -1, 0, 0)
+            head_top_bone = Bone("頭頂実体", "head_top", head_top_vertex.position.copy(), -1, 0, 0)
             head_top_bone.index = len(pmx.bones.keys())
             pmx.bones[head_top_bone.name] = head_top_bone
             pmx.bone_indexes[head_top_bone.index] = head_top_bone.name

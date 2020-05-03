@@ -21,7 +21,8 @@ class CameraPanel(BasePanel):
         self.header_panel = CameraHeaderPanel(self.frame, self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL)
         self.header_sizer = wx.BoxSizer(wx.VERTICAL)
 
-        self.description_txt = wx.StaticText(self.header_panel, wx.ID_ANY, u"指定されたカメラモーションのサイジングを、ボーンモーションのサイジングと同時に行えます。", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.description_txt = wx.StaticText(self.header_panel, wx.ID_ANY, u"指定されたカメラモーションのサイジングを、ボーンモーションのサイジングと同時に行えます。\n" \
+                                             + "全長オフセットYは、カメラに映す変換先モデルの全長を調整するオフセット値を指定できます。", wx.DefaultPosition, wx.DefaultSize, 0)
         self.header_sizer.Add(self.description_txt, 0, wx.ALL, 5)
 
         # カメラVMDファイルコントロール
@@ -147,5 +148,22 @@ class CameraSet():
         self.camera_model_file_ctrl = HistoryFilePickerCtrl(frame, window, u"カメラ作成元モデルPMX", u"カメラ作成元モデルPMXファイルを開く", ("pmx"), wx.FLP_DEFAULT_STYLE, \
                                                             u"カメラ作成に使用されたモデルのPMXパスを指定してください。\n未指定の場合、モーション作成元モデルPMXを使用します。" \
                                                             + "\n精度は落ちますが、類似したサイズ・ボーン構造のモデルでも代用できます。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。", \
-                                                            file_model_spacer=0, title_parts_ctrl=None, file_histories_key="camera_pmx", is_change_output=True, is_aster=False, is_save=False, set_no=set_idx)
+                                                            file_model_spacer=0, title_parts_ctrl=None, file_histories_key="camera_pmx", \
+                                                            is_change_output=True, is_aster=False, is_save=False, set_no=set_idx)
         self.set_sizer.Add(self.camera_model_file_ctrl.sizer, 1, wx.EXPAND, 0)
+
+        self.offset_sizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.camera_offset_y_txt = wx.StaticText(self.window, wx.ID_ANY, u"全長Yオフセット", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.camera_offset_y_txt.Wrap(-1)
+        self.offset_sizer.Add(self.camera_offset_y_txt, 0, wx.ALL, 5)
+
+        # オフセットYコントロール
+        self.camera_offset_y_ctrl = wx.SpinCtrlDouble(self.window, id=wx.ID_ANY, size=wx.Size(100, -1), value="0.0", min=-1000, max=1000, initial=0.0, inc=0.1)
+        self.camera_offset_y_ctrl.SetToolTip(u"カメラに映す変換先モデルの全長を調整するオフセット値を指定できます。")
+        self.camera_offset_y_ctrl.Bind(wx.EVT_MOUSEWHEEL, lambda event: self.frame.on_wheel_spin_ctrl(event, 0.2))
+        self.offset_sizer.Add(self.camera_offset_y_ctrl, 0, wx.ALL, 5)
+
+        self.set_sizer.Add(self.offset_sizer, 0, wx.ALL, 0)
+
+

@@ -16,11 +16,13 @@ logger = MLogger(__name__)
 
 class MOptions():
 
-    def __init__(self, version_name, logging_level, data_set_list, arm_options, monitor, is_file, outout_datetime):
+    def __init__(self, version_name, logging_level, data_set_list, arm_options, camera_motion, camera_output_vmd_path, monitor, is_file, outout_datetime):
         self.version_name = version_name
         self.logging_level = logging_level
         self.data_set_list = data_set_list
         self.arm_options = arm_options
+        self.camera_motion = camera_motion
+        self.camera_output_vmd_path = camera_output_vmd_path
         self.monitor = monitor
         self.is_file = is_file
         self.outout_datetime = outout_datetime
@@ -76,6 +78,9 @@ class MOptions():
         parser.add_argument("--alignment_distance_finger", type=float, default=1.4)
         parser.add_argument("--alignment_distance_floor", type=float, default=1.8)
         parser.add_argument("--arm_check_skip_flg", type=int, default=0)
+        parser.add_argument("--camera_motion_path", type=str, default="")
+        parser.add_argument("--camera_org_model_path", default=[], type=(lambda x: list(map(str, x.split(';')))))
+        parser.add_argument("--camera_offset_y", default=[], type=(lambda x: list(map(str, x.split(';')))))
         parser.add_argument("--verbose", type=int, default=20)
 
         args = parser.parse_args()
@@ -104,9 +109,22 @@ class MOptions():
                 arm_check_skip_flg
             )
 
+            # 元モデルが未指定の場合、空で処理する
+            if not args.camera_org_model_path or (len(args.camera_org_model_path) == 1 and len(args.camera_org_model_path[0]) == 0):
+                args.camera_org_model_path = []
+                for org_path in args.org_model_path:
+                    args.camera_org_model_path.append("")
+
+            # オフセットYが未指定の場合、0で処理する
+            if not args.camera_offset_y or (len(args.camera_offset_y) == 1 and len(args.camera_offset_y[0]) == 0):
+                args.camera_offset_y = []
+                for org_path in args.org_model_path:
+                    args.camera_offset_y.append(0)
+
             data_set_list = []
-            for set_no, (motion_path, org_model_path, rep_model_path, detail_stance_flg_val, twist_flg_val) in enumerate( \
-                zip(args.motion_path, args.org_model_path, args.rep_model_path, args.detail_stance_flg, args.twist_flg)): # noqa
+            for set_no, (motion_path, org_model_path, rep_model_path, detail_stance_flg_val, twist_flg_val, camera_org_model_path, camera_offset_y) in enumerate( \
+                zip(args.motion_path, args.org_model_path, args.rep_model_path, args.detail_stance_flg, args.twist_flg, args.camera_org_model_path, \
+                    args.camera_offset_y)): # noqa
 
                 display_set_no = "【No.{0}】".format(set_no + 1)
 
@@ -119,7 +137,7 @@ class MOptions():
                 elif input_ext.lower() == ".vpd":
                     motion_reader = VpdReader(motion_path)
                 else:
-                    raise SizingException("%s.motion_path 読み込み失敗(拡張子不正): %s", display_set_no, os.path.basename(motion_path), decoration=MLogger.DECORATION_BOX)
+                    raise SizingException("{0}.motion_path 読み込み失敗(拡張子不正): {1}".format(display_set_no, os.path.basename(motion_path)))
                 
                 motion = motion_reader.read_data()
 
@@ -132,7 +150,7 @@ class MOptions():
                 if input_ext.lower() == ".pmx":
                     org_model_reader = PmxReader(org_model_path)
                 else:
-                    raise SizingException("%s.org_model_path 読み込み失敗(拡張子不正): %s", display_set_no, os.path.basename(org_model_path), decoration=MLogger.DECORATION_BOX)
+                    raise SizingException("{0}.org_model_path 読み込み失敗(拡張子不正): {1}".format(display_set_no, os.path.basename(org_model_path)))
                 
                 org_model = org_model_reader.read_data()
 
@@ -145,11 +163,28 @@ class MOptions():
                 if input_ext.lower() == ".pmx":
                     rep_model_reader = PmxReader(rep_model_path)
                 else:
-                    raise SizingException("%s.rep_model_path 読み込み失敗(拡張子不正): %s", display_set_no, os.path.basename(rep_model_path), decoration=MLogger.DECORATION_BOX)
+                    raise SizingException("{0}.rep_model_path 読み込み失敗(拡張子不正): {1}".format(display_set_no, os.path.basename(rep_model_path)))
                 
                 rep_model = rep_model_reader.read_data()
 
                 logger.info("%s モーション変換先モデルPMXファイル 読み込み成功 %s", display_set_no, os.path.basename(rep_model_path))
+
+                # 元モデル ----------
+                if len(camera_org_model_path) > 0:
+                    logger.info("%s カメラ作成元モデルPMXファイル 読み込み開始", display_set_no)
+
+                    file_name, input_ext = os.path.splitext(os.path.basename(camera_org_model_path))
+                    if input_ext.lower() == ".pmx":
+                        camera_org_model_reader = PmxReader(camera_org_model_path)
+                    else:
+                        raise SizingException("{0}.camera_org_model_path 読み込み失敗(拡張子不正): {1}".format(display_set_no, os.path.basename(camera_org_model_path)))
+                    
+                    camera_org_model = camera_org_model_reader.read_data()
+
+                    logger.info("%s カメラ作成元モデルPMXファイル 読み込み成功 %s", display_set_no, os.path.basename(camera_org_model_path))
+                else:
+                    # カメラ元モデルが未指定の場合、作成元モデルをそのまま流用
+                    camera_org_model = org_model
 
                 detail_stance_flg = True if detail_stance_flg_val == 1 else False
                 twist_flg = True if twist_flg_val == 1 else False
@@ -164,16 +199,38 @@ class MOptions():
                     output_vmd_path,
                     detail_stance_flg,
                     twist_flg,
-                    []
+                    [],
+                    camera_org_model,
+                    camera_offset_y
                 )
 
                 data_set_list.append(data_set)
+
+            if len(args.camera_motion_path) != 0:
+                # カメラパス --------
+                logger.info("調整対象カメラVMDファイル 読み込み開始")
+                
+                file_name, input_ext = os.path.splitext(os.path.basename(args.camera_motion_path))
+                if input_ext.lower() == ".vmd":
+                    camera_motion_reader = VmdReader(args.camera_motion_path)
+                else:
+                    raise SizingException("camera_motion_path 読み込み失敗(拡張子不正): %s", os.path.basename(args.camera_motion_path))
+                
+                camera_motion = camera_motion_reader.read_data()
+                camera_output_vmd_path = MFileUtils.get_output_camera_vmd_path(args.camera_motion_path, data_set_list[0].rep_model.path, "")
+
+                logger.info("調整対象カメラVMD/VPDファイル 読み込み成功 %s", os.path.basename(args.camera_motion_path))
+            else:
+                camera_motion = None
+                camera_output_vmd_path = None
 
             options = MOptions(\
                 version_name=version_name, \
                 logging_level=args.verbose, \
                 data_set_list=data_set_list, \
                 arm_options=arm_options, \
+                camera_motion=camera_motion, \
+                camera_output_vmd_path=camera_output_vmd_path, \
                 monitor=None, \
                 is_file=True, \
                 outout_datetime=logger.outout_datetime)
@@ -187,7 +244,7 @@ class MOptions():
 
 class MOptionsDataSet():
 
-    def __init__(self, motion, org_model, rep_model, output_vmd_path, detail_stance_flg, twist_flg, morph_list):
+    def __init__(self, motion, org_model, rep_model, output_vmd_path, detail_stance_flg, twist_flg, morph_list, camera_org_model, camera_offset_y):
         self.motion = motion
         self.org_model = org_model
         self.rep_model = rep_model
@@ -195,6 +252,9 @@ class MOptionsDataSet():
         self.detail_stance_flg = detail_stance_flg
         self.twist_flg = twist_flg
         self.morph_list = morph_list
+        self.camera_org_model = camera_org_model
+        self.camera_offset_y = camera_offset_y
+
         self.org_motion = self.motion.copy()
         self.test_params = None
         self.full_arms = False

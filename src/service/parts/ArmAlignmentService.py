@@ -32,7 +32,6 @@ class ArmAlignmentService():
 
         # リンク辞書
         self.target_links = {}
-        self.target_leg_links = {}
         # 処理対象キーフレ
         fnos = []
 
@@ -52,8 +51,6 @@ class ArmAlignmentService():
         # キーフレを重複除外してソートする
         self.target_fnos = sorted(list(set(fnos)))
 
-        result = True
-
         all_prev_org_effector_poses_indexes = {}
         all_prev_rep_effector_poses_indexes = {}
         all_prev_org_tip_poses_indexes = {}
@@ -65,7 +62,7 @@ class ArmAlignmentService():
                 self.execute_alignment(fno, all_prev_org_effector_poses_indexes, all_prev_rep_effector_poses_indexes, \
                                        all_prev_org_tip_poses_indexes, all_prev_rep_tip_poses_indexes)
     
-        return result
+        return True
 
     # 位置合わせ実行
     def execute_alignment(self, fno: int, all_prev_org_effector_poses_indexes: dict, all_prev_rep_effector_poses_indexes: dict, \
@@ -139,7 +136,7 @@ class ArmAlignmentService():
                     all_target_distances[distance_ratio] = []
                 all_target_distances[distance_ratio].append((from_data_set_idx, from_alignment_idx, to_data_set_idx, to_alignment_idx))
 
-            elif base_distance < distance_ratio <= base_distance * 5:
+            elif base_distance < distance_ratio <= base_distance * 3:
                 # 基準距離に近い場合、ログだけ出す
                 logger.info("－近接なし: f: %s(%s-%s:%s-%s), 境界: %s, 2点間の距離: %s", fno, \
                             (from_data_set_idx + 1), self.target_links[from_data_set_idx][from_alignment_idx].effector_display_bone_name, \
@@ -577,7 +574,7 @@ class ArmAlignmentService():
                     logger.debug("☆先端位置合わせ実行(%s): f: %s(%s-%s), rep: %s, dot: %s", ik_cnt, fno, (data_set_idx + 1), \
                                  target_link.tip_bone_name, tip_vec.to_log(), dot)
 
-                    if dot < 0.7:
+                    if dot < 0.9:
                         # 内積NGなら元に戻す
                         logger.info("×先端位置合わせ失敗: f: %s(%s-%s), 近似度: %s", fno, (data_set_idx + 1), target_link.effector_display_bone_name, round(dot, 5))
                         bf.rotation = org_bfs[(data_set_idx, alignment_idx, target_link.effector_bone_name)].rotation

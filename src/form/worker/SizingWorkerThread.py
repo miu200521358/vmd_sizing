@@ -37,6 +37,11 @@ class SizingWorkerThread(BaseWorkerThread):
 
             for file_idx in range(len(file_path_list)):
                 if self.frame.file_panel_ctrl.file_set.motion_vmd_file_ctrl.load(file_idx):
+
+                    camera_org_model = self.frame.file_panel_ctrl.file_set.org_model_file_ctrl.data
+                    if 1 in self.frame.camera_panel_ctrl.camera_set_dict and self.frame.camera_panel_ctrl.camera_set_dict[1].camera_model_file_ctrl.is_set_path():
+                        # カメラ元モデルが指定されている場合、カメラ元モデル再指定
+                        camera_org_model = self.frame.camera_panel_ctrl.camera_set_dict[1].camera_model_file_ctrl.data
                     
                     # 1件目は必ず読み込む
                     first_data_set = MOptionsDataSet(
@@ -46,23 +51,35 @@ class SizingWorkerThread(BaseWorkerThread):
                         output_vmd_path=self.frame.file_panel_ctrl.file_set.output_vmd_file_ctrl.file_ctrl.GetPath(), \
                         detail_stance_flg=self.frame.file_panel_ctrl.file_set.org_model_file_ctrl.title_parts_ctrl.GetValue(), \
                         twist_flg=self.frame.file_panel_ctrl.file_set.rep_model_file_ctrl.title_parts_ctrl.GetValue(), \
-                        morph_list=self.frame.morph_panel_ctrl.get_morph_list(1)
+                        morph_list=self.frame.morph_panel_ctrl.get_morph_list(1), \
+                        camera_org_model=camera_org_model, \
+                        camera_offset_y=self.frame.camera_panel_ctrl.camera_set_dict[1].camera_offset_y_ctrl.GetValue()
                     )
                     data_set_list.append(first_data_set)
 
-                    # 2件目以降は有効なのだけ読み込む
-                    for file_set in self.frame.multi_panel_ctrl.file_set_list:
-                        if file_set.is_loaded():
-                            multi_data_set = MOptionsDataSet(
-                                motion=file_set.motion_vmd_file_ctrl.data.copy(), \
-                                org_model=file_set.org_model_file_ctrl.data, \
-                                rep_model=file_set.rep_model_file_ctrl.data, \
-                                output_vmd_path=file_set.output_vmd_file_ctrl.file_ctrl.GetPath(), \
-                                detail_stance_flg=file_set.org_model_file_ctrl.title_parts_ctrl.GetValue(), \
-                                twist_flg=file_set.rep_model_file_ctrl.title_parts_ctrl.GetValue(), \
-                                morph_list=self.frame.morph_panel_ctrl.get_morph_list(file_set.set_no)
-                            )
-                            data_set_list.append(multi_data_set)
+            # 2件目以降は有効なのだけ読み込む
+            for multi_idx, file_set in enumerate(self.frame.multi_panel_ctrl.file_set_list):
+                if file_set.is_loaded():
+                    
+                    camera_org_model = file_set.org_model_file_ctrl.data
+                    if multi_idx + 1 in self.frame.camera_panel_ctrl.camera_set_dict and \
+                            self.frame.camera_panel_ctrl.camera_set_dict[multi_idx + 1].camera_model_file_ctrl.is_set_path():
+                        # カメラ元モデルが指定されている場合、カメラ元モデル再指定
+                        camera_org_model = self.frame.camera_panel_ctrl.camera_set_dict[multi_idx + 1].camera_model_file_ctrl.data
+
+                    multi_data_set = MOptionsDataSet(
+                        motion=file_set.motion_vmd_file_ctrl.data.copy(), \
+                        org_model=file_set.org_model_file_ctrl.data, \
+                        rep_model=file_set.rep_model_file_ctrl.data, \
+                        output_vmd_path=file_set.output_vmd_file_ctrl.file_ctrl.GetPath(), \
+                        detail_stance_flg=file_set.org_model_file_ctrl.title_parts_ctrl.GetValue(), \
+                        twist_flg=file_set.rep_model_file_ctrl.title_parts_ctrl.GetValue(), \
+                        morph_list=self.frame.morph_panel_ctrl.get_morph_list(file_set.set_no), \
+                        camera_org_model=camera_org_model, \
+                        camera_offset_y=self.frame.camera_panel_ctrl.camera_set_dict[multi_idx + 1].camera_offset_y_ctrl.GetValue()
+                    )
+                    data_set_list.append(multi_data_set)
+
             options = MOptions(\
                 version_name=self.frame.version_name, \
                 logging_level=self.frame.logging_level, \
@@ -78,6 +95,8 @@ class SizingWorkerThread(BaseWorkerThread):
                     self.frame.arm_panel_ctrl.alignment_distance_floor_slider.GetValue(), \
                     self.frame.arm_panel_ctrl.arm_check_skip_flg_ctrl.GetValue()
                 ), \
+                camera_motion=self.frame.camera_panel_ctrl.camera_vmd_file_ctrl.data, \
+                camera_output_vmd_path=self.frame.camera_panel_ctrl.output_camera_vmd_file_ctrl.file_ctrl.GetPath(), \
                 monitor=self.queue, \
                 is_file=False, \
                 outout_datetime=logger.outout_datetime)

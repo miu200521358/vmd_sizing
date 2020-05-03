@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #
+import _pickle as cPickle
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 import math
@@ -232,6 +233,9 @@ class Bone():
         self.BONEFLAG_HAS_LOCAL_COORDINATE = 0x0800
         self.BONEFLAG_IS_AFTER_PHYSICS_DEFORM = 0x1000
         self.BONEFLAG_IS_EXTERNAL_PARENT_DEFORM = 0x2000
+    
+    def copy(self):
+        return cPickle.loads(cPickle.dumps(self, -1))
 
     def hasFlag(self, flag):
         return (self.flag & flag) != 0
@@ -885,10 +889,10 @@ class PmxModel():
         "下半身": ["腰", "センター実体", "グルーブ", "センター"],
         "上半身": ["腰", "センター実体", "グルーブ", "センター"],
         "上半身2": ["上半身"],
-        "首": ["上半身2", "上半身"],
-        "頭": ["首"],
-        "頭頂": ["頭"],
         "首根元": ["上半身2", "上半身"],
+        "首": ["首根元", "上半身2", "上半身"],
+        "頭": ["首"],
+        "頭頂実体": ["頭"],
         "左肩P": ["首根元", "上半身2", "上半身"],
         "左肩": ["左肩P", "首根元", "上半身2", "上半身"],
         "左肩下延長": ["左肩"],
@@ -989,16 +993,25 @@ class PmxModel():
     def get_head_top_vertex(self):
         bone_name_list = ["頭"]
 
+        # まずX制限をかけて頂点を取得する
         up_max_pos, up_max_vertex, down_max_pos, down_max_vertex, right_max_pos, right_max_vertex, left_max_pos, left_max_vertex, \
             back_max_pos, back_max_vertex, front_max_pos, front_max_vertex, multi_max_pos, multi_max_vertex \
-            = self.get_bone_end_vertex(bone_name_list, self.def_calc_vertex_pos_original, None)
+            = self.get_bone_end_vertex(bone_name_list, self.def_calc_vertex_pos_original, def_is_target=self.def_is_target_x_limit)
 
         if not up_max_vertex:
-            # 頭頂頂点が取れなかった場合
-            if "頭" in self.bones:
-                return Vertex(-1, self.bones["頭"].position, MVector3D(), [], [], Vertex.Bdef1(-1), -1)
-            else:
-                return Vertex(-1, MVector3D(), MVector3D(), [], [], Vertex.Bdef1(-1), -1)
+
+            # 頭頂頂点が取れなかった場合、X制限を外す
+            up_max_pos, up_max_vertex, down_max_pos, down_max_vertex, right_max_pos, right_max_vertex, left_max_pos, left_max_vertex, \
+                back_max_pos, back_max_vertex, front_max_pos, front_max_vertex, multi_max_pos, multi_max_vertex \
+                = self.get_bone_end_vertex(bone_name_list, self.def_calc_vertex_pos_original, def_is_target=None)
+
+            if not up_max_vertex:
+                if "頭" in self.bones:
+                    return Vertex(-1, self.bones["頭"].position.copy(), MVector3D(), [], [], Vertex.Bdef1(-1), -1)
+                elif "首" in self.bones:
+                    return Vertex(-1, self.bones["首"].position.copy(), MVector3D(), [], [], Vertex.Bdef1(-1), -1)
+                else:
+                    return Vertex(-1, MVector3D(), MVector3D(), [], [], Vertex.Bdef1(-1), -1)
         
         return up_max_vertex
 

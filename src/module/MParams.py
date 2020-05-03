@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 #
 from collections import OrderedDict
-from mmd.VmdData import VmdBoneFrame
 
 
 class BoneLinks():
@@ -23,14 +22,14 @@ class BoneLinks():
                 if lidx == target_bone_index + offset:
                     return self.__links[lkey]
         
-        return VmdBoneFrame()
+        return None
     
     def all(self):
         return self.__links
 
     # リンクに追加
-    def append(self, bone: VmdBoneFrame):
-        self.__links[bone.name] = bone
+    def append(self, bone):
+        self.__links[bone.name] = bone.copy()
     
     # リンクの反転
     def reversed(self):
