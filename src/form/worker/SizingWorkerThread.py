@@ -39,9 +39,12 @@ class SizingWorkerThread(BaseWorkerThread):
                 if self.frame.file_panel_ctrl.file_set.motion_vmd_file_ctrl.load(file_idx):
 
                     camera_org_model = self.frame.file_panel_ctrl.file_set.org_model_file_ctrl.data
-                    if 1 in self.frame.camera_panel_ctrl.camera_set_dict and self.frame.camera_panel_ctrl.camera_set_dict[1].camera_model_file_ctrl.is_set_path():
-                        # カメラ元モデルが指定されている場合、カメラ元モデル再指定
-                        camera_org_model = self.frame.camera_panel_ctrl.camera_set_dict[1].camera_model_file_ctrl.data
+                    camera_offset_y = 0
+                    if 1 in self.frame.camera_panel_ctrl.camera_set_dict:
+                        if self.frame.camera_panel_ctrl.camera_set_dict[1].camera_model_file_ctrl.is_set_path():
+                            # カメラ元モデルが指定されている場合、カメラ元モデル再指定
+                            camera_org_model = self.frame.camera_panel_ctrl.camera_set_dict[1].camera_model_file_ctrl.data
+                        camera_offset_y = self.frame.camera_panel_ctrl.camera_set_dict[1].camera_offset_y_ctrl.GetValue()
                     
                     # 1件目は必ず読み込む
                     first_data_set = MOptionsDataSet(
@@ -53,7 +56,7 @@ class SizingWorkerThread(BaseWorkerThread):
                         twist_flg=self.frame.file_panel_ctrl.file_set.rep_model_file_ctrl.title_parts_ctrl.GetValue(), \
                         morph_list=self.frame.morph_panel_ctrl.get_morph_list(1), \
                         camera_org_model=camera_org_model, \
-                        camera_offset_y=self.frame.camera_panel_ctrl.camera_set_dict[1].camera_offset_y_ctrl.GetValue()
+                        camera_offset_y=camera_offset_y
                     )
                     data_set_list.append(first_data_set)
 
@@ -61,11 +64,13 @@ class SizingWorkerThread(BaseWorkerThread):
             for multi_idx, file_set in enumerate(self.frame.multi_panel_ctrl.file_set_list):
                 if file_set.is_loaded():
                     
+                    camera_offset_y = 0
                     camera_org_model = file_set.org_model_file_ctrl.data
-                    if multi_idx + 1 in self.frame.camera_panel_ctrl.camera_set_dict and \
-                            self.frame.camera_panel_ctrl.camera_set_dict[multi_idx + 1].camera_model_file_ctrl.is_set_path():
-                        # カメラ元モデルが指定されている場合、カメラ元モデル再指定
-                        camera_org_model = self.frame.camera_panel_ctrl.camera_set_dict[multi_idx + 1].camera_model_file_ctrl.data
+                    if multi_idx + 1 in self.frame.camera_panel_ctrl.camera_set_dict:
+                        if self.frame.camera_panel_ctrl.camera_set_dict[multi_idx + 1].camera_model_file_ctrl.is_set_path():
+                            # カメラ元モデルが指定されている場合、カメラ元モデル再指定
+                            camera_org_model = self.frame.camera_panel_ctrl.camera_set_dict[multi_idx + 1].camera_model_file_ctrl.data
+                        camera_offset_y = self.frame.camera_panel_ctrl.camera_set_dict[multi_idx + 1].camera_offset_y_ctrl.GetValue()
 
                     multi_data_set = MOptionsDataSet(
                         motion=file_set.motion_vmd_file_ctrl.data.copy(), \
@@ -76,7 +81,7 @@ class SizingWorkerThread(BaseWorkerThread):
                         twist_flg=file_set.rep_model_file_ctrl.title_parts_ctrl.GetValue(), \
                         morph_list=self.frame.morph_panel_ctrl.get_morph_list(file_set.set_no), \
                         camera_org_model=camera_org_model, \
-                        camera_offset_y=self.frame.camera_panel_ctrl.camera_set_dict[multi_idx + 1].camera_offset_y_ctrl.GetValue()
+                        camera_offset_y=camera_offset_y
                     )
                     data_set_list.append(multi_data_set)
 

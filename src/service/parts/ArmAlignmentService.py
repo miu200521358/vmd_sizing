@@ -225,6 +225,7 @@ class ArmAlignmentService():
             rep_tip_poses_indexes = {}
             ratio_indexes = {}
             entity_ratio_indexes = {}
+            palm_ratio_indexes = {}
             prev_org_effector_poses_indexes = None
             prev_rep_effector_poses_indexes = None
             prev_org_tip_poses_indexes = None
@@ -263,6 +264,11 @@ class ArmAlignmentService():
                 
                 # 手首の厚み比率
                 entity_ratio_indexes[(data_set_idx, alignment_idx)] = target_link.entity_ratio
+
+                palm_ratio = target_link.rep_palm_length / target_link.org_palm_length
+
+                # 手のひらの大きさ比率
+                palm_ratio_indexes[(data_set_idx, alignment_idx)] = np.array([palm_ratio, 1, palm_ratio])
 
                 # 元モデルのエフェクタ位置（numpyデータ）
                 org_effector_poses_indexes[(data_set_idx, alignment_idx)] = all_org_effector_poses_indexes[(data_set_idx, alignment_idx)]
@@ -307,7 +313,7 @@ class ArmAlignmentService():
                     prev_rep_tip_poses_indexes[(data_set_idx, alignment_idx)] = all_prev_rep_tip_poses_indexes[(data_set_idx, alignment_idx)]
 
             # 元モデルのエフェクタ
-            org_effector_poses = np.array(list(org_effector_poses_indexes.values()))
+            org_effector_poses = np.array(list(org_effector_poses_indexes.values())) * np.array(list(palm_ratio_indexes.values()))
             logger.test("fno: %s, org: %s", fno, org_effector_poses)
             # エフェクタ中心点
             org_mean = np.mean(org_effector_poses, axis=0)
@@ -360,9 +366,11 @@ class ArmAlignmentService():
 
             # --------------
 
-            # 元モデルの先端中心点
-            org_tip_poses = np.array(list(org_tip_poses_indexes.values()))
+            # 元モデルの先端
+            org_tip_poses = np.array(list(org_tip_poses_indexes.values())) * np.array(list(palm_ratio_indexes.values()))
             logger.test("fno: %s, org: %s", fno, org_tip_poses)
+
+            # 元モデルの先端中心点
             org_mean = np.mean(org_tip_poses, axis=0)
             logger.test("fno: %s, org mean: %s", fno, org_mean)
 
@@ -489,6 +497,7 @@ class ArmAlignmentService():
                 for ik_links in target_link.ik_links_list:
                     for link_name in ik_links.all().keys():
                         org_bfs[(data_set_idx, alignment_idx, link_name)] = data_set.motion.calc_bf(link_name, fno).copy()
+                    org_bfs[(data_set_idx, alignment_idx, target_link.tip_ik_links.last_name())] = data_set.motion.calc_bf(target_link.tip_ik_links.last_name(), fno).copy()
 
             is_success = [False for _ in range(len(index_group_list))]
 
@@ -568,16 +577,16 @@ class ArmAlignmentService():
                     # IK計算実行
                     MServiceUtils.calc_IK(data_set.rep_model, target_link.rep_links, data_set.motion, fno, tip_vec, target_link.tip_ik_links, max_count=2)
 
-                    bf = data_set.motion.calc_bf(target_link.effector_bone_name, fno)
-                    dot = MQuaternion.dotProduct(org_bfs[(data_set_idx, alignment_idx, target_link.effector_bone_name)].rotation, bf.rotation)
+                    bf = data_set.motion.calc_bf(target_link.tip_ik_links.last_name(), fno)
+                    dot = MQuaternion.dotProduct(org_bfs[(data_set_idx, alignment_idx, target_link.tip_ik_links.last_name())].rotation, bf.rotation)
 
                     logger.debug("☆先端位置合わせ実行(%s): f: %s(%s-%s), rep: %s, dot: %s", ik_cnt, fno, (data_set_idx + 1), \
                                  target_link.tip_bone_name, tip_vec.to_log(), dot)
 
                     if dot < 0.9:
                         # 内積NGなら元に戻す
-                        logger.info("×先端位置合わせ失敗: f: %s(%s-%s), 近似度: %s", fno, (data_set_idx + 1), target_link.effector_display_bone_name, round(dot, 5))
-                        bf.rotation = org_bfs[(data_set_idx, alignment_idx, target_link.effector_bone_name)].rotation
+                        logger.info("×先端位置合わせ失敗: f: %s(%s-%s), 近似度: %s", fno, (data_set_idx + 1), target_link.tip_ik_links.last_name(), round(dot, 5))
+                        bf.rotation = org_bfs[(data_set_idx, alignment_idx, target_link.tip_ik_links.last_name())].rotation
 
                 # どっちにしろbf確定(手首もここで確定)
                 for ik_links in target_link.ik_links_list:

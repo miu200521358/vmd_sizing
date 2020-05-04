@@ -36,6 +36,7 @@ class MainFrame(wx.Frame):
         self.is_out_log = is_out_log
         self.mydir_path = mydir_path
         self.elapsed_time = 0
+        self.popuped_finger_warning = False
         
         self.worker = None
         self.load_worker = None
@@ -350,3 +351,10 @@ class MainFrame(wx.Frame):
         else:
             event.GetEventObject().SetValue(event.GetEventObject().GetValue() - inc)
 
+    def on_popup_finger_warning(self, event: wx.Event):
+        if not self.popuped_finger_warning:
+            dialog = wx.MessageDialog(self, "複数人数モーションで指位置合わせがONになっています。\n指の数だけ組み合わせが膨大になり時間がかかりますが、" \
+                                    + "その割に余計な指に反応して綺麗になりません。よろしいですか？", style=wx.OK | wx.ICON_WARNING)
+            dialog.ShowModal()
+            dialog.Destroy()
+            self.popuped_finger_warning = True

@@ -101,6 +101,9 @@ class BaseFilePickerCtrl():
         event.Skip()
     
     def on_change_file(self, event):
+        # ダイアログFLGクリア
+        self.frame.popuped_finger_warning = False
+        
         # 先頭と末尾の改行は除去
         target_path = self.file_ctrl.GetPath().strip()
         logger.test("target_path strip: %s", target_path)

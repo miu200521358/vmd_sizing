@@ -65,6 +65,9 @@ class MultiPanel(BasePanel):
         self.sizer.Layout()
         # self.sizer.FitInside(self.scrolled_window)
 
+        if self.frame.arm_panel_ctrl.arm_alignment_finger_flg_ctrl.GetValue() and len(self.file_set_list) > 0:
+            self.frame.on_popup_finger_warning(event)
+
         event.Skip()
 
     # フォーム無効化

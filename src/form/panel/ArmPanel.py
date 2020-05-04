@@ -215,5 +215,9 @@ class ArmPanel(BasePanel):
             self.arm_process_flg_alignment.SetValue(1)
             # パス再生成
             self.set_output_vmd_path()
+
+        if self.arm_alignment_finger_flg_ctrl.GetValue() and len(self.frame.multi_panel_ctrl.file_set_list) > 0:
+            self.frame.on_popup_finger_warning(event)
+
         event.Skip()
 

@@ -125,8 +125,8 @@
                 "--arm_process_flg_alignment", "1",     // 手首位置合わせ
                 "--alignment_finger_flg", "1",          // 指位置合わせ
                 "--alignment_floor_flg", "1",           // 床位置合わせ
-                "--alignment_distance_wrist", "1.7",    // 手首距離
-                "--alignment_distance_finger", "1.4",   // 指距離
+                "--alignment_distance_wrist", "5",    // 手首距離
+                "--alignment_distance_finger", "3",   // 指距離
                 "--alignment_distance_floor", "1.8",    // 床距離
                 "--camera_motion_path", "",
                 "--camera_org_model_path", "",
