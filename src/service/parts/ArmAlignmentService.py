@@ -721,9 +721,13 @@ class ArmAlignmentService():
         if not set(finger_name_list).issubset(data_set.org_model.bones) or not set(finger_name_list).issubset(data_set.org_model.bones):
             logger.warning("指ボーンが不足しているため、指位置合わせはスキップします。", decoration=MLogger.DECORATION_BOX)
             return []
+        
+        alignment_start_idx = len(self.target_links[data_set_idx].keys()) + 1
 
-        for direction in ["左", "右"]:
-            for finger_name in ["親指", "人指", "中指", "薬指", "小指"]:
+        for direction_idx, direction in enumerate(["左", "右"]):
+            for finger_idx, finger_name in enumerate(["親指", "人指", "中指", "薬指", "小指"]):
+                alignment_idx = (direction_idx * 5) + finger_idx + alignment_start_idx
+            
                 total_finger_name = "{0}{1}先".format(direction, finger_name)
 
                 # 手のひらの長さ
@@ -768,7 +772,7 @@ class ArmAlignmentService():
                 tip_ik_links.append(rep_finger_links.get("{0}手首".format(direction)))
 
                 # 指リンク登録
-                self.target_links[data_set_idx][len(self.target_links[data_set_idx].keys())] = \
+                self.target_links[data_set_idx][alignment_idx] = \
                     ArmAlignmentOption(org_finger_links, rep_finger_links, ik_links_list, ik_count_list, tip_ik_links, \
                                        org_palm_length, rep_palm_length, data_set.org_model, data_set.rep_model, "{0}腕".format(direction), \
                                        total_finger_name, total_finger_name[:3], total_finger_name, self.options.arm_options.alignment_distance_finger, data_set.xz_ratio)

@@ -154,8 +154,19 @@ def get_output_vmd_path(base_file_path: str, rep_pmx_path: str, detail_stance_fl
 
     # ファイルパス自体が変更されたか、自動生成ルールに則っている場合、ファイルパス変更
     if is_force or is_auto_vmd_output_path(output_vmd_path, motion_vmd_dir_path, motion_vmd_file_name, ".vmd", rep_pmx_file_name):
-        return new_output_vmd_path
 
+        try:
+            open(new_output_vmd_path, 'w')
+            os.remove(new_output_vmd_path)
+        except Exception:
+            logger.warning("出力ファイルパスの生成に失敗しました。以下の原因が考えられます。\n" \
+                           + "・ファイルパスが255文字を超えている\n" \
+                           + "・ファイルパスに使えない文字列が含まれている（例) \\　/　:　*　?　\"　<　>　|）" \
+                           + "・出力ファイルパスの親フォルダに書き込み権限がない" \
+                           + "・出力ファイルパスに書き込み権限がない")
+
+        return new_output_vmd_path
+    
     return output_vmd_path
 
 
@@ -198,6 +209,17 @@ def get_output_camera_vmd_path(base_file_path: str, rep_pmx_path: str, output_ca
 
     # ファイルパス自体が変更されたか、自動生成ルールに則っている場合、ファイルパス変更
     if is_force or is_auto_camera_vmd_output_path(output_camera_vmd_path, motion_camera_vmd_dir_path, motion_camera_vmd_file_name, ".vmd", rep_pmx_file_name):
+
+        try:
+            open(new_output_camera_vmd_path, 'w')
+            os.remove(new_output_camera_vmd_path)
+        except Exception:
+            logger.warning("出力ファイルパスの生成に失敗しました。以下の原因が考えられます。\n" \
+                           + "・ファイルパスが255文字を超えている\n" \
+                           + "・ファイルパスに使えない文字列が含まれている（例) \\　/　:　*　?　\"　<　>　|）" \
+                           + "・出力ファイルパスの親フォルダに書き込み権限がない" \
+                           + "・出力ファイルパスに書き込み権限がない")
+
         return new_output_camera_vmd_path
 
     return output_camera_vmd_path
@@ -215,7 +237,7 @@ def is_auto_camera_vmd_output_path(output_camera_vmd_path: str, motion_camera_vm
     escaped_motion_camera_vmd_ext = escape_filepath(motion_camera_vmd_ext)
 
     new_output_camera_vmd_pattern = re.compile(r'^%s_%s%s%s$' % (escaped_motion_camera_vmd_file_name, \
-                                        escaped_rep_pmx_file_name, r"_\d{8}_\d{6}", escaped_motion_camera_vmd_ext))
+                                               escaped_rep_pmx_file_name, r"_\d{8}_\d{6}", escaped_motion_camera_vmd_ext))
     
     # 自動生成ルールに則ったファイルパスである場合、合致あり
     return re.match(new_output_camera_vmd_pattern, output_camera_vmd_path) is not None

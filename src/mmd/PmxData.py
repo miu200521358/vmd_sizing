@@ -440,6 +440,7 @@ class RigidBody():
             self.add_qs = add_qs
 
             self.matrix = MMatrix4x4()
+            self.matrix.setToIdentity()
 
             # 実際の原点位置
             for v, q in zip(trans_vs, add_qs):

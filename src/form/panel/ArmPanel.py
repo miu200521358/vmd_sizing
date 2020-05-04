@@ -96,7 +96,8 @@ class ArmPanel(BasePanel):
 
         # 指位置合わせ
         self.arm_alignment_finger_flg_ctrl = wx.CheckBox(self, wx.ID_ANY, u"指の位置で手首位置合わせを行う", wx.DefaultPosition, wx.DefaultSize, 0)
-        self.arm_alignment_finger_flg_ctrl.SetToolTip(u"チェックを入れると、フィンガータットモーション等、指間の距離を基準に手首位置を調整できます。")
+        self.arm_alignment_finger_flg_ctrl.SetToolTip(u"チェックを入れると、フィンガータットモーション等、指間の距離を基準に手首位置を調整できます。" \
+                                                      + "複数人数モーションではOFFのままの方が綺麗になります。")
         self.arm_alignment_finger_flg_ctrl.Bind(wx.EVT_CHECKBOX, self.on_change_arm_process_alignment)
         self.alignment_option_sizer.Add(self.arm_alignment_finger_flg_ctrl, 0, wx.ALL, 5)
 
@@ -132,7 +133,7 @@ class ArmPanel(BasePanel):
         self.alignment_distance_finger_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
         self.alignment_distance_finger_txt = wx.StaticText(self, wx.ID_ANY, u"指間の距離　　  ", wx.DefaultPosition, wx.DefaultSize, 0)
-        self.alignment_distance_finger_txt.SetToolTip(u"どのくらい指が近付いた場合に、指位置合わせを実行するか指定してください。\n値が小さいほど、指が近付いた時だけ指位置合わせを行います。\n距離の単位は、元モデルの手のひらの大きさです。" \
+        self.alignment_distance_finger_txt.SetToolTip(u"どのくらい指が近付いた場合に、指位置合わせを実行するか指定してください。\n値が小さいほど、指が近付いた時だけ指位置合わせを行います。\n距離の単位は、元モデルの手のひらの大きさです。\n" \
                                                       + "\nサイジング実行時、指間の距離がメッセージ欄に出てますので、参考にしてください。\nスライダーを最大に設定すると、常に指位置合わせを行います。")
         self.alignment_distance_finger_txt.Wrap(-1)
         self.alignment_distance_finger_sizer.Add(self.alignment_distance_finger_txt, 0, wx.ALL, 5)

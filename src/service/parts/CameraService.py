@@ -162,8 +162,10 @@ class CameraService():
 
                 cnt += 1
 
-        logger.info("%sフレーム目 縮尺比率: %s, 注視点: %s-%s, 上辺: %s-%s, 下辺: %s-%s, 調整: %s, 距離: %s, 視野角: %s", cf.fno, round(ratio, 5), (nearest_data_set_idx + 1), nearest_bone_name, \
-                    (top_data_set_idx + 1), top_bone_name, (bottom_data_set_idx + 1), bottom_bone_name, org_nearest_relative_vec.to_log(), round(offset_length, 5), offset_angle)
+        logger.info("%sフレーム目 縮尺比率: %s, 注視点: %s-%s, 上辺: %s-%s, 下辺: %s-%s, 調整: %s, 距離: %s, 視野角: %s", \
+                    cf.fno, round(ratio, 5), (nearest_data_set_idx + 1), nearest_bone_name.replace("実体", ""), \
+                    (top_data_set_idx + 1), top_bone_name.replace("実体", ""), (bottom_data_set_idx + 1), bottom_bone_name.replace("実体", ""), \
+                    org_nearest_relative_vec.to_log(), round(offset_length, 5), offset_angle)
     
     # カメラ倍率計算
     def calc_camera_ratio(self, fno: int, cf: VmdCameraFrame):
@@ -308,7 +310,7 @@ class CameraService():
 
         if len(square_poses) == 0:
             # 処理対象ボーンがない場合、-1
-            return (-1, None), (-1, None)
+            return (-1, ""), (-1, "")
 
         # 画面内に映っている対象となるINDEX
         refrected_indexes = np.where(((0 - x_offset) <= square_poses[:, 0]) & (square_poses[:, 0] <= (1 + x_offset)) \
@@ -317,7 +319,7 @@ class CameraService():
         
         if len(refrected_indexes[0]) == 0:
             # 画面内に映っているボーンがない場合、-1
-            return (-1, None), (-1, None)
+            return (-1, ""), (-1, "")
         
         y_indexes = np.argsort(square_poses[refrected_indexes][:, 1])
         # 画面上端(Y最小)
@@ -325,7 +327,7 @@ class CameraService():
         top_edge_pos = square_poses[top_edge_index]
         for yi in y_indexes:
             if square_poses[yi][1] > square_poses[refrected_indexes[0][y_indexes[0]]][1] + 0.2:
-                # 上端から画面1/10の距離までなめたら終了
+                # 上端から画面0.2の距離までなめたら終了
                 break
 
             if square_poses[yi][2] < top_edge_pos[2]:
@@ -338,7 +340,7 @@ class CameraService():
         bottom_edge_pos = square_poses[bottom_edge_index]
         for yi in reversed(y_indexes):
             if square_poses[yi][1] < square_poses[refrected_indexes[0][y_indexes[-1]]][1] - 0.2:
-                # 下端から画面1/10の距離までなめたら終了
+                # 下端から画面0.2の距離までなめたら終了
                 break
 
             if square_poses[yi][2] < bottom_edge_pos[2]:
