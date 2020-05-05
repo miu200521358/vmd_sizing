@@ -47,10 +47,14 @@
                 // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/025_一期一振/一期一振 peco式 20190316/一期一振_通常衣装_防具なし_ver1.00.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/025_一期一振/一期一振 peco式 20190316/一期一振_通常衣装_防具なし_ver1.00.pmx",
                 // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/061_愛染国俊/愛染国俊 ぽんず式 ver1.00/ぽんず式愛染国俊ver1.00.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/057_明石国行/明石国行 ぱゆ式 ver.1.2/明石国行A_顔影調整.pmx",
 
-                "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/アンノウン・マザーグース【フィンガータットモーション】 しぱ/アンノウンマザーグース【フィンガータットモーション】1.00.vmd",
-                "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/112_膝丸/膝丸mkmk009b 刀剣乱舞/膝丸mkmk009b/膝丸mkmk009b.pmx",
-                "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/011_今剣/今剣 ゆるん式 ver0124/ライブ衣装/今剣インナー_準標準.pmx",
+                // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/アンノウン・マザーグース【フィンガータットモーション】 しぱ/アンノウンマザーグース【フィンガータットモーション】1.00.vmd",
+                // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/112_膝丸/膝丸mkmk009b 刀剣乱舞/膝丸mkmk009b/膝丸mkmk009b.pmx",
+                // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/011_今剣/今剣 ゆるん式 ver0124/ライブ衣装/今剣インナー_準標準.pmx",
 
+                "--motion_path", "E:/MMD/MikuMikuDance_v926x64/Work/202001_sizing/剛体/ロキ_Baboパート.vmd;E:/MMD/MikuMikuDance_v926x64/Work/202001_sizing/剛体/ロキ_リンパート.vmd",
+                "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/Tda式デフォ服ミク_ver1.1 金子卵黄/Tda式初音ミク_デフォ服ver.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/Tda式デフォ服ミク_ver1.1 金子卵黄/Tda式初音ミク_デフォ服ver.pmx",
+                "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/_VMDサイジング/8頭身審神者 猫のしもべ/8頭身審神者3_剛体.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/_VMDサイジング/8頭身審神者 猫のしもべ/8頭身審神者3_剛体2.pmx",
+                
                 // "--motion_path", "C:/MMD/vmd_sizing/vmd/20191226_らぶ肩01.vmd",
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/_VMDサイジング/鳳仙花/鳳仙花mkmk髭切007bミュ第一_0-2000.vmd",
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/GimmeGimme シガー/ぎみぎみっちゃん_0-700.vmd",
@@ -82,7 +86,6 @@
                 // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/Tda式初音ミク・アペンドVer1.10/Tda式初音ミク・アペンド_Ver1.10.pmx",
                 // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/130_鶴丸国永/鶴丸国永 sam式 Ver1.1/sam式鶴丸国永（武装解除） Ver1.1/sam式鶴丸国永（武装解除）Ver1.1.pmx",
                 // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/コロン式  初音ミクV3_Re_rev.1.2/コロン式  初音ミクV3_Re_rev.1.2(スパッツ)_準標準.pmx",
-                // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/Tda式デフォ服ミク_ver1.1 金子卵黄/Tda式初音ミク_デフォ服ver.pmx",
                 // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/重音テト/Lat式重音テト Lat／ula/Lat式改変テト_Normal2.pmx",
                 // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/055_鶯丸/鶯丸 さとく式 ver0.90/さとく式鶯丸ver0.90.pmx",
                 // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/107_髭切/髭切【刀ミュ】mkmk008d 刀剣乱舞/髭切【刀ミュ】mkmk008d/髭切【刀ミュ3】mkmk008d_鳳仙花.pmx",
@@ -118,19 +121,19 @@
                 // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/_VMDサイジング/8頭身審神者 猫のしもべ/8頭身審神者3_軸制限無し.pmx",
                 // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ゲーム/ドラクエ/竜酸式グレイグ配布用_1.09.3/竜酸式グレイグ_1.09.3.pmx",
                 // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/017_数珠丸恒次/数珠丸恒次 hzeo式 ver0.5/hzeo式数珠丸恒次ver0.5_準標準.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/019_にっかり青江/にっかり青江ver1.2 azure式/にっかり青江ver1.2.pmx",
-                "--detail_stance_flg", "0;0",           // スタンス追加補正FLG
+                "--detail_stance_flg", "0",           // スタンス追加補正FLG
                 "--twist_flg", "0;0",                   // 捩り分散
-                "--arm_process_flg_avoidance", "0",     // 剛体接触回避
-                "--avoidance_target_list", "",          // 対象剛体名
-                "--arm_process_flg_alignment", "1",     // 手首位置合わせ
-                "--alignment_finger_flg", "1",          // 指位置合わせ
-                "--alignment_floor_flg", "1",           // 床位置合わせ
+                "--arm_process_flg_avoidance", "1",     // 剛体接触回避
+                "--avoidance_target_list", "頭;上半身",          // 対象剛体名
+                "--arm_process_flg_alignment", "0",     // 手首位置合わせ
+                "--alignment_finger_flg", "0",          // 指位置合わせ
+                "--alignment_floor_flg", "0",           // 床位置合わせ
                 "--alignment_distance_wrist", "5",    // 手首距離
                 "--alignment_distance_finger", "3",   // 指距離
                 "--alignment_distance_floor", "1.8",    // 床距離
                 "--camera_motion_path", "",
                 "--camera_org_model_path", "",
-                "--camera_offset_y", "0",
+                "--camera_offset_y", "",
                 // "--verbose", "1",                       // 最小
                 // "--verbose", "2",                       // DEBUG_FULL
                 // "--verbose", "15",                   // FULL

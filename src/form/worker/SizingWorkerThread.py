@@ -91,7 +91,7 @@ class SizingWorkerThread(BaseWorkerThread):
                 data_set_list=data_set_list, \
                 arm_options=MArmProcessOptions( \
                     self.frame.arm_panel_ctrl.arm_process_flg_avoidance.GetValue(), \
-                    list(map(str, [x.strip() for x in self.frame.arm_panel_ctrl.avoidance_target_txt_ctrl.GetValue().split(',')])), \
+                    list(map(str, [x.strip() for x in self.frame.arm_panel_ctrl.avoidance_target_txt_ctrl.GetValue().split(';')])), \
                     self.frame.arm_panel_ctrl.arm_process_flg_alignment.GetValue(), \
                     self.frame.arm_panel_ctrl.arm_alignment_finger_flg_ctrl.GetValue(), \
                     self.frame.arm_panel_ctrl.arm_alignment_floor_flg_ctrl.GetValue(), \

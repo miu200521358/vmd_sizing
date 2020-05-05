@@ -224,6 +224,9 @@ def calc_global_pos(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: i
         
         # 自分は、位置だけ掛ける
         global_3ds_dic[lname] = total_mats[lname] * v
+        
+        # 最後の行列をかけ算する
+        total_mats[lname] *= matrixs[n].copy()
 
     if return_matrix:
         # 行列も返す場合

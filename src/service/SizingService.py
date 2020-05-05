@@ -12,6 +12,7 @@ from module.MOptions import MOptions, MOptionsDataSet
 from service.parts.MoveService import MoveService
 from service.parts.StanceService import StanceService
 from service.parts.ArmAlignmentService import ArmAlignmentService
+from service.parts.ArmAvoidanceService import ArmAvoidanceService
 from service.parts.MorphService import MorphService
 from service.parts.CameraService import CameraService
 from utils import MServiceUtils
@@ -53,7 +54,7 @@ class SizingService():
                 service_data_txt = "{service_data_txt}剛体接触回避: {avoidance}\n".format(service_data_txt=service_data_txt,
                                         avoidance=self.options.arm_options.avoidance) # noqa
                 service_data_txt = "{service_data_txt}対象剛体名: {avoidance_target}\n".format(service_data_txt=service_data_txt,
-                                        avoidance=",".join(self.options.arm_options.avoidance_target_list)) # noqa
+                                        avoidance_target=",".join(self.options.arm_options.avoidance_target_list)) # noqa
 
             if self.options.arm_options.alignment:
                 service_data_txt = "{service_data_txt}手首位置合わせ: {alignment} ({distance})\n".format(service_data_txt=service_data_txt,
@@ -92,7 +93,8 @@ class SizingService():
 
             if self.options.arm_options.avoidance:
                 # 剛体接触回避
-                pass
+                if not ArmAvoidanceService(self.options).execute():
+                    return False
             elif self.options.arm_options.alignment:
                 # 手首位置合わせ
                 if not ArmAlignmentService(self.options).execute():

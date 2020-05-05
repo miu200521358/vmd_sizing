@@ -23,7 +23,7 @@ class StanceService():
 
     def execute(self):
         futures = []
-        with ThreadPoolExecutor(thread_name_prefix="stance") as executor:
+        with ThreadPoolExecutor(thread_name_prefix="stance", max_workers=5) as executor:
             for data_set_idx, data_set in enumerate(self.options.data_set_list):
                 if data_set.motion.motion_cnt <= 0:
                     # モーションデータが無い場合、処理スキップ
@@ -95,7 +95,7 @@ class StanceService():
         logger.info("捩り分散　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
         
         futures = []
-        with ThreadPoolExecutor(thread_name_prefix="twist{0}".format(data_set_idx)) as executor:
+        with ThreadPoolExecutor(thread_name_prefix="twist{0}".format(data_set_idx), max_workers=2) as executor:
             for direction in ["左", "右"]:
                 futures.append(executor.submit(self.spread_twist_lr, data_set_idx, direction))
         concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
@@ -681,7 +681,7 @@ class StanceService():
         logger.info("つま先補正　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
 
         futures = []
-        with ThreadPoolExecutor(thread_name_prefix="toe{0}".format(data_set_idx)) as executor:
+        with ThreadPoolExecutor(thread_name_prefix="toe{0}".format(data_set_idx), max_workers=2) as executor:
             for direction in ["左", "右"]:
                 futures.append(executor.submit(self.adjust_toe_stance_lr, data_set_idx, direction))
         concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
@@ -1371,7 +1371,7 @@ class StanceService():
         logger.info("肩スタンス補正　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
 
         futures = []
-        with ThreadPoolExecutor(thread_name_prefix="shoulder{0}".format(data_set_idx), max_workers=1) as executor:
+        with ThreadPoolExecutor(thread_name_prefix="shoulder{0}".format(data_set_idx), max_workers=2) as executor:
             for direction in ["左", "右"]:
                 futures.append(executor.submit(self.adjust_shoulder_stance_lr, data_set_idx, "{0}肩P".format(direction), "{0}肩".format(direction), "{0}腕".format(direction)))
         concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)

@@ -313,7 +313,7 @@ class ArmAlignmentService():
                     prev_rep_tip_poses_indexes[(data_set_idx, alignment_idx)] = all_prev_rep_tip_poses_indexes[(data_set_idx, alignment_idx)]
 
             # 元モデルのエフェクタ
-            org_effector_poses = np.array(list(org_effector_poses_indexes.values())) * np.array(list(palm_ratio_indexes.values()))
+            org_effector_poses = np.array(list(org_effector_poses_indexes.values())) * np.mean(np.array(list(palm_ratio_indexes.values())), axis=0)
             logger.test("fno: %s, org: %s", fno, org_effector_poses)
             # エフェクタ中心点
             org_mean = np.mean(org_effector_poses, axis=0)
@@ -367,7 +367,7 @@ class ArmAlignmentService():
             # --------------
 
             # 元モデルの先端
-            org_tip_poses = np.array(list(org_tip_poses_indexes.values())) * np.array(list(palm_ratio_indexes.values()))
+            org_tip_poses = np.array(list(org_tip_poses_indexes.values())) * np.mean(np.array(list(palm_ratio_indexes.values())), axis=0)
             logger.test("fno: %s, org: %s", fno, org_tip_poses)
 
             # 元モデルの先端中心点

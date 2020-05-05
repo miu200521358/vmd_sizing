@@ -4,6 +4,7 @@ import _pickle as cPickle
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 import math
+import numpy as np
 
 from module.MParams import BoneLinks
 from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
@@ -419,36 +420,37 @@ class RigidBody():
                "mode: {10}".format(self.name, self.english_name, self.bone_index, self.collision_group, self.no_collision_group,
                                    self.shape_type, self.shape_size, self.shape_position, self.shape_rotation, self.param, self.mode)
     
-    def get_obb(self, bone_pos, trans_vs, add_qs):
+    # 剛体: ボーン追従
+    def isModeStatic(self):
+        return self.mode == 0
+    
+    # 剛体: 物理演算
+    def isModeDynamic(self):
+        return self.mode == 1
+    
+    # 剛体: 物理演算 + Bone位置合わせ
+    def isModeMix(self):
+        return self.mode == 2
+    
+    def get_obb(self, bone_pos, bone_matrix):
         # 剛体の形状別の衝突判定用
         if self.shape_type == self.SHAPE_SPHERE:
-            return PmxModel.RigidBody.Sphere(self.shape_size, self.shape_position, self.shape_rotation, bone_pos, trans_vs, add_qs)
+            return RigidBody.Sphere(self.shape_size, self.shape_position, self.shape_rotation, bone_pos, bone_matrix)
         elif self.shape_type == self.SHAPE_BOX:
-            return PmxModel.RigidBody.Box(self.shape_size, self.shape_position, self.shape_rotation, bone_pos, trans_vs, add_qs)
+            return RigidBody.Box(self.shape_size, self.shape_position, self.shape_rotation, bone_pos, bone_matrix)
         else:
-            return PmxModel.RigidBody.Capsule(self.shape_size, self.shape_position, self.shape_rotation, bone_pos, trans_vs, add_qs)
+            return RigidBody.Capsule(self.shape_size, self.shape_position, self.shape_rotation, bone_pos, bone_matrix)
 
     # OBB（有向境界ボックス：Oriented Bounding Box）
     class OBB(metaclass=ABCMeta):
-        def __init__(self, shape_size, shape_position, shape_rotation, bone_pos, trans_vs, add_qs):
+        def __init__(self, shape_size, shape_position, shape_rotation, bone_pos, bone_matrix):
             self.shape_size = shape_size
             self.shape_position = shape_position
             self.shape_rotation = shape_rotation
-            self.shape_rotation_qq = MQuaternion.fromEulerAngles(-shape_rotation.x(), shape_rotation.y(), shape_rotation.z())
+            self.shape_rotation_qq = MQuaternion.fromEulerAngles(math.degrees(shape_rotation.x()), math.degrees(shape_rotation.y()), math.degrees(shape_rotation.z()))
             self.bone_pos = bone_pos
-            self.trans_vs = trans_vs
-            self.add_qs = add_qs
 
-            self.matrix = MMatrix4x4()
-            self.matrix.setToIdentity()
-
-            # 実際の原点位置
-            for v, q in zip(trans_vs, add_qs):
-                # 移動
-                self.matrix.translate(v)
-                # 回転
-                self.matrix.rotate(q)
-
+            self.matrix = bone_matrix
             # 剛体自体の位置
             self.matrix.translate(self.shape_position - bone_pos)
             # 剛体自体の回転
@@ -463,11 +465,11 @@ class RigidBody():
         # 指定軸番号の方向ベクトルを取得
         def get_direct(self, axis):
             if axis == "x":
-                return self.matrix.mapVector(MVector3D(1, 0, 0))
+                return (self.matrix * MVector3D(-1, 0, 0)).normalized()
             if axis == "y":
-                return self.matrix.mapVector(MVector3D(0, 1, 0))
+                return (self.matrix * MVector3D(0, -1, 0)).normalized()
             if axis == "z":
-                return self.matrix.mapVector(MVector3D(0, 0, 1))
+                return (self.matrix * MVector3D(0, 0, -1)).normalized()
         
         # 誤差を丸める
         def epsilon(self, v):
@@ -476,136 +478,183 @@ class RigidBody():
             else:
                 return v
 
-        # http://marupeke296.com/COL_3D_No12_OBBvsPoint.html
-        # http://marupeke296.com/COL_3D_No14_OBBvsPlane.html
-        # 3次元OBBと点の最短距離算出関数
-        def get_distance_vec(self, point):
-            # 最終的に長さを求めるベクトル
-            distance_vec = MVector3D()
-            
-            # 各軸についてはみ出た部分のベクトルを算出
-            for axis in ["x", "y", "z"]:
-                length = self.get_length(axis)
-                if length <= 0:
-                    continue
+        # # http://marupeke296.com/COL_3D_No12_OBBvsPoint.html
+        # # http://marupeke296.com/COL_3D_No14_OBBvsPlane.html
+        # # 3次元OBBと点の最短距離算出関数
+        # def get_distance_vec(self, point):
+        #     # 最終的に長さを求めるベクトル
+        #     distance_vec = MVector3D()
 
-                # pointの位置の場合分け
-                s = MVector3D.dotProduct((point - self.origin), self.get_direct(axis)) / length
-                # sの誤差を丸めた絶対値
-                fs = abs(self.epsilon(s))
-                # はみ出した部分のベクトル算出
-                if fs > 1:
-                    distance_vec += (1 - fs) * length * self.get_direct(axis)
+        #     # 各軸についてはみ出た部分のベクトルを算出
+        #     for axis in ["x", "y", "z"]:
+        #         length = self.get_length(axis)
+        #         if length <= 0:
+        #             continue
+        #         logger.info("length: %s", length)
+
+        #         # pointの位置の場合分け
+        #         s = MVector3D.dotProduct((point - self.origin), self.get_direct(axis)) / length
+        #         # sの誤差を丸めた絶対値
+        #         fs = abs(self.epsilon(s))
+        #         logger.info("dot: %s", s * length)
+        #         logger.info("s: %s", s)
+        #         logger.info("fs: %s", fs)
+        #         # はみ出した部分のベクトル算出
+        #         if 0 < fs < 1:
+        #             distance_vec += self.get_direct(axis) * fs * length
+        #             logger.info("get_distance_vec distance_vec: %s", distance_vec)
                 
-            return distance_vec
+        #     return distance_vec
         
         # 指定軸方向の長さ
         @abstractmethod
-        def get_length(self, axis):
+        def get_length(self, axis: str):
             pass
-        
-        # 衝突判定
-        def judge_collision(self, point):
-            distance_vec = self.get_distance_vec(point)
-
-            # 衝突判定
-            collision = self.get_collistion(distance_vec, point)
-
-            # めり込んだ位置から平面の法線方向に戻し距離だけオフセット
-            return_pos = self.get_return_pos(distance_vec, point)
-
-            return collision, return_pos
-        
-        # # OBBとの衝突判定
-        # def get_return_distance(self, distance_vec, distance_proximity):
-        #     return_distance = 0
-        #     if distance > 0:
-        #         return_distance = r - self.epsilon(distance)
-        #     else:
-        #         return_distance = r + self.epsilon(distance)
-        #     return return_distance
 
         # OBBとの衝突判定
         @abstractmethod
-        def get_collistion(self, distance_vec, point):
+        def get_collistion(self, point: MVector3D, direction: str):
             pass
+                
+        # 衝突判定
+        def judge_collision(self, point: MVector3D, direction: str):
+            collision, return_vec = self.get_collistion(point, direction)
+
+            # distance_vec = self.get_distance_vec(point)
+            # # return_vec = self.matrix * -self.shape_size
+            
+            return collision, return_vec
         
         # OBBとの衝突判定
-        def get_return_pos(self, distance_vec, point):
-            # 戻し距離
-            return MVector3D.crossProduct(point, self.origin).normalized() * distance_vec
+        # http://marupeke296.com/COL_3D_No14_OBBvsPlane.html
+        def get_return_distance(self, point):
+            plane_normal = (self.matrix * MVector3D(0, 0, -1)).normalized()
+
+            # 平面の法線に対するOBBの射影線の長さを算出
+            MVector3D.dotProduct((self.get_direct("z") * 2), self.get_direct("z"))
+
+
+            return_distance = 0
+            if distance > 0:
+                return_distance = r - self.epsilon(distance)
+            else:
+                return_distance = r + self.epsilon(distance)
+            return return_distance
 
     # 球剛体
     class Sphere(OBB):
-        def __init__(self, shape_size, shape_position, shape_rotation, pos, trans_vs, add_qs):
-            super().__init__(shape_size, shape_position, shape_rotation, pos, trans_vs, add_qs)
+        def __init__(self, shape_size, shape_position, shape_rotation, bone_pos, bone_matrix):
+            super().__init__(shape_size, shape_position, shape_rotation, bone_pos, bone_matrix)
 
         # 指定軸方向の長さ
-        def get_length(self, axis):
+        def get_length(self, axis: str):
             # 半径そのもの
             return self.shape_size.x()
 
         # 衝突しているか
-        def get_collistion(self, distance_vec, point):
+        def get_collistion(self, point: MVector3D, direction: str):
             # 半径未満なら衝突
-            return 0 < abs(self.epsilon(distance_vec.length())) < self.shape_size.x()
+            collision = 0 < abs(self.epsilon(distance_vec.length())) < self.shape_size.x()
+
+            return_vec = MVector3D()
+            # if collision:
+            #     return_vec = MVector3D(x_vec, y_vec, z_vec)
+            
+            # 3方向の間に点が含まれていたら衝突あり
+            return collision, return_vec
 
     # 箱剛体
     class Box(OBB):
-        def __init__(self, shape_size, shape_position, shape_rotation, pos, trans_vs, add_qs):
-            super().__init__(shape_size, shape_position, shape_rotation, pos, trans_vs, add_qs)
+        def __init__(self, shape_size, shape_position, shape_rotation, bone_pos, bone_matrix):
+            super().__init__(shape_size, shape_position, shape_rotation, bone_pos, bone_matrix)
 
         # 指定軸方向の長さ
-        def get_length(self, axis):
+        def get_length(self, axis: str):
             # 各軸の長さ
             return self.shape_size_xyz[axis] / 2
 
         # 衝突しているか（内外判定）
         # https://stackoverflow.com/questions/21037241/how-to-determine-a-point-is-inside-or-outside-a-cube
-        def get_collistion(self, distance_vec, point):
+        def get_collistion(self, point: MVector3D, direction: str):
             # 立方体の中にある場合、衝突
             # 下辺
-            b1 = self.matrix * MVector3D(self.get_length("x"), -self.get_length("y"), -self.get_length("z"))
-            b2 = self.matrix * MVector3D(self.get_length("x"), -self.get_length("y"), self.get_length("z"))
-            # b3 = self.matrix * MVector3D(-self.get_length("x"), -self.get_length("y"), self.get_length("z"))
-            b4 = self.matrix * MVector3D(-self.get_length("x"), -self.get_length("y"), -self.get_length("z"))
+            b1 = self.matrix * MVector3D(-self.shape_size.x(), -self.shape_size.y(), -self.shape_size.z())
+            b2 = self.matrix * MVector3D(self.shape_size.x(), -self.shape_size.y(), -self.shape_size.z())
+            b4 = self.matrix * MVector3D(-self.shape_size.x(), -self.shape_size.y(), self.shape_size.z())
             # 上辺
-            t1 = self.matrix * MVector3D(self.get_length("x"), self.get_length("y"), -self.get_length("z"))
-            # t2 = self.matrix * MVector3D(self.get_length("x"), self.get_length("y"), self.get_length("z"))
-            # t3 = self.matrix * MVector3D(-self.get_length("x"), self.get_length("y"), self.get_length("z"))
-            # t4 = self.matrix * MVector3D(-self.get_length("x"), self.get_length("y"), -self.get_length("z"))
+            t1 = self.matrix * MVector3D(-self.shape_size.x(), self.shape_size.y(), -self.shape_size.z())
 
             d1 = (t1 - b1)
-            size1 = d1.lengthSquared()
+            size1 = d1.length()
             dir1 = d1 / size1
-            PmxModel.set_effective_value_vec3(dir1)
+            dir1.effective()
 
             d2 = (b2 - b1)
-            size2 = d2.lengthSquared()
+            size2 = d2.length()
             dir2 = d2 / size2
-            PmxModel.set_effective_value_vec3(dir2)
+            dir2.effective()
 
             d3 = (b4 - b1)
-            size3 = d3.lengthSquared()
+            size3 = d3.length()
             dir3 = d3 / size3
-            PmxModel.set_effective_value_vec3(dir3)
+            dir3.effective()
 
             dir_vec = point - self.origin
-            PmxModel.set_effective_value_vec3(dir_vec)
+            dir_vec.effective()
 
-            res1 = abs(MVector3D.dotProduct(dir_vec, dir1) * 2) < size1
-            res2 = abs(MVector3D.dotProduct(dir_vec, dir2) * 2) < size2
-            res3 = abs(MVector3D.dotProduct(dir_vec, dir3) * 2) < size3
+            x_vec = abs(MVector3D.dotProduct(dir_vec, dir1)) * 2
+            y_vec = abs(MVector3D.dotProduct(dir_vec, dir2)) * 2
+            z_vec = abs(MVector3D.dotProduct(dir_vec, dir3)) * 2
 
-            return res1 == res2 == res3
+            res1 = x_vec < size1
+            res2 = y_vec < size2
+            res3 = z_vec < size3
+
+            # 3方向の間に点が含まれていたら衝突あり
+            collision = (res1 and res2 and res3 and True)
+
+            # logger.test("x_vec: %s", x_vec)
+            # logger.test("y_vec: %s", y_vec)
+            # logger.test("z_vec: %s", z_vec)
+
+            # 左右の腕のどちらと衝突しているかにより、元に戻す方向が逆になる
+            x = self.shape_size.x() if direction == "左" else -self.shape_size.x()
+            z = -self.shape_size.z()
+            
+            # X方向にOBBの境界に持って行った場合の位置
+            x_base = self.matrix * MVector3D(x, 0, 0)
+            # Z方向に同上
+            z_base = self.matrix * MVector3D(0, 0, z)
+            logger.test("x_base: %s", x_base)
+            logger.test("z_base: %s", z_base)
+
+            x_diff = x_base.distanceToPoint(point)
+            z_diff = z_base.distanceToPoint(point)
+
+            logger.test("x_diff: %s", x_diff)
+            logger.test("z_diff: %s", z_diff)
+
+            local_point = self.matrix.inverted() * point
+
+            if x_diff < z_diff:
+                # Xの方がZよりも境界に近い場合
+                return_vec = self.matrix * MVector3D(x, local_point.y(), local_point.z())
+            else:
+                return_vec = self.matrix * MVector3D(local_point.x(), local_point.y(), z)
+
+            # return_vec.setX(point.x())
+            # return_vec.setY(point.y())
+            logger.test("return_vec after: %s", return_vec)
+
+            return collision, return_vec
 
     # カプセル剛体
     class Capsule(OBB):
-        def __init__(self, shape_size, shape_position, shape_rotation, pos, trans_vs, add_qs):
-            super().__init__(shape_size, shape_position, shape_rotation, pos, trans_vs, add_qs)
+        def __init__(self, shape_size, shape_position, shape_rotation, bone_pos, bone_matrix):
+            super().__init__(shape_size, shape_position, shape_rotation, bone_pos, bone_matrix)
                             
         # 指定軸方向の長さ
-        def get_length(self, axis):
+        def get_length(self, axis: str):
             if axis in ["x", "z"]:
                 # カプセルの横は線分
                 return self.shape_size.y() / 2
@@ -614,9 +663,16 @@ class RigidBody():
                 return self.shape_size.y() / 2 + self.shape_size.x()
 
         # 衝突しているか
-        def get_collistion(self, distance_vec, point):
+        def get_collistion(self, point: MVector3D, direction: str):
             # 半径未満なら衝突
-            return 0 < abs(self.epsilon(distance_vec.length())) < self.shape_size.x()
+            collision = 0 < abs(self.epsilon(distance_vec.length())) < self.shape_size.x()
+
+            return_vec = MVector3D()
+            # if collision:
+            #     return_vec = MVector3D(x_vec, y_vec, z_vec)
+            
+            # 3方向の間に点が含まれていたら衝突あり
+            return collision, return_vec
 
     class RigidBodyParam():
         def __init__(self, mass, linear_damping, angular_damping, restitution, friction):
@@ -902,7 +958,8 @@ class PmxModel():
         "左腕捩": ["左腕"],
         "左ひじ": ["左腕捩", "左腕"],
         "左手捩": ["左ひじ"],
-        "左手首": ["左手捩", "左ひじ"],
+        "左ひじ手首中間": ["左手捩", "左ひじ"],
+        "左手首": ["左ひじ手首中間", "左手捩", "左ひじ"],
         "左手首実体": ["左手首"],
         "左親指０": ["左手首"],
         "左親指１": ["左親指０", "左手首"],
@@ -948,7 +1005,8 @@ class PmxModel():
         "右腕捩": ["右腕"],
         "右ひじ": ["右腕捩", "右腕"],
         "右手捩": ["右ひじ"],
-        "右手首": ["右手捩", "右ひじ"],
+        "右ひじ手首中間": ["右手捩", "右ひじ"],
+        "右手首": ["右ひじ手首中間", "右手捩", "右ひじ"],
         "右手首実体": ["右手首"],
         "右親指０": ["右手首"],
         "右親指１": ["右親指０", "右手首"],

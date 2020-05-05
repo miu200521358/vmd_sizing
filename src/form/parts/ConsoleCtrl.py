@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 
+import time
 import wx
 from utils.MLogger import MLogger # noqa
 
@@ -16,3 +17,6 @@ class ConsoleCtrl(wx.TextCtrl):
         while True:
             # super().write(queue.get())
             wx.CallAfter(queue.get())
+            # 0.1秒待機
+            time.sleep(0.1)
+

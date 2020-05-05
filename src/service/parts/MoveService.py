@@ -23,7 +23,7 @@ class MoveService():
         futures = []
         result = True
 
-        with ThreadPoolExecutor(thread_name_prefix="move") as executor:
+        with ThreadPoolExecutor(thread_name_prefix="move", max_workers=5) as executor:
             for data_set_idx, data_set in enumerate(self.options.data_set_list):
                 if data_set.motion.motion_cnt <= 0:
                     # モーションデータが無い場合、処理スキップ
