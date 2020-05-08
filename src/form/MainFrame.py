@@ -12,6 +12,7 @@ from form.panel.CameraPanel import CameraPanel
 from form.panel.BlendPanel import BlendPanel
 from form.panel.CsvPanel import CsvPanel
 from form.panel.VmdPanel import VmdPanel
+from form.panel.BezierPanel import BezierPanel
 from form.worker.SizingWorkerThread import SizingWorkerThread
 from form.worker.LoadWorkerThread import LoadWorkerThread
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
@@ -103,6 +104,10 @@ class MainFrame(wx.Frame):
         # VMDタブ
         self.vmd_panel_ctrl = VmdPanel(self, self.note_ctrl, 7)
         self.note_ctrl.AddPage(self.vmd_panel_ctrl, u"VMD", False)
+        
+        # 補間タブ
+        self.bezier_panel_ctrl = BezierPanel(self, self.note_ctrl, 8)
+        self.note_ctrl.AddPage(self.bezier_panel_ctrl, u"補間", False)
         
         # ---------------------------------------------
 
