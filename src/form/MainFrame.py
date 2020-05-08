@@ -9,6 +9,7 @@ from form.panel.MorphPanel import MorphPanel
 from form.panel.MultiPanel import MultiPanel
 from form.panel.ArmPanel import ArmPanel
 from form.panel.CameraPanel import CameraPanel
+from form.panel.BlendPanel import BlendPanel
 from form.panel.CsvPanel import CsvPanel
 from form.panel.VmdPanel import VmdPanel
 from form.worker.SizingWorkerThread import SizingWorkerThread
@@ -91,12 +92,16 @@ class MainFrame(wx.Frame):
         self.camera_panel_ctrl = CameraPanel(self, self.note_ctrl, 4)
         self.note_ctrl.AddPage(self.camera_panel_ctrl, u"カメラ", False)
 
+        # ブレンドタブ
+        self.blend_panel_ctrl = BlendPanel(self, self.note_ctrl, 5)
+        self.note_ctrl.AddPage(self.blend_panel_ctrl, u"ブレンド", False)
+
         # CSVタブ
-        self.csv_panel_ctrl = CsvPanel(self, self.note_ctrl, 5)
+        self.csv_panel_ctrl = CsvPanel(self, self.note_ctrl, 6)
         self.note_ctrl.AddPage(self.csv_panel_ctrl, u"CSV", False)
 
         # VMDタブ
-        self.vmd_panel_ctrl = VmdPanel(self, self.note_ctrl, 6)
+        self.vmd_panel_ctrl = VmdPanel(self, self.note_ctrl, 7)
         self.note_ctrl.AddPage(self.vmd_panel_ctrl, u"VMD", False)
         
         # ---------------------------------------------

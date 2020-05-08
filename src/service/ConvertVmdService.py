@@ -153,7 +153,7 @@ class ConvertVmdService():
 
             model = PmxModel()
             model.name = "CSV Convert Model"
-            data_set = MOptionsDataSet(bone_motion, None, model, bone_fpath, False, False, [])
+            data_set = MOptionsDataSet(bone_motion, None, model, bone_fpath, False, False, [], None, None)
 
             VmdWriter(data_set).write()
 
@@ -213,7 +213,7 @@ class ConvertVmdService():
 
                 model = PmxModel()
                 model.name = "カメラ・照明"
-                data_set = MOptionsDataSet(camera_motion, None, model, camera_fpath, False, False, [])
+                data_set = MOptionsDataSet(camera_motion, None, model, camera_fpath, False, False, [], None, None)
 
                 VmdWriter(data_set).write()
 

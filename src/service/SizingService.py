@@ -31,7 +31,7 @@ class SizingService():
         logging.basicConfig(level=self.options.logging_level, format="%(message)s [%(module_name)s]")
 
         try:
-            service_data_txt = "VMDサイジング処理実行\n------------------------\nexeバージョン: {version_name}\n".format(version_name=self.options.version_name) \
+            service_data_txt = "VMDサイジング処理実行\n------------------------\nexeバージョン: {version_name}\n".format(version_name=self.options.version_name)
 
             for data_set_idx, data_set in enumerate(self.options.data_set_list):
                 service_data_txt = "{service_data_txt}\n【No.{no}】 --------- \n".format(service_data_txt=service_data_txt, no=(data_set_idx+1)) # noqa

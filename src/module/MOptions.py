@@ -299,6 +299,21 @@ class MVmdOptions():
         self.bone_csv_path = bone_csv_path
         self.morph_csv_path = morph_csv_path
         self.camera_csv_path = camera_csv_path
-    
+
+
+class MBlendOptions():
+
+    def __init__(self, version_name, logging_level, model, eye_list, eyebrow_list, lip_list, other_list, min_value, max_value, inc_value):
+        self.version_name = version_name
+        self.logging_level = logging_level
+        self.model = model
+        self.eye_list = eye_list
+        self.eyebrow_list = eyebrow_list
+        self.lip_list = lip_list
+        self.other_list = other_list
+        self.min_value = min_value
+        self.max_value = max_value
+        self.inc_value = inc_value
+        
 
     

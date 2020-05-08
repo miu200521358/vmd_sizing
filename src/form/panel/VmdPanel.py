@@ -36,13 +36,13 @@ class VmdPanel(BasePanel):
         self.bone_csv_file_ctrl = BaseFilePickerCtrl(frame, self, u"CSVファイル（ボーン）", u"CSVファイルを選択してください", ("csv"), wx.FLP_DEFAULT_STYLE, \
                                                      u"VMDに変換したいボーンモーションのファイルパスを指定してください。", \
                                                      is_aster=False, is_save=False, set_no=0, required=False)
-        self.sizer.Add(self.bone_csv_file_ctrl.sizer, 1, wx.EXPAND, 0)
+        self.sizer.Add(self.bone_csv_file_ctrl.sizer, 0, wx.EXPAND | wx.ALL, 0)
 
         # CSVファイルコントロール（モーフ）
         self.morph_csv_file_ctrl = BaseFilePickerCtrl(frame, self, u"CSVファイル（モーフ）", u"CSVファイルを選択してください", ("csv"), wx.FLP_DEFAULT_STYLE, \
                                                       u"VMDに変換したいモーフモーションのファイルパスを指定してください。", \
                                                       is_aster=False, is_save=False, set_no=0, required=False)
-        self.sizer.Add(self.morph_csv_file_ctrl.sizer, 1, wx.EXPAND, 0)
+        self.sizer.Add(self.morph_csv_file_ctrl.sizer, 0, wx.EXPAND | wx.ALL, 0)
 
         self.static_line2 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
         self.sizer.Add(self.static_line2, 0, wx.EXPAND | wx.ALL, 5)
@@ -51,7 +51,7 @@ class VmdPanel(BasePanel):
         self.camera_csv_file_ctrl = BaseFilePickerCtrl(frame, self, u"CSVファイル（カメラ）", u"CSVファイルを選択してください", ("csv"), wx.FLP_DEFAULT_STYLE, \
                                                        u"VMDに変換したいカメラモーションのファイルパスを指定してください。", \
                                                        is_aster=False, is_save=False, set_no=0, required=False)
-        self.sizer.Add(self.camera_csv_file_ctrl.sizer, 1, wx.EXPAND, 0)
+        self.sizer.Add(self.camera_csv_file_ctrl.sizer, 0, wx.EXPAND | wx.ALL, 0)
 
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
 

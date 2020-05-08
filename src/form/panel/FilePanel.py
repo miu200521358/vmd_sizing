@@ -2,6 +2,7 @@
 #
 import wx
 import wx.lib.newevent
+import sys
 
 from form.panel.BasePanel import BasePanel
 from form.parts.SizingFileSet import SizingFileSet
@@ -72,6 +73,9 @@ class FilePanel(BasePanel):
 
     # 実行前チェック
     def on_check(self, event: wx.Event):
+        # 出力先をファイルパネルのコンソールに変更
+        sys.stdout = self.console_ctrl
+
         # フォーム無効化
         self.disable()
         # タブ固定
@@ -90,6 +94,9 @@ class FilePanel(BasePanel):
 
     # サイジング実行
     def on_exec(self, event: wx.Event):
+        # 出力先をファイルパネルのコンソールに変更
+        sys.stdout = self.console_ctrl
+
         # フォーム無効化
         self.disable()
         # タブ固定
