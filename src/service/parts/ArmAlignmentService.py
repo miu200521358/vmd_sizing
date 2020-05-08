@@ -563,7 +563,7 @@ class ArmAlignmentService():
                             if dot < 0.9:
                                 # 内積もNGなら元に戻す
                                 logger.info("×位置合わせ失敗: f: %s(%s-%s), 近似度: %s", fno, (data_set_idx + 1), target_link.effector_display_bone_name, round(dot, 5))
-                                bf.rotation = org_bfs[(data_set_idx, alignment_idx, link_name)].rotation
+                                bf.rotation = org_bfs[(data_set_idx, alignment_idx, link_name)].rotation.copy()
                             else:
                                 # 最後まで回して内積OKならとりあえずFLG=ON
                                 is_success[group_cnt] = True
@@ -586,7 +586,7 @@ class ArmAlignmentService():
                     if dot < 0.9:
                         # 内積NGなら元に戻す
                         logger.info("×先端位置合わせ失敗: f: %s(%s-%s), 近似度: %s", fno, (data_set_idx + 1), target_link.tip_ik_links.last_name(), round(dot, 5))
-                        bf.rotation = org_bfs[(data_set_idx, alignment_idx, target_link.tip_ik_links.last_name())].rotation
+                        bf.rotation = org_bfs[(data_set_idx, alignment_idx, target_link.tip_ik_links.last_name())].rotation.copy()
 
                 # どっちにしろbf確定(手首もここで確定)
                 for ik_links in target_link.ik_links_list:
@@ -630,8 +630,8 @@ class ArmAlignmentService():
 
             # ひじは角度制限をつける
             elbow_bone = rep_wrist_links.get("{0}ひじ".format(direction))
-            elbow_bone.ik_limit_min = MVector3D(-180, -0.5, 0)
-            elbow_bone.ik_limit_min = MVector3D(180, 180, 0)
+            # elbow_bone.ik_limit_min = MVector3D(-180, -0.5, -10)
+            # elbow_bone.ik_limit_max = MVector3D(180, 180, 10)
             elbow_bone.dot_limit = 0.7
 
             arm_bone = rep_wrist_links.get("{0}腕".format(direction))
@@ -753,12 +753,16 @@ class ArmAlignmentService():
 
                 # ひじは角度制限をつける
                 elbow_bone = rep_finger_links.get("{0}ひじ".format(direction))
-                elbow_bone.ik_limit_min = MVector3D(-180, -0.5, 0)
-                elbow_bone.ik_limit_min = MVector3D(180, 180, 0)
+                # elbow_bone.ik_limit_min = MVector3D(-180, -0.5, -90)
+                # elbow_bone.ik_limit_max = MVector3D(180, 180, 90)
+                elbow_bone.dot_limit = 0.7
+
+                arm_bone = rep_finger_links.get("{0}腕".format(direction))
+                arm_bone.dot_limit = 0.7
 
                 ik_links = BoneLinks()
                 ik_links.append(rep_finger_links.get(total_finger_name))
-                ik_links.append(rep_finger_links.get("{0}腕".format(direction)))
+                ik_links.append(arm_bone)
                 ik_links_list.append(ik_links)
                 ik_count_list.append(2)
                             
@@ -771,7 +775,7 @@ class ArmAlignmentService():
                 ik_links = BoneLinks()
                 ik_links.append(rep_finger_links.get(total_finger_name))
                 ik_links.append(elbow_bone)
-                ik_links.append(rep_finger_links.get("{0}腕".format(direction)))
+                ik_links.append(arm_bone)
                 ik_links_list.append(ik_links)
                 ik_count_list.append(3)
 

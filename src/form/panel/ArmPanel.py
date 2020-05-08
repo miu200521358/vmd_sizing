@@ -17,8 +17,8 @@ class ArmPanel(BasePanel):
     def __init__(self, frame: wx.Frame, parent: wx.Notebook, tab_idx: int):
         super().__init__(frame, parent, tab_idx)
 
-        avoidance_tooltip = u"指定文字列が名前に含まれているボーン追従剛体と手首・指先との接触を回避します。（セミコロン(;)で複数指定可能）"
-        alignment_tooltip = u"変換先モデルの手首位置が、作成元モデルの手首とほぼ同じ位置になるよう、手首位置を調整します。"
+        avoidance_tooltip = "指定文字列が名前に含まれているボーン追従剛体と手首・指先との接触を回避します。\n「頭接触回避」は頭を中心とした球体剛体を自動で計算します。（セミコロン(;)で複数指定可能）"
+        alignment_tooltip = "変換先モデルの手首位置が、作成元モデルの手首とほぼ同じ位置になるよう、手首位置を調整します。"
 
         # 同じグループなので、とりあえず宣言だけしておく
         self.arm_process_flg_nothing = wx.RadioButton(self, wx.ID_ANY, u"腕関係の処理を行わない", wx.DefaultPosition, wx.DefaultSize, style=wx.RB_GROUP)
@@ -31,7 +31,7 @@ class ArmPanel(BasePanel):
         self.arm_process_flg_alignment.SetToolTip(alignment_tooltip)
         self.arm_process_flg_alignment.Bind(wx.EVT_RADIOBUTTON, self.set_output_vmd_path)
 
-        self.description_txt = wx.StaticText(self, wx.ID_ANY, "腕を変換先モデルに合わせて調整する事ができます。\n「剛体接触回避」と「手首位置合わせ」のいずれかのみ実行できます。" + \
+        self.description_txt = wx.StaticText(self, wx.ID_ANY, "腕を変換先モデルに合わせて調整する事ができます。\n「接触回避」と「位置合わせ」のいずれかのみ実行できます。" + \
                                              "\n腕の動きが、元々のモーションから変わる事があります。いずれもそれなりに時間がかかります。", wx.DefaultPosition, wx.DefaultSize, 0)
         self.sizer.Add(self.description_txt, 0, wx.ALL, 5)
 
@@ -50,7 +50,7 @@ class ArmPanel(BasePanel):
         self.avoidance_title_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
         # 剛体接触回避タイトルラジオ
-        self.avoidance_title_txt = wx.StaticText(self, wx.ID_ANY, u"剛体接触回避", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.avoidance_title_txt = wx.StaticText(self, wx.ID_ANY, u"接触回避", wx.DefaultPosition, wx.DefaultSize, 0)
         self.avoidance_title_txt.SetToolTip(avoidance_tooltip)
         self.avoidance_title_txt.Wrap(-1)
         self.avoidance_title_txt.SetFont(wx.Font(wx.NORMAL_FONT.GetPointSize(), wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, False, wx.EmptyString))
@@ -65,7 +65,7 @@ class ArmPanel(BasePanel):
         self.sizer.Add(self.avoidance_description_txt, 0, wx.ALL, 5)
 
         # 剛体名指定
-        self.avoidance_target_txt_ctrl = wx.TextCtrl(self, wx.ID_ANY, "頭", wx.DefaultPosition, (-1, 50), wx.HSCROLL | wx.WANTS_CHARS)
+        self.avoidance_target_txt_ctrl = wx.TextCtrl(self, wx.ID_ANY, "頭接触回避", wx.DefaultPosition, (-1, 50), wx.HSCROLL | wx.WANTS_CHARS)
         self.avoidance_target_txt_ctrl.Bind(wx.EVT_TEXT, self.on_change_arm_process_avoidance)
         self.sizer.Add(self.avoidance_target_txt_ctrl, 0, wx.EXPAND | wx.ALL, 5)
 
@@ -76,7 +76,7 @@ class ArmPanel(BasePanel):
         self.alignment_title_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
         # 手首位置合わせタイトルラジオ
-        self.alignment_title_txt = wx.StaticText(self, wx.ID_ANY, u"手首位置合わせ", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.alignment_title_txt = wx.StaticText(self, wx.ID_ANY, u"位置合わせ", wx.DefaultPosition, wx.DefaultSize, 0)
         self.alignment_title_txt.SetToolTip("両手を合わせたり、床に手をついたりするモーションを、変換先モデルの手首位置に合わせて調整します。\n" + \
                                             "それぞれの距離を調整することで、位置合わせの適用範囲を調整することができます。")
         self.alignment_title_txt.Wrap(-1)

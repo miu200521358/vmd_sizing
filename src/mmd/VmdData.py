@@ -721,7 +721,7 @@ class VmdMotion():
 
         for bone_name, bone_frames in self.bones.items():
             if bone_name not in ["SIZING_ROOT_BONE", "頭頂", "右つま先実体", "左つま先実体", "右足底辺", "左足底辺", "右足底実体", "左足底実体", "右足ＩＫ底実体", "左足ＩＫ底実体", "右足IK親底実体", "左足IK親底実体", \
-                                 "首根元", "右腕下延長", "左腕下延長", "右腕垂直", "左腕垂直", "センター実体"]:
+                                 "首根元", "右腕下延長", "左腕下延長", "右腕垂直", "左腕垂直", "センター実体", "左腕ひじ中間", "右腕ひじ中間", "左ひじ手首中間", "右ひじ手首中間", "左手首実体", "右手首実体"]:
                 # サイジング用ボーンは出力しない
                 target_fnos[bone_name] = self.get_bone_fnos(bone_name, is_key=True)
 

@@ -460,7 +460,6 @@ class PmxReader():
             if "右ひじ" in pmx.bones and "右手首" in pmx.bones:
                 # 右ひじ手首中間ボーン
                 right_elbow_middle_pos = (pmx.bones["右ひじ"].position + pmx.bones["右手首"].position) / 2
-                right_elbow_middle_pos.setY(right_elbow_middle_pos.y() - 1)
                 right_elbow_middle_bone = Bone("右ひじ手首中間", "", right_elbow_middle_pos, -1, 0, 0)
                 right_elbow_middle_bone.index = len(pmx.bones.keys())
                 pmx.bones[right_elbow_middle_bone.name] = right_elbow_middle_bone
@@ -469,11 +468,26 @@ class PmxReader():
             if "左ひじ" in pmx.bones and "左手首" in pmx.bones:
                 # 左ひじ手首中間ボーン
                 left_elbow_middle_pos = (pmx.bones["左ひじ"].position + pmx.bones["左手首"].position) / 2
-                left_elbow_middle_pos.setY(left_elbow_middle_pos.y() - 1)
                 left_elbow_middle_bone = Bone("左ひじ手首中間", "", left_elbow_middle_pos, -1, 0, 0)
                 left_elbow_middle_bone.index = len(pmx.bones.keys())
                 pmx.bones[left_elbow_middle_bone.name] = left_elbow_middle_bone
                 pmx.bone_indexes[left_elbow_middle_bone.index] = left_elbow_middle_bone.name
+
+            if "右ひじ" in pmx.bones and "右腕" in pmx.bones:
+                # 右腕ひじ中間ボーン
+                right_arm_middle_pos = (pmx.bones["右ひじ"].position + pmx.bones["右腕"].position) / 2
+                right_arm_middle_bone = Bone("右腕ひじ中間", "", right_arm_middle_pos, -1, 0, 0)
+                right_arm_middle_bone.index = len(pmx.bones.keys())
+                pmx.bones[right_arm_middle_bone.name] = right_arm_middle_bone
+                pmx.bone_indexes[right_arm_middle_bone.index] = right_arm_middle_bone.name
+
+            if "左ひじ" in pmx.bones and "左腕" in pmx.bones:
+                # 左腕ひじ中間ボーン
+                left_arm_middle_pos = (pmx.bones["左ひじ"].position + pmx.bones["左腕"].position) / 2
+                left_arm_middle_bone = Bone("左腕ひじ中間", "", left_arm_middle_pos, -1, 0, 0)
+                left_arm_middle_bone.index = len(pmx.bones.keys())
+                pmx.bones[left_arm_middle_bone.name] = left_arm_middle_bone
+                pmx.bone_indexes[left_arm_middle_bone.index] = left_arm_middle_bone.name
 
             # センター実体
             center_entity_bone = Bone("センター実体", "", MVector3D(), -1, 0, 0)

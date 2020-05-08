@@ -75,15 +75,16 @@ def calc_IK(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, targ
 
                 # IK軸制限がある場合、上限下限をチェック
                 if ik_bone.ik_limit_min != MVector3D() and ik_bone.ik_limit_max != MVector3D():
-                    new_ik_euler = new_ik_qq.toEulerAngles()
+                    x_qq, y_qq, z_qq, yz_qq = separate_local_qq(fno, bone_name, new_ik_qq, model.get_local_x_axis(ik_bone.name))
 
-                    # logger.test("new_ik_euler before: %s", new_ik_euler)
+                    logger.test("new_ik_qq: %s, x_qq: %s, y_qq: %s, z_qq: %s", new_ik_qq.toEulerAngles(), x_qq.toEulerAngles(), y_qq.toEulerAngles(), z_qq.toEulerAngles())
+                    logger.test("new_ik_qq: %s, x_qq: %s, y_qq: %s, z_qq: %s", new_ik_qq.toDegree(), x_qq.toDegree(), y_qq.toDegree(), z_qq.toDegree())
 
-                    euler_x = min(ik_bone.ik_limit_max.x(), max(ik_bone.ik_limit_min.x(), new_ik_euler.x()))
-                    euler_y = min(ik_bone.ik_limit_max.y(), max(ik_bone.ik_limit_min.y(), new_ik_euler.y()))
-                    euler_z = min(ik_bone.ik_limit_max.z(), max(ik_bone.ik_limit_min.z(), new_ik_euler.z()))
+                    euler_x = min(ik_bone.ik_limit_max.x(), max(ik_bone.ik_limit_min.x(), x_qq.toDegree()))
+                    euler_y = min(ik_bone.ik_limit_max.y(), max(ik_bone.ik_limit_min.y(), y_qq.toDegree()))
+                    euler_z = min(ik_bone.ik_limit_max.z(), max(ik_bone.ik_limit_min.z(), z_qq.toDegree()))
 
-                    # logger.test("new_ik_euler after: %s, %s, %s", euler_x, euler_y, euler_z)
+                    logger.test("limit_qq: %s -> %s", new_ik_qq.toEulerAngles(), MQuaternion.fromEulerAngles(euler_x, euler_y, euler_z).toEulerAngles())
 
                     new_ik_qq = MQuaternion.fromEulerAngles(euler_x, euler_y, euler_z)
                 

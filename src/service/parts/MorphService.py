@@ -40,8 +40,8 @@ class MorphService():
                 # 置換元モーフがある場合、保持
                 original_morphs[org_morph_name] = copy.deepcopy(data_set.motion.morphs[org_morph_name])
 
-            if rep_morph_name in data_set.motion.morphs:
-                # 置換先モーフがある場合、保持
+            if rep_morph_name in data_set.motion.morphs and org_morph_name != rep_morph_name:
+                # 置換先モーフがある場合、保持（元と先が同じ場合、スルー）
                 replaced_morphs[rep_morph_name] = copy.deepcopy(data_set.motion.morphs[rep_morph_name])
         
         # 保持したので、モーフ削除

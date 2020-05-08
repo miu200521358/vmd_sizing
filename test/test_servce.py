@@ -40,10 +40,10 @@ class MorphServiceTest(unittest.TestCase):
 
         morph_list = []
 
-        data_set = MOptionsDataSet(motion, None, None, None, False, False, morph_list)
+        data_set = MOptionsDataSet(motion, None, None, None, False, False, morph_list, None, None)
 
         service = MorphService(None)
-        service.replace_morph(data_set)
+        service.replace_morph(0, data_set)
 
         self.assertEqual(["A"], sorted(list(motion.morphs.keys())))
 
@@ -59,10 +59,10 @@ class MorphServiceTest(unittest.TestCase):
 
         morph_list = [("A", "B", 0.5)]
 
-        data_set = MOptionsDataSet(motion, None, None, None, False, False, morph_list)
+        data_set = MOptionsDataSet(motion, None, None, None, False, False, morph_list, None, None)
 
         service = MorphService(None)
-        service.replace_morph(data_set)
+        service.replace_morph(0, data_set)
 
         self.assertEqual(["B"], sorted(list(motion.morphs.keys())))
 
@@ -83,10 +83,10 @@ class MorphServiceTest(unittest.TestCase):
 
         morph_list = [("A", "B", 0.5), ("A", "C", 2)]
 
-        data_set = MOptionsDataSet(motion, None, None, None, False, False, morph_list)
+        data_set = MOptionsDataSet(motion, None, None, None, False, False, morph_list, None, None)
 
         service = MorphService(None)
-        service.replace_morph(data_set)
+        service.replace_morph(0, data_set)
 
         self.assertEqual(["B", "C"], sorted(list(motion.morphs.keys())))
 
@@ -120,10 +120,10 @@ class MorphServiceTest(unittest.TestCase):
 
         morph_list = [("A", "B", 2)]
 
-        data_set = MOptionsDataSet(motion, None, None, None, False, False, morph_list)
+        data_set = MOptionsDataSet(motion, None, None, None, False, False, morph_list, None, None)
 
         service = MorphService(None)
-        service.replace_morph(data_set)
+        service.replace_morph(0, data_set)
 
         self.assertEqual(["B"], sorted(list(motion.morphs.keys())))
 
@@ -151,10 +151,10 @@ class MorphServiceTest(unittest.TestCase):
 
         morph_list = [("A", "B", 2), ("B", "C", 2)]
 
-        data_set = MOptionsDataSet(motion, None, None, None, False, False, morph_list)
+        data_set = MOptionsDataSet(motion, None, None, None, False, False, morph_list, None, None)
 
         service = MorphService(None)
-        service.replace_morph(data_set)
+        service.replace_morph(0, data_set)
 
         self.assertEqual(["B", "C"], list(motion.morphs.keys()))
 
@@ -194,10 +194,10 @@ class MorphServiceTest(unittest.TestCase):
 
         morph_list = [("A", "B", 2), ("B", "C", 2)]
 
-        data_set = MOptionsDataSet(motion, None, None, None, False, False, morph_list)
+        data_set = MOptionsDataSet(motion, None, None, None, False, False, morph_list, None, None)
 
         service = MorphService(None)
-        service.replace_morph(data_set)
+        service.replace_morph(0, data_set)
 
         self.assertEqual(["B", "C"], sorted(list(motion.morphs.keys())))
 
@@ -218,6 +218,48 @@ class MorphServiceTest(unittest.TestCase):
         self.assertEqual(3, motion.morphs["C"][5].ratio)
         self.assertEqual(12, motion.morphs["C"][7].ratio)
         self.assertEqual(4, motion.morphs["C"][11].ratio)
+
+    def test_replace_morph_07(self):
+        motion = VmdMotion()
+        motion.morphs["A"] = {}
+        for fno, ratio in [(0, 10), (1, 20), (3, 30), (7, 0), (10, 3)]:
+            motion.morphs["A"][fno] = VmdMorphFrame(fno)
+            motion.morphs["A"][fno].ratio = ratio
+
+        motion.morphs["B"] = {}
+        for fno, ratio in [(1, 3), (2, 5), (7, 4), (11, 2)]:
+            motion.morphs["B"][fno] = VmdMorphFrame(fno)
+            motion.morphs["B"][fno].ratio = ratio
+
+        motion.morphs["C"] = {}
+        for fno, ratio in [(5, 3), (7, 4), (8, 5)]:
+            motion.morphs["C"][fno] = VmdMorphFrame(fno)
+            motion.morphs["C"][fno].ratio = ratio
+
+        morph_list = [("A", "A", 1), ("A", "D", 0.2)]
+
+        data_set = MOptionsDataSet(motion, None, None, None, False, False, morph_list, None, None)
+
+        service = MorphService(None)
+        service.replace_morph(0, data_set)
+
+        self.assertEqual(["A", "B", "C", "D"], sorted(list(motion.morphs.keys())))
+
+        self.assertTrue("A" in motion.morphs)
+        self.assertEqual([0, 1, 3, 7, 10], sorted(list(motion.morphs["A"].keys())))
+        self.assertAlmostEqual(10, motion.morphs["A"][0].ratio)
+        self.assertAlmostEqual(20, motion.morphs["A"][1].ratio)
+        self.assertAlmostEqual(30, motion.morphs["A"][3].ratio)
+        self.assertAlmostEqual(0, motion.morphs["A"][7].ratio)
+        self.assertAlmostEqual(3, motion.morphs["A"][10].ratio)
+
+        self.assertTrue("D" in motion.morphs)
+        self.assertEqual([0, 1, 3, 7, 10], sorted(list(motion.morphs["D"].keys())))
+        self.assertAlmostEqual(2, motion.morphs["D"][0].ratio)
+        self.assertAlmostEqual(4, motion.morphs["D"][1].ratio)
+        self.assertAlmostEqual(6, motion.morphs["D"][3].ratio)
+        self.assertAlmostEqual(0, motion.morphs["D"][7].ratio)
+        self.assertAlmostEqual(0.6, motion.morphs["D"][10].ratio)
 
 
 class StanceServiceTest(unittest.TestCase):
