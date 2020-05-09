@@ -287,11 +287,7 @@ class VmdMotion():
             logger.info("-- %sフレーム目:終了(%s％)【No.%s - %s】", end_fno, round((end_fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
 
     # フィルターをかける
-    def smooth_filter_bf(self, data_set_no: int, bone_name: str, is_rot: bool, is_mov: bool):
-
-        # フィルタパラメーター
-        config = {"freq": 30, "mincutoff": 0.3, "beta": 0.01, "dcutoff": 0.25}
-
+    def smooth_filter_bf(self, data_set_no: int, bone_name: str, is_rot: bool, is_mov: bool, config={"freq": 30, "mincutoff": 0.3, "beta": 0.01, "dcutoff": 0.25}):
         # 移動用フィルタ
         pxfilter = OneEuroFilter(**config)
         pyfilter = OneEuroFilter(**config)
@@ -329,12 +325,12 @@ class VmdMotion():
                 new_qq = MQuaternion.fromEulerAngles(rx, ry, rz)
                 now_bf.rotation = new_qq
 
-            if fno // 500 > prev_sep_fno and fnos[-1] > 0:
+            if data_set_no > 0 and fno // 500 > prev_sep_fno and fnos[-1] > 0:
                 logger.info("-- %sフレーム目:終了(%s％)【No.%s - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
                 prev_sep_fno = fno // 500
 
     # 指定ボーンの不要キーを削除する
-    def remove_unnecessary_bf(self, data_set_no: int, bone_name: str, start_fno: int, end_fno: int, is_rot: bool, is_mov: bool, is_log: bool):
+    def remove_unnecessary_bf(self, data_set_no: int, bone_name: str, start_fno: int, end_fno: int, is_rot: bool, is_mov: bool, is_log: bool, offset=0):
         # キーフレ（開始フレ以降）を取得する
         fnos = self.get_bone_fnos(bone_name, start_fno=start_fno)
         logger.debug("remove_unnecessary_bf prev: %s, %s", bone_name, len(fnos))
@@ -355,12 +351,13 @@ class VmdMotion():
                     # 現在キーを追加
                     fill_bfs.append(now_bf)
 
-                    if self.join_bf(prev_bf, fill_bfs, next_bf, is_rot, is_mov):
+                    if self.join_bf(prev_bf, fill_bfs, next_bf, is_rot, is_mov, offset):
                         # 全ての補間曲線が繋ぐのに成功した場合、繋ぐ
                         logger.debug("fno: %s, %s, ○補間曲線結合", fno, bone_name)
 
                         # nowキーを物理的に削除
-                        del self.bones[bone_name][fno]
+                        if fno in self.bones[bone_name]:
+                            self.bones[bone_name][fno].key = False
 
                         # startはそのままで、nowだけ動かす
                         fno = fno + 1       # 現在フレームを次に移す
@@ -378,39 +375,94 @@ class VmdMotion():
                     fno = start_fno + 1       # 現在フレームを次に移す
 
         if is_log and fnos[-1] > 0:
-            logger.info("-- %sフレーム目:終了(%s％)【No.%s - %s】", end_fno, round((end_fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
+            if data_set_no == 0:
+                logger.info("-- %sフレーム目:終了(%s％)【%s】", end_fno, round((end_fno / fnos[-1]) * 100, 3), bone_name)
+            else:
+                logger.info("-- %sフレーム目:終了(%s％)【No.%s - %s】", end_fno, round((end_fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
 
         logger.debug("remove_unnecessary_bf after: %s, %s, all: %s", bone_name, len(self.get_bone_fnos(bone_name, is_key=True)), len(fnos))
 
     # 補間曲線込みでbfを結合できる場合、結合する
-    def join_bf(self, prev_bf: VmdBoneFrame, fill_bfs: list, next_bf: VmdBoneFrame, is_rot: bool, is_mov: bool):
+    def join_bf(self, prev_bf: VmdBoneFrame, fill_bfs: list, next_bf: VmdBoneFrame, is_rot: bool, is_mov: bool, offset=0):
         rot_values = []
+        x_values = []
+        y_values = []
+        z_values = []
 
-        if len(fill_bfs) > 0:
-            # 中間がある場合
+        if is_rot:
+            if len(fill_bfs) > 0:
+                # 中間がある場合
 
-            # 回転の場合、クォータニオンのthetaを参照する
-            rot_values.append(0)                                                    # 開始フレーム自体の変位はなし
-            rot_values.append(prev_bf.rotation.calcTheata(fill_bfs[0].rotation))    # 最初の変位
+                # 回転の場合、クォータニオンのthetaを参照する
+                rot_values.append(0)                                                    # 開始フレーム自体の変位はなし
+                rot_values.append(prev_bf.rotation.calcTheata(fill_bfs[0].rotation))    # 最初の変位
 
-            for before_bf, after_bf in zip(fill_bfs[:-1], fill_bfs[1:]):
-                # 前後の変位を測定する
-                rot_values.append(before_bf.rotation.calcTheata(after_bf.rotation))
+                for before_bf, after_bf in zip(fill_bfs[:-1], fill_bfs[1:]):
+                    # 前後の変位を測定する
+                    rot_values.append(before_bf.rotation.calcTheata(after_bf.rotation))
 
-            rot_values.append(fill_bfs[-1].rotation.calcTheata(next_bf.rotation))    # 最後の変位
-        else:
-            # 間がない場合
-            rot_values = [prev_bf.rotation.calcTheata(next_bf.rotation)]    # 最初の変位
+                rot_values.append(fill_bfs[-1].rotation.calcTheata(next_bf.rotation))    # 最後の変位
+            else:
+                # 間がない場合
+                rot_values = [prev_bf.rotation.calcTheata(next_bf.rotation)]    # 最初の変位
 
         logger.debug("f: %s, %s, join: %s", prev_bf.fno, prev_bf.name, rot_values)
 
-        # 結合したベジェ曲線
-        joined_rot_bzs = MBezierUtils.join_value_2_bezier(prev_bf.fno, prev_bf.name, rot_values) if is_rot else True
+        if is_mov:
+            if len(fill_bfs) > 0:
+                # 中間がある場合
 
-        if joined_rot_bzs:
+                # X ------------
+                x_values.append(0)                        # 開始フレーム自体の変位はなし
+                x_values.append(fill_bfs[0].position.x() - prev_bf.position.x())    # 最初の変位
+
+                for before_bf, after_bf in zip(fill_bfs[:-1], fill_bfs[1:]):
+                    # 前後の変位を測定する
+                    x_values.append(after_bf.position.x() - before_bf.position.x())
+
+                x_values.append(next_bf.position.x() - fill_bfs[-1].position.x())    # 最後の変位
+
+                # Y -----------
+                y_values.append(0)                        # 開始フレーム自体の変位はなし
+                y_values.append(fill_bfs[0].position.y() - prev_bf.position.y())    # 最初の変位
+
+                for before_bf, after_bf in zip(fill_bfs[:-1], fill_bfs[1:]):
+                    # 前後の変位を測定する
+                    y_values.append(after_bf.position.y() - before_bf.position.y())
+
+                y_values.append(next_bf.position.y() - fill_bfs[-1].position.y())    # 最後の変位
+
+                # Z -----------
+                z_values.append(0)                        # 開始フレーム自体の変位はなし
+                z_values.append(fill_bfs[0].position.z() - prev_bf.position.z())    # 最初の変位
+
+                for before_bf, after_bf in zip(fill_bfs[:-1], fill_bfs[1:]):
+                    # 前後の変位を測定する
+                    z_values.append(after_bf.position.z() - before_bf.position.z())
+
+                z_values.append(next_bf.position.z() - fill_bfs[-1].position.z())    # 最後の変位
+
+            else:
+                # 間がない場合
+                x_values = [prev_bf.position.x()]    # 最初の変位
+                y_values = [prev_bf.position.y()]    # 最初の変位
+                z_values = [prev_bf.position.z()]    # 最初の変位
+
+        # 結合したベジェ曲線
+        joined_rot_bzs = MBezierUtils.join_value_2_bezier(prev_bf.fno, prev_bf.name, rot_values, offset) if is_rot else True
+        joined_x_bzs = MBezierUtils.join_value_2_bezier(prev_bf.fno, prev_bf.name, x_values, offset) if is_mov else True
+        joined_y_bzs = MBezierUtils.join_value_2_bezier(prev_bf.fno, prev_bf.name, y_values, offset) if is_mov else True
+        joined_z_bzs = MBezierUtils.join_value_2_bezier(prev_bf.fno, prev_bf.name, z_values, offset) if is_mov else True
+
+        if joined_rot_bzs and joined_x_bzs and joined_y_bzs and joined_z_bzs:
             # 結合できた場合、補間曲線をnextに設定
             if is_rot:
                 self.reset_interpolation_parts(prev_bf.name, next_bf, joined_rot_bzs, MBezierUtils.R_x1_idxs, MBezierUtils.R_y1_idxs, MBezierUtils.R_x2_idxs, MBezierUtils.R_y2_idxs)
+
+            if is_mov:
+                self.reset_interpolation_parts(prev_bf.name, next_bf, joined_x_bzs, MBezierUtils.MX_x1_idxs, MBezierUtils.MX_y1_idxs, MBezierUtils.MX_x2_idxs, MBezierUtils.MX_y2_idxs)
+                self.reset_interpolation_parts(prev_bf.name, next_bf, joined_y_bzs, MBezierUtils.MY_x1_idxs, MBezierUtils.MY_y1_idxs, MBezierUtils.MY_x2_idxs, MBezierUtils.MY_y2_idxs)
+                self.reset_interpolation_parts(prev_bf.name, next_bf, joined_z_bzs, MBezierUtils.MZ_x1_idxs, MBezierUtils.MZ_y1_idxs, MBezierUtils.MZ_x2_idxs, MBezierUtils.MZ_y2_idxs)
 
             return True
 

@@ -7,7 +7,6 @@ import math
 import numpy as np
 
 from module.MParams import BoneLinks
-import module.MMath as MMath
 from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from utils.MException import SizingException # noqa
 from utils.MLogger import MLogger # noqa

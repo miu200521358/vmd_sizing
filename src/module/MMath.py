@@ -310,6 +310,10 @@ class MVector3D():
         self.setZ(1 if is_almost_null(self.z()) else self.z())
 
         return self
+    
+    def isnan(self):
+        self.__data = self.data().astype(np.float64)
+        return np.isnan(self.data()).any()
                 
     @classmethod
     def crossProduct(cls, v1, v2):

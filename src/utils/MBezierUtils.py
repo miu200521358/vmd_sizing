@@ -38,7 +38,7 @@ MZ_y2_idxs = [14, 29, 59, 44]
 
 
 # 指定したすべての値を通るカトマル曲線からベジェ曲線を計算し、MMD補間曲線範囲内に収められた場合、そのベジェ曲線を返す
-def join_value_2_bezier(fno: int, bone_name: str, values: list):
+def join_value_2_bezier(fno: int, bone_name: str, values: list, offset=0):
     if np.isclose(np.max(np.array(values)), np.min(np.array(values)), atol=1e-3) or len(values) <= 2:
         # すべてがだいたい同じ値（最小と最大が同じ値)か次数が1の場合、線形補間
         return LINEAR_MMD_INTERPOLATION
@@ -89,7 +89,7 @@ def join_value_2_bezier(fno: int, bone_name: str, values: list):
         logger.test("joined_curve: %s", joined_curve.nodes)
 
         # 全体のキーフレを2倍にしたX（細かく点をチェックする）
-        bezier_x = np.linspace(0, len(values), len(values) * 2)
+        bezier_x = np.linspace(0, len(values), len(values))
 
         # 元の2つのベジェ曲線との交点を取得する
         full_ys = intersect_by_x(full_curve, bezier_x)
@@ -107,7 +107,7 @@ def join_value_2_bezier(fno: int, bone_name: str, values: list):
         logger.debug("f: %s, %s, diff_ys: %s", fno, bone_name, diff_ys)
 
         # 差が大きい箇所をピックアップする
-        diff_limit = (np.abs(np.diff([np.max(full_ys), np.min(full_ys)])) / len(values) * 2) + 1e-2
+        diff_limit = (np.abs(np.diff([np.max(full_ys), np.min(full_ys)])) / len(values) * 2) + 1e-2 + offset
         diff_large = np.where(np.abs(diff_ys[:-1]) > diff_limit, 1, 0)
         logger.test("diff_limit: %s, diff_large: %s", diff_limit, diff_large)
         logger.debug("f: %s, %s, diff_ys: %s, diff_limit: %s, diff_large: %s", fno, bone_name, diff_ys, diff_limit, diff_large)
@@ -121,7 +121,7 @@ def join_value_2_bezier(fno: int, bone_name: str, values: list):
                                  MVector2D(joined_curve.nodes[0, 2], joined_curve.nodes[1, 2]), MVector2D(joined_curve.nodes[0, 3], joined_curve.nodes[1, 3]))
         logger.debug("joined_bz: %s, %s", joined_bz[1], joined_bz[2])
                             
-        if not is_fit_bezier_mmd(joined_bz):
+        if not is_fit_bezier_mmd(joined_bz, int(offset * 10)):
             # 補間曲線がMMD補間曲線内に収まらない場合、NG
             return None
         

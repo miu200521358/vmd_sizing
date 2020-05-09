@@ -13,6 +13,7 @@ from form.panel.BlendPanel import BlendPanel
 from form.panel.CsvPanel import CsvPanel
 from form.panel.VmdPanel import VmdPanel
 from form.panel.BezierPanel import BezierPanel
+from form.panel.SmoothPanel import SmoothPanel
 from form.worker.SizingWorkerThread import SizingWorkerThread
 from form.worker.LoadWorkerThread import LoadWorkerThread
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
@@ -93,20 +94,24 @@ class MainFrame(wx.Frame):
         self.camera_panel_ctrl = CameraPanel(self, self.note_ctrl, 4)
         self.note_ctrl.AddPage(self.camera_panel_ctrl, u"カメラ", False)
 
+        # スムーズタブ
+        self.smooth_panel_ctrl = SmoothPanel(self, self.note_ctrl, 5)
+        self.note_ctrl.AddPage(self.smooth_panel_ctrl, u"スムーズ", False)
+
         # ブレンドタブ
-        self.blend_panel_ctrl = BlendPanel(self, self.note_ctrl, 5)
+        self.blend_panel_ctrl = BlendPanel(self, self.note_ctrl, 6)
         self.note_ctrl.AddPage(self.blend_panel_ctrl, u"ブレンド", False)
 
         # CSVタブ
-        self.csv_panel_ctrl = CsvPanel(self, self.note_ctrl, 6)
+        self.csv_panel_ctrl = CsvPanel(self, self.note_ctrl, 7)
         self.note_ctrl.AddPage(self.csv_panel_ctrl, u"CSV", False)
 
         # VMDタブ
-        self.vmd_panel_ctrl = VmdPanel(self, self.note_ctrl, 7)
+        self.vmd_panel_ctrl = VmdPanel(self, self.note_ctrl, 8)
         self.note_ctrl.AddPage(self.vmd_panel_ctrl, u"VMD", False)
         
         # 補間タブ
-        self.bezier_panel_ctrl = BezierPanel(self, self.note_ctrl, 8)
+        self.bezier_panel_ctrl = BezierPanel(self, self.note_ctrl, 9)
         self.note_ctrl.AddPage(self.bezier_panel_ctrl, u"補間", False)
         
         # ---------------------------------------------
@@ -152,7 +157,27 @@ class MainFrame(wx.Frame):
             self.note_ctrl.ChangeSelection(self.file_panel_ctrl.tab_idx)
             event.Skip()
             return
-        
+
+        elif self.smooth_panel_ctrl.is_fix_tab:
+            self.note_ctrl.ChangeSelection(self.smooth_panel_ctrl.tab_idx)
+            event.Skip()
+            return
+
+        elif self.blend_panel_ctrl.is_fix_tab:
+            self.note_ctrl.ChangeSelection(self.blend_panel_ctrl.tab_idx)
+            event.Skip()
+            return
+
+        elif self.csv_panel_ctrl.is_fix_tab:
+            self.note_ctrl.ChangeSelection(self.csv_panel_ctrl.tab_idx)
+            event.Skip()
+            return
+
+        elif self.vmd_panel_ctrl.is_fix_tab:
+            self.note_ctrl.ChangeSelection(self.vmd_panel_ctrl.tab_idx)
+            event.Skip()
+            return
+
         if self.note_ctrl.GetSelection() == self.morph_panel_ctrl.tab_idx:
             # コンソールクリア
             self.file_panel_ctrl.console_ctrl.Clear()
@@ -364,7 +389,7 @@ class MainFrame(wx.Frame):
     def on_popup_finger_warning(self, event: wx.Event):
         if not self.popuped_finger_warning:
             dialog = wx.MessageDialog(self, "複数人数モーションで指位置合わせがONになっています。\n指の数だけ組み合わせが膨大になり時間がかかりますが、" \
-                                    + "その割に余計な指に反応して綺麗になりません。よろしいですか？", style=wx.OK | wx.ICON_WARNING)
+                                      + "その割に余計な指に反応して綺麗になりません。よろしいですか？", style=wx.OK | wx.ICON_WARNING)
             dialog.ShowModal()
             dialog.Destroy()
             self.popuped_finger_warning = True
