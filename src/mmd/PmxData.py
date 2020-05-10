@@ -615,6 +615,10 @@ class RigidBody():
         # 衝突しているか
         # http://marupeke296.com/COL_3D_No27_CapsuleCapsule.html
         def get_collistion(self, point: MVector3D):
+            # 剛体のローカル座標系に基づく点の位置
+            local_point = self.matrix.inverted() * point
+            logger.debug("local_point: %s", local_point)
+
             # 下辺
             b1 = self.matrix * MVector3D(0, -self.shape_size.y(), 0)
             # 上辺
@@ -623,9 +627,14 @@ class RigidBody():
             # 垂線までの長さ
             v = (t1 - b1)
             lensq = v.lengthSquared()
-            t = 0 if lensq == 0 else MVector3D.dotProduct(point - v, b1) / lensq
+            t = 0 if lensq == 0 else MVector3D.dotProduct(point - b1, b1) / lensq
             # 垂線を下ろした座標
             h = b1 + (v * t)
+
+            logger.debug("v: %s", v)
+            logger.debug("lensq: %s", lensq)
+            logger.debug("t: %s", t)
+            logger.debug("h: %s", h)
 
             # 点・下辺始点・垂線点の三角形
             ba = (point - b1).lengthSquared()
@@ -637,52 +646,54 @@ class RigidBody():
             tb = (h - t1).lengthSquared()
             tc = (point - h).lengthSquared()
 
-            if bc < ba + bb:
-                # 下辺始点が鋭角三角形の場合、下辺始点との長さ
+            logger.debug("ba: %s, bb: %s, bc: %s", ba, bb, bc)
+            logger.debug("ta: %s, tb: %s, tc: %s", ta, tb, tc)
+
+            if bc > ba + bb:
+                # 下辺始点が鈍角三角形の場合、下辺始点との長さ
                 h = b1
-            elif tc < ta + tb:
-                # 上辺終点が鋭角三角形の場合、上辺終点との長さ
+            elif tc > ta + tb:
+                # 上辺終点が鈍角三角形の場合、上辺終点との長さ
                 h = t1
 
-            logger.test("v: %s", v)
-            logger.test("lensq: %s", lensq)
-            logger.test("t: %s", t)
-            logger.test("h: %s", h)
-            logger.test("segl: %s", point.distanceToPoint(h))
+            logger.debug("v: %s", v)
+            logger.debug("lensq: %s", lensq)
+            logger.debug("t: %s", t)
+            logger.debug("h: %s", h)
+            logger.debug("point: %s", point)
+            logger.debug("segl: %s", point.distanceToPoint(h))
 
             # カプセルの線分から半径以内なら中に入っている
             d = point.distanceToPoint(h)
             collision = 0 < d < self.shape_size.x()
 
+            logger.debug("d: %s", d)
+
             return_vec = MVector3D()
 
             if collision:
                 x = self.shape_size.x() * self.h_sign
-                y = -self.shape_size.x()
+                y = self.shape_size.x() * self.v_sign
                 z = -self.shape_size.x()
-
-                # 剛体のローカル座標系に基づく点の位置
-                local_point = self.matrix.inverted() * point
-                logger.debug("local_point: %s, d: %s", local_point, d)
 
                 # X軸方向の角度
                 x_dot = MVector3D.dotProduct(local_point.normalized(), MVector3D(x, 0, 0).normalized())
                 x_theta = math.acos(max(-1, min(1, x_dot))) % math.radians(90)
 
                 # Yの離れ具合
-                y_theta = (point - h).abs().y() / self.shape_size.x()
+                y_theta = (point - self.origin).abs().y() / self.shape_size.x()
 
                 # Z軸方向の角度
                 z_dot = MVector3D.dotProduct(local_point.normalized(), MVector3D(0, 0, z).normalized())
                 z_theta = math.acos(max(-1, min(1, z_dot))) % math.radians(90)
                 
                 new_x = math.cos(x_theta) * x
-                new_y = local_point.y() + (local_point.y() - math.sin(y_theta) * y)
-                new_z = math.cos(z_theta) * z
+                new_y = local_point.y()
+                new_z = local_point.z() + math.cos(z_theta) * z
         
                 return_vec = self.matrix * MVector3D(new_x, new_y, new_z)
-                logger.debug("xt: %s, xs: %s, yt: %s, ys: %s, zt: %s, zs: %s, new: %s, return: %s", \
-                             x_theta, new_x / x, y_theta, new_y / y, z_theta, new_z / z, MVector3D(new_x, new_y, new_z), return_vec)
+                logger.debug("xt: %s, xs: %s, yt: %s, ys: %s, zt: %s, zs: %s, zc: %s, new: %s, return: %s", \
+                             x_theta, new_x / x, y_theta, new_y / y, z_theta, new_z / z, math.cos(z_theta) * z, MVector3D(new_x, new_y, new_z), return_vec)
 
             # 3方向の間に点が含まれていたら衝突あり
             return collision, return_vec

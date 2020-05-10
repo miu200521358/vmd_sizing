@@ -47,12 +47,12 @@ class ArmAvoidanceService():
             return True
 
         futures = []
-        with ThreadPoolExecutor(thread_name_prefix="avoidance") as executor:
+        with ThreadPoolExecutor(thread_name_prefix="avoidance", max_workers=1) as executor:
             for data_set_idx, data_set in enumerate(self.options.data_set_list):
                 logger.info("接触回避　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
 
-                futures.append(executor.submit(self.execute_avoidance_pool, data_set_idx, "右"))
                 futures.append(executor.submit(self.execute_avoidance_pool, data_set_idx, "左"))
+                futures.append(executor.submit(self.execute_avoidance_pool, data_set_idx, "右"))
 
         concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
@@ -75,12 +75,16 @@ class ArmAvoidanceService():
 
             prev_fno = 0
             fnos = data_set.motion.get_bone_fnos("{0}腕".format(direction), "{0}ひじ".format(direction), "{0}手首".format(direction))
-            for fno in fnos:
+            while len(fnos) > 0:
+                fno = fnos[0]
                 self.execute_avoidance_frame(data_set_idx, direction, avoidance_options, fno)
 
                 if fno // 500 > prev_fno and fnos[-1] > 0:
                     logger.info("-- %sフレーム目:終了(%s％)【No.%s-%s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1, direction)
                     prev_fno = fno // 500
+                
+                # キーの登録が増えているかもなので、ここで取り直す
+                fnos = data_set.motion.get_bone_fnos("{0}腕".format(direction), "{0}ひじ".format(direction), "{0}手首".format(direction), start_fno=(fno + 1))
 
             return True
         except SizingException as se:
@@ -129,6 +133,8 @@ class ArmAvoidanceService():
 
                 # 先モデルのそれぞれのグローバル位置
                 rep_global_3ds = MServiceUtils.calc_global_pos(data_set.rep_model, arm_link, data_set.motion, fno)
+
+                # [logger.debug("k: %s, v: %s", k, v) for k, v in rep_global_3ds.items()]
 
                 collision, rep_collision_vec = obb.judge_collision(rep_global_3ds[arm_link.last_name()])
                 logger.test("d: %s-%s, f: %s, col: %s, ret: %s", data_set_idx, direction, fno, collision, rep_collision_vec.to_log())
@@ -284,13 +290,13 @@ class ArmAvoidanceService():
             effector_bone = arm_link.get(effector_bone_name)
 
             arm_bone = arm_link.get("{0}腕".format(direction))
-            arm_bone.dot_limit = 0.7
+            arm_bone.dot_limit = 0.75
 
             ik_links = BoneLinks()
             ik_links.append(effector_bone)
             ik_links.append(arm_bone)
             ik_links_list[effector_bone_name].append(ik_links)
-            ik_count_list[effector_bone_name].append(1)
+            ik_count_list[effector_bone_name].append(3)
 
         effector_bone_name_list = []
 
@@ -313,10 +319,10 @@ class ArmAvoidanceService():
             elbow_bone = arm_link.get("{0}ひじ".format(direction))
             # elbow_bone.ik_limit_min = MVector3D(-180, -0.5, -90)
             # elbow_bone.ik_limit_max = MVector3D(180, 180, 90)
-            elbow_bone.dot_limit = 0.7
+            elbow_bone.dot_limit = 0.75
 
             arm_bone = arm_link.get("{0}腕".format(direction))
-            arm_bone.dot_limit = 0.7
+            arm_bone.dot_limit = 0.75
 
             ik_links = BoneLinks()
             ik_links.append(effector_bone)
@@ -342,3 +348,4 @@ class ArmAvoidanceService():
                 target_data_set_idxs.append(data_set_idx)
             
         return target_data_set_idxs
+

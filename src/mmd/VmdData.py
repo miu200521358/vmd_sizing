@@ -726,7 +726,7 @@ class VmdMotion():
         keys = []
         for bone_name in bone_names:
             if bone_name in self.bones:
-                keys.extend([x for x in self.bones[bone_name].keys() if self.bones[bone_name][x].fno >= start_fno and\
+                keys.extend([x for x in self.bones[bone_name].keys() if self.bones[bone_name][x].fno >= start_fno and \
                             (not is_key or (is_key and self.bones[bone_name][x].key)) and (not is_read or (is_read and self.bones[bone_name][x].read))])
         
         # 重複を除いた昇順フレーム番号リストを返す

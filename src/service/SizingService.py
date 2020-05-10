@@ -91,23 +91,24 @@ class SizingService():
             if not StanceService(self.options).execute():
                 return False
 
+            # 剛体接触回避
             if self.options.arm_options.avoidance:
-                # 剛体接触回避
                 if not ArmAvoidanceService(self.options).execute():
                     return False
-            elif self.options.arm_options.alignment:
-                # 手首位置合わせ
+
+            # 手首位置合わせ
+            if self.options.arm_options.alignment:
                 if not ArmAlignmentService(self.options).execute():
                     return False
-
-            # モーフ置換
-            if not MorphService(self.options).execute():
-                return False
 
             # カメラ補正
             if self.options.camera_motion:
                 if not CameraService(self.options).execute():
                     return False
+
+            # モーフ置換
+            if not MorphService(self.options).execute():
+                return False
             
             for data_set_idx, data_set in enumerate(self.options.data_set_list):
                 # 実行後、出力ファイル存在チェック

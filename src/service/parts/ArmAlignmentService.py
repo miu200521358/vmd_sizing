@@ -32,8 +32,8 @@ class ArmAlignmentService():
 
         # リンク辞書
         self.target_links = {}
-        # 処理対象キーフレ
-        fnos = []
+        # 処理対象ボーン名リスト
+        bone_names = []
 
         logger.info("手首位置合わせ　", decoration=MLogger.DECORATION_LINE)
 
@@ -41,26 +41,46 @@ class ArmAlignmentService():
             # 処理対象データセットに対して、準備実行
 
             # 手首位置合わせ用準備（床位置合わせも含む）
-            fnos.extend(self.prepare_wrist(data_set_idx))
+            bone_names.extend(self.prepare_wrist(data_set_idx))
 
             # 準備が終わったら、キーフレを追加していく
             if self.options.arm_options.alignment_finger_flg:
                 # 指位置合わせ用準備
-                fnos.extend(self.prepare_finger(data_set_idx))
+                bone_names.extend(self.prepare_finger(data_set_idx))
+        
+        # ボーン名重複除去
+        bone_names = list(set(bone_names))
 
-        # キーフレを重複除外してソートする
-        self.target_fnos = sorted(list(set(fnos)))
+        fnos = []
+        # 処理対象全ファイルセット単位でキーフレ検出
+        for data_set_idx in self.target_data_set_idxs:
+            # 処理対象データセット
+            data_set = self.options.data_set_list[data_set_idx]
+            fnos = data_set.motion.get_bone_fnos(*bone_names)
+            # キーフレを重複除外してソートする
+            fnos = sorted(list(set(fnos)))
 
         all_prev_org_effector_poses_indexes = {}
         all_prev_rep_effector_poses_indexes = {}
         all_prev_org_tip_poses_indexes = {}
         all_prev_rep_tip_poses_indexes = {}
         # 手首位置合わせ実行（先頭からキーフレ単位で見ていく必要があるので、並列化不可）
-        for fno in self.target_fnos:
+        while len(fnos) > 0:
+            fno = fnos[0]
+
             all_prev_org_effector_poses_indexes, all_prev_rep_effector_poses_indexes, \
                 all_prev_org_tip_poses_indexes, all_prev_rep_tip_poses_indexes = \
                 self.execute_alignment(fno, all_prev_org_effector_poses_indexes, all_prev_rep_effector_poses_indexes, \
                                        all_prev_org_tip_poses_indexes, all_prev_rep_tip_poses_indexes)
+
+            # キーフレが増えている可能性があるので、ここで再取得
+            for data_set_idx in self.target_data_set_idxs:
+                # 処理対象データセット
+                data_set = self.options.data_set_list[data_set_idx]
+                # 次の範囲でキーフレ検索
+                fnos = data_set.motion.get_bone_fnos(*bone_names, start_fno=(fno + 1))
+                # キーフレを重複除外してソートする
+                fnos = sorted(list(set(fnos)))
     
         return True
 
@@ -560,7 +580,7 @@ class ArmAlignmentService():
                             bf = data_set.motion.calc_bf(link_name, fno)
                             dot = MQuaternion.dotProduct(org_bfs[(data_set_idx, alignment_idx, link_name)].rotation, bf.rotation)
 
-                            if dot < 0.9:
+                            if dot < 0.8:
                                 # 内積もNGなら元に戻す
                                 logger.info("×位置合わせ失敗: f: %s(%s-%s), 近似度: %s", fno, (data_set_idx + 1), target_link.effector_display_bone_name, round(dot, 5))
                                 bf.rotation = org_bfs[(data_set_idx, alignment_idx, link_name)].rotation.copy()
@@ -583,7 +603,7 @@ class ArmAlignmentService():
                     logger.debug("☆先端位置合わせ実行(%s): f: %s(%s-%s), rep: %s, dot: %s", ik_cnt, fno, (data_set_idx + 1), \
                                  target_link.tip_bone_name, tip_vec.to_log(), dot)
 
-                    if dot < 0.9:
+                    if dot < 0.8:
                         # 内積NGなら元に戻す
                         logger.info("×先端位置合わせ失敗: f: %s(%s-%s), 近似度: %s", fno, (data_set_idx + 1), target_link.tip_ik_links.last_name(), round(dot, 5))
                         bf.rotation = org_bfs[(data_set_idx, alignment_idx, target_link.tip_ik_links.last_name())].rotation.copy()
@@ -606,7 +626,7 @@ class ArmAlignmentService():
         self.target_links[data_set_idx] = {}
         data_set = self.options.data_set_list[data_set_idx]
 
-        fnos = []
+        bone_names = []
 
         for (alignment_idx, direction) in [(1, "左"), (2, "右")]:
             # 手のひら頂点計算
@@ -632,10 +652,10 @@ class ArmAlignmentService():
             elbow_bone = rep_wrist_links.get("{0}ひじ".format(direction))
             # elbow_bone.ik_limit_min = MVector3D(-180, -0.5, -10)
             # elbow_bone.ik_limit_max = MVector3D(180, 180, 10)
-            elbow_bone.dot_limit = 0.7
+            elbow_bone.dot_limit = 0.75
 
             arm_bone = rep_wrist_links.get("{0}腕".format(direction))
-            arm_bone.dot_limit = 0.7
+            arm_bone.dot_limit = 0.75
 
             ik_links = BoneLinks()
             ik_links.append(wrist_bone)
@@ -680,7 +700,7 @@ class ArmAlignmentService():
                                    "{0}手首".format(direction), "{0}手首".format(direction), tip_bone_name, self.options.arm_options.alignment_distance_wrist, data_set.xz_ratio)
 
             # 腕・ひじ・手首のキーフレ
-            fnos.extend(data_set.motion.get_bone_fnos("{0}腕".format(direction), "{0}ひじ".format(direction), "{0}手首".format(direction)))
+            bone_names.extend(["{0}腕".format(direction), "{0}ひじ".format(direction), "{0}手首".format(direction)])
 
             # 床位置合わせも行う場合、リンク追加生成
             if self.options.arm_options.alignment_floor_flg:
@@ -713,9 +733,9 @@ class ArmAlignmentService():
 
         if self.options.arm_options.alignment_floor_flg:
             # 床位置合わせの場合、上半身系も対象とする
-            fnos.extend(data_set.motion.get_bone_fnos("上半身", "上半身2"))
+            bone_names.extend(["上半身", "上半身2"])
 
-        return fnos
+        return bone_names
 
     # 指位置合わせの準備
     def prepare_finger(self, data_set_idx: int):
@@ -755,10 +775,10 @@ class ArmAlignmentService():
                 elbow_bone = rep_finger_links.get("{0}ひじ".format(direction))
                 # elbow_bone.ik_limit_min = MVector3D(-180, -0.5, -90)
                 # elbow_bone.ik_limit_max = MVector3D(180, 180, 90)
-                elbow_bone.dot_limit = 0.7
+                elbow_bone.dot_limit = 0.75
 
                 arm_bone = rep_finger_links.get("{0}腕".format(direction))
-                arm_bone.dot_limit = 0.7
+                arm_bone.dot_limit = 0.75
 
                 ik_links = BoneLinks()
                 ik_links.append(rep_finger_links.get(total_finger_name))

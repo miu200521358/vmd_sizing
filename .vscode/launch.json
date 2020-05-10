@@ -124,7 +124,7 @@
                 "--detail_stance_flg", "0",           // スタンス追加補正FLG
                 "--twist_flg", "0;0",                   // 捩り分散
                 "--arm_process_flg_avoidance", "1",     // 剛体接触回避
-                "--avoidance_target_list", "頭;上半身",          // 対象剛体名
+                "--avoidance_target_list", "頭;上半身;胸避け",          // 対象剛体名
                 "--arm_process_flg_alignment", "0",     // 手首位置合わせ
                 "--alignment_finger_flg", "0",          // 指位置合わせ
                 "--alignment_floor_flg", "0",           // 床位置合わせ

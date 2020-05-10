@@ -21,30 +21,19 @@ class ArmPanel(BasePanel):
         alignment_tooltip = "変換先モデルの手首位置が、作成元モデルの手首とほぼ同じ位置になるよう、手首位置を調整します。"
 
         # 同じグループなので、とりあえず宣言だけしておく
-        self.arm_process_flg_nothing = wx.RadioButton(self, wx.ID_ANY, u"腕関係の処理を行わない", wx.DefaultPosition, wx.DefaultSize, style=wx.RB_GROUP)
-        self.arm_process_flg_nothing.SetValue(True)
-        self.arm_process_flg_nothing.Bind(wx.EVT_RADIOBUTTON, self.set_output_vmd_path)
-        self.arm_process_flg_avoidance = wx.RadioButton(self, wx.ID_ANY, u"", wx.DefaultPosition, wx.DefaultSize)
+        self.arm_process_flg_avoidance = wx.CheckBox(self, wx.ID_ANY, u"", wx.DefaultPosition, wx.DefaultSize)
         self.arm_process_flg_avoidance.SetToolTip(avoidance_tooltip)
-        self.arm_process_flg_avoidance.Bind(wx.EVT_RADIOBUTTON, self.set_output_vmd_path)
-        self.arm_process_flg_alignment = wx.RadioButton(self, wx.ID_ANY, u"", wx.DefaultPosition, wx.DefaultSize)
+        self.arm_process_flg_avoidance.Bind(wx.EVT_CHECKBOX, self.set_output_vmd_path)
+        self.arm_process_flg_alignment = wx.CheckBox(self, wx.ID_ANY, u"", wx.DefaultPosition, wx.DefaultSize)
         self.arm_process_flg_alignment.SetToolTip(alignment_tooltip)
-        self.arm_process_flg_alignment.Bind(wx.EVT_RADIOBUTTON, self.set_output_vmd_path)
+        self.arm_process_flg_alignment.Bind(wx.EVT_CHECKBOX, self.set_output_vmd_path)
 
-        self.description_txt = wx.StaticText(self, wx.ID_ANY, "腕を変換先モデルに合わせて調整する事ができます。\n「接触回避」と「位置合わせ」のいずれかのみ実行できます。" + \
+        self.description_txt = wx.StaticText(self, wx.ID_ANY, "腕を変換先モデルに合わせて調整する事ができます。\n「接触回避」と「位置合わせ」を合わせて実行できます。（接触回避→位置合わせの順に実行）" + \
                                              "\n腕の動きが、元々のモーションから変わる事があります。いずれもそれなりに時間がかかります。", wx.DefaultPosition, wx.DefaultSize, 0)
         self.sizer.Add(self.description_txt, 0, wx.ALL, 5)
 
         self.static_line01 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
         self.sizer.Add(self.static_line01, 0, wx.EXPAND | wx.ALL, 5)
-
-        # デフォルト
-        self.nothing_title_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.nothing_title_sizer.Add(self.arm_process_flg_nothing, 0, wx.ALL, 5)
-        self.sizer.Add(self.nothing_title_sizer, 0, wx.ALL, 5)
-        
-        self.static_line02 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
-        self.sizer.Add(self.static_line02, 0, wx.EXPAND | wx.ALL, 5)
 
         # 剛体接触回避 ----------------
         self.avoidance_title_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -176,10 +165,10 @@ class ArmPanel(BasePanel):
         self.arm_check_skip_sizer = wx.BoxSizer(wx.VERTICAL)
 
         self.arm_check_skip_flg_ctrl = wx.CheckBox(self, wx.ID_ANY, u"腕～手首のサイジング可能チェックをスキップする", wx.DefaultPosition, wx.DefaultSize, 0)
-        self.arm_check_skip_flg_ctrl.SetToolTip(u"サイジング可能チェックをスキップして、必ず処理を行うようにします。")
+        self.arm_check_skip_flg_ctrl.SetToolTip(u"サイジング可能チェック（腕IKがあると不可）をスキップして、必ず処理を行うようにします。")
         self.arm_check_skip_sizer.Add(self.arm_check_skip_flg_ctrl, 0, wx.ALL, 5)
 
-        self.arm_check_skip_description = wx.StaticText(self, wx.ID_ANY, u"腕サイジング可能チェックをスキップして、必ず腕関係処理を行うようにします。\n" \
+        self.arm_check_skip_description = wx.StaticText(self, wx.ID_ANY, u"腕サイジング可能チェック（腕IKがあると不可）をスキップして、必ず腕関係処理を行うようにします。\n" \
                                                         + "※サイジング結果がおかしくなる可能性がありますが、サポート対象外です。", \
                                                         wx.DefaultPosition, wx.DefaultSize, 0)
         self.arm_check_skip_description.Wrap(-1)
