@@ -17,7 +17,7 @@ class ArmPanel(BasePanel):
     def __init__(self, frame: wx.Frame, parent: wx.Notebook, tab_idx: int):
         super().__init__(frame, parent, tab_idx)
 
-        avoidance_tooltip = "指定文字列が名前に含まれているボーン追従剛体と手首・指先との接触を回避します。\n「頭接触回避」は頭を中心とした球体剛体を自動で計算します。（セミコロン(;)で複数指定可能）"
+        avoidance_tooltip = "指定文字列名のボーン追従剛体と手首・指先との接触を回避します。\n「頭接触回避」は頭を中心とした球体剛体を自動で計算します。（セミコロン(;)で複数指定可能）"
         alignment_tooltip = "変換先モデルの手首位置が、作成元モデルの手首とほぼ同じ位置になるよう、手首位置を調整します。"
 
         # 同じグループなので、とりあえず宣言だけしておく
