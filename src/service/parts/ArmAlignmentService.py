@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 #
 import numpy as np
+import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
 
 from mmd.PmxData import PmxModel, Bone # noqa
 from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
@@ -9,6 +11,7 @@ from module.MOptions import MOptions, MOptionsDataSet # noqa
 from module.MParams import BoneLinks # noqa
 from utils import MUtils, MServiceUtils, MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
+from utils.MException import SizingException
 
 logger = MLogger(__name__, level=1)
 
@@ -81,8 +84,66 @@ class ArmAlignmentService():
                 fnos = data_set.motion.get_bone_fnos(*bone_names, start_fno=(fno + 1))
                 # キーフレを重複除外してソートする
                 fnos = sorted(list(set(fnos)))
+        
+        result = True
+
+        futures = []
+        with ThreadPoolExecutor(thread_name_prefix="aliginment_after") as executor:
+            for data_set_idx, data_set in enumerate(self.options.data_set_list):
+                futures.append(executor.submit(self.aliginment_after, data_set_idx, "右"))
+                futures.append(executor.submit(self.aliginment_after, data_set_idx, "左"))
+
+        concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
+
+        result = True
+
+        for f in futures:
+            result = f.result() and result
     
-        return True
+        return result
+    
+    # 位置合わせ後処理
+    def aliginment_after(self, data_set_idx: int, direction: str):
+        try:
+            logger.info("%s位置合わせ後処理【No.%s】", direction, (data_set_idx + 1))
+
+            logger.copy(self.options)
+            # 処理対象データセット
+            data_set = self.options.data_set_list[data_set_idx]
+
+            for bone_name in ["{0}腕".format(direction), "{0}ひじ".format(direction), "{0}手首".format(direction)]:
+                # 読み込んだ時のキーフレのみを対象とする
+                fnos = data_set.motion.get_bone_fnos(bone_name, is_read=True)
+                if len(fnos) < 2:
+                    # 前後がない場合、全件キーフレ
+                    all_fnos = data_set.motion.get_bone_fnos(bone_name)
+                    fnos = [all_fnos[0], all_fnos[-1]]
+
+                prev_sep_fno = 0
+                log_target_idxs = []
+                for fno_idx, fno in enumerate(data_set.motion.get_bone_fnos(bone_name)):
+                    if fno // 500 > prev_sep_fno:
+                        log_target_idxs.append(fno)
+                        prev_sep_fno = fno // 500
+                log_target_idxs.append(fnos[-1])
+
+                for start_fno, end_fno in zip(fnos[:-1], fnos[1:]):
+                    # 跳ねたりしてるのを円滑化
+                    data_set.motion.smooth_bf(data_set_idx + 1, bone_name, start_fno, end_fno, data_set.rep_model.bones[bone_name].getRotatable(), \
+                                              data_set.rep_model.bones[bone_name].getTranslatable(), 5, (end_fno in log_target_idxs))
+
+                # フィルタリング処理
+                data_set.motion.smooth_filter_bf(data_set_idx + 1, bone_name, data_set.rep_model.bones[bone_name].getRotatable(), \
+                                                 data_set.rep_model.bones[bone_name].getTranslatable(), \
+                                                 config={"freq": 30, "mincutoff": 0.5, "beta": 0.1, "dcutoff": 0.5})
+
+            return True
+        except SizingException as se:
+            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
+            return False
+        except Exception as e:
+            logger.error("サイジング処理が意図せぬエラーで終了しました。", e)
+            return False
 
     # 位置合わせ実行
     def execute_alignment(self, fno: int, all_prev_org_effector_poses_indexes: dict, all_prev_rep_effector_poses_indexes: dict, \
@@ -517,7 +578,9 @@ class ArmAlignmentService():
                 for ik_links in target_link.ik_links_list:
                     for link_name in ik_links.all().keys():
                         org_bfs[(data_set_idx, alignment_idx, link_name)] = data_set.motion.calc_bf(link_name, fno).copy()
-                    org_bfs[(data_set_idx, alignment_idx, target_link.tip_ik_links.last_name())] = data_set.motion.calc_bf(target_link.tip_ik_links.last_name(), fno).copy()
+
+                    if target_link.tip_ik_links:
+                        org_bfs[(data_set_idx, alignment_idx, target_link.tip_ik_links.last_name())] = data_set.motion.calc_bf(target_link.tip_ik_links.last_name(), fno).copy()
 
             is_success = [False for _ in range(len(index_group_list))]
 
@@ -560,7 +623,7 @@ class ArmAlignmentService():
                                      target_link.effector_display_bone_name, effector_vec.to_log(), MVector3D(rep_diff).to_log(), list(dot_dict.values()))
 
                         if np.count_nonzero(np.where(np.abs(rep_diff) > 0.2, 1, 0)) == 0 and \
-                                np.count_nonzero(np.where(np.abs(np.array(list(dot_dict.values()))) < np.array(list(dot_limit_dict.values())), 1, 0)) == 0:
+                                np.count_nonzero(np.where(np.array(list(dot_dict.values())) < np.array(list(dot_limit_dict.values())), 1, 0)) == 0:
                             # 大体同じ位置にあって、角度もそう大きくズレてない場合、OK
                             is_success[group_cnt] = True
                             break
@@ -650,31 +713,31 @@ class ArmAlignmentService():
 
             # ひじは角度制限をつける
             elbow_bone = rep_wrist_links.get("{0}ひじ".format(direction))
-            # elbow_bone.ik_limit_min = MVector3D(-180, -0.5, -10)
-            # elbow_bone.ik_limit_max = MVector3D(180, 180, 10)
-            elbow_bone.dot_limit = 0.75
+            # elbow_bone.ik_limit_min = MVector3D(-180, -0.5, -90)
+            # elbow_bone.ik_limit_max = MVector3D(180, 180, 90)
+            elbow_bone.dot_limit = 0.8
 
             arm_bone = rep_wrist_links.get("{0}腕".format(direction))
-            arm_bone.dot_limit = 0.75
+            arm_bone.dot_limit = 0.7
 
             ik_links = BoneLinks()
             ik_links.append(wrist_bone)
             ik_links.append(arm_bone)
             ik_links_list.append(ik_links)
-            ik_count_list.append(2)
+            ik_count_list.append(10)
                         
             ik_links = BoneLinks()
             ik_links.append(wrist_bone)
             ik_links.append(elbow_bone)
             ik_links_list.append(ik_links)
-            ik_count_list.append(2)
+            ik_count_list.append(10)
 
             ik_links = BoneLinks()
             ik_links.append(wrist_bone)
             ik_links.append(elbow_bone)
             ik_links.append(arm_bone)
             ik_links_list.append(ik_links)
-            ik_count_list.append(3)
+            ik_count_list.append(10)
 
             if tip_bone_name == "{0}手首".format(direction):
                 # 位置合わせが手首の場合、先端調整不要
@@ -722,7 +785,7 @@ class ArmAlignmentService():
                 ik_links.append(upper_bone)
 
                 ik_links_list.append(ik_links)
-                ik_count_list.append(3)
+                ik_count_list.append(10)
 
                 # 手首リンク登録(alignmentをマイナスとする)
                 self.target_links[data_set_idx][-alignment_idx] = \
@@ -775,29 +838,29 @@ class ArmAlignmentService():
                 elbow_bone = rep_finger_links.get("{0}ひじ".format(direction))
                 # elbow_bone.ik_limit_min = MVector3D(-180, -0.5, -90)
                 # elbow_bone.ik_limit_max = MVector3D(180, 180, 90)
-                elbow_bone.dot_limit = 0.75
+                elbow_bone.dot_limit = 0.8
 
                 arm_bone = rep_finger_links.get("{0}腕".format(direction))
-                arm_bone.dot_limit = 0.75
+                arm_bone.dot_limit = 0.7
 
                 ik_links = BoneLinks()
                 ik_links.append(rep_finger_links.get(total_finger_name))
                 ik_links.append(arm_bone)
                 ik_links_list.append(ik_links)
-                ik_count_list.append(2)
+                ik_count_list.append(10)
                             
                 ik_links = BoneLinks()
                 ik_links.append(rep_finger_links.get(total_finger_name))
                 ik_links.append(elbow_bone)
                 ik_links_list.append(ik_links)
-                ik_count_list.append(2)
+                ik_count_list.append(10)
 
                 ik_links = BoneLinks()
                 ik_links.append(rep_finger_links.get(total_finger_name))
                 ik_links.append(elbow_bone)
                 ik_links.append(arm_bone)
                 ik_links_list.append(ik_links)
-                ik_count_list.append(3)
+                ik_count_list.append(10)
 
                 # 先端リンク
                 tip_ik_links = BoneLinks()

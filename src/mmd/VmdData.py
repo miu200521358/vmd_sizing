@@ -267,7 +267,7 @@ class VmdMotion():
                     now_bf = self.calc_bf(bone_name, fno + offset)
                     next_bf = self.calc_bf(bone_name, fno + 3)
 
-                    if is_rot:
+                    if is_rot and now_bf.key:
                         # 前後の内積
                         prev_next_dot = MQuaternion.dotProduct(prev_bf.rotation, next_bf.rotation)
                         # 自分と後の内積
@@ -277,7 +277,7 @@ class VmdMotion():
                         logger.test("set: %s, %s, f: %s, offset: %s, diff: %s, prev_next_dot: %s, now_next_dot: %s", data_set_no, bone_name, fno, offset, diff, prev_next_dot, now_next_dot)
 
                         # 前後と自分の内積の差が一定以上の場合、円滑化
-                        if prev_next_dot > now_next_dot and diff > 1 - math.cos(math.radians(limit_degrees)):
+                        if prev_next_dot > now_next_dot and diff > math.radians(limit_degrees):
                             logger.debug("★ 円滑化 set: %s, %s, f: %s, offset: %s, diff: %s, prev_next_dot: %s, now_next_dot: %s", \
                                          data_set_no, bone_name, fno, offset, diff, prev_next_dot, now_next_dot)
 

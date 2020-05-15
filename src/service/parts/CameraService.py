@@ -572,7 +572,7 @@ class CameraService():
             self.prepare_link(data_set.camera_org_model, data_set.rep_model, org_links, org_link_target, rep_links, ["{0}足".format(direction), "下半身"], ["{0}足".format(direction)])
 
         # 頭頂実体をオフセット調整
-        rep_links["頭頂実体"].get("頭頂実体").position.setY(rep_links["頭頂実体"].get("頭頂実体").position.y() + data_set.camera_offset_y)
+        rep_links["頭頂実体"].get("頭頂実体").position.setY(float(rep_links["頭頂実体"].get("頭頂実体").position.y()) + float(data_set.camera_offset_y))
 
         self.camera_options[data_set_idx] = CameraOption(org_links, org_link_target, rep_links, org_total_height, org_face_length, org_heads, \
                                                          rep_total_height, rep_face_length, rep_heads, body_ratio, head_ratio)

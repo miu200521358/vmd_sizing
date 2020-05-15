@@ -25,6 +25,9 @@ class CameraPanel(BasePanel):
                                              + "全長オフセットYは、カメラに映す変換先モデルの全長を調整するオフセット値を指定できます。", wx.DefaultPosition, wx.DefaultSize, 0)
         self.header_sizer.Add(self.description_txt, 0, wx.ALL, 5)
 
+        self.static_line01 = wx.StaticLine(self.header_panel, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
+        self.header_sizer.Add(self.static_line01, 0, wx.EXPAND | wx.ALL, 5)
+
         # カメラVMDファイルコントロール
         self.camera_vmd_file_ctrl = HistoryFilePickerCtrl(self.frame, self.header_panel, u"カメラモーションVMD", u"カメラモーションVMDファイルを開く", ("vmd"), wx.FLP_DEFAULT_STYLE, \
                                                           u"調整したいカメラモーションのVMDパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。", \
