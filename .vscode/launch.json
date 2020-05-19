@@ -55,13 +55,19 @@
                 // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/Tda式デフォ服ミク_ver1.1 金子卵黄/Tda式初音ミク_デフォ服ver.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/Tda式デフォ服ミク_ver1.1 金子卵黄/Tda式初音ミク_デフォ服ver.pmx",
                 // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/_VMDサイジング/8頭身審神者 猫のしもべ/8頭身審神者3_剛体.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/_VMDサイジング/8頭身審神者 猫のしもべ/8頭身審神者3_剛体2.pmx",
 
-                // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/ELECT yurie/エレクト_2375-2420.vmd",
-                // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ゲーム/戦国BASARA/幸村 たぬき式 ver.1.24/真田幸村没第二衣装1.24軽量版.pmx",
-                // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/025_一期一振/一期一振 ひわこ式 ver.2.0/ねんどろいちご(25％).pmx",
+                "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/ELECT yurie/エレクト_2375-2420.vmd",
+                "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ゲーム/戦国BASARA/幸村 たぬき式 ver.1.24/真田幸村没第二衣装1.24軽量版.pmx",
+                "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/025_一期一振/一期一振 ひわこ式 ver.2.0/ねんどろいちご(25％).pmx",
 
-                "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/少女ふぜゐ　モーション配布 づなうじ/少女ふぜゐIK_0-1000.vmd",
-                "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/艦隊これくしょん/舞風ver2 お宮/舞風ver2武装無し.pmx",
-                "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/107_髭切/【刀犬】源氏mkmk002b/髭切【刀犬】mkmk002a刀犬男士/髭切刀犬男士小mkmk002a.pmx",
+                // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/少女ふぜゐ　モーション配布 づなうじ/少女ふぜゐIK_0-1000.vmd",
+                // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/艦隊これくしょん/舞風ver2 お宮/舞風ver2武装無し.pmx",
+                // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/107_髭切/【刀犬】源氏mkmk002b/髭切【刀犬】mkmk002a刀犬男士/髭切刀犬男士小mkmk002a.pmx",
+
+                // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/テオ　モーション じゅんこだ/さとく式鶯丸_0-2000.vmd",
+                // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/055_鶯丸/鶯丸 さとく式 ver0.90/さとく式鶯丸ver0.90.pmx",
+                // // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/艦隊これくしょん/重巡洋艦Pola_v0.9b つみだんご/Pola(艤装なし).pmx",
+                // // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ゲーム/Fate/hoge式源頼光ver1.00/hoge式源頼光ver1.00_剛体カプセル.pmx",
+                // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/_VMDサイジング/8頭身審神者 猫のしもべ/8頭身審神者3_剛体2.pmx;",
 
                 // "--motion_path", "C:/MMD/vmd_sizing/vmd/20191226_らぶ肩01.vmd",
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/_VMDサイジング/鳳仙花/鳳仙花mkmk髭切007bミュ第一_0-2000.vmd",
@@ -130,13 +136,14 @@
                 "--detail_stance_flg", "0",           // スタンス追加補正FLG
                 "--twist_flg", "0;0",                   // 捩り分散
                 "--arm_process_flg_avoidance", "1",     // 剛体接触回避
-                "--avoidance_target_list", "頭接触回避",          // 対象剛体名
+                "--avoidance_target_list", "頭接触回避;胸接触回避;テスト",          // 対象剛体名
                 "--arm_process_flg_alignment", "0",     // 手首位置合わせ
                 "--alignment_finger_flg", "0",          // 指位置合わせ
                 "--alignment_floor_flg", "0",           // 床位置合わせ
                 "--alignment_distance_wrist", "1.7",    // 手首距離
                 "--alignment_distance_finger", "1.4",   // 指距離
                 "--alignment_distance_floor", "1.8",    // 床距離
+                "--arm_check_skip_flg", "1",            // 腕チェックスキップ
                 "--camera_motion_path", "",
                 "--camera_org_model_path", "",
                 "--camera_offset_y", "",

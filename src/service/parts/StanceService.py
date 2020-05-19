@@ -33,12 +33,11 @@ class StanceService():
 
         concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
-        result = True
-
         for f in futures:
-            result = f.result() and result
-    
-        return result
+            if not f.result():
+                return False
+
+        return True
     
     def execute_pool(self, data_set_idx: int):
         try:
@@ -85,10 +84,11 @@ class StanceService():
             return True
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
-            return False
+            return se
         except Exception as e:
-            logger.error("サイジング処理が意図せぬエラーで終了しました。", e)
-            return False
+            import traceback
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            raise e
 
     # 捩り分散
     def spread_twist(self, data_set_idx: int, data_set: MOptionsDataSet):
@@ -103,7 +103,9 @@ class StanceService():
         for f in futures:
             if not f.result():
                 return False
-                 
+
+        return True
+
     # 捩り分散左右
     def spread_twist_lr(self, data_set_idx: int, direction: str):
         try:
@@ -207,6 +209,7 @@ class StanceService():
 
                         for start_fno, end_fno in zip(fnos[:-1], fnos[1:]):
                             futures.append(executor.submit(self.smooth_twist, data_set_idx, bone_name, start_fno, end_fno, log_target_idxs))
+
                 concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
                 for f in futures:
                     if not f.result():
@@ -235,6 +238,7 @@ class StanceService():
                             log_target_idxs.append(fnos[-1])
 
                             futures.append(executor.submit(self.remove_unnecessary_bf_pool_parts, data_set_idx, bone_name, fnos[1], fnos[-1], log_target_idxs))
+
                     concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
                     for f in futures:
                         if not f.result():
@@ -249,6 +253,7 @@ class StanceService():
                 with ThreadPoolExecutor(thread_name_prefix="twist_smooth{0}".format(data_set_idx)) as executor:
                     for bone_name in [arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name]:
                         futures.append(executor.submit(self.smooth_filter_twist, data_set_idx, bone_name))
+
                 concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
                 for f in futures:
                     if not f.result():
@@ -259,10 +264,11 @@ class StanceService():
             return True
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
-            return False
+            return se
         except Exception as e:
-            logger.error("サイジング処理が意図せぬエラーで終了しました。", e)
-            return False
+            import traceback
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            raise e
 
     def remove_unnecessary_bf_pool_parts(self, data_set_idx: int, bone_name: str, start_fno: int, end_fno: int, log_target_idxs: list):
         try:
@@ -275,10 +281,11 @@ class StanceService():
             return True
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
-            return False
+            return se
         except Exception as e:
-            logger.error("サイジング処理が意図せぬエラーで終了しました。", e)
-            return False
+            import traceback
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            raise e
     
     def smooth_twist(self, data_set_idx: int, bone_name: str, start_fno: int, end_fno: int, log_target_idxs: list):
         try:
@@ -291,10 +298,11 @@ class StanceService():
             return True
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
-            return False
+            return se
         except Exception as e:
-            logger.error("サイジング処理が意図せぬエラーで終了しました。", e)
-            return False
+            import traceback
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            raise e
 
     def smooth_filter_twist(self, data_set_idx: int, bone_name: str):
         try:
@@ -307,10 +315,11 @@ class StanceService():
             return True
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
-            return False
+            return se
         except Exception as e:
-            logger.error("サイジング処理が意図せぬエラーで終了しました。", e)
-            return False
+            import traceback
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            raise e
 
     # 捩り分散のPool内処理
     def prepare_spread_twist_pool(self, data_set_idx: int, bone_name: str):
@@ -326,10 +335,11 @@ class StanceService():
             return True
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
-            return False
+            return se
         except Exception as e:
-            logger.error("サイジング処理が意図せぬエラーで終了しました。", e)
-            return False
+            import traceback
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            raise e
 
     # 捩り分散のPool内処理
     def spread_twist_pool(self, data_set_idx: int, fno_idx: int, fno: int, last_fno: int, arm_bone_name: str, arm_twist_bone_name: str, elbow_bone_name: str, \
@@ -437,10 +447,11 @@ class StanceService():
             return True
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
-            return False
+            return se
         except Exception as e:
-            logger.error("サイジング処理が意図せぬエラーで終了しました。", e)
-            return False
+            import traceback
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            raise e
 
     # 捩りの回転量を計算する
     def calc_twist_qq(self, data_set_idx: int, fno: int, bone_name: str, grand_parent_x_axis: MVector3D, original_grand_parent_qq: MQuaternion, \
@@ -684,11 +695,14 @@ class StanceService():
         with ThreadPoolExecutor(thread_name_prefix="toe{0}".format(data_set_idx), max_workers=2) as executor:
             for direction in ["左", "右"]:
                 futures.append(executor.submit(self.adjust_toe_stance_lr, data_set_idx, direction))
+
         concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
         for f in futures:
             if not f.result():
                 return False
+
+        return True
                  
     # つま先補正
     def adjust_toe_stance_lr(self, data_set_idx: int, direction: str):
@@ -780,10 +794,11 @@ class StanceService():
             return True
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
-            return False
+            return se
         except Exception as e:
-            logger.error("サイジング処理が意図せぬエラーで終了しました。", e)
-            return False
+            import traceback
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            raise e
 
     # つま先の差異
     def get_toe_diff(self, data_set_idx: int, data_set: MOptionsDataSet, org_toe_links: BoneLinks, rep_toe_links: BoneLinks, toe_limit_ratio: float, ik_bone_name: str, fno: int):
@@ -1374,12 +1389,15 @@ class StanceService():
         with ThreadPoolExecutor(thread_name_prefix="shoulder{0}".format(data_set_idx), max_workers=2) as executor:
             for direction in ["左", "右"]:
                 futures.append(executor.submit(self.adjust_shoulder_stance_lr, data_set_idx, "{0}肩P".format(direction), "{0}肩".format(direction), "{0}腕".format(direction)))
+
         concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
         for f in futures:
             if not f.result():
                 return False
-        
+
+        return True
+
     # 肩スタンス補正左右
     def adjust_shoulder_stance_lr(self, data_set_idx: int, shoulder_p_name: str, shoulder_name: str, arm_name: str):
         try:
@@ -1525,10 +1543,11 @@ class StanceService():
             return True
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
-            return False
+            return se
         except Exception as e:
-            logger.error("サイジング処理が意図せぬエラーで終了しました。", e)
-            return False
+            import traceback
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            raise e
 
     # 肩スタンス補正
     def calc_rotation_stance_shoulder(self, bf: VmdBoneFrame, data_set_idx: int, data_set: MOptionsDataSet, \
@@ -1698,7 +1717,9 @@ class StanceService():
         for f in futures:
             if not f.result():
                 return False
-    
+
+        return True
+
     def adjust_arm_stance_twist_pool(self, data_set_idx: int, bone_name: str):
         try:
             logger.copy(self.options)
@@ -1724,10 +1745,11 @@ class StanceService():
             return True
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
-            return False
+            return se
         except Exception as e:
-            logger.error("サイジング処理が意図せぬエラーで終了しました。", e)
-            return False
+            import traceback
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            raise e
 
     # 腕スタンス補正左右
     def adjust_arm_stance_pool(self, data_set_idx: int, arm_diff_qq_dic: dict, bone_name: str):
@@ -1751,10 +1773,11 @@ class StanceService():
             return True
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
-            return False
+            return se
         except Exception as e:
-            logger.error("サイジング処理が意図せぬエラーで終了しました。", e)
-            return False
+            import traceback
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            raise e
 
     # 腕スタンス補正用傾き計算
     def calc_arm_stance(self, data_set: MOptionsDataSet):

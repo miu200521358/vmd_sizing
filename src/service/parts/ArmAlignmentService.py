@@ -85,25 +85,22 @@ class ArmAlignmentService():
                 # キーフレを重複除外してソートする
                 fnos = sorted(list(set(fnos)))
         
-        result = True
-
         futures = []
-        with ThreadPoolExecutor(thread_name_prefix="aliginment_after") as executor:
+        with ThreadPoolExecutor(thread_name_prefix="alignment_after") as executor:
             for data_set_idx, data_set in enumerate(self.options.data_set_list):
-                futures.append(executor.submit(self.aliginment_after, data_set_idx, "右"))
-                futures.append(executor.submit(self.aliginment_after, data_set_idx, "左"))
+                futures.append(executor.submit(self.alignment_after, data_set_idx, "右"))
+                futures.append(executor.submit(self.alignment_after, data_set_idx, "左"))
 
         concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
-        result = True
-
         for f in futures:
-            result = f.result() and result
-    
-        return result
+            if not f.result():
+                return False
+
+        return True
     
     # 位置合わせ後処理
-    def aliginment_after(self, data_set_idx: int, direction: str):
+    def alignment_after(self, data_set_idx: int, direction: str):
         try:
             logger.info("%s位置合わせ後処理【No.%s】", direction, (data_set_idx + 1))
 
@@ -140,10 +137,11 @@ class ArmAlignmentService():
             return True
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
-            return False
+            return se
         except Exception as e:
-            logger.error("サイジング処理が意図せぬエラーで終了しました。", e)
-            return False
+            import traceback
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            raise e
 
     # 位置合わせ実行
     def execute_alignment(self, fno: int, all_prev_org_effector_poses_indexes: dict, all_prev_rep_effector_poses_indexes: dict, \
@@ -713,19 +711,21 @@ class ArmAlignmentService():
 
             # ひじは角度制限をつける
             elbow_bone = rep_wrist_links.get("{0}ひじ".format(direction))
-            # elbow_bone.ik_limit_min = MVector3D(-180, -0.5, -90)
-            # elbow_bone.ik_limit_max = MVector3D(180, 180, 90)
-            elbow_bone.dot_limit = 0.8
+            elbow_bone.ik_limit_min = MVector3D(-180, -0.5, -90)
+            elbow_bone.ik_limit_max = MVector3D(180, 180, 90)
+            elbow_bone.dot_limit = 0.7
 
             arm_bone = rep_wrist_links.get("{0}腕".format(direction))
             arm_bone.dot_limit = 0.7
 
-            ik_links = BoneLinks()
-            ik_links.append(wrist_bone)
-            ik_links.append(arm_bone)
-            ik_links_list.append(ik_links)
-            ik_count_list.append(10)
-                        
+            if not self.options.arm_options.avoidance:
+                # 腕だけ動かすパターンは接触回避もやった場合は行わない
+                ik_links = BoneLinks()
+                ik_links.append(wrist_bone)
+                ik_links.append(arm_bone)
+                ik_links_list.append(ik_links)
+                ik_count_list.append(10)
+            
             ik_links = BoneLinks()
             ik_links.append(wrist_bone)
             ik_links.append(elbow_bone)
@@ -838,16 +838,18 @@ class ArmAlignmentService():
                 elbow_bone = rep_finger_links.get("{0}ひじ".format(direction))
                 # elbow_bone.ik_limit_min = MVector3D(-180, -0.5, -90)
                 # elbow_bone.ik_limit_max = MVector3D(180, 180, 90)
-                elbow_bone.dot_limit = 0.8
+                elbow_bone.dot_limit = 0.7
 
                 arm_bone = rep_finger_links.get("{0}腕".format(direction))
                 arm_bone.dot_limit = 0.7
 
-                ik_links = BoneLinks()
-                ik_links.append(rep_finger_links.get(total_finger_name))
-                ik_links.append(arm_bone)
-                ik_links_list.append(ik_links)
-                ik_count_list.append(10)
+                if not self.options.arm_options.avoidance:
+                    # 腕だけ動かすパターンは接触回避もやった場合は行わない
+                    ik_links = BoneLinks()
+                    ik_links.append(rep_finger_links.get(total_finger_name))
+                    ik_links.append(arm_bone)
+                    ik_links_list.append(ik_links)
+                    ik_count_list.append(10)
                             
                 ik_links = BoneLinks()
                 ik_links.append(rep_finger_links.get(total_finger_name))

@@ -21,7 +21,6 @@ class MoveService():
 
     def execute(self):
         futures = []
-        result = True
 
         with ThreadPoolExecutor(thread_name_prefix="move", max_workers=5) as executor:
             for data_set_idx, data_set in enumerate(self.options.data_set_list):
@@ -47,9 +46,10 @@ class MoveService():
         concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
         for f in futures:
-            result = f.result() and result
+            if not f.result():
+                return False
 
-        return result
+        return True
     
     def adjust_move(self, data_set_idx: int, bone_name: str):
         try:
@@ -74,10 +74,11 @@ class MoveService():
             return True
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
-            return False
+            return se
         except Exception as e:
-            logger.error("サイジング処理が意図せぬエラーで終了しました。", e)
-            return False
+            import traceback
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            raise e
 
     def set_leg_ik_offset(self, data_set_idx: int, data_set: MOptionsDataSet):
         target_bones = ["左足", "左足ＩＫ", "右足ＩＫ"]

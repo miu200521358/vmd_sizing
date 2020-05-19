@@ -75,6 +75,7 @@ class BoneLinks():
 
         return list(self.__links.keys())[-1]
     
+    # 最後のリンク名を取得する
     def last_display_name(self):
         if not self.__links:
             return ""
@@ -87,6 +88,13 @@ class BoneLinks():
             return ""
 
         return list(self.__links.keys())[0]
+
+    # 最初のリンク名を取得する
+    def first_display_name(self):
+        if not self.__links:
+            return ""
+
+        return list(self.__links.keys())[0].replace("実体", "")
 
     def __str__(self):
         return "<BoneLinks links:{0}".format(self.__links)
