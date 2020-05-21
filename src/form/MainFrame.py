@@ -158,6 +158,12 @@ class MainFrame(wx.Frame):
             event.Skip()
             return
 
+        elif self.arm_panel_ctrl.is_fix_tab:
+            # 腕タブの固定が指定されている場合、固定はファイルタブ
+            self.note_ctrl.ChangeSelection(self.file_panel_ctrl.tab_idx)
+            event.Skip()
+            return
+
         elif self.smooth_panel_ctrl.is_fix_tab:
             self.note_ctrl.ChangeSelection(self.smooth_panel_ctrl.tab_idx)
             event.Skip()
@@ -191,7 +197,21 @@ class MainFrame(wx.Frame):
 
             # 読み込み処理実行
             self.load(is_morph=True)
-        
+
+        if self.note_ctrl.GetSelection() == self.arm_panel_ctrl.tab_idx:
+            # コンソールクリア
+            self.file_panel_ctrl.console_ctrl.Clear()
+            wx.GetApp().Yield()
+
+            # 一旦ファイルタブに固定
+            self.note_ctrl.SetSelection(self.file_panel_ctrl.tab_idx)
+            self.arm_panel_ctrl.fix_tab()
+
+            logger.info("腕タブ表示準備開始\nファイル読み込み処理を実行します。少しお待ちください....", decoration=MLogger.DECORATION_BOX)
+
+            # 読み込み処理実行
+            self.load(is_arm=True)
+                
         if self.note_ctrl.GetSelection() == self.camera_panel_ctrl.tab_idx:
             # カメラタブを開く場合、カメラタブ初期化処理実行
             self.note_ctrl.ChangeSelection(self.camera_panel_ctrl.tab_idx)
@@ -201,6 +221,7 @@ class MainFrame(wx.Frame):
     def release_tab(self):
         self.file_panel_ctrl.release_tab()
         self.morph_panel_ctrl.release_tab()
+        self.arm_panel_ctrl.release_tab()
 
     # フォーム入力可
     def enable(self):
@@ -241,7 +262,7 @@ class MainFrame(wx.Frame):
         return worked_time
 
     # 読み込み
-    def load(self, is_exec=False, is_morph=False):
+    def load(self, is_exec=False, is_morph=False, is_arm=False):
         # フォーム無効化
         self.file_panel_ctrl.disable()
         # タブ固定
@@ -252,16 +273,17 @@ class MainFrame(wx.Frame):
         result = self.is_valid() and result
 
         if not result:
-            if is_morph:
+            if is_morph or is_arm:
+                tab_name = "モーフ" if is_morph else "腕"
                 # 読み込み出来なかったらエラー
-                logger.error("「ファイル」タブで以下のいずれかのファイルパスが指定されていないため、「モーフ」タブが開けません。" \
+                logger.error("「ファイル」タブで以下のいずれかのファイルパスが指定されていないため、「{tab_name}」タブが開けません。".format(tab_name=tab_name) \
                              + "\n・調整対象VMDファイル" \
                              + "\n・作成元モデルPMXファイル" \
                              + "\n・変換先モデルPMXファイル" \
                              + "\n既に指定済みの場合、現在読み込み中の可能性があります。" \
                              + "\n特に長いVMDは読み込みに時間がかかります。" \
                              + "\n調整に必要な３ファイルすべてを指定して、" \
-                             + "\n「■読み込み成功」のログが出てから、「モーフ」タブを開いてください。", decoration=MLogger.DECORATION_BOX)
+                             + "\n「■読み込み成功」のログが出てから、「{tab_name}」タブを開いてください。".format(tab_name=tab_name), decoration=MLogger.DECORATION_BOX)
 
             # タブ移動可
             self.release_tab()
@@ -275,7 +297,7 @@ class MainFrame(wx.Frame):
             logger.error("まだ処理が実行中です。終了してから再度実行してください。", decoration=MLogger.DECORATION_BOX)
         else:
             # 別スレッドで実行
-            self.load_worker = LoadWorkerThread(self, LoadThreadEvent, is_exec, is_morph)
+            self.load_worker = LoadWorkerThread(self, LoadThreadEvent, is_exec, is_morph, is_arm)
             self.load_worker.start()
             self.load_worker.stop_event.set()
 
@@ -340,6 +362,11 @@ class MainFrame(wx.Frame):
             # モーフタブを開く場合、モーフタブ初期化処理実行
             self.note_ctrl.ChangeSelection(self.morph_panel_ctrl.tab_idx)
             self.morph_panel_ctrl.initialize(event)
+
+        elif event.is_arm:
+            # 腕タブを開く場合、腕タブ初期化処理実行
+            self.note_ctrl.ChangeSelection(self.arm_panel_ctrl.tab_idx)
+            self.arm_panel_ctrl.initialize(event)
 
         else:
             # 終了音を鳴らす

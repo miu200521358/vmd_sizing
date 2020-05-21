@@ -48,13 +48,15 @@ class SizingService():
                 service_data_txt = "{service_data_txt}　　捩り分散有無: {twist_flg}\n".format(service_data_txt=service_data_txt,
                                         twist_flg=data_set.twist_flg) # noqa
 
+                if data_set_idx in self.options.arm_options.avoidance_target_list:
+                    service_data_txt = "{service_data_txt}　　対象剛体名: {avoidance_target}\n".format(service_data_txt=service_data_txt,
+                                            avoidance_target=",".join(self.options.arm_options.avoidance_target_list[data_set_idx])) # noqa
+
             service_data_txt = "{service_data_txt}\n--------- \n".format(service_data_txt=service_data_txt) # noqa
 
             if self.options.arm_options.avoidance:
                 service_data_txt = "{service_data_txt}剛体接触回避: {avoidance}\n".format(service_data_txt=service_data_txt,
                                         avoidance=self.options.arm_options.avoidance) # noqa
-                service_data_txt = "{service_data_txt}対象剛体名: {avoidance_target}\n".format(service_data_txt=service_data_txt,
-                                        avoidance_target=",".join(self.options.arm_options.avoidance_target_list)) # noqa
 
             if self.options.arm_options.alignment:
                 service_data_txt = "{service_data_txt}手首位置合わせ: {alignment} ({distance})\n".format(service_data_txt=service_data_txt,

@@ -20,10 +20,11 @@ logger = MLogger(__name__, level=1)
 # 接触回避用オプション
 class ArmAvoidanceOption():
 
-    def __init__(self, arm_links: BoneLinks, ik_links_list: list, ik_count_list: list, avoidance_links: dict, avoidances: dict):
+    def __init__(self, arm_links: BoneLinks, wrist_links: BoneLinks, ik_links_list: list, ik_count_list: list, avoidance_links: dict, avoidances: dict):
         super().__init__()
 
         self.arm_links = arm_links
+        self.wrist_links = wrist_links
         self.ik_links_list = ik_links_list
         self.ik_count_list = ik_count_list
         self.avoidance_links = avoidance_links
@@ -187,6 +188,15 @@ class ArmAvoidanceService():
                     if link_name not in total_org_bfs:
                         total_org_bfs[link_name] = data_set.motion.calc_bf(link_name, fno).copy()
 
+        arm_bone_name = "{0}腕".format(link_name[0])
+        elbow_bone_name = "{0}ひじ".format(link_name[0])
+        wrist_bone_name = "{0}手首".format(link_name[0])
+        elbow_local_x_axis = data_set.rep_model.get_local_x_axis(elbow_bone_name)
+        elbow_local_y_axis = MVector3D.crossProduct(elbow_local_x_axis, MVector3D(0, 0, -1)).normalized()
+        # 変更前モーションの手首までのグローバル位置
+        org_wrist_global_3ds = MServiceUtils.calc_global_pos(data_set.rep_model, avoidance_options.wrist_links, data_set.motion, fno)
+
+        is_total_success = []
         for ((avoidance_name, avodance_link), avoidance) in zip(avoidance_options.avoidance_links.items(), avoidance_options.avoidances.values()):
             # 剛体の現在位置をチェック
             rep_avbone_global_3ds, rep_avbone_global_mats = \
@@ -214,7 +224,9 @@ class ArmAvoidanceService():
                     for link_name in ik_links.all().keys():
                         if link_name not in org_bfs:
                             org_bfs[link_name] = data_set.motion.calc_bf(link_name, fno).copy()
-
+            if elbow_bone_name not in org_bfs:
+                org_bfs[elbow_bone_name] = data_set.motion.calc_bf(elbow_bone_name, fno).copy()
+            
             collision = False
             is_success = []
             is_failure_last_names = []
@@ -270,7 +282,7 @@ class ArmAvoidanceService():
                                 prev_dot = MQuaternion.dotProduct(prev_org_bfs[link_name].rotation, bf.rotation)
                                 
                                 if prev_dot > 1 - math.radians(3) and link_name in prev_correct_qq:
-                                    # 差異が5度以内の場合、前回の修正角度を適用するようリンク追加
+                                    # 差異が一定以内の場合、前回の修正角度を適用するようリンク追加
                                     is_target_names.append(link_name)
                                 else:
                                     logger.debug("前回適用なし f: %s(%s-%s:%s), prev[%s], now[%s], prev_dot[%s]", \
@@ -371,21 +383,6 @@ class ArmAvoidanceService():
                             is_success.append(True)
                             total_success_cnt += 1
 
-                            # # 手首の位置をキャンセルする
-                            # cancel_rot = MQuaternion()
-                            # for link_name in reversed(list(ik_links.all().keys())[1:]):
-                            #     # 親から順に
-                            #     cancel_rot *= data_set.motion.calc_bf(link_name, fno).rotation.inverted()
-                            #     cancel_rot *= org_bfs[link_name].rotation
-
-                            #     logger.debug("f: %s, cancel_rot: %s", fno, cancel_rot.toEulerAngles())
-                            
-                            # # 手首にキャンセル分をかける
-                            # wrist_name = "{0}手首".format(arm_link.last_name()[0])
-                            # wrist_bf = data_set.motion.calc_bf(wrist_name, fno)
-                            # wrist_bf.rotation = cancel_rot * wrist_bf.rotation
-                            # data_set.motion.regist_bf(wrist_bf, wrist_name, fno)
-
                             for link_name in list(ik_links.all().keys())[1:]:
                                 total_correct_qq[link_name] = total_org_bfs[link_name].rotation.inverted() * data_set.motion.calc_bf(link_name, fno).rotation
                                 logger.debug("f: %s(%s:%s:%s), total_org[%s], now[%s], diff[%s]", fno, (data_set_idx + 1), link_name, avoidance_name, \
@@ -425,6 +422,38 @@ class ArmAvoidanceService():
             if len(is_success) > 0 and is_success.count(False) > 0:
                 # どこかのパターンで失敗してる場合、失敗ログ
                 logger.info("×回避失敗: f: %s(%s-%s:%s) %s", fno, (data_set_idx + 1), direction, avoidance_name, ', '.join(list(set(is_failure_last_names))))
+            
+            # if len(is_success) > 0 and is_success.count(False) == 0:
+            #     is_total_success.extend(is_success)
+            #     # 全成功であれば、ひじの向きを調整前に合わせる
+                
+            #     # 元々のひじの角度
+            #     org_elbow_x_qq, org_elbow_y_qq, org_elbow_z_qq, org_elbow_yz_qq = \
+            #         MServiceUtils.separate_local_qq(fno, elbow_bone_name, org_bfs[elbow_bone_name].rotation, elbow_local_x_axis)
+            #     # 現在のひじ
+            #     elbow_bf = data_set.motion.calc_bf(elbow_bone_name, fno)
+            #     rep_elbow_x_qq, rep_elbow_y_qq, rep_elbow_z_qq, rep_elbow_yz_qq = \
+            #         MServiceUtils.separate_local_qq(fno, elbow_bone_name, elbow_bf.rotation, elbow_local_x_axis)
+
+            #     # 回避後手首までのグローバル位置
+            #     rep_wrist_global_3ds = MServiceUtils.calc_global_pos(data_set.rep_model, avoidance_options.wrist_links, data_set.motion, fno)
+            #     # 回避後ひじまでのグローバル位置（ひじ角度は初期値）
+            #     rep_elbow_global_3ds = MServiceUtils.calc_global_pos(data_set.rep_model, avoidance_options.wrist_links, data_set.motion, fno, \
+            #                                                          limit_links=avoidance_options.wrist_links.from_links(arm_bone_name))
+
+            #     # 初期スタンスから元のグローバル位置までの回転量
+            #     correct_elbow_qq = MQuaternion.rotationTo((rep_elbow_global_3ds[wrist_bone_name] - rep_elbow_global_3ds[elbow_bone_name]).normalized(), \
+            #                                               (org_wrist_global_3ds[wrist_bone_name] - rep_wrist_global_3ds[elbow_bone_name]).normalized())
+            #     correct_elbow_y_qq = MQuaternion.fromAxisAndAngle(elbow_local_y_axis, correct_elbow_qq.toDegree())
+
+            #     # Xの捩りと合わせてひじに登録する
+            #     elbow_global_qq = correct_elbow_y_qq * org_elbow_x_qq
+            #     logger.debug("ひじ調整(%s): f: %s(%s:%s:%s), axis: %s, org: %s, correct: %s, correcty: %s, rep: %s", ik_cnt, fno, (data_set_idx + 1), \
+            #                  list(ik_links.all().keys()), avoidance_name, axis, org_bfs[elbow_bone_name].rotation.toEulerAngles().to_log(), \
+            #                  correct_elbow_qq.toEulerAngles().to_log(), correct_elbow_y_qq.toEulerAngles().to_log(), elbow_global_qq.toEulerAngles().to_log())
+                
+            #     elbow_bf.rotation = elbow_global_qq
+            #     data_set.motion.regist_bf(elbow_bf, elbow_bone_name, fno)
 
         # どっちにしろbf確定
         for arm_link in avoidance_options.arm_links:
@@ -468,7 +497,7 @@ class ArmAvoidanceService():
         avoidance_links = {}
         avoidances = {}
         
-        if "頭接触回避" in self.options.arm_options.avoidance_target_list:
+        if "頭接触回避" in self.options.arm_options.avoidance_target_list[data_set_idx]:
             # 頭接触回避用剛体取得
             head_rigidbody = data_set.rep_model.get_head_rigidbody()
             head_rigidbody.is_small = (face_length <= 3)
@@ -485,7 +514,7 @@ class ArmAvoidanceService():
         # self.calc_elbow_middle_entity_vertex(data_set_idx, data_set.rep_model, "変換先", direction)
         
         logger.debug("list: %s", self.options.arm_options.avoidance_target_list)
-        for avoidance_target in self.options.arm_options.avoidance_target_list:
+        for avoidance_target in self.options.arm_options.avoidance_target_list[data_set_idx]:
             if avoidance_target and len(avoidance_target) > 0:
                 for rigidbody_name, rigidbody in data_set.rep_model.rigidbodies.items():
                     # 処理対象剛体：剛体名が指定の文字列であり、かつボーン追従剛体
@@ -531,9 +560,9 @@ class ArmAvoidanceService():
 
             # ひじは角度制限をつける
             elbow_bone = arm_link.get("{0}ひじ".format(direction))
-            elbow_bone.ik_limit_min = MVector3D(-180, -0.5, -90)
-            elbow_bone.ik_limit_max = MVector3D(180, 180, 90)
-            elbow_bone.dot_limit = 0.6
+            # elbow_bone.ik_limit_min = MVector3D(-180, -0.5, -10)
+            # elbow_bone.ik_limit_max = MVector3D(180, 180, 10)
+            elbow_bone.dot_limit = 0.7
 
             arm_bone = arm_link.get("{0}腕".format(direction))
             arm_bone.dot_limit = 0.7
@@ -543,7 +572,13 @@ class ArmAvoidanceService():
             ik_links.append(arm_bone)
             ik_links_list[effector_bone_name].append(ik_links)
             ik_count_list[effector_bone_name].append(5)
-        
+
+            ik_links = BoneLinks()
+            ik_links.append(effector_bone)
+            ik_links.append(elbow_bone)
+            ik_links_list[effector_bone_name].append(ik_links)
+            ik_count_list[effector_bone_name].append(5)
+            
             ik_links = BoneLinks()
             ik_links.append(effector_bone)
             ik_links.append(elbow_bone)
@@ -576,9 +611,11 @@ class ArmAvoidanceService():
             ik_links.append(arm_bone)
             ik_links_list[effector_bone_name].append(ik_links)
             ik_count_list[effector_bone_name].append(5)
+        
+        wrist_links = data_set.rep_model.create_link_2_top_one("{0}手首".format(direction))
 
         # 手首リンク登録
-        return ArmAvoidanceOption(arm_links, ik_links_list, ik_count_list, avoidance_links, avoidances)
+        return ArmAvoidanceOption(arm_links, wrist_links, ik_links_list, ik_count_list, avoidance_links, avoidances)
 
     # 指定したモデル・方向の手のひら頂点
     def calc_wrist_entity_vertex(self, data_set_idx: int, model: PmxModel, target_model_type: str, direction: str):
@@ -638,7 +675,7 @@ class ArmAvoidanceService():
                 continue
             
             if (self.options.arm_options.arm_check_skip_flg or (data_set.rep_model.can_arm_sizing and data_set.org_model.can_arm_sizing)) \
-                    and data_set_idx not in target_data_set_idxs:
+                    and data_set_idx not in target_data_set_idxs and data_set_idx in self.options.arm_options.avoidance_target_list:
                 # ボーンセットがあり、腕系サイジング可能で、かつまだ登録されていない場合
                 target_data_set_idxs.append(data_set_idx)
             

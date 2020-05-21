@@ -4,15 +4,15 @@
 import wx
 import time
 from form.worker.BaseWorkerThread import BaseWorkerThread
-from form.panel.CameraPanel import CameraSet
 
 
 class LoadWorkerThread(BaseWorkerThread):
 
-    def __init__(self, frame: wx.Frame, result_event: wx.Event, is_exec: bool, is_morph: bool):
+    def __init__(self, frame: wx.Frame, result_event: wx.Event, is_exec: bool, is_morph: bool, is_arm: bool):
         self.elapsed_time = 0
         self.is_exec = is_exec
         self.is_morph = is_morph
+        self.is_arm = is_arm
 
         super().__init__(frame, result_event, frame.file_panel_ctrl.console_ctrl)
 
@@ -38,4 +38,4 @@ class LoadWorkerThread(BaseWorkerThread):
         self.elapsed_time = time.time() - start
 
     def post_event(self):
-        wx.PostEvent(self.frame, self.result_event(result=self.result, elapsed_time=self.elapsed_time, is_exec=self.is_exec, is_morph=self.is_morph))
+        wx.PostEvent(self.frame, self.result_event(result=self.result, elapsed_time=self.elapsed_time, is_exec=self.is_exec, is_morph=self.is_morph, is_arm=self.is_arm))

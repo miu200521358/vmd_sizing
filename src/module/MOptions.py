@@ -99,7 +99,7 @@ class MOptions():
 
             arm_options = MArmProcessOptions(
                 arm_process_flg_avoidance, \
-                [(a.strip() if len(a.strip()) > 0 else "") for a in args.avoidance_target_list], \
+                {0: [(a.strip() if len(a.strip()) > 0 else "") for a in args.avoidance_target_list]}, \
                 arm_process_flg_alignment, \
                 alignment_finger_flg, \
                 alignment_floor_flg, \

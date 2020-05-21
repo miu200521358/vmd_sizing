@@ -711,8 +711,8 @@ class ArmAlignmentService():
 
             # ひじは角度制限をつける
             elbow_bone = rep_wrist_links.get("{0}ひじ".format(direction))
-            elbow_bone.ik_limit_min = MVector3D(-180, -0.5, -90)
-            elbow_bone.ik_limit_max = MVector3D(180, 180, 90)
+            elbow_bone.ik_limit_min = MVector3D(-180, -0.5, -10)
+            elbow_bone.ik_limit_max = MVector3D(180, 180, 10)
             elbow_bone.dot_limit = 0.7
 
             arm_bone = rep_wrist_links.get("{0}腕".format(direction))

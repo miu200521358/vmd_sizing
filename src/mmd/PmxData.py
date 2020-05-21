@@ -503,7 +503,7 @@ class RigidBody():
             # 原点との距離が半径未満なら衝突
             d = point.distanceToPoint(self.origin)
             collision = 0 < d < self.shape_size.x() * 0.9
-            near_collision = 0 <= d <= self.shape_size.x() * 1.1
+            near_collision = 0 <= d <= self.shape_size.x() * 1.0
 
             return_vec = MVector3D()
 
@@ -524,15 +524,19 @@ class RigidBody():
                 sin_y_theta = math.sin(y_theta)
                 sin_x_theta = math.sin(x_theta)
 
-                # Yはそのまま
-                new_y = local_point.y()
+                if math.cos(x_theta) < 0.3:
+                    # Xがほとんど離れてない場合、Yを下げる
+                    new_y = sin_x_theta * y
+                else:
+                    # 一定以上離れていたら、Yはそのまま
+                    new_y = local_point.y()
 
                 new_x_local = MVector3D(sin_y_theta * x, new_y, local_point.z())
                 new_z_local = MVector3D(local_point.x(), new_y, sin_x_theta * z)
 
                 if axis == "":
                     # 軸が決まっていない場合、近い方の軸を選択(Zの方を若干優先)
-                    axis = "x" if new_x_local.distanceToPoint(local_point) < new_z_local.distanceToPoint(local_point) * 1.1 and not MMath.is_almost_null(sin_y_theta) else "z"
+                    axis = "x" if new_x_local.distanceToPoint(local_point) * 1.3 < new_z_local.distanceToPoint(local_point) and not MMath.is_almost_null(sin_y_theta) else "z"
 
                 # 近い方の軸（もしくは前から引き継いだ軸）で回避する
                 if axis == "x":
@@ -598,11 +602,11 @@ class RigidBody():
 
             # ---------
             # 下辺
-            b1 = self.matrix * MVector3D(-self.shape_size.x(), -self.shape_size.y(), -self.shape_size.z()) * 1.1
-            b2 = self.matrix * MVector3D(self.shape_size.x(), -self.shape_size.y(), -self.shape_size.z()) * 1.1
-            b4 = self.matrix * MVector3D(-self.shape_size.x(), -self.shape_size.y(), self.shape_size.z()) * 1.1
+            b1 = self.matrix * MVector3D(-self.shape_size.x(), -self.shape_size.y(), -self.shape_size.z()) * 1.0
+            b2 = self.matrix * MVector3D(self.shape_size.x(), -self.shape_size.y(), -self.shape_size.z()) * 1.0
+            b4 = self.matrix * MVector3D(-self.shape_size.x(), -self.shape_size.y(), self.shape_size.z()) * 1.0
             # 上辺
-            t1 = self.matrix * MVector3D(-self.shape_size.x(), self.shape_size.y(), -self.shape_size.z()) * 1.1
+            t1 = self.matrix * MVector3D(-self.shape_size.x(), self.shape_size.y(), -self.shape_size.z()) * 1.0
 
             d1 = (t1 - b1)
             size1 = d1.length()
@@ -726,60 +730,59 @@ class RigidBody():
             logger.test("point: %s", point)
             logger.test("segl: %s", point.distanceToPoint(h))
 
-            # hのローカル座標系に基づく点の位置
-            h_matrix = self.matrix.copy()
-            h_matrix.translate(self.matrix.inverted() * h)
-            local_point = h_matrix.inverted() * point
-            logger.test("h: %s, localh: %s", h, h_matrix * MVector3D())
-
             # カプセルの線分から半径以内なら中に入っている
             d = point.distanceToPoint(h)
             collision = 0 < d < self.shape_size.x() * 0.9
-            near_collision = 0 <= d <= self.shape_size.x() * 1.1
+            near_collision = 0 <= d <= self.shape_size.x() * 1.0
 
             logger.test("d: %s", d)
 
             return_vec = MVector3D()
 
             if collision or near_collision:
+                # hのローカル座標系に基づく点の位置
+                h_matrix = self.matrix.copy()
+                h_matrix.translate(self.matrix.inverted() * h)
+                local_point = h_matrix.inverted() * point
+                logger.debug("h: %s, localh: %s", h, h_matrix * MVector3D())
+
                 x = self.shape_size.x() * self.h_sign
                 y = self.shape_size.x() * self.v_sign
+                z = self.shape_size.x() * np.sign(local_point.z())
 
-                # Z方向は小さい子は常に手前、大きい子は原点からの向き
-                z = self.shape_size.x() * (-1 if self.is_small else np.sign(local_point.z()))
+                # 各軸方向の離れ具合
+                x_theta = math.acos(max(-1, min(1, local_point.x() / x)))
+                y_theta = math.acos(max(-1, min(1, local_point.y() / y)))
+                z_theta = math.acos(max(-1, min(1, local_point.z() / z)))
+                # 離れ具合から見た円周の位置
+                sin_y_theta = math.sin(y_theta)
+                sin_x_theta = math.sin(x_theta)
 
-                # 各軸方向の離れ具合（原点からの離れ具合で測る）
-                x_theta = abs(math.acos(max(-1, min(1, local_point.x() / x))))
-                y_theta = abs(math.acos(max(-1, min(1, local_point.y() / y))))
-                z_theta = abs(math.acos(max(-1, min(1, local_point.z() / z))))
+                new_y = local_point.y()
 
-                # Y方向にOBBの境界に持って行った場合の位置（原点からの距離で測る）
-                y_upper_base = h_matrix.inverted() * (self.matrix * MVector3D(0, y, 0))
-                y_lower_base = h_matrix.inverted() * (self.matrix * MVector3D(0, -y, 0))
+                new_x_local = MVector3D(sin_y_theta * x, new_y, local_point.z())
+                new_z_local = MVector3D(local_point.x(), new_y, sin_x_theta * z)
 
-                # XZはYの離れ具合に応じて取る位置を変える
-                if (x_theta < z_theta and axis == "") or axis == "x":
-                    new_x = abs(math.cos(x_theta)) * x
-                    new_z = abs(math.sin(x_theta)) * z
-                    axis = "x"
+                if axis == "":
+                    # 軸が決まっていない場合、近い方の軸を選択(Zの方を若干優先)
+                    axis = "x" if new_x_local.distanceToPoint(local_point) * 1.3 < new_z_local.distanceToPoint(local_point) and not MMath.is_almost_null(sin_y_theta) else "z"
+
+                # 近い方の軸（もしくは前から引き継いだ軸）で回避する
+                if axis == "x":
+                    new_x = sin_y_theta * x
+                    new_z = local_point.z()
                 else:
-                    new_x = abs(math.sin(z_theta)) * x
-                    new_z = abs(math.cos(z_theta)) * z
-                    axis = "z"
-                
-                new_upper_local = MVector3D(new_x, y_upper_base.y(), new_z)
-                new_lower_local = MVector3D(new_x, y_lower_base.y(), new_z)
-                new_local = new_upper_local if local_point.distanceToPoint(new_upper_local) < local_point.distanceToPoint(new_lower_local) else new_lower_local
+                    new_x = local_point.x()
+                    new_z = sin_x_theta * z
 
-                logger.debug("f: %s, local_point: %s, d: %s, new_local: %s, ud: %s, ld: %s, new_upper_local: %s, new_lower_local: %s", self.fno, local_point.to_log(), \
-                             d, new_local.to_log(), local_point.distanceToPoint(new_upper_local), local_point.distanceToPoint(new_lower_local), \
-                             new_upper_local.to_log(), new_lower_local.to_log())
+                new_local = MVector3D(new_x, new_y, new_z)
+                logger.debug("f: %s, local_point: %s, d: %s, new_local: %s", self.fno, local_point.to_log(), d, new_local.to_log())
 
                 return_vec = h_matrix * new_local
-                logger.debug("f: %s, y: %s, xt: %s, yt: %s, zt: %s, yc: %s, ys: %s, axis: %s, return: %s", self.fno, local_point.y() / y, \
-                             x_theta, y_theta, z_theta, math.cos(y_theta), math.sin(y_theta), axis, return_vec.to_log())
+                logger.debug("f: %s, y: %s, yt: %s, sy: %s, xt: %s, sx: %s, zt: %s, xd: %s, zd: %s, axis: %s, new: %s, return: %s", self.fno, local_point.y() / y, \
+                             y_theta, sin_y_theta, x_theta, sin_x_theta, z_theta, new_x_local.distanceToPoint(local_point), new_z_local.distanceToPoint(local_point), \
+                             axis, new_local.to_log(), return_vec.to_log())
 
-            # 3方向の間に点が含まれていたら衝突あり
             return collision, near_collision, axis, return_vec
 
     class RigidBodyParam():
