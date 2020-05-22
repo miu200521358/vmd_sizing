@@ -85,17 +85,17 @@ class ArmAlignmentService():
                 # キーフレを重複除外してソートする
                 fnos = sorted(list(set(fnos)))
         
-        futures = []
-        with ThreadPoolExecutor(thread_name_prefix="alignment_after") as executor:
-            for data_set_idx, data_set in enumerate(self.options.data_set_list):
-                futures.append(executor.submit(self.alignment_after, data_set_idx, "右"))
-                futures.append(executor.submit(self.alignment_after, data_set_idx, "左"))
+        # futures = []
+        # with ThreadPoolExecutor(thread_name_prefix="alignment_after") as executor:
+        #     for data_set_idx, data_set in enumerate(self.options.data_set_list):
+        #         futures.append(executor.submit(self.alignment_after, data_set_idx, "右"))
+        #         futures.append(executor.submit(self.alignment_after, data_set_idx, "左"))
 
-        concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
+        # concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
-        for f in futures:
-            if not f.result():
-                return False
+        # for f in futures:
+        #     if not f.result():
+        #         return False
 
         return True
     
