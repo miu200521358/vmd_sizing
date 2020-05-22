@@ -979,7 +979,7 @@ class PmxModel():
             # まだリンクが生成されていない場合、順序保持辞書生成
             links = BoneLinks()
         
-        if target_bone_name not in self.bones or target_bone_name not in self.PARENT_BORN_PAIR:
+        if target_bone_name not in self.bones and target_bone_name not in self.PARENT_BORN_PAIR:
             # 開始ボーン名がなければ終了
             return links
 
@@ -1040,7 +1040,7 @@ class PmxModel():
         "左肩C": ["左肩"],
         "左腕": ["左肩C", "左肩"],
         "左腕捩": ["左腕"],
-        "左腕ひじ中間": ["左腕捩"],
+        "左腕ひじ中間": ["左腕捩", "左腕"],
         "左ひじ": ["左腕捩", "左腕"],
         "左ひじ実体": ["左ひじ"],
         "左手捩": ["左ひじ"],
@@ -1090,7 +1090,7 @@ class PmxModel():
         "右肩C": ["右肩"],
         "右腕": ["右肩C", "右肩"],
         "右腕捩": ["右腕"],
-        "右腕ひじ中間": ["右腕捩"],
+        "右腕ひじ中間": ["右腕捩", "右腕"],
         "右ひじ": ["右腕捩", "右腕"],
         "右ひじ実体": ["右ひじ"],
         "右手捩": ["右ひじ"],

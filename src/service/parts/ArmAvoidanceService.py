@@ -412,8 +412,8 @@ class ArmAvoidanceService():
                 for rigidbody_name, rigidbody in data_set.rep_model.rigidbodies.items():
                     # 処理対象剛体：剛体名が指定の文字列であり、かつボーン追従剛体
                     if avoidance_target == rigidbody_name and rigidbody.isModeStatic() and rigidbody.bone_index in data_set.rep_model.bone_indexes:
-                        # 追従するボーンINDEXのリンク
-                        avoidance_links[rigidbody_name] = data_set.rep_model.create_link_2_top_one(data_set.rep_model.bone_indexes[rigidbody.bone_index])
+                        # 追従するボーンINDEXのリンク（ボーンは未定義のものも取得）
+                        avoidance_links[rigidbody_name] = data_set.rep_model.create_link_2_top_one(data_set.rep_model.bone_indexes[rigidbody.bone_index], is_defined=False)
                         avoidances[rigidbody_name] = rigidbody
                         rigidbody.bone_name = data_set.rep_model.bone_indexes[rigidbody.bone_index]
                         # 腕より上の剛体か

@@ -197,6 +197,7 @@ class SmoothPanel(BasePanel):
         # フォーム有効化
         self.enable()
         # ワーカー終了
+        self.convert_smooth_worker.join()
         self.convert_smooth_worker = None
         # プログレス非表示
         self.gauge_ctrl.SetValue(0)

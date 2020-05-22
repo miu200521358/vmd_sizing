@@ -127,6 +127,7 @@ class CsvPanel(BasePanel):
         # フォーム有効化
         self.enable()
         # ワーカー終了
+        self.convert_csv_worker.join()
         self.convert_csv_worker = None
         # プログレス非表示
         self.gauge_ctrl.SetValue(0)

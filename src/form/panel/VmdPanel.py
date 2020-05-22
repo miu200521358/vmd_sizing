@@ -148,6 +148,7 @@ class VmdPanel(BasePanel):
         # フォーム有効化
         self.enable()
         # ワーカー終了
+        self.convert_vmd_worker.join()
         self.convert_vmd_worker = None
         # プログレス非表示
         self.gauge_ctrl.SetValue(0)

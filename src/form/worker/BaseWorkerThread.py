@@ -44,12 +44,16 @@ class BaseWorkerThread(Thread, metaclass=ABCMeta):
         # スレッド実行
         self.thread_event()
 
+        # モニター除去
+        self.monitor._delete()
+
         # 後処理実行
         self.post_event()
-
-        self.monitor._delete()
     
     def post_event(self):
+        self.stop_event.clear()
+        self.stop_event.set()
+
         wx.PostEvent(self.frame, self.result_event(result=self.result))
 
     def abort(self):

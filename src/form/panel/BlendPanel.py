@@ -249,6 +249,7 @@ class BlendPanel(BasePanel):
         # フォーム有効化
         self.enable()
         # ワーカー終了
+        self.blend_worker.join()
         self.blend_worker = None
         # プログレス非表示
         self.gauge_ctrl.SetValue(0)

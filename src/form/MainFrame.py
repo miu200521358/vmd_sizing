@@ -306,12 +306,13 @@ class MainFrame(wx.Frame):
     # 読み込み完了処理
     def on_load_result(self, event: wx.Event):
         self.elapsed_time = event.elapsed_time
-
+        
         # タブ移動可
         self.release_tab()
         # フォーム有効化
         self.enable()
         # ワーカー終了
+        self.load_worker.join()
         self.load_worker = None
         # プログレス非表示
         self.file_panel_ctrl.gauge_ctrl.SetValue(0)
@@ -389,6 +390,7 @@ class MainFrame(wx.Frame):
         self.sound_finish()
 
         # ワーカー終了
+        self.worker.join()
         self.worker = None
         # タブ移動可
         self.release_tab()
