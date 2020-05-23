@@ -60,6 +60,10 @@
                 "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ゲーム/東方Project/21.八坂神奈子_N式 nakao/八坂神奈子_N式_剛体.pmx",
                 // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/025_一期一振/一期一振 ひわこ式 ver.2.0/ねんどろいちご(25％).pmx",
 
+                "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_2人/おこちゃま戦争 ｽﾀｲﾘｯｼｭP/先生（0Ｆ～）kradness＆れをる音源_0-1000.vmd",
+                "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/アニメ/銀魂/坂田銀時Ver2.52 aokana/坂田銀時Ver2.52pmx版/着物無/インナー.pmx",
+                "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ゲーム/うたプリ/四ノ宮那月 chn/FREECELL那月.pmx",
+
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/少女ふぜゐ　モーション配布 づなうじ/少女ふぜゐIK_0-1000.vmd",
                 // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/艦隊これくしょん/舞風ver2 お宮/舞風ver2武装無し.pmx",
                 // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/107_髭切/【刀犬】源氏mkmk002b/髭切【刀犬】mkmk002a刀犬男士/髭切刀犬男士小mkmk002a.pmx",

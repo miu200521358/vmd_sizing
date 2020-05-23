@@ -97,9 +97,10 @@ class ArmAvoidanceService():
         # 回避用オプション
         avoidance_options = self.avoidance_options[(data_set_idx, direction)]
 
+        target_bone_names = ["{0}腕".format(direction), "{0}腕捩り".format(direction), "{0}ひじ".format(direction), "{0}手捩り".format(direction), "{0}手首".format(direction)]
         avoidance_axis = {}
         prev_block_fno = 0
-        fnos = data_set.motion.get_bone_fnos("{0}腕".format(direction), "{0}ひじ".format(direction), "{0}手首".format(direction))
+        fnos = data_set.motion.get_bone_fnos(*target_bone_names)
         while len(fnos) > 0:
             fno = fnos[0]
             
@@ -277,7 +278,7 @@ class ArmAvoidanceService():
                 prev_block_fno = fno // 500
             
             # キーの登録が増えているかもなので、ここで取り直す
-            fnos = data_set.motion.get_bone_fnos("{0}腕".format(direction), "{0}ひじ".format(direction), "{0}手首".format(direction), start_fno=(fno + 1))
+            fnos = data_set.motion.get_bone_fnos(*target_bone_names, start_fno=(fno + 1))
 
         return True
 

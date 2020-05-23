@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 #
 import numpy as np
-import concurrent.futures
-from concurrent.futures import ThreadPoolExecutor
 
 from mmd.PmxData import PmxModel, Bone # noqa
 from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
@@ -711,10 +709,10 @@ class ArmAlignmentService():
 
             # ひじは角度制限をつける
             elbow_bone = rep_wrist_links.get("{0}ひじ".format(direction))
-            elbow_bone.ik_limit_min = MVector3D(-180, -0.5, -10)
-            elbow_bone.ik_limit_max = MVector3D(180, 180, 10)
+            # elbow_bone.ik_limit_min = MVector3D(-180, -0.5, -10)
+            # elbow_bone.ik_limit_max = MVector3D(180, 180, 10)
             elbow_bone.dot_limit = 0.7
-
+            
             arm_bone = rep_wrist_links.get("{0}腕".format(direction))
             arm_bone.dot_limit = 0.7
 
@@ -763,7 +761,7 @@ class ArmAlignmentService():
                                    "{0}手首".format(direction), "{0}手首".format(direction), tip_bone_name, self.options.arm_options.alignment_distance_wrist, data_set.xz_ratio)
 
             # 腕・ひじ・手首のキーフレ
-            bone_names.extend(["{0}腕".format(direction), "{0}ひじ".format(direction), "{0}手首".format(direction)])
+            bone_names.extend(["{0}腕".format(direction), "{0}腕捩り".format(direction), "{0}ひじ".format(direction), "{0}手捩り".format(direction), "{0}手首".format(direction)])
 
             # 床位置合わせも行う場合、リンク追加生成
             if self.options.arm_options.alignment_floor_flg:
