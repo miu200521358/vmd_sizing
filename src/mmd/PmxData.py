@@ -7,7 +7,6 @@ import math
 import numpy as np
 
 from module.MParams import BoneLinks
-import module.MMath as MMath
 from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from utils.MException import SizingException # noqa
 from utils.MLogger import MLogger # noqa
@@ -925,7 +924,6 @@ class PmxModel():
     # 腕系サイジングが可能かチェック
     def check_arm_bone_can_sizing(self):
 
-        # つま先調整に必要なボーン群
         target_bones = ["左腕", "左ひじ", "左手首", "右腕", "右ひじ", "右手首"]
 
         cannot_sizing = "腕系処理をスキップします。\n腕系処理（腕スタンス補正・接触回避・位置合わせ）を実行したい場合、\n腕タブのチェックスキップFLGをONにして再実行してください。"
@@ -934,10 +932,10 @@ class PmxModel():
             logger.warning("腕・ひじ・手首の左右ボーンが揃ってないため、%s\nモデル: %s", cannot_sizing, self.name, decoration=MLogger.DECORATION_BOX)
             return False
         
-        for bone_name in ["左腕IK", "左腕ＩＫ", "右腕IK", "右腕ＩＫ"]:
-            # 腕IKが入ってて、かつそれが表示されてる場合、NG
-            if bone_name in self.bones and self.bones[bone_name].getVisibleFlag():
-                logger.warning("モデルに表示された腕IKが含まれているため、%s\nモデル: %s", cannot_sizing, self.name, decoration=MLogger.DECORATION_BOX)
+        for bone_name in self.bones.keys():
+            if ("腕IK" in bone_name or "腕ＩＫ" in bone_name or "うでIK" in bone_name or "うでＩＫ" in bone_name or "腕XIK" in bone_name):
+                # 腕IKが入ってて、かつそれが表示されてる場合、NG
+                logger.warning("モデルに「腕IK」が含まれているため、%s\nモデル: %s", cannot_sizing, self.name, decoration=MLogger.DECORATION_BOX)
                 return False
 
         return True

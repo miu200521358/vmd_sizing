@@ -217,9 +217,9 @@ class ArmAlignmentService():
 
             elif base_distance < distance_ratio <= base_distance * 3:
                 # 基準距離に近い場合、ログだけ出す
-                logger.info("－近接なし: f: %s(%s-%s:%s-%s), 境界: %s, 2点間の距離: %s", fno, \
+                logger.info("－近接なし: f: %s(%s-%s:%s-%s), 境界: %s", fno, \
                             (from_data_set_idx + 1), self.target_links[from_data_set_idx][from_alignment_idx].effector_display_bone_name, \
-                            (to_data_set_idx + 1), self.target_links[to_data_set_idx][to_alignment_idx].effector_display_bone_name, round(distance_ratio, 5), base_distance)
+                            (to_data_set_idx + 1), self.target_links[to_data_set_idx][to_alignment_idx].effector_display_bone_name, round(distance_ratio, 5))
 
         # 距離の近いものからINDEXの組合せを登録
         # 基本的には全部の中心点を算出するが、それぞれのモデルの両手のみが近かった場合を想定
@@ -284,9 +284,9 @@ class ArmAlignmentService():
                 # 対象の場合、ログ表示
                 base_distance = self.target_links[to_data_set_idx][to_alignment_idx].distance
 
-                logger.info("○近接あり: f: %s(%s-%s:%s-%s), 境界: %s, 2点間の距離: %s", fno, \
+                logger.info("○近接あり: f: %s(%s-%s:%s-%s), 境界: %s", fno, \
                             (from_data_set_idx + 1), self.target_links[from_data_set_idx][from_alignment_idx].effector_display_bone_name, \
-                            (to_data_set_idx + 1), self.target_links[to_data_set_idx][to_alignment_idx].effector_display_bone_name, round(distance_ratio, 5), base_distance)
+                            (to_data_set_idx + 1), self.target_links[to_data_set_idx][to_alignment_idx].effector_display_bone_name, round(distance_ratio, 5))
 
         if len(all_index_group) == 0:
             # 位置合わせ組合せがない場合、スルー

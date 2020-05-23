@@ -222,6 +222,7 @@ class ArmPanel(BasePanel):
         self.avoidance_dialog.Hide()
 
     def initialize(self, event: wx.Event):
+
         if 1 in self.avoidance_set_dict:
             # ファイルタブ用接触回避のファイルセットがある場合
             if self.frame.file_panel_ctrl.file_set.is_loaded():
@@ -258,6 +259,43 @@ class ArmPanel(BasePanel):
             else:
                 # 空から作る場合、複数タブのファイルセット参照
                 self.add_set(set_no, multi_file_set, replace=False)
+
+        # 腕系不可モデル名リスト
+        disable_arm_model_names = []
+
+        if self.frame.file_panel_ctrl.file_set.is_loaded():
+            if not self.frame.file_panel_ctrl.file_set.org_model_file_ctrl.data.can_arm_sizing:
+                # 腕不可の場合、リスト追加
+                disable_arm_model_names.append("【No.1】作成元モデル: {0}".format(self.frame.file_panel_ctrl.file_set.org_model_file_ctrl.data.name))
+
+            if not self.frame.file_panel_ctrl.file_set.rep_model_file_ctrl.data.can_arm_sizing:
+                # 腕不可の場合、リスト追加
+                disable_arm_model_names.append("【No.1】変換先モデル: {0}".format(self.frame.file_panel_ctrl.file_set.rep_model_file_ctrl.data.name))
+
+        for multi_file_set_idx, multi_file_set in enumerate(self.frame.multi_panel_ctrl.file_set_list):
+            set_no = multi_file_set_idx + 2
+            if multi_file_set.is_loaded():
+                if not multi_file_set.org_model_file_ctrl.data.can_arm_sizing:
+                    # 腕不可の場合、リスト追加
+                    disable_arm_model_names.append("【No.{0}】作成元モデル: {1}".format(set_no, multi_file_set.org_model_file_ctrl.data.name))
+
+                if not multi_file_set.rep_model_file_ctrl.data.can_arm_sizing:
+                    # 腕不可の場合、リスト追加
+                    disable_arm_model_names.append("【No.{0}】変換先モデル: {1}".format(set_no, multi_file_set.rep_model_file_ctrl.data.name))
+            
+        if len(disable_arm_model_names) > 0:
+            # 腕不可モデルがいる場合、ダイアログ表示
+            with wx.MessageDialog(self, "下記モデルに「腕IK」が含まれているため、該当ファイルセットの腕系処理\n（腕スタンス補正・接触回避・位置合わせ）がこのままではスルーされます。\n" \
+                                  + "腕チェックスキップFLGをONにすると、強制的に腕系処理が実行されます。\n※ただし、結果がおかしくなってもサポート対象外となります。\n" \
+                                  + "腕チェックスキップFLGをONにしますか？ \n\n{0}".format('\n'.join(disable_arm_model_names)), style=wx.YES_NO | wx.ICON_WARNING) as dialog:
+                if dialog.ShowModal() == wx.ID_NO:
+                    # 腕系チェックスキップOFF
+                    self.arm_check_skip_flg_ctrl.SetValue(0)
+                else:
+                    # 腕系チェックスキップON
+                    self.arm_check_skip_flg_ctrl.SetValue(1)
+                
+        event.Skip()
 
     def add_set(self, set_idx: int, file_set: SizingFileSet, replace: bool):
         new_avoidance_set = AvoidanceSet(self.frame, self, self.avoidance_dialog.scrolled_window, set_idx, file_set)
@@ -326,11 +364,12 @@ class AvoidanceSet():
         self.rep_avoidances = ["頭接触回避 (頭)"]   # 選択肢文言
         self.rep_avoidance_names = ["頭接触回避"]   # 選択肢文言に紐付くモーフ名
 
-        for rigidbody_name, rigidbody in file_set.rep_model_file_ctrl.data.rigidbodies.items():
-            # 処理対象剛体：有効なボーン追従剛体
-            if rigidbody.isModeStatic() and rigidbody.bone_index in file_set.rep_model_file_ctrl.data.bone_indexes:
-                self.rep_avoidances.append("{0} ({1})".format(rigidbody.name, file_set.rep_model_file_ctrl.data.bone_indexes[rigidbody.bone_index]))
-                self.rep_avoidance_names.append(rigidbody.name)
+        if file_set.is_loaded and file_set.rep_model_file_ctrl.data:
+            for rigidbody_name, rigidbody in file_set.rep_model_file_ctrl.data.rigidbodies.items():
+                # 処理対象剛体：有効なボーン追従剛体
+                if rigidbody.isModeStatic() and rigidbody.bone_index in file_set.rep_model_file_ctrl.data.bone_indexes:
+                    self.rep_avoidances.append("{0} ({1})".format(rigidbody.name, file_set.rep_model_file_ctrl.data.bone_indexes[rigidbody.bone_index]))
+                    self.rep_avoidance_names.append(rigidbody.name)
 
         self.set_sizer = wx.StaticBoxSizer(wx.StaticBox(self.window, wx.ID_ANY, "【No.{0}】".format(set_idx)), orient=wx.VERTICAL)
 

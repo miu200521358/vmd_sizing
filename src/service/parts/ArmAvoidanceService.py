@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 #
-import math
 import numpy as np
 import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor
@@ -72,7 +71,7 @@ class ArmAvoidanceService():
     # 接触回避
     def execute_avoidance_pool(self, data_set_idx: int, direction: str):
         try:
-            # 接触回避前処理
+            # 接触回避準備
             all_avoidance_axis = self.avoidance_before(data_set_idx, direction)
 
             # 接触回避処理
@@ -282,9 +281,9 @@ class ArmAvoidanceService():
 
         return True
 
-    # 接触回避前処理
+    # 接触回避準備
     def avoidance_before(self, data_set_idx: int, direction: str):
-        logger.info("接触回避前処理【No.%s-%s】", (data_set_idx + 1), direction)
+        logger.info("接触回避準備【No.%s-%s】", (data_set_idx + 1), direction)
 
         logger.copy(self.options)
         # 処理対象データセット
