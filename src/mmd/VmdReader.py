@@ -96,8 +96,8 @@ class VmdReader():
                 frame.interpolation = list(self.unpack(64, "64B", True))
                 logger.test("interpolation %s", frame.interpolation)
                 # オリジナルの補間曲線を保持しておく
-                frame.org_interpolation = copy.deepcopy(frame.interpolation)
-                logger.test("org_interpolation %s", frame.org_interpolation)
+                # frame.org_interpolation = copy.deepcopy(frame.interpolation)
+                # logger.test("org_interpolation %s", frame.org_interpolation)
 
                 if bone_name not in motion.bones:
                     # まだ辞書にない場合、配列追加

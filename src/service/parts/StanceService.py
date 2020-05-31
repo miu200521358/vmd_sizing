@@ -144,21 +144,11 @@ class StanceService():
                 logger.test("%s: axis: %s", wrist_twist_bone_name, wrist_twist_local_x_axis)
                 logger.test("%s: axis: %s", wrist_bone_name, wrist_local_x_axis)
 
-                # 今の状態で補間曲線を含めて登録しておく
-                prev_sep_fno = 0
+                # 内積差分に基づきキー追加
                 logger.info("%s捩り分散準備開始【No.%s】", direction, (data_set_idx + 1))
+                data_set.motion.regist_differ_bf((data_set_idx + 1), [arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name], limit_degrees=0.5)
+                logger.info("-- %s捩り分散準備:終了【No.%s】", direction, (data_set_idx + 1))
 
-                # 全打ち準備
-                futures = []
-                with ThreadPoolExecutor(thread_name_prefix="twist_full{0}".format(data_set_idx)) as executor:
-                    for bone_name in [arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name]:
-                        futures.append(executor.submit(self.prepare_spread_twist_pool, data_set_idx, bone_name))
-                concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
-
-                for f in futures:
-                    if not f.result():
-                        return False
-                        
                 # 腕系ボーンのfnos
                 fnos = data_set.motion.get_bone_fnos(arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name)
 
@@ -186,29 +176,39 @@ class StanceService():
                     if not f.result():
                         return False
 
-                logger.info("%s捩り分散後処理【No.%s】", arm_bone_name, (data_set_idx + 1))
+                logger.info("%s捩り分散後処理 - 円滑化【No.%s】", arm_bone_name, (data_set_idx + 1))
 
                 # 各ボーンのbfを円滑化
                 futures = []
                 with ThreadPoolExecutor(thread_name_prefix="twist_smooth{0}".format(data_set_idx)) as executor:
                     for bone_name in [arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name]:
-                        # 読み込んだ時のキーフレのみを対象とする
-                        fnos = data_set.motion.get_bone_fnos(bone_name, is_read=True)
-                        if len(fnos) < 2:
-                            # 前後がない場合、全件キーフレ
-                            all_fnos = data_set.motion.get_bone_fnos(bone_name)
-                            fnos = [all_fnos[0], all_fnos[-1]]
+                        futures.append(executor.submit(self.smooth_twist, data_set_idx, bone_name))
 
-                        prev_sep_fno = 0
-                        log_target_idxs = []
-                        for fno_idx, fno in enumerate(data_set.motion.get_bone_fnos(bone_name)):
-                            if fno // 500 > prev_sep_fno:
-                                log_target_idxs.append(fno)
-                                prev_sep_fno = fno // 500
-                        log_target_idxs.append(fnos[-1])
+                concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
+                for f in futures:
+                    if not f.result():
+                        return False
 
-                        for start_fno, end_fno in zip(fnos[:-1], fnos[1:]):
-                            futures.append(executor.submit(self.smooth_twist, data_set_idx, bone_name, start_fno, end_fno, log_target_idxs))
+                logger.info("%s捩り分散後処理 - フィルタリング【No.%s】", arm_bone_name, (data_set_idx + 1))
+
+                # # 捩りボーンのbfにフィルターをかける
+                # futures = []
+                # with ThreadPoolExecutor(thread_name_prefix="twist_smooth_twist{0}".format(data_set_idx)) as executor:
+                #     for bone_name in [arm_twist_bone_name, wrist_twist_bone_name]:
+                #         futures.append(executor.submit(self.smooth_filter_twist, data_set_idx, bone_name, \
+                #                        config={"freq": 30, "mincutoff": 0.01, "beta": 0.01, "dcutoff": 1}))
+
+                # concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
+                # for f in futures:
+                #     if not f.result():
+                #         return False
+
+                # 各ボーンのbfにフィルターをかける
+                futures = []
+                with ThreadPoolExecutor(thread_name_prefix="twist_smooth{0}".format(data_set_idx)) as executor:
+                    for bone_name in [arm_bone_name, elbow_bone_name, wrist_bone_name, arm_twist_bone_name, wrist_twist_bone_name]:
+                        futures.append(executor.submit(self.smooth_filter_twist, data_set_idx, bone_name, \
+                                       config={"freq": 30, "mincutoff": 0.03, "beta": 0.1, "dcutoff": 1}))
 
                 concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
                 for f in futures:
@@ -218,46 +218,16 @@ class StanceService():
                 # 最後に全キーフレで繋げるのを除去
                 if self.options.logging_level != MLogger.FULL and self.options.logging_level != MLogger.DEBUG_FULL:
                     futures = []
-                    with ThreadPoolExecutor(thread_name_prefix="smooth{0}".format(data_set_idx)) as executor:
-                        logger.info("不要キー削除【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
+                    with ThreadPoolExecutor(thread_name_prefix="twist_remove{0}".format(data_set_idx)) as executor:
+                        logger.info("%s捩り分散後処理 - 不要キー削除【No.%s】", arm_bone_name, (data_set_idx + 1))
                         
                         for bone_name in [arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name]:
-                            # 読み込んだ時のキーフレのみを対象とする
-                            fnos = data_set.motion.get_bone_fnos(bone_name, is_read=True)
-                            if len(fnos) < 2:
-                                # 前後がない場合、全件キーフレ
-                                all_fnos = data_set.motion.get_bone_fnos(bone_name)
-                                fnos = [all_fnos[0], all_fnos[-1]]
-
-                            prev_sep_fno = 0
-                            log_target_idxs = []
-                            for fno_idx, fno in enumerate(data_set.motion.get_bone_fnos(bone_name)):
-                                if fno // 500 > prev_sep_fno:
-                                    log_target_idxs.append(fno)
-                                    prev_sep_fno = fno // 500
-                            log_target_idxs.append(fnos[-1])
-
-                            futures.append(executor.submit(self.remove_unnecessary_bf_pool_parts, data_set_idx, bone_name, fnos[1], fnos[-1], log_target_idxs))
+                            futures.append(executor.submit(self.remove_unnecessary_bf_pool_parts, data_set_idx, bone_name))
 
                     concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
                     for f in futures:
                         if not f.result():
                             return False
-                    
-                    for data_set_idx, data_set in enumerate(self.options.data_set_list):
-                        if data_set.full_arms:
-                            logger.info(" 不要キー削除:終了【No.%s】", data_set_idx + 1)
-
-                # 各ボーンのbfにフィルターをかける
-                futures = []
-                with ThreadPoolExecutor(thread_name_prefix="twist_smooth{0}".format(data_set_idx)) as executor:
-                    for bone_name in [arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name]:
-                        futures.append(executor.submit(self.smooth_filter_twist, data_set_idx, bone_name))
-
-                concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
-                for f in futures:
-                    if not f.result():
-                        return False
 
                 logger.info("%s捩り分散:終了【No.%s】", direction, (data_set_idx + 1))
 
@@ -270,13 +240,12 @@ class StanceService():
             logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
             raise e
 
-    def remove_unnecessary_bf_pool_parts(self, data_set_idx: int, bone_name: str, start_fno: int, end_fno: int, log_target_idxs: list):
+    def average_twist(self, data_set_idx: int, bone_name: str):
         try:
             logger.copy(self.options)
             data_set = self.options.data_set_list[data_set_idx]
-            data_set.motion.remove_unnecessary_bf(data_set_idx + 1, bone_name, start_fno, end_fno, \
-                                                  data_set.rep_model.bones[bone_name].getRotatable(), data_set.rep_model.bones[bone_name].getTranslatable(), \
-                                                  (end_fno in log_target_idxs))
+            data_set.motion.average_bf(data_set_idx + 1, bone_name, \
+                                       data_set.rep_model.bones[bone_name].getRotatable(), data_set.rep_model.bones[bone_name].getTranslatable())
 
             return True
         except SizingException as se:
@@ -287,13 +256,29 @@ class StanceService():
             logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
             raise e
     
-    def smooth_twist(self, data_set_idx: int, bone_name: str, start_fno: int, end_fno: int, log_target_idxs: list):
+    def remove_unnecessary_bf_pool_parts(self, data_set_idx: int, bone_name: str):
         try:
             logger.copy(self.options)
             data_set = self.options.data_set_list[data_set_idx]
+            data_set.motion.remove_unnecessary_bf(data_set_idx + 1, bone_name, data_set.rep_model.bones[bone_name].getRotatable(), \
+                                                  data_set.rep_model.bones[bone_name].getTranslatable(), offset=10)
 
-            data_set.motion.smooth_bf(data_set_idx + 1, bone_name, start_fno, end_fno, data_set.rep_model.bones[bone_name].getRotatable(), \
-                                      data_set.rep_model.bones[bone_name].getTranslatable(), 2, (end_fno in log_target_idxs))
+            return True
+        except SizingException as se:
+            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
+            return se
+        except Exception as e:
+            import traceback
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            raise e
+    
+    def smooth_twist(self, data_set_idx: int, bone_name: str):
+        try:
+            logger.copy(self.options)
+            data_set = self.options.data_set_list[data_set_idx]
+            
+            data_set.motion.smooth_bf(data_set_idx + 1, bone_name, data_set.rep_model.bones[bone_name].getRotatable(), \
+                                      data_set.rep_model.bones[bone_name].getTranslatable(), limit_degrees=1)
 
             return True
         except SizingException as se:
@@ -304,33 +289,13 @@ class StanceService():
             logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
             raise e
 
-    def smooth_filter_twist(self, data_set_idx: int, bone_name: str):
+    def smooth_filter_twist(self, data_set_idx: int, bone_name: str, config: dict):
         try:
             logger.copy(self.options)
             data_set = self.options.data_set_list[data_set_idx]
 
             data_set.motion.smooth_filter_bf(data_set_idx + 1, bone_name, data_set.rep_model.bones[bone_name].getRotatable(), \
-                                             data_set.rep_model.bones[bone_name].getTranslatable())
-
-            return True
-        except SizingException as se:
-            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
-            return se
-        except Exception as e:
-            import traceback
-            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
-            raise e
-
-    # 捩り分散のPool内処理
-    def prepare_spread_twist_pool(self, data_set_idx: int, bone_name: str):
-        try:
-            logger.copy(self.options)
-            data_set = self.options.data_set_list[data_set_idx]
-
-            # 各ボーンのbfを全打ち
-            data_set.motion.regist_full_bf((data_set_idx + 1), bone_name, data_set.rep_model.bones[bone_name].getRotatable(), \
-                                           data_set.rep_model.bones[bone_name].getTranslatable(), True)
-            logger.info("-- %s捩り分散準備:終了【No.%s】", bone_name, (data_set_idx + 1))
+                                             data_set.rep_model.bones[bone_name].getTranslatable(), config=config, loop=1)
 
             return True
         except SizingException as se:
@@ -442,7 +407,7 @@ class StanceService():
             logger.time("f: %s, end", fno)
 
             if fno in log_target_idxs and last_fno > 0:
-                logger.info("-- %sフレーム目:終了(%s％)【No.%s - %s】", fno, round((fno / last_fno) * 100, 3), data_set_idx + 1, arm_twist_bone_name)
+                logger.info("-- %sフレーム目:終了(%s％)【No.%s - 捩り分散 - %s】", fno, round((fno / last_fno) * 100, 3), data_set_idx + 1, arm_twist_bone_name)
 
             return True
         except SizingException as se:
@@ -786,7 +751,7 @@ class StanceService():
                             data_set.motion.regist_bf(ik_bf, "{0}足ＩＫ".format(direction), fno)
                     
                     if fno // 500 > prev_sep_fno and fnos[-1] > 0:
-                        logger.info("-- %sフレーム目:終了(%s％)【No.%s - %sつま先】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1, direction)
+                        logger.info("-- %sフレーム目:終了(%s％)【No.%s - %sつま先補正】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1, direction)
                         prev_sep_fno = fno // 500
 
                 logger.info("%sつま先補正:終了【No.%s】", direction, (data_set_idx + 1))
@@ -890,7 +855,7 @@ class StanceService():
                     logger.debug("f: %s, 体幹オフセット後: %s", bf.fno, bf.position)
 
                 if fno // 500 > prev_fno and fnos[-1] > 0:
-                    logger.info("-- %sフレーム目:終了(%s％)【No.%s - センター】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1)
+                    logger.info("-- %sフレーム目:終了(%s％)【No.%s - センタースタンス補正】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1)
                     prev_fno = fno // 500
 
             logger.info("センタースタンス補正: 終了【No.%s】", (data_set_idx + 1))
@@ -1156,7 +1121,7 @@ class StanceService():
                                                     rep_upper_initial_slope_qq, upper_initial_qq, dot_limit)
 
                 if fno // 500 > prev_fno and fnos[-1] > 0:
-                    logger.info("-- %sフレーム目:終了(%s％)【No.%s - 上半身】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1)
+                    logger.info("-- %sフレーム目:終了(%s％)【No.%s - 上半身スタンス補正】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1)
                     prev_fno = fno // 500
 
             # 子の角度調整
@@ -1257,7 +1222,7 @@ class StanceService():
                                                         rep_upper2_initial_slope_qq, upper2_initial_qq, dot2_limit)
 
                     if fno // 500 > prev_fno and fnos[-1] > 0:
-                        logger.info("-- %sフレーム目:終了(%s％)【No.%s - 上半身2】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1)
+                        logger.info("-- %sフレーム目:終了(%s％)【No.%s - 上半身2スタンス補正】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1)
                         prev_fno = fno // 500
 
                 # 子の角度調整
@@ -1532,7 +1497,7 @@ class StanceService():
                     data_set.motion.regist_bf(shoulder_bf, shoulder_name, fno)
                         
                     if fno // 500 > prev_fno and fnos[-1] > 0:
-                        logger.info("-- %sフレーム目:終了(%s％)【No.%s - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1, shoulder_name)
+                        logger.info("-- %sフレーム目:終了(%s％)【No.%s - %sスタンス補正】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1, shoulder_name)
                         prev_fno = fno // 500
 
                 # 子の角度調整

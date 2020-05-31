@@ -690,11 +690,11 @@ class RigidBody():
             logger.test("ba: %s, bb: %s, bc: %s", ba, bb, bc)
             logger.test("ta: %s, tb: %s, tc: %s", ta, tb, tc)
 
-            if ba > bb + bc:
-                # 下辺始点が鋭角三角形の場合、下辺始点との長さ
+            if t1.distanceToPoint(b1) < b1.distanceToPoint(h) < t1.distanceToPoint(h):
+                # b1側の外分点
                 h = b1
-            elif ta > tb + tc:
-                # 上辺終点が鋭角三角形の場合、上辺終点との長さ
+            elif t1.distanceToPoint(b1) < t1.distanceToPoint(h) < b1.distanceToPoint(h):
+                # t1側の外分点
                 h = t1
 
             logger.test("v: %s", v)
@@ -1186,15 +1186,21 @@ class PmxModel():
             radius = (max(x_len, y_len, z_len) / 2)
             # radius += radius / 15
 
-            # 中点
-            center = MVector3D(np.mean([up_max_vertex.position.data(), down_max_vertex.position.data(), left_max_vertex.position.data(), \
-                                        right_max_vertex.position.data(), back_max_vertex.position.data(), front_max_vertex.position.data()], axis=0))
+            center = MVector3D()
             # XZはど真ん中
             center.setX(0)
-            # Yは下辺から半径分上ちょっと下くらい
-            center.setY(down_max_vertex.position.y() + (radius * 0.9))
-            # Zはちょっと前に
-            center.setZ(center.z() - (radius * 0.1))
+            # Yは下辺から半径分上
+            center.setY(down_max_vertex.position.y() + (radius * 0.95))
+            # Zは前面から半径分後ろ
+            center.setZ(front_max_vertex.position.z() + (radius * 0.95))
+
+            # # 中点
+            # center = MVector3D(np.mean([up_max_vertex.position.data(), down_max_vertex.position.data(), left_max_vertex.position.data(), \
+            #                             right_max_vertex.position.data(), back_max_vertex.position.data(), front_max_vertex.position.data()], axis=0))
+            # # Yは下辺から半径分上ちょっと下くらい
+            # center.setY(down_max_vertex.position.y() + (radius * 0.9))
+            # # Zはちょっと前に
+            # center.setZ(center.z() - (radius * 0.1))
 
             head_rigidbody = RigidBody("頭接触回避", None, self.bones["頭"].index, None, None, 0, \
                                        MVector3D(radius, radius, radius), center, MVector3D(), None, None, None, None, None, 0)

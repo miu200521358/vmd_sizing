@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 #
 import numpy as np
+import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
 
 from mmd.PmxData import PmxModel, Bone # noqa
 from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
@@ -28,7 +30,7 @@ class ArmAlignmentService():
 
         if len(self.target_data_set_idxs) == 0:
             # データセットがない場合、処理スキップ
-            logger.warning("手首位置合わせができるファイルセットが見つからなかったため、位置合わせ処理をスキップします。", decoration=MLogger.DECORATION_BOX)
+            logger.warning("位置合わせができるファイルセットが見つからなかったため、位置合わせ処理をスキップします。", decoration=MLogger.DECORATION_BOX)
             return True
 
         # リンク辞書
@@ -36,7 +38,7 @@ class ArmAlignmentService():
         # 処理対象ボーン名リスト
         bone_names = []
 
-        logger.info("手首位置合わせ　", decoration=MLogger.DECORATION_LINE)
+        logger.info("位置合わせ　", decoration=MLogger.DECORATION_LINE)
 
         for data_set_idx in self.target_data_set_idxs:
             # 処理対象データセットに対して、準備実行
@@ -57,9 +59,10 @@ class ArmAlignmentService():
         for data_set_idx in self.target_data_set_idxs:
             # 処理対象データセット
             data_set = self.options.data_set_list[data_set_idx]
-            fnos = data_set.motion.get_bone_fnos(*bone_names)
-            # キーフレを重複除外してソートする
-            fnos = sorted(list(set(fnos)))
+            fnos.extend(data_set.motion.get_bone_fnos(*bone_names))
+
+        # キーフレを重複除外してソートする
+        fnos = sorted(list(set(fnos)))
 
         all_prev_org_effector_poses_indexes = {}
         all_prev_rep_effector_poses_indexes = {}
@@ -74,63 +77,53 @@ class ArmAlignmentService():
                 self.execute_alignment(fno, all_prev_org_effector_poses_indexes, all_prev_rep_effector_poses_indexes, \
                                        all_prev_org_tip_poses_indexes, all_prev_rep_tip_poses_indexes)
 
+            fnos = []
             # キーフレが増えている可能性があるので、ここで再取得
             for data_set_idx in self.target_data_set_idxs:
                 # 処理対象データセット
                 data_set = self.options.data_set_list[data_set_idx]
                 # 次の範囲でキーフレ検索
-                fnos = data_set.motion.get_bone_fnos(*bone_names, start_fno=(fno + 1))
-                # キーフレを重複除外してソートする
-                fnos = sorted(list(set(fnos)))
+                fnos.extend(data_set.motion.get_bone_fnos(*bone_names, start_fno=(fno + 1)))
+                
+            # キーフレを重複除外してソートする
+            fnos = sorted(list(set(fnos)))
         
-        # futures = []
-        # with ThreadPoolExecutor(thread_name_prefix="alignment_after") as executor:
-        #     for data_set_idx, data_set in enumerate(self.options.data_set_list):
-        #         futures.append(executor.submit(self.alignment_after, data_set_idx, "右"))
-        #         futures.append(executor.submit(self.alignment_after, data_set_idx, "左"))
+        futures = []
+        with ThreadPoolExecutor(thread_name_prefix="alignment_after") as executor:
+            for data_set_idx, data_set in enumerate(self.options.data_set_list):
+                for direction in ["右", "左"]:
+                    for bone_name in ["{0}腕".format(direction), "{0}ひじ".format(direction), "{0}手首".format(direction)]:
+                        futures.append(executor.submit(self.alignment_after, data_set_idx, bone_name))
 
-        # concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
+        concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
-        # for f in futures:
-        #     if not f.result():
-        #         return False
+        for f in futures:
+            if not f.result():
+                return False
 
         return True
     
     # 位置合わせ後処理
-    def alignment_after(self, data_set_idx: int, direction: str):
+    def alignment_after(self, data_set_idx: int, bone_name: str):
         try:
-            logger.info("%s位置合わせ後処理【No.%s】", direction, (data_set_idx + 1))
+            logger.info("位置合わせ処理 - 円滑化【No.%s - %s】", (data_set_idx + 1), bone_name)
 
             logger.copy(self.options)
-            # 処理対象データセット
             data_set = self.options.data_set_list[data_set_idx]
+            
+            data_set.motion.smooth_bf(data_set_idx + 1, bone_name, data_set.rep_model.bones[bone_name].getRotatable(), \
+                                      data_set.rep_model.bones[bone_name].getTranslatable(), limit_degrees=1)
 
-            for bone_name in ["{0}腕".format(direction), "{0}ひじ".format(direction), "{0}手首".format(direction)]:
-                # 読み込んだ時のキーフレのみを対象とする
-                fnos = data_set.motion.get_bone_fnos(bone_name, is_read=True)
-                if len(fnos) < 2:
-                    # 前後がない場合、全件キーフレ
-                    all_fnos = data_set.motion.get_bone_fnos(bone_name)
-                    fnos = [all_fnos[0], all_fnos[-1]]
+            logger.info("位置合わせ処理 - フィルタリング【No.%s - %s】", (data_set_idx + 1), bone_name)
 
-                prev_sep_fno = 0
-                log_target_idxs = []
-                for fno_idx, fno in enumerate(data_set.motion.get_bone_fnos(bone_name)):
-                    if fno // 500 > prev_sep_fno:
-                        log_target_idxs.append(fno)
-                        prev_sep_fno = fno // 500
-                log_target_idxs.append(fnos[-1])
+            data_set.motion.smooth_filter_bf(data_set_idx + 1, bone_name, data_set.rep_model.bones[bone_name].getRotatable(), \
+                                             data_set.rep_model.bones[bone_name].getTranslatable(), \
+                                             config={"freq": 30, "mincutoff": 0.03, "beta": 0.1, "dcutoff": 1}, loop=1)
 
-                for start_fno, end_fno in zip(fnos[:-1], fnos[1:]):
-                    # 跳ねたりしてるのを円滑化
-                    data_set.motion.smooth_bf(data_set_idx + 1, bone_name, start_fno, end_fno, data_set.rep_model.bones[bone_name].getRotatable(), \
-                                              data_set.rep_model.bones[bone_name].getTranslatable(), 5, (end_fno in log_target_idxs))
+            logger.info("位置合わせ処理 - 不要キー削除【No.%s - %s】", (data_set_idx + 1), bone_name)
 
-                # フィルタリング処理
-                data_set.motion.smooth_filter_bf(data_set_idx + 1, bone_name, data_set.rep_model.bones[bone_name].getRotatable(), \
-                                                 data_set.rep_model.bones[bone_name].getTranslatable(), \
-                                                 config={"freq": 30, "mincutoff": 0.5, "beta": 0.1, "dcutoff": 0.5})
+            data_set.motion.remove_unnecessary_bf(data_set_idx + 1, bone_name, data_set.rep_model.bones[bone_name].getRotatable(), \
+                                                  data_set.rep_model.bones[bone_name].getTranslatable(), offset=15)
 
             return True
         except SizingException as se:
@@ -716,19 +709,19 @@ class ArmAlignmentService():
             arm_bone = rep_wrist_links.get("{0}腕".format(direction))
             arm_bone.dot_limit = 0.7
 
-            if not self.options.arm_options.avoidance:
-                # 腕だけ動かすパターンは接触回避もやった場合は行わない
-                ik_links = BoneLinks()
-                ik_links.append(wrist_bone)
-                ik_links.append(arm_bone)
-                ik_links_list.append(ik_links)
-                ik_count_list.append(10)
+            # if not self.options.arm_options.avoidance:
+            #     # 腕だけ動かすパターンは接触回避もやった場合は行わない
+            #     ik_links = BoneLinks()
+            #     ik_links.append(wrist_bone)
+            #     ik_links.append(arm_bone)
+            #     ik_links_list.append(ik_links)
+            #     ik_count_list.append(10)
             
-            ik_links = BoneLinks()
-            ik_links.append(wrist_bone)
-            ik_links.append(elbow_bone)
-            ik_links_list.append(ik_links)
-            ik_count_list.append(10)
+            # ik_links = BoneLinks()
+            # ik_links.append(wrist_bone)
+            # ik_links.append(elbow_bone)
+            # ik_links_list.append(ik_links)
+            # ik_count_list.append(10)
 
             ik_links = BoneLinks()
             ik_links.append(wrist_bone)
@@ -841,19 +834,19 @@ class ArmAlignmentService():
                 arm_bone = rep_finger_links.get("{0}腕".format(direction))
                 arm_bone.dot_limit = 0.7
 
-                if not self.options.arm_options.avoidance:
-                    # 腕だけ動かすパターンは接触回避もやった場合は行わない
-                    ik_links = BoneLinks()
-                    ik_links.append(rep_finger_links.get(total_finger_name))
-                    ik_links.append(arm_bone)
-                    ik_links_list.append(ik_links)
-                    ik_count_list.append(10)
+                # if not self.options.arm_options.avoidance:
+                #     # 腕だけ動かすパターンは接触回避もやった場合は行わない
+                #     ik_links = BoneLinks()
+                #     ik_links.append(rep_finger_links.get(total_finger_name))
+                #     ik_links.append(arm_bone)
+                #     ik_links_list.append(ik_links)
+                #     ik_count_list.append(10)
                             
-                ik_links = BoneLinks()
-                ik_links.append(rep_finger_links.get(total_finger_name))
-                ik_links.append(elbow_bone)
-                ik_links_list.append(ik_links)
-                ik_count_list.append(10)
+                # ik_links = BoneLinks()
+                # ik_links.append(rep_finger_links.get(total_finger_name))
+                # ik_links.append(elbow_bone)
+                # ik_links_list.append(ik_links)
+                # ik_count_list.append(10)
 
                 ik_links = BoneLinks()
                 ik_links.append(rep_finger_links.get(total_finger_name))

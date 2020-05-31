@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 #
-import copy
 import math
 import numpy as np
 import quaternion # noqa
@@ -65,8 +64,10 @@ class MVector2D():
         self.__data = normv
     
     def effective(self):
-        self.setX(get_effective_value(self.x()))
-        self.setY(get_effective_value(self.y()))
+        self.__data[np.isnan(self.__data)] = 0
+        self.__data[np.isinf(self.__data)] = 0
+
+        return self
             
     def data(self):
         return self.__data
@@ -290,9 +291,8 @@ class MVector3D():
         return (is_almost_null(self.__data[0]) and is_almost_null(self.__data[1]) and is_almost_null(self.__data[2]))
     
     def effective(self):
-        self.setX(get_effective_value(self.x()))
-        self.setY(get_effective_value(self.y()))
-        self.setZ(get_effective_value(self.z()))
+        self.__data[np.isnan(self.__data)] = 0
+        self.__data[np.isinf(self.__data)] = 0
 
         return self
                 
@@ -516,10 +516,8 @@ class MVector4D():
         return (is_almost_null(self.__data[0]) and is_almost_null(self.__data[1]) and is_almost_null(self.__data[2]) and is_almost_null(self.__data[3]))
                    
     def effective(self):
-        self.setX(get_effective_value(self.x()))
-        self.setY(get_effective_value(self.y()))
-        self.setZ(get_effective_value(self.z()))
-        self.setW(get_effective_value(self.w()))
+        self.__data[np.isnan(self.__data)] = 0
+        self.__data[np.isinf(self.__data)] = 0
                                 
     @classmethod
     def dotProduct(cls, v1, v2):
@@ -723,10 +721,10 @@ class MQuaternion():
         self.__data = self.__data.normalized()
 
     def effective(self):
-        self.setX(get_effective_value(self.x()))
-        self.setY(get_effective_value(self.y()))
-        self.setZ(get_effective_value(self.z()))
-        self.setScalar((1 if get_effective_value(self.scalar()) == 0 else self.scalar()))
+        self.__data.components[np.isnan(self.__data.components)] = 0
+        self.__data.components[np.isinf(self.__data.components)] = 0
+        # Scalarは1がデフォルトとなる
+        self.setScalar(1 if self.scalar() == 0 else self.scalar())
 
     def toMatrix4x4(self):
         mat = MMatrix4x4()
@@ -829,7 +827,7 @@ class MQuaternion():
     
     @classmethod
     def dotProduct(cls, v1, v2):
-        dotv = np.sum(copy.deepcopy(v1.__data.components) * copy.deepcopy(v2.__data.components))
+        dotv = np.sum(v1.__data.components * v2.__data.components)
         return dotv
     
     @classmethod

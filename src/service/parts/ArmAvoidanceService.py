@@ -72,10 +72,21 @@ class ArmAvoidanceService():
     def execute_avoidance_pool(self, data_set_idx: int, direction: str):
         try:
             # 接触回避準備
-            all_avoidance_axis = self.avoidance_before(data_set_idx, direction)
+            all_avoidance_axis = self.prepare_avoidance_dataset(data_set_idx, direction)
 
             # 接触回避処理
-            self.avoidance_execute(data_set_idx, direction, all_avoidance_axis)
+            self.execute_avoidance(data_set_idx, direction, all_avoidance_axis)
+
+            # 各ボーンのbfを円滑化
+            futures = []
+            with ThreadPoolExecutor(thread_name_prefix="avoidance_after{0}".format(data_set_idx)) as executor:
+                for bone_name in ["{0}腕".format(direction), "{0}ひじ".format(direction), "{0}手首".format(direction)]:
+                    futures.append(executor.submit(self.execute_avoidance_after, data_set_idx, bone_name))
+
+            concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
+            for f in futures:
+                if not f.result():
+                    return False
 
             return True
         except SizingException as se:
@@ -85,10 +96,41 @@ class ArmAvoidanceService():
             import traceback
             logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
             raise e
-    
+
     # 接触回避処理
-    def avoidance_execute(self, data_set_idx: int, direction: str, all_avoidance_axis: dict):
-        logger.info("接触回避処理【No.%s-%s】", (data_set_idx + 1), direction)
+    def execute_avoidance_after(self, data_set_idx: int, bone_name: str):
+        try:
+            logger.info("接触回避後処理 - 円滑化【No.%s - %s】", (data_set_idx + 1), bone_name)
+
+            logger.copy(self.options)
+            data_set = self.options.data_set_list[data_set_idx]
+            
+            data_set.motion.smooth_bf(data_set_idx + 1, bone_name, data_set.rep_model.bones[bone_name].getRotatable(), \
+                                      data_set.rep_model.bones[bone_name].getTranslatable(), limit_degrees=1)
+
+            logger.info("接触回避後処理 - フィルタリング【No.%s - %s】", (data_set_idx + 1), bone_name)
+
+            data_set.motion.smooth_filter_bf(data_set_idx + 1, bone_name, data_set.rep_model.bones[bone_name].getRotatable(), \
+                                             data_set.rep_model.bones[bone_name].getTranslatable(), \
+                                             config={"freq": 30, "mincutoff": 0.03, "beta": 0.1, "dcutoff": 1}, loop=1)
+
+            logger.info("接触回避後処理 - 不要キー削除【No.%s - %s】", (data_set_idx + 1), bone_name)
+
+            data_set.motion.remove_unnecessary_bf(data_set_idx + 1, bone_name, data_set.rep_model.bones[bone_name].getRotatable(), \
+                                                  data_set.rep_model.bones[bone_name].getTranslatable(), offset=15)
+
+            return True
+        except SizingException as se:
+            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
+            return se
+        except Exception as e:
+            import traceback
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            raise e
+
+    # 接触回避処理
+    def execute_avoidance(self, data_set_idx: int, direction: str, all_avoidance_axis: dict):
+        logger.info("接触回避処理【No.%s - %s】", (data_set_idx + 1), direction)
 
         logger.copy(self.options)
         # 処理対象データセット
@@ -97,7 +139,7 @@ class ArmAvoidanceService():
         # 回避用オプション
         avoidance_options = self.avoidance_options[(data_set_idx, direction)]
 
-        target_bone_names = ["{0}腕".format(direction), "{0}腕捩り".format(direction), "{0}ひじ".format(direction), "{0}手捩り".format(direction), "{0}手首".format(direction)]
+        target_bone_names = ["{0}腕".format(direction), "{0}腕捩".format(direction), "{0}ひじ".format(direction), "{0}手捩".format(direction), "{0}手首".format(direction)]
         avoidance_axis = {}
         prev_block_fno = 0
         fnos = data_set.motion.get_bone_fnos(*target_bone_names)
@@ -274,7 +316,7 @@ class ArmAvoidanceService():
                             data_set.motion.regist_bf(now_bf, link_name, fno)
             
             if fno // 500 > prev_block_fno and fnos[-1] > 0:
-                logger.info("-- %sフレーム目:終了(%s％)【No.%s-%s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1, direction)
+                logger.info("-- %sフレーム目:終了(%s％)【No.%s - 接触回避 - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1, direction)
                 prev_block_fno = fno // 500
             
             # キーの登録が増えているかもなので、ここで取り直す
@@ -283,8 +325,8 @@ class ArmAvoidanceService():
         return True
 
     # 接触回避準備
-    def avoidance_before(self, data_set_idx: int, direction: str):
-        logger.info("接触回避準備【No.%s-%s】", (data_set_idx + 1), direction)
+    def prepare_avoidance_dataset(self, data_set_idx: int, direction: str):
+        logger.info("接触回避準備【No.%s - %s】", (data_set_idx + 1), direction)
 
         logger.copy(self.options)
         # 処理対象データセット
@@ -293,11 +335,19 @@ class ArmAvoidanceService():
         # 回避用オプション
         avoidance_options = self.avoidance_options[(data_set_idx, direction)]
 
-        all_avoidance_list = []
-        prev_collision = False
+        all_avoidance_list = [{}]
+        prev_collisions = []
         prev_block_fno = 0
-        fnos = data_set.motion.get_bone_fnos("{0}腕".format(direction), "{0}ひじ".format(direction), "{0}手首".format(direction))
+        fnos = data_set.motion.get_bone_fnos("{0}腕".format(direction), "{0}腕捩".format(direction), "{0}ひじ".format(direction), "{0}手捩".format(direction), "{0}手首".format(direction))
         for fno in fnos:
+            
+            # 衝突しておらず、かつ前回の衝突情報がある場合、追加
+            if prev_collisions.count(True) == 0 and len(all_avoidance_list[-1].keys()) > 0:
+                # 前回衝突なしで今回衝突していたら、リスト追加
+                all_avoidance_list.append({})
+            
+            prev_collisions = []
+
             for ((avoidance_name, avodance_link), avoidance) in zip(avoidance_options.avoidance_links.items(), avoidance_options.avoidances.values()):
                 # 剛体の現在位置をチェック
                 rep_avbone_global_3ds, rep_avbone_global_mats = \
@@ -319,20 +369,17 @@ class ArmAvoidanceService():
                                      fno, (data_set_idx + 1), arm_link.last_name(), avoidance_name, collision, near_collision, \
                                      x_distance, z_distance, rep_x_collision_vec.to_log(), rep_z_collision_vec.to_log())
 
-                        if not prev_collision:
-                            # 前回衝突なしで今回衝突していたら、リスト追加
-                            all_avoidance_list.append({})
-
                         # 衝突していたら、その中にキーフレ/ボーン名で登録
                         all_avoidance_list[-1][(fno, avoidance_name, arm_link.last_name())] = \
                             {"fno": fno, "avoidance_name": avoidance_name, "bone_name": arm_link.last_name(), "collision": collision, "near_collision": near_collision, \
-                                "x_distance": x_distance, "z_distance": z_distance, "rep_x_collision_vec": rep_x_collision_vec, "rep_z_collision_vec": rep_z_collision_vec}
-                    
-                    prev_collision = prev_collision or collision or near_collision
+                                "x_distance": x_distance, "z_distance": z_distance, "rep_x_collision_vec": rep_x_collision_vec, "rep_z_collision_vec": rep_z_collision_vec}                    
 
-            if fno // 500 > prev_block_fno and fnos[-1] > 0:
-                logger.info("-- %sフレーム目:終了(%s％)【No.%s-%s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1, direction)
-                prev_block_fno = fno // 500
+                    prev_collisions.append(collision)
+                    prev_collisions.append(near_collision)
+
+            if fno // 200 > prev_block_fno and fnos[-1] > 0:
+                logger.info("-- %sフレーム目:終了(%s％)【No.%s - 接触回避準備 - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1, direction)
+                prev_block_fno = fno // 200
 
         all_avoidance_axis = {}
         for aidx, avoidance_list in enumerate(all_avoidance_list):
@@ -351,13 +398,14 @@ class ArmAvoidanceService():
                 block_x_distance += x_distance
                 block_z_distance += z_distance
             
-            # 範囲
-            from_fno = min([fno for (fno, avoidance_name, bone_name) in avoidance_list.keys()])
-            to_fno = max([fno for (fno, avoidance_name, bone_name) in avoidance_list.keys()])
+            if len(avoidance_list.keys()) > 0:
+                # 範囲
+                from_fno = min([fno for (fno, avoidance_name, bone_name) in avoidance_list.keys()])
+                to_fno = max([fno for (fno, avoidance_name, bone_name) in avoidance_list.keys()])
 
-            # 回避距離があって、総合的な回避距離が近い方を採用
-            all_avoidance_axis[from_fno] = {"from_fno": from_fno, "to_fno": to_fno, "axis": ("x" if block_x_distance < block_z_distance else "z")}
-            logger.debug("aidx: %s, from: %s, to: %s, axis: %s, xd: %s, zd: %s", aidx, from_fno, to_fno, all_avoidance_axis[from_fno], block_x_distance, block_z_distance)
+                # 回避距離があって、総合的な回避距離が近い方を採用(若干Z優先)
+                all_avoidance_axis[from_fno] = {"from_fno": from_fno, "to_fno": to_fno, "axis": ("x" if block_x_distance < block_z_distance else "z")}
+                logger.debug("aidx: %s, d: %s, from: %s, to: %s, axis: %s, xd: %s, zd: %s", aidx, direction, from_fno, to_fno, all_avoidance_axis[from_fno], block_x_distance, block_z_distance)
             
         return all_avoidance_axis
 
@@ -396,11 +444,11 @@ class ArmAvoidanceService():
             head_rigidbody.is_small = (face_length <= 3)
 
             if head_rigidbody:
-                logger.info("【No.%s-%s】頭接触回避用剛体: 半径: %s, 位置: %s", (data_set_idx + 1), direction, head_rigidbody.shape_size.x(), head_rigidbody.shape_position.to_log())
+                logger.info("【No.%s - %s】頭接触回避用剛体: 半径: %s, 位置: %s", (data_set_idx + 1), direction, head_rigidbody.shape_size.x(), head_rigidbody.shape_position.to_log())
                 avoidance_links[head_rigidbody.name] = data_set.rep_model.create_link_2_top_one(data_set.rep_model.bone_indexes[head_rigidbody.bone_index])
                 avoidances[head_rigidbody.name] = head_rigidbody
             else:
-                logger.info("【No.%s-%s】頭にウェイトが乗っている頂点が見つからなかった為、接触回避用剛体が作れませんでした。", (data_set_idx + 1), direction)
+                logger.info("【No.%s - %s】頭にウェイトが乗っている頂点が見つからなかった為、接触回避用剛体が作れませんでした。", (data_set_idx + 1), direction)
 
         self.calc_wrist_entity_vertex(data_set_idx, data_set.rep_model, "変換先", direction)
         # self.calc_elbow_entity_vertex(data_set_idx, data_set.rep_model, "変換先", direction)
@@ -482,9 +530,9 @@ class ArmAvoidanceService():
         effector_bone_name_list = []
         effector_bone_name_list.append("{0}ひじ".format(direction))
 
-        if face_length > 3:
-            # 腕ひじ中間は3頭身より大きい場合のみ検討
-            effector_bone_name_list.append("{0}腕ひじ中間".format(direction))
+        # if face_length > 3:
+        #     # 腕ひじ中間は3頭身より大きい場合のみ検討
+        #     effector_bone_name_list.append("{0}腕ひじ中間".format(direction))
 
         # 腕を動かすパターン
         for effector_entity_bone_name in effector_bone_name_list:

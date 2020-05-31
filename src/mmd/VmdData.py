@@ -10,7 +10,7 @@ from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MM
 from utils import MBezierUtils # noqa
 from utils.MLogger import MLogger
 
-logger = MLogger(__name__)
+logger = MLogger(__name__, level=1)
 
 
 class VmdBoneFrame():
@@ -197,152 +197,168 @@ class VmdMotion():
         # ハッシュ値
         self.digest = None
     
-    def regist_full_bf(self, data_set_no: int, bone_name: str, is_rot: bool, is_mov: bool, is_full: bool):
-        prev_sep_fno = 0
-        registed_bfs = []   # 登録対象bfリスト
+    def regist_full_bf(self, data_set_no: int, bone_name_list: str, offset=1):
+        # 指定された全部のボーンのキーフレ取得
+        fnos = self.get_bone_fnos(*bone_name_list)
+        # オフセット単位でキーフレ計算
+        fnos.extend(x for x in range(fnos[-1])[::offset])
+        # 重複を除いて再計算
+        fnos = sorted(list(set(fnos)))
 
-        if is_full:
-            for fno in range(self.last_motion_frame):
+        # 指定ボーン名でキーフレ登録
+        for bone_name in bone_name_list:
+            prev_sep_fno = 0
+
+            for fno in fnos:
                 bf = self.calc_bf(bone_name, fno)
-                bf.key = True
-                registed_bfs.append(bf)
-        else:
-            fnos = self.get_bone_fnos(bone_name)
-            if len(fnos) > 2:
-                start_fno = fnos[0]     # 開始フレーム番号
-                fno = fnos[1]           # 次のフレーム番号
-                fill_bfs = []
-                while fno < fnos[-1]:
-                    prev_bf = self.calc_bf(bone_name, start_fno)    # 繋ぐ元のbf
-                    now_bf = self.calc_bf(bone_name, fno)           # 繋ぐ対象のbf
-                    next_bf = self.calc_bf(bone_name, fno + 1)      # 繋ぐ先のbf
+                self.regist_bf(bf, bone_name, fno)
 
-                    if not now_bf.read:
-                        # 読み込みキーではない場合、結合を試す
-                        
-                        # 現在キーを追加
-                        fill_bfs.append(now_bf)
-
-                        if self.join_bf(prev_bf, fill_bfs, next_bf, is_rot, is_mov):
-                            # 全ての補間曲線が繋ぐのに成功した場合、繋ぐ
-                            logger.test("fno: %s, %s, ○補間曲線結合", fno, bone_name)
-
-                            # nowキーは有効にしないでそのまま登録だけする
-                            registed_bfs.append(now_bf)
-
-                            # startはそのままで、nowだけ動かす
-                            fno = fno + 1       # 現在フレームを次に移す
-                        else:
-                            logger.test("fno: %s, %s, ×補間曲線結合失敗", fno, bone_name)
-                            # どれか失敗してたら、キーを有効にして残す
-
-                            now_bf.key = True
-                            registed_bfs.append(now_bf)
-
-                            start_fno = fno     # 開始を現在フレーム
-                            fill_bfs = []       # 中間キーをクリア
-                            fno = fno + 1       # 現在フレームを次に移す
-                    else:
-                        # 読み込み時のキーである場合、既に登録されているのでスルー
-                        start_fno = fno     # 開始を現在フレーム
-                        fill_bfs = []       # 中間キーをクリア
-                        fno = fno + 1       # 現在フレームを次に移す
-
-                    if fno // 500 > prev_sep_fno and fnos[-1] > 0:
-                        logger.info("-- %sフレーム目:終了(%s％)【No.%s - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
-                        prev_sep_fno = fno // 500
-
-        # 保持したのを登録しなおし
-        for bf in registed_bfs:
-            self.bones[bone_name][bf.fno] = bf
+                if data_set_no > 0 and fno // 500 > prev_sep_fno and fnos[-1] > 0:
+                    logger.info("-- %sフレーム目:終了(%s％)【No.%s - 全打ち - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
+                    prev_sep_fno = fno // 500
     
+    def regist_differ_bf(self, data_set_no: int, bone_name_list: str, limit_degrees: float):
+        fnos = [0]
+        for bone_name in bone_name_list:
+            prev_sep_fno = 0
+
+            # 有効キーを取得
+            bone_fnos = self.get_bone_fnos(bone_name, is_key=True)
+            
+            before_bf = self.calc_bf(bone_name, 0)  # 比較対象bf
+            for fno in range(1, bone_fnos[-1]):
+                bf = self.calc_bf(bone_name, fno)
+
+                if bf.read:
+                    # 読み込みキーである場合、必ず処理対象に追加
+                    fnos.append(fno)
+                    # 前回キーとして保持
+                    before_bf = bf.copy()
+                else:
+                    # 読み込みキーではない場合、処理対象にするかチェック
+
+                    # 読み込みキーとの差
+                    dot = MQuaternion.dotProduct(before_bf.rotation, bf.rotation)
+                    if dot < 1 - math.radians(limit_degrees):
+                        # 前と今回の内積の差が指定度数より離れている場合、追加
+                        logger.test("★ 追加 set: %s, %s, f: %s, dot: %s", data_set_no, bone_name, fno, dot)
+                        fnos.append(fno)
+                        # 前回キーとして保持
+                        before_bf = bf.copy()
+                    else:
+                        logger.test("－ スルー set: %s, %s, f: %s, dot: %s, degree: %s", data_set_no, bone_name, fno, dot, math.degrees(1 - dot))
+
+                if data_set_no > 0 and fno // 500 > prev_sep_fno and bone_fnos[-1] > 0:
+                    logger.info("-- %sフレーム目:終了(%s％)【No.%s - キーフレ追加準備 - %s】", fno, round((fno / bone_fnos[-1]) * 100, 3), data_set_no, bone_name)
+                    prev_sep_fno = fno // 500
+
+        # 重複を除いて再計算
+        fnos = sorted(list(set(fnos)))
+
+        # 指定ボーン名でキーフレ登録
+        for bone_name in bone_name_list:
+            prev_sep_fno = 0
+
+            for fno in fnos:
+                bf = self.calc_bf(bone_name, fno)
+                self.regist_bf(bf, bone_name, fno)
+
+                if data_set_no > 0 and fno // 500 > prev_sep_fno and fnos[-1] > 0:
+                    logger.info("-- %sフレーム目:終了(%s％)【No.%s - キーフレ追加 - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
+                    prev_sep_fno = fno // 500
+
     # 指定ボーンが跳ねてたりするのを回避
-    def smooth_bf(self, data_set_no: int, bone_name: str, start_fno: int, end_fno: int, is_rot: bool, is_mov: bool, limit_degrees: float, is_log: bool):
+    def smooth_bf(self, data_set_no: int, bone_name: str, is_rot: bool, is_mov: bool, limit_degrees: float):
         # キーフレを取得する
-        fnos = self.get_bone_fnos(bone_name, start_fno=start_fno)
-        if len(fnos) > 2:
-            for fno in range(start_fno, end_fno):
-                for offset in range(0, 3):
-                    prev_bf = self.calc_bf(bone_name, fno - 1)
-                    now_bf = self.calc_bf(bone_name, fno + offset)
-                    next_bf = self.calc_bf(bone_name, fno + 3)
-
-                    if is_rot and now_bf.key:
-                        # 前後の内積
-                        prev_next_dot = MQuaternion.dotProduct(prev_bf.rotation, next_bf.rotation)
-                        # 自分と後の内積
-                        now_next_dot = MQuaternion.dotProduct(now_bf.rotation, next_bf.rotation)
-                        # 内積差分
-                        diff = np.abs(np.diff([prev_next_dot, now_next_dot]))
-                        logger.test("set: %s, %s, f: %s, offset: %s, diff: %s, prev_next_dot: %s, now_next_dot: %s", data_set_no, bone_name, fno, offset, diff, prev_next_dot, now_next_dot)
-
-                        # 前後と自分の内積の差が一定以上の場合、円滑化
-                        if prev_next_dot > now_next_dot and diff > math.radians(limit_degrees):
-                            logger.debug("★ 円滑化 set: %s, %s, f: %s, offset: %s, diff: %s, prev_next_dot: %s, now_next_dot: %s", \
-                                         data_set_no, bone_name, fno, offset, diff, prev_next_dot, now_next_dot)
-
-                            now_bf.rotation = MQuaternion.slerp(prev_bf.rotation, next_bf.rotation, ((now_bf.fno - prev_bf.fno) / (next_bf.fno - prev_bf.fno)))
-
-        if is_log and fnos[-1] > 0:
-            logger.info("-- %sフレーム目:終了(%s％)【No.%s - %s】", end_fno, round((end_fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
-
-    # フィルターをかける
-    def smooth_filter_bf(self, data_set_no: int, bone_name: str, is_rot: bool, is_mov: bool, config={"freq": 30, "mincutoff": 0.3, "beta": 0.01, "dcutoff": 0.25}):
-        # 移動用フィルタ
-        pxfilter = OneEuroFilter(**config)
-        pyfilter = OneEuroFilter(**config)
-        pzfilter = OneEuroFilter(**config)
-
-        # 回転用フィルタ
-        rxfilter = OneEuroFilter(**config)
-        ryfilter = OneEuroFilter(**config)
-        rzfilter = OneEuroFilter(**config)
-
         fnos = self.get_bone_fnos(bone_name)
         prev_sep_fno = 0
+        if len(fnos) > 2:
+            for fno in fnos:
+                prev_bf = self.calc_bf(bone_name, fno - 1)
+                now_bf = self.calc_bf(bone_name, fno)
+                next_bf = self.calc_bf(bone_name, fno + 1)
 
-        # 全区間をフィルタにかける
-        for fno in fnos:
-            now_bf = self.calc_bf(bone_name, fno)
+                if is_rot and now_bf.key:
+                    # 前後の内積
+                    prev_next_dot = MQuaternion.dotProduct(prev_bf.rotation, next_bf.rotation)
+                    # 自分と後の内積
+                    now_next_dot = MQuaternion.dotProduct(now_bf.rotation, next_bf.rotation)
+                    # 内積差分
+                    diff = np.abs(np.diff([prev_next_dot, now_next_dot]))
+                    logger.test("set: %s, %s, f: %s, diff: %s, prev_next_dot: %s, now_next_dot: %s", data_set_no, bone_name, fno, diff, prev_next_dot, now_next_dot)
 
-            if is_mov:
-                # 移動XYZそれぞれにフィルターをかける
-                px = pxfilter(now_bf.position.x(), now_bf.fno)
-                py = pyfilter(now_bf.position.y(), now_bf.fno)
-                pz = pzfilter(now_bf.position.z(), now_bf.fno)
-                now_bf.position = MVector3D(px, py, pz)
-            
-            if is_rot:
-                # 回転XYZそれぞれにフィルターをかける(オイラー角)
-                now_qq = now_bf.rotation
+                    # 前後と自分の内積の差が一定以上の場合、円滑化
+                    if prev_next_dot > now_next_dot and diff > math.radians(limit_degrees):
+                        logger.debug("★ 円滑化 set: %s, %s, f: %s, diff: %s, prev_next_dot: %s, now_next_dot: %s", \
+                                     data_set_no, bone_name, fno, diff, prev_next_dot, now_next_dot)
 
-                r = now_qq.toEulerAngles()
-                rx = rxfilter(r.x(), now_bf.fno)
-                ry = ryfilter(r.y(), now_bf.fno)
-                rz = rzfilter(r.z(), now_bf.fno)
+                        now_bf.rotation = MQuaternion.slerp(prev_bf.rotation, next_bf.rotation, ((now_bf.fno - prev_bf.fno) / (next_bf.fno - prev_bf.fno)))
 
-                # クォータニオンに戻して保持
-                new_qq = MQuaternion.fromEulerAngles(rx, ry, rz)
-                now_bf.rotation = new_qq
+                if data_set_no > 0 and fno // 200 > prev_sep_fno and fnos[-1] > 0:
+                    logger.info("-- %sフレーム目:終了(%s％)【No.%s - 円滑化 - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
+                    prev_sep_fno = fno // 200
 
-            if data_set_no > 0 and fno // 500 > prev_sep_fno and fnos[-1] > 0:
-                logger.info("-- %sフレーム目:終了(%s％)【No.%s - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
-                prev_sep_fno = fno // 500
+    # フィルターをかける
+    def smooth_filter_bf(self, data_set_no: int, bone_name: str, is_rot: bool, is_mov: bool, loop=1, config={"freq": 30, "mincutoff": 0.3, "beta": 0.01, "dcutoff": 0.25}):
+        
+        for n in range(loop):
+            # 移動用フィルタ
+            pxfilter = OneEuroFilter(**config)
+            pyfilter = OneEuroFilter(**config)
+            pzfilter = OneEuroFilter(**config)
+
+            # 回転用フィルタ
+            rxfilter = OneEuroFilter(**config)
+            ryfilter = OneEuroFilter(**config)
+            rzfilter = OneEuroFilter(**config)
+
+            fnos = self.get_bone_fnos(bone_name)
+            prev_sep_fno = 0
+
+            # 全区間をフィルタにかける
+            for fno in fnos:
+                now_bf = self.calc_bf(bone_name, fno)
+
+                if is_mov:
+                    # 移動XYZそれぞれにフィルターをかける
+                    px = pxfilter(now_bf.position.x(), fno)
+                    py = pyfilter(now_bf.position.y(), fno)
+                    pz = pzfilter(now_bf.position.z(), fno)
+                    now_bf.position = MVector3D(px, py, pz)
+                
+                if is_rot:
+                    # 回転XYZそれぞれにフィルターをかける(オイラー角)
+                    now_qq = now_bf.rotation
+
+                    r = now_qq.toEulerAngles()
+                    rx = rxfilter(r.x(), fno)
+                    ry = ryfilter(r.y(), fno)
+                    rz = rzfilter(r.z(), fno)
+
+                    # クォータニオンに戻して保持
+                    new_qq = MQuaternion.fromEulerAngles(rx, ry, rz)
+                    now_bf.rotation = new_qq
+
+                if data_set_no > 0 and fno // 500 > prev_sep_fno and fnos[-1] > 0:
+                    logger.info("-- %sフレーム目:終了(%s％)【No.%s - フィルタリング - %s(%s)】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, bone_name, (n + 1))
+                    prev_sep_fno = fno // 500
 
     # 指定ボーンの不要キーを削除する
-    def remove_unnecessary_bf(self, data_set_no: int, bone_name: str, start_fno: int, end_fno: int, is_rot: bool, is_mov: bool, is_log: bool, offset=0):
+    def remove_unnecessary_bf(self, data_set_no: int, bone_name: str, is_rot: bool, is_mov: bool, offset=0):
         # キーフレ（開始フレ以降）を取得する
-        fnos = self.get_bone_fnos(bone_name, start_fno=start_fno)
+        fnos = self.get_bone_fnos(bone_name)
+        prev_sep_fno = 0
         logger.debug("remove_unnecessary_bf prev: %s, %s", bone_name, len(fnos))
 
         if len(fnos) > 2:
             start_fno = fnos[0]     # 開始フレーム番号
             fno = fnos[1]           # 次のフレーム番号
             fill_bfs = []
-            while fno < end_fno:
+            for fno in fnos:
                 prev_bf = self.calc_bf(bone_name, start_fno)    # 繋ぐ元のbf
                 now_bf = self.calc_bf(bone_name, fno)           # 繋ぐ対象のbf
                 next_bf = self.calc_bf(bone_name, fno + 1)      # 繋ぐ先のbf
+                is_next_key = next_bf.key                       # nextの有効有無
                 
                 # 読み込みキーではない場合、結合を試す
                 logger.test("now: %s", now_bf)
@@ -353,34 +369,40 @@ class VmdMotion():
 
                     if self.join_bf(prev_bf, fill_bfs, next_bf, is_rot, is_mov, offset):
                         # 全ての補間曲線が繋ぐのに成功した場合、繋ぐ
-                        logger.debug("fno: %s, %s, ○補間曲線結合", fno, bone_name)
+                        logger.debug("f: %s, %s, ○補間曲線結合", fno, bone_name)
 
                         # nowキーを物理的に削除
                         if fno in self.bones[bone_name]:
-                            self.bones[bone_name][fno].key = False
-
-                        # startはそのままで、nowだけ動かす
-                        fno = fno + 1       # 現在フレームを次に移す
+                            del self.bones[bone_name][fno]
+                        
+                        # nextキーをキーの有効有無は問わずに登録
+                        self.regist_bf(next_bf, bone_name, fno + 1)
+                        self.bones[bone_name][fno + 1].key = is_next_key
                     else:
-                        logger.debug("fno: %s, %s, ×補間曲線結合失敗", fno, bone_name)
+                        logger.debug("f: %s, %s, ×補間曲線結合失敗", fno, bone_name)
                         # どれか失敗してたら、そのまま残す
+
+                        # nowキーを有効にする
+                        now_bf.key = True
+
                         start_fno = fno     # 開始を現在フレーム
                         fill_bfs = []       # 中間キーをクリア
-                        fno = fno + 1       # 現在フレームを次に移す
                 else:
-                    logger.debug("fno: %s, %s, ▲読み込みキー", fno, bone_name)
+                    logger.debug("f: %s, %s, ▲読み込みキー", fno, bone_name)
                     # 読み込み時のキーである場合、強制的に残す
                     start_fno = fno     # 開始を現在フレーム
                     fill_bfs = []       # 中間キーをクリア
-                    fno = start_fno + 1       # 現在フレームを次に移す
 
-        if is_log and fnos[-1] > 0:
-            if data_set_no == 0:
-                logger.info("-- %sフレーム目:終了(%s％)【%s】", end_fno, round((end_fno / fnos[-1]) * 100, 3), bone_name)
-            else:
-                logger.info("-- %sフレーム目:終了(%s％)【No.%s - %s】", end_fno, round((end_fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
+                if fno // 100 > prev_sep_fno:
+                    if data_set_no == 0:
+                        logger.info("-- %sフレーム目:終了(%s％)【不要キー削除 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
+                    else:
+                        logger.info("-- %sフレーム目:終了(%s％)【No.%s - 不要キー削除 - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
 
-        logger.debug("remove_unnecessary_bf after: %s, %s, all: %s", bone_name, len(self.get_bone_fnos(bone_name, is_key=True)), len(fnos))
+                    prev_sep_fno = fno // 100
+
+        active_fnos = self.get_bone_fnos(bone_name, is_key=True)
+        logger.debug("remove_unnecessary_bf after: %s, %s, all: %s", bone_name, active_fnos, len(fnos))
 
     # 補間曲線込みでbfを結合できる場合、結合する
     def join_bf(self, prev_bf: VmdBoneFrame, fill_bfs: list, next_bf: VmdBoneFrame, is_rot: bool, is_mov: bool, offset=0):
@@ -390,69 +412,29 @@ class VmdMotion():
         z_values = []
 
         if is_rot:
-            if len(fill_bfs) > 0:
-                # 中間がある場合
-
-                # 回転の場合、クォータニオンのthetaを参照する
-                rot_values.append(0)                                                    # 開始フレーム自体の変位はなし
-                rot_values.append(prev_bf.rotation.calcTheata(fill_bfs[0].rotation))    # 最初の変位
-
-                for before_bf, after_bf in zip(fill_bfs[:-1], fill_bfs[1:]):
-                    # 前後の変位を測定する
-                    rot_values.append(before_bf.rotation.calcTheata(after_bf.rotation))
-
-                rot_values.append(fill_bfs[-1].rotation.calcTheata(next_bf.rotation))    # 最後の変位
-            else:
-                # 間がない場合
-                rot_values = [prev_bf.rotation.calcTheata(next_bf.rotation)]    # 最初の変位
-
-        logger.debug("f: %s, %s, join: %s", prev_bf.fno, prev_bf.name, rot_values)
+            rot_values = np.array([prev_bf.rotation.toDegree()] + [bf.rotation.toDegree() for bf in fill_bfs] + [next_bf.rotation.toDegree()]) - prev_bf.rotation.toDegree()
+            
+            logger.test("f: %s, %s, rot_values: %s", prev_bf.fno, prev_bf.name, rot_values)
 
         if is_mov:
-            if len(fill_bfs) > 0:
-                # 中間がある場合
+            # X ------------
+            x_values = np.array([prev_bf.position.x()] + [bf.position.x() for bf in fill_bfs] + [next_bf.position.x()]) - prev_bf.position.x()
 
-                # X ------------
-                x_values.append(0)                        # 開始フレーム自体の変位はなし
-                x_values.append(fill_bfs[0].position.x() - prev_bf.position.x())    # 最初の変位
+            # Y -----------
+            y_values = np.array([prev_bf.position.y()] + [bf.position.y() for bf in fill_bfs] + [next_bf.position.y()]) - prev_bf.position.y()
 
-                for before_bf, after_bf in zip(fill_bfs[:-1], fill_bfs[1:]):
-                    # 前後の変位を測定する
-                    x_values.append(after_bf.position.x() - before_bf.position.x())
+            # Z -----------
+            z_values = np.array([prev_bf.position.z()] + [bf.position.z() for bf in fill_bfs] + [next_bf.position.z()]) - prev_bf.position.z()
 
-                x_values.append(next_bf.position.x() - fill_bfs[-1].position.x())    # 最後の変位
-
-                # Y -----------
-                y_values.append(0)                        # 開始フレーム自体の変位はなし
-                y_values.append(fill_bfs[0].position.y() - prev_bf.position.y())    # 最初の変位
-
-                for before_bf, after_bf in zip(fill_bfs[:-1], fill_bfs[1:]):
-                    # 前後の変位を測定する
-                    y_values.append(after_bf.position.y() - before_bf.position.y())
-
-                y_values.append(next_bf.position.y() - fill_bfs[-1].position.y())    # 最後の変位
-
-                # Z -----------
-                z_values.append(0)                        # 開始フレーム自体の変位はなし
-                z_values.append(fill_bfs[0].position.z() - prev_bf.position.z())    # 最初の変位
-
-                for before_bf, after_bf in zip(fill_bfs[:-1], fill_bfs[1:]):
-                    # 前後の変位を測定する
-                    z_values.append(after_bf.position.z() - before_bf.position.z())
-
-                z_values.append(next_bf.position.z() - fill_bfs[-1].position.z())    # 最後の変位
-
-            else:
-                # 間がない場合
-                x_values = [prev_bf.position.x()]    # 最初の変位
-                y_values = [prev_bf.position.y()]    # 最初の変位
-                z_values = [prev_bf.position.z()]    # 最初の変位
+            logger.test("f: %s, %s, x_values: %s", prev_bf.fno, prev_bf.name, x_values)
+            logger.test("f: %s, %s, y_values: %s", prev_bf.fno, prev_bf.name, y_values)
+            logger.test("f: %s, %s, z_values: %s", prev_bf.fno, prev_bf.name, z_values)
 
         # 結合したベジェ曲線
-        joined_rot_bzs = MBezierUtils.join_value_2_bezier(prev_bf.fno, prev_bf.name, rot_values, offset) if is_rot else True
-        joined_x_bzs = MBezierUtils.join_value_2_bezier(prev_bf.fno, prev_bf.name, x_values, offset) if is_mov else True
-        joined_y_bzs = MBezierUtils.join_value_2_bezier(prev_bf.fno, prev_bf.name, y_values, offset) if is_mov else True
-        joined_z_bzs = MBezierUtils.join_value_2_bezier(prev_bf.fno, prev_bf.name, z_values, offset) if is_mov else True
+        joined_rot_bzs = MBezierUtils.join_value_2_bezier(fill_bfs[-1].fno, next_bf.name, rot_values, offset=offset, diff_limit=0.1) if is_rot else True
+        joined_x_bzs = MBezierUtils.join_value_2_bezier(fill_bfs[-1].fno, next_bf.name, x_values, offset=offset, diff_limit=0.01) if is_mov else True
+        joined_y_bzs = MBezierUtils.join_value_2_bezier(fill_bfs[-1].fno, next_bf.name, y_values, offset=offset, diff_limit=0.01) if is_mov else True
+        joined_z_bzs = MBezierUtils.join_value_2_bezier(fill_bfs[-1].fno, next_bf.name, z_values, offset=offset, diff_limit=0.01) if is_mov else True
 
         if joined_rot_bzs and joined_x_bzs and joined_y_bzs and joined_z_bzs:
             # 結合できた場合、補間曲線をnextに設定
@@ -490,21 +472,21 @@ class VmdMotion():
     # https://harigane.at.webry.info/201103/article_1.html
     def calc_bf(self, bone_name: str, fno: int, is_key=False, is_read=False, is_reset_interpolation=False):
         fill_bf = VmdBoneFrame(fno)
-        fill_bf.set_name(bone_name)
 
         if bone_name not in self.bones:
             self.bones[bone_name] = {fno: fill_bf}
+            fill_bf.set_name(bone_name)
             return fill_bf
         
-        # 条件に合致するフレーム番号を探す
-        # is_key: 登録対象のキーを探す
-        # is_read: データ読み込み時のキーを探す
-        fnos = [x for x in sorted(self.bones[bone_name].keys()) if (x == fno) \
-                and (not is_key or (is_key and self.bones[bone_name][x].key)) and (not is_read or (is_read and self.bones[bone_name][x].read))]
+        # # 条件に合致するフレーム番号を探す
+        # # is_key: 登録対象のキーを探す
+        # # is_read: データ読み込み時のキーを探す
+        # fnos = [x for x in sorted(self.bones[bone_name].keys()) if (x == fno) \
+        #         and (not is_key or (is_key and self.bones[bone_name][x].key)) and (not is_read or (is_read and self.bones[bone_name][x].read))]
         
-        if len(fnos) > 0:
+        if fno in self.bones[bone_name] and (not is_key or (is_key and self.bones[bone_name][fno].key)) and (not is_read or (is_read and self.bones[bone_name][fno].read)):
             # 合致するキーが見つかった場合、それを返す
-            return self.bones[bone_name][fnos[0]]
+            return self.bones[bone_name][fno]
         else:
             # 合致するキーが見つからなかった場合
             if is_key or is_read:
@@ -517,6 +499,7 @@ class VmdMotion():
         after_fnos = [x for x in sorted(self.bones[bone_name].keys()) if (x > fno)]
 
         if len(after_fnos) == 0 and len(before_fnos) == 0:
+            fill_bf.set_name(bone_name)
             return fill_bf
 
         if len(after_fnos) == 0:
@@ -537,6 +520,10 @@ class VmdMotion():
 
         prev_bf = self.bones[bone_name][before_fnos[-1]]
         next_bf = self.bones[bone_name][after_fnos[0]]
+
+        # 名前をコピー
+        fill_bf.name = prev_bf.name
+        fill_bf.bname = prev_bf.bname
 
         # 補間曲線を元に間を埋める
         fill_bf.rotation = self.calc_bf_rot(prev_bf, fill_bf, next_bf)

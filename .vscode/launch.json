@@ -30,9 +30,13 @@
                 // "--camera_org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/めんぼう式 初音ミク Ver1.11/めんぼう式 初音ミク ver1.11.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/めんぼう式 初音ミク Ver1.11/めんぼう式 初音ミク ver1.11.pmx",
                 // "--camera_offset_y", "0;0",
 
-                // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/愛言葉III なつき/nac_aikotoba3_0-500.vmd",
+                // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/愛言葉III なつき/nac_aikotoba3_1020-1120.vmd",
                 // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/らぶ式ミク/らぶ式ミク_準標準.pmx",
-                // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/あぴミク01_Ver.1.04 アレン・ベルル/Appearance Miku_01_Ver.1.04_準標準.pmx",
+                // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/Appearance Miku/Appearance Miku_準標準.pmx",
+
+                "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/ファンサ 【七河みこさんVer】 0729robo/【MMDモーショントレース】ファンサ【七河みこさん振付】配布用_0-1000.vmd",
+                "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/重音テト/Tda式改変テト・えんじぇぅccvセットVer1.01 coa/Tda式改変テト・えんじぇぅccv ver.1.01/Tda式改変テト・えんじぇうccv Ver1.01.pmx",
+                "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/艦隊これくしょん/つかさ式満潮アリスVer1.0/満潮アリスVer1.0.pmx",
 
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/馬と鹿 づなうじ/馬と鹿0-1650.vmd",
                 // "--motion_path", "E:/MMD/MikuMikuDance_v926x64/Work/202001_sizing/位置合わせ/馬と鹿pickup.vmd",
@@ -55,14 +59,14 @@
                 // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/Tda式デフォ服ミク_ver1.1 金子卵黄/Tda式初音ミク_デフォ服ver.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/Tda式デフォ服ミク_ver1.1 金子卵黄/Tda式初音ミク_デフォ服ver.pmx",
                 // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/_VMDサイジング/8頭身審神者 猫のしもべ/8頭身審神者3_剛体.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/_VMDサイジング/8頭身審神者 猫のしもべ/8頭身審神者3_剛体2.pmx",
 
-                "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/ELECT yurie/エレクト_1000-2000.vmd",
-                "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ゲーム/戦国BASARA/幸村 たぬき式 ver.1.24/真田幸村没第二衣装1.24軽量版.pmx",
-                "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ゲーム/東方Project/21.八坂神奈子_N式 nakao/八坂神奈子_N式_剛体.pmx",
+                // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/ELECT yurie/エレクト_1000-2000.vmd",
+                // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ゲーム/戦国BASARA/幸村 たぬき式 ver.1.24/真田幸村没第二衣装1.24軽量版.pmx",
+                // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ゲーム/東方Project/21.八坂神奈子_N式 nakao/八坂神奈子_N式_剛体.pmx",
                 // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/025_一期一振/一期一振 ひわこ式 ver.2.0/ねんどろいちご(25％).pmx",
 
-                "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_2人/おこちゃま戦争 ｽﾀｲﾘｯｼｭP/先生（0Ｆ～）kradness＆れをる音源_0-1000.vmd",
-                "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/アニメ/銀魂/坂田銀時Ver2.52 aokana/坂田銀時Ver2.52pmx版/着物無/インナー.pmx",
-                "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ゲーム/うたプリ/四ノ宮那月 chn/FREECELL那月.pmx",
+                // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_2人/おこちゃま戦争 ｽﾀｲﾘｯｼｭP/先生（0Ｆ～）kradness＆れをる音源_0-1000.vmd",
+                // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/アニメ/銀魂/坂田銀時Ver2.52 aokana/坂田銀時Ver2.52pmx版/着物無/インナー.pmx",
+                // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ゲーム/うたプリ/四ノ宮那月 chn/FREECELL那月.pmx",
 
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/少女ふぜゐ　モーション配布 づなうじ/少女ふぜゐIK_0-1000.vmd",
                 // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/艦隊これくしょん/舞風ver2 お宮/舞風ver2武装無し.pmx",
@@ -143,9 +147,9 @@
                 // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ゲーム/ドラクエ/竜酸式グレイグ配布用_1.09.3/竜酸式グレイグ_1.09.3.pmx",
                 // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/017_数珠丸恒次/数珠丸恒次 hzeo式 ver0.5/hzeo式数珠丸恒次ver0.5_準標準.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/019_にっかり青江/にっかり青江ver1.2 azure式/にっかり青江ver1.2.pmx",
                 "--detail_stance_flg", "0",           // スタンス追加補正FLG
-                "--twist_flg", "0;0",                   // 捩り分散
+                "--twist_flg", "1",                   // 捩り分散
                 "--arm_process_flg_avoidance", "1",     // 剛体接触回避
-                "--avoidance_target_list", "頭接触回避;胸接触回避;テスト;左胸上追従;右胸上追従",          // 対象剛体名
+                "--avoidance_target_list", "頭接触回避;上半身2",          // 対象剛体名
                 "--arm_process_flg_alignment", "0",     // 手首位置合わせ
                 "--alignment_finger_flg", "0",          // 指位置合わせ
                 "--alignment_floor_flg", "0",           // 床位置合わせ
@@ -176,7 +180,7 @@
             "stopOnEntry": false,
             "args": [
                 // "--motion_path", "E:/MMD/MikuMikuDance_v926x64/Work/201805_auto/misozi/kenbu/kenbu3_20190429_205936/kenbu3_json_20190429_205936_idx01/あにまさ式ミクボーン_20190429_210136_h0.0_z1.0_s1_p0.5_r3.0_reduce.vmd",
-                "--motion_path", "E:/MMD/MikuMikuDance_v926x64/Work/202001_sizing/smooth_vmd/円滑化テスト07_腕線形.vmd",
+                // "--motion_path", "E:/MMD/MikuMikuDance_v926x64/Work/202001_sizing/smooth_vmd/円滑化テスト07_腕線形.vmd",
                 // "--motion_path", "E:/MMD/MikuMikuDance_v926x64/Work/202001_sizing/smooth_vmd/円滑化テスト14_wave02抜粋腕.vmd",
                 // "--motion_path", "E:/MMD/MikuMikuDance_v926x64/Work/202001_sizing/smooth_vmd/円滑化テスト11_wave02抜粋_bone_smooth_20200111_091616.vmd",
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/よっしゃあ漢唄/よっしゃあ男歌.vmd",
@@ -186,15 +190,15 @@
                 // "--motion_path", "E:/MMD/MikuMikuDance_v926x64/Work/202001_sizing/smooth_vmd/円滑化テスト18_wave02抜粋腕4.vmd",
                 // "--motion_path", "E:/MMD/MikuMikuDance_v926x64/Work/202001_sizing/smooth_vmd/円滑化テスト39_wave左腕.vmd",
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/ELECT yurie/エレクト_左ひじ_0-1500.vmd",
-                "--motion_path", "E:/MMD/MikuMikuDance_v926x64/Work/202001_sizing/smooth_vmd/円滑化テスト09_明かり.vmd",
-                // "--motion_path", "E:/MMD/MikuMikuDance_v926x64/Work/202001_sizing/smooth_vmd/円滑化テスト26_右腕.vmd",
+                // "--motion_path", "E:/MMD/MikuMikuDance_v926x64/Work/202001_sizing/smooth_vmd/円滑化テスト09_明かり.vmd",
+                "--motion_path", "E:/MMD/MikuMikuDance_v926x64/Work/202001_sizing/smooth_vmd/円滑化テスト26_右腕.vmd",
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/ELECT yurie/エレクト.vmd",
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/ドラマツルギー motion 配布用 moka/ドラマツルギー_0-500.vmd",
                 // "--model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/初音ミク標準のみ.pmx",
-                // "--model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/_あにまさ式ミク準標準見せパン/初音ミクVer2 準標準 見せパン ショート 飾りなし.pmx",
+                "--model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/_あにまさ式ミク準標準見せパン/初音ミクVer2 準標準 見せパン ショート 飾りなし.pmx",
                 // "--model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/戦国BASARA/幸村 たぬき式 ver.1.24/真田幸村没第二衣装1.24.pmx",
-                "--model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Accessory/明かり/模細工ガラス風照明 一護牛乳（銀時愛P）/模細工ガラス風照明（紫）単体.pmx",
-                "--loop_cnt", "2",
+                // "--model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Accessory/明かり/模細工ガラス風照明 一護牛乳（銀時愛P）/模細工ガラス風照明（紫）単体.pmx",
+                "--loop_cnt", "12",
                 "--interpolation", "1",
                 "--verbose", "10"
             ],

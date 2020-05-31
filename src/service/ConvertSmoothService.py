@@ -109,11 +109,10 @@ class ConvertSmoothService():
     def remove_unnecessary_bf(self, bone_name: str):
         try:
             logger.copy(self.options)
-            fnos = self.options.motion.get_bone_fnos(bone_name)
 
             logger.info("【不要キー削除】%s 開始", bone_name)
-            self.options.motion.remove_unnecessary_bf(0, bone_name, fnos[0], fnos[-1], self.options.model.bones[bone_name].getRotatable(), \
-                                                      self.options.model.bones[bone_name].getTranslatable(), True, offset=(0.1 * self.options.loop_cnt))
+            self.options.motion.remove_unnecessary_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
+                                                      self.options.model.bones[bone_name].getTranslatable(), offset=(self.options.loop_cnt * 5))
             logger.info("【不要キー削除】%s 終了", bone_name)
 
             return True
@@ -133,7 +132,7 @@ class ConvertSmoothService():
                 logger.info("【フィルタリング%s回目】%s 開始", n, bone_name)
                 self.options.motion.smooth_filter_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
                                                      self.options.model.bones[bone_name].getTranslatable(), \
-                                                     config={"freq": 30, "mincutoff": 0.3, "beta": 0.01, "dcutoff": 0.25})
+                                                     config={"freq": 30, "mincutoff": 0.01, "beta": 0.01, "dcutoff": 1})
 
             logger.info("【フィルタリング】%s 終了", bone_name)
 
@@ -153,8 +152,7 @@ class ConvertSmoothService():
             logger.info("【スムージング1回目】%s 開始", bone_name)
 
             # 各ボーンのbfを全打ち
-            self.options.motion.regist_full_bf(1, bone_name, self.options.model.bones[bone_name].getRotatable(), \
-                                               self.options.model.bones[bone_name].getTranslatable(), True)
+            self.options.motion.regist_full_bf(1, [bone_name], offset=1)
             
             logger.info("【スムージング1回目】%s 終了", bone_name)
 

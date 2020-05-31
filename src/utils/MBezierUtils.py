@@ -5,7 +5,7 @@ from utils.MLogger import MLogger # noqa
 import numpy as np
 import bezier
 
-logger = MLogger(__name__)
+logger = MLogger(__name__, level=1)
 
 # MMDでの補間曲線の最大値
 INTERPOLATION_MMD_MAX = 127
@@ -38,17 +38,19 @@ MZ_y2_idxs = [14, 29, 59, 44]
 
 
 # 指定したすべての値を通るカトマル曲線からベジェ曲線を計算し、MMD補間曲線範囲内に収められた場合、そのベジェ曲線を返す
-def join_value_2_bezier(fno: int, bone_name: str, values: list, offset=0):
+def join_value_2_bezier(fno: int, bone_name: str, values: list, offset=0, diff_limit=0.01):
     if np.isclose(np.max(np.array(values)), np.min(np.array(values)), atol=1e-3) or len(values) <= 2:
         # すべてがだいたい同じ値（最小と最大が同じ値)か次数が1の場合、線形補間
         return LINEAR_MMD_INTERPOLATION
 
     try:
         # Xは次数（フレーム数）分移動
-        xs = np.linspace(0, len(values) - 2, len(values) - 1)
+        xs = np.arange(0, len(values))
+        # YはXの移動分を許容範囲とする
+        ys = values + xs[-1]
 
         # カトマル曲線をベジェ曲線に変換する
-        bz_x, bz_y = convert_catmullrom_2_bezier(np.concatenate([[None], xs, [None]]), np.concatenate([[None], values, [None]]))
+        bz_x, bz_y = convert_catmullrom_2_bezier(np.concatenate([[None], xs, [None]]), np.concatenate([[None], ys, [None]]))
         logger.test("bz_x: %s", bz_x)
         logger.test("bz_y: %s", bz_y)
 
@@ -74,56 +76,85 @@ def join_value_2_bezier(fno: int, bone_name: str, values: list, offset=0):
         elif degree > 3:
             # 3次より多い場合、次数を減らす
 
-            # 開始から次の開始までのベジェ曲線(次数4から3に減らす)
-            fill_curve = bezier.Curve(np.asfortranarray([[bz_x[0], bz_x[1], bz_x[2], bz_x[3], bz_x[4]], [bz_y[0], bz_y[1], bz_y[2], bz_y[3], bz_y[4]]]), degree=4)
-            reduced = fill_curve.reduce_()
+            reduced_curve_list = []
+            bz_x = full_curve.nodes[0]
+            bz_y = full_curve.nodes[1]
+            logger.test("START bz_x: %s, bz_y: %s", bz_x, bz_y)
+            
+            # 3次になるまでベジェ曲線を繋いで減らしていく
+            while len(bz_x) > 4:
+                reduced_curve_list = []
 
-            for n in range(5, degree + 1):
-                # 3次に到達するまでベジェ曲線の次数を減らす
-                fill_curve = bezier.Curve(np.asfortranarray([[reduced.nodes[0][0], reduced.nodes[0][1], reduced.nodes[0][2], reduced.nodes[0][3], bz_x[n]], \
-                                                            [reduced.nodes[1][0], reduced.nodes[1][1], reduced.nodes[1][2], reduced.nodes[1][3], bz_y[n]]]), degree=4)
-                reduced = fill_curve.reduce_()
+                for n in range(0, degree + 1, 5):
+                    reduce_bz_x = bz_x[n:n + 5]
+                    reduce_bz_y = bz_y[n:n + 5]
+                    logger.test("n: %s, reduce_bz_x: %s, reduce_bz_y: %s", n, reduce_bz_x, reduce_bz_y)
+                    reduced_curve = bezier.Curve(np.asfortranarray([reduce_bz_x, reduce_bz_y]), degree=(len(reduce_bz_x) - 1))
 
-            joined_curve = reduced
+                    # 次数がある場合、減らす
+                    if (len(reduce_bz_x) - 1) > 1:
+                        reduced_curve = reduced_curve.reduce_()
+
+                    logger.test("n: %s, nodes: %s", n, reduced_curve.nodes)
+                    
+                    # リストに追加
+                    reduced_curve_list.append(reduced_curve)
+
+                bz_x = []
+                bz_y = []
+
+                for reduced_curve in reduced_curve_list:
+                    bz_x = np.append(bz_x, reduced_curve.nodes[0])
+                    bz_y = np.append(bz_y, reduced_curve.nodes[1])
+
+                logger.test("NEXT bz_x: %s, bz_y: %s", bz_x, bz_y)
+
+            logger.test("FINISH bz_x: %s, bz_y: %s", bz_x, bz_y)
+
+            # bz_x = [full_curve.nodes[0][0]] + list(bz_x) + [full_curve.nodes[0][-1]]
+            # bz_y = [full_curve.nodes[0][0]] + list(bz_y) + [full_curve.nodes[0][-1]]
+
+            joined_curve = bezier.Curve(np.asfortranarray([bz_x, bz_y]), degree=(len(bz_x) - 1))
 
         logger.test("joined_curve: %s", joined_curve.nodes)
 
-        # 全体のキーフレを2倍にしたX（細かく点をチェックする）
-        bezier_x = np.linspace(0, len(values), len(values))
+        # 全体のキーフレ
+        bezier_x = np.arange(0, len(values))[1:-1]
 
         # 元の2つのベジェ曲線との交点を取得する
         full_ys = intersect_by_x(full_curve, bezier_x)
-        logger.test("full_ys: %s", full_ys)
-        logger.debug("f: %s, %s, full_ys: %s", fno, bone_name, full_ys)
+        logger.test("f: %s, %s, full_ys: %s", fno, bone_name, full_ys)
 
         # 次数を減らしたベジェ曲線との交点を取得する
         reduced_ys = intersect_by_x(joined_curve, bezier_x)
-        logger.test("reduced_ys: %s", reduced_ys)
-        logger.debug("f: %s, %s, reduced_ys: %s", fno, bone_name, reduced_ys)
+        logger.test("f: %s, %s, reduced_ys: %s", fno, bone_name, reduced_ys)
 
         # 交点の差を取得する
         diff_ys = np.asfortranarray(full_ys) - np.asfortranarray(reduced_ys)
-        logger.test("diff_ys: %s", diff_ys)
-        logger.debug("f: %s, %s, diff_ys: %s", fno, bone_name, diff_ys)
 
         # 差が大きい箇所をピックアップする
-        diff_limit = (np.abs(np.diff([np.max(full_ys), np.min(full_ys)])) / len(values) * 2) + 1e-2 + offset
-        diff_large = np.where(np.abs(diff_ys[:-1]) > diff_limit, 1, 0)
-        logger.test("diff_limit: %s, diff_large: %s", diff_limit, diff_large)
-        logger.debug("f: %s, %s, diff_ys: %s, diff_limit: %s, diff_large: %s", fno, bone_name, diff_ys, diff_limit, diff_large)
+        diff_large = np.where(np.abs(diff_ys) > (diff_limit * offset), 1, 0)
+        
+        # 差が一定未満である場合、ベジェ曲線をMMD補間曲線に合わせる
+        nodes = joined_curve.nodes
+
+        # MMD用補間曲線に変換
+        joined_bz = scale_bezier(MVector2D(nodes[0, 0], nodes[1, 0]), MVector2D(nodes[0, 1], nodes[1, 1]), \
+                                 MVector2D(nodes[0, 2], nodes[1, 2]), MVector2D(nodes[0, 3], nodes[1, 3]))
+        logger.debug("f: %s, %s, values: %s, nodes: %s, full_ys: %s, reduced_ys: %s, diff_ys: %s, diff_limit: %s, diff_large: %s, joined_bz: %s, %s, fit: %s", \
+                     fno, bone_name, values, joined_curve.nodes, full_ys, reduced_ys, diff_ys, diff_limit, np.count_nonzero(diff_large) > 0, joined_bz[1], joined_bz[2], \
+                     is_fit_bezier_mmd(joined_bz, offset))
 
         if np.count_nonzero(diff_large) > 0:
             # 差が大きい箇所がある場合、分割不可
             return None
-        
-        # 差が一定未満である場合、ベジェ曲線をMMD補間曲線に合わせる
-        joined_bz = scale_bezier(MVector2D(joined_curve.nodes[0, 0], joined_curve.nodes[1, 0]), MVector2D(joined_curve.nodes[0, 1], joined_curve.nodes[1, 1]), \
-                                 MVector2D(joined_curve.nodes[0, 2], joined_curve.nodes[1, 2]), MVector2D(joined_curve.nodes[0, 3], joined_curve.nodes[1, 3]))
-        logger.debug("joined_bz: %s, %s", joined_bz[1], joined_bz[2])
-                            
-        if not is_fit_bezier_mmd(joined_bz, int(offset * 10)):
+
+        if not is_fit_bezier_mmd(joined_bz, offset):
             # 補間曲線がMMD補間曲線内に収まらない場合、NG
             return None
+        
+        # オフセット込みの場合、MMD用補間曲線枠内に収める
+        fit_bezier_mmd(joined_bz)
         
         # すべてクリアした場合、補間曲線採用
         return joined_bz
@@ -131,6 +162,13 @@ def join_value_2_bezier(fno: int, bone_name: str, values: list, offset=0):
         # エラーレベルは落として表に出さない
         logger.debug("ベジェ曲線生成失敗", e)
         return None
+
+
+def fit_bezier_mmd(bzs):
+    for bz in bzs:
+        bz.effective()
+        bz.setX(0 if bz.x() < 0 else INTERPOLATION_MMD_MAX if bz.x() > INTERPOLATION_MMD_MAX else bz.x())
+        bz.setY(0 if bz.y() < 0 else INTERPOLATION_MMD_MAX if bz.y() > INTERPOLATION_MMD_MAX else bz.y())
 
 
 # Catmull-Rom曲線の制御点(通過点)をBezier曲線の制御点に変換する
@@ -153,6 +191,9 @@ def convert_catmullrom_2_bezier(xs: list, ys: list):
             continue
 
         if not p0 and p3:
+            bz_x.append(p1.x())
+            bz_y.append(p1.y())
+
             # p0が空の場合、始点
             B = (p1 * (1 / 2)) - p2 + (p3 * (1 / 2))
             C = (p1 * (-3 / 2)) + (p2 * 2) - (p3 * (1 / 2))
@@ -161,7 +202,7 @@ def convert_catmullrom_2_bezier(xs: list, ys: list):
             # p3が空の場合、終点
             B = (p0 * (1 / 2)) - p1 + (p2 * (1 / 2))
             C = (p0 * (-1 / 2)) + (p2 * (1 / 2))
-        
+
         if p0 and p3:
             # それ以外は通過点
             B = p0 - (p1 * (5 / 2)) + (p2 * (4 / 2)) - (p3 * (1 / 2))
@@ -180,6 +221,9 @@ def convert_catmullrom_2_bezier(xs: list, ys: list):
         bz_y.append(s1.y())
         bz_y.append(s2.y())
 
+    bz_x.append(xs[-2])
+    bz_y.append(ys[-2])
+
     return bz_x, bz_y
 
 
@@ -190,7 +234,7 @@ def intersect_by_x(curve, xs):
         # 交点を求める為のX線上の直線
         line1 = bezier.Curve(np.asfortranarray([[x, x], [-99999, 99999]]), degree=1)
 
-        # 交点を求める
+        # 交点を求める（高精度は求めない）
         intersections = curve.intersect(line1, _verify=False)
 
         # tからyを求め直す
