@@ -14,7 +14,7 @@ from utils import MUtils, MServiceUtils, MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
 from utils.MException import SizingException
 
-logger = MLogger(__name__)
+logger = MLogger(__name__, level=MLogger.DEBUG)
 
 
 class StanceService():
@@ -240,22 +240,6 @@ class StanceService():
             logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
             raise e
 
-    def average_twist(self, data_set_idx: int, bone_name: str):
-        try:
-            logger.copy(self.options)
-            data_set = self.options.data_set_list[data_set_idx]
-            data_set.motion.average_bf(data_set_idx + 1, bone_name, \
-                                       data_set.rep_model.bones[bone_name].getRotatable(), data_set.rep_model.bones[bone_name].getTranslatable())
-
-            return True
-        except SizingException as se:
-            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
-            return se
-        except Exception as e:
-            import traceback
-            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
-            raise e
-    
     def remove_unnecessary_bf_pool_parts(self, data_set_idx: int, bone_name: str):
         try:
             logger.copy(self.options)
@@ -327,7 +311,6 @@ class StanceService():
             arm_x_qq, arm_y_qq, arm_z_qq, arm_yz_qq = MServiceUtils.separate_local_qq(fno, arm_bone_name, arm_bf.rotation, arm_local_x_axis)
             elbow_x_qq, elbow_y_qq, elbow_z_qq, elbow_yz_qq = MServiceUtils.separate_local_qq(fno, elbow_bone_name, elbow_bf.rotation, elbow_local_x_axis)
             wrist_x_qq, wrist_y_qq, wrist_z_qq, wrist_yz_qq = MServiceUtils.separate_local_qq(fno, wrist_bone_name, wrist_bf.rotation, wrist_local_x_axis)
-            logger.time("f: %s separate", fno)
 
             logger.test("f: %s, %s: total: %s", fno, arm_bone_name, arm_bf.rotation.toEulerAngles())
             logger.test("f: %s, %s: x: %s", fno, arm_bone_name, arm_x_qq.toEulerAngles())
@@ -403,8 +386,6 @@ class StanceService():
             wrist_bf.rotation = wrist_result_qq
             wrist_bf.key = True
             data_set.motion.bones[wrist_bone_name][fno] = wrist_bf
-
-            logger.time("f: %s, end", fno)
 
             if fno in log_target_idxs and last_fno > 0:
                 logger.info("-- %sフレーム目:終了(%s％)【No.%s - 捩り分散 - %s】", fno, round((fno / last_fno) * 100, 3), data_set_idx + 1, arm_twist_bone_name)
@@ -486,15 +467,11 @@ class StanceService():
         max_dot = 0
         max_degree = 0
 
-        logger.time("fno: %s, %s (01)", fno, bone_name)
-
         # まず30度範囲でチェック
         max_dot, max_degree = self.test_twist_qq(fno, bone_name, grand_parent_x_axis, grand_parent_qq, grand_parent_twist_qq, \
                                                  parent_x_axis, parent_qq, twist_x_axis, original_twist_qq, \
                                                  child_x_axis, child_y_axis, original_child_qq, child_qq, original_vec, \
-                                                 total_degree, max_dot, max_degree, np.asarray([(x, -x) for x in range(0, 181, 30)]).flatten())
-
-        logger.time("fno: %s, %s (02)", fno, bone_name)
+                                                 total_degree, max_dot, max_degree, np.asarray([(x, -x) for x in range(0, 91, 30)]).flatten())
 
         if max_dot > math.cos(math.radians(2)):
             return max_dot, MQuaternion.fromAxisAndAngle(twist_x_axis, max_degree)
@@ -503,9 +480,7 @@ class StanceService():
         max_dot, max_degree = self.test_twist_qq(fno, bone_name, grand_parent_x_axis, grand_parent_qq, grand_parent_twist_qq, \
                                                  parent_x_axis, parent_qq, twist_x_axis, original_twist_qq, \
                                                  child_x_axis, child_y_axis, original_child_qq, child_qq, original_vec, \
-                                                 max_degree, max_dot, max_degree, np.asarray([(x, -x) for x in range(1, 45, 1)]).flatten())
-
-        logger.time("fno: %s, %s (03)", fno, bone_name)
+                                                 max_degree, max_dot, max_degree, np.asarray([(x, -x) for x in range(1, 46, 1)]).flatten())
 
         if max_dot > math.cos(math.radians(2)):
             return max_dot, MQuaternion.fromAxisAndAngle(twist_x_axis, max_degree)
@@ -515,8 +490,6 @@ class StanceService():
                                                  parent_x_axis, parent_qq, twist_x_axis, original_twist_qq, \
                                                  child_x_axis, child_y_axis, original_child_qq, child_qq, original_vec, \
                                                  max_degree, max_dot, max_degree, np.asarray([(x * 0.1, -x * 0.1) for x in range(1, 10)]).flatten())
-
-        logger.time("fno: %s, %s (04)", fno, bone_name)
 
         if max_dot > math.cos(math.radians(8)):
             return max_dot, MQuaternion.fromAxisAndAngle(twist_x_axis, max_degree)

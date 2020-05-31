@@ -337,14 +337,16 @@ class ArmPanel(BasePanel):
     # 処理対象：手首位置合わせON
     def on_check_arm_process_alignment(self, event: wx.Event):
         # ラジオボタンかチェックボックスイベントがTrueの場合、切り替え
-        if ((isinstance(event.GetEventObject(), wx.RadioButton) or isinstance(event.GetEventObject(), wx.CheckBox)) and event.GetEventObject().GetValue()) \
-                or (not isinstance(event.GetEventObject(), wx.RadioButton)):
+        if isinstance(event.GetEventObject(), wx.StaticText):
             if self.arm_process_flg_alignment.GetValue() == 0:
                 self.arm_process_flg_alignment.SetValue(1)
             else:
                 self.arm_process_flg_alignment.SetValue(0)
-            # パス再生成
-            self.set_output_vmd_path()
+        else:
+            if self.arm_alignment_finger_flg_ctrl.GetValue() == 0 and self.arm_alignment_floor_flg_ctrl.GetValue() == 0:
+                self.arm_process_flg_alignment.SetValue(0)
+            else:
+                self.arm_process_flg_alignment.SetValue(1)
 
         if self.arm_alignment_finger_flg_ctrl.GetValue() and len(self.frame.multi_panel_ctrl.file_set_list) > 0:
             self.frame.on_popup_finger_warning(event)
@@ -364,20 +366,28 @@ class AvoidanceSet():
         self.rep_avoidances = ["頭接触回避 (頭)"]   # 選択肢文言
         self.rep_avoidance_names = ["頭接触回避"]   # 選択肢文言に紐付くモーフ名
 
-        if file_set.is_loaded and file_set.rep_model_file_ctrl.data:
+        self.set_sizer = wx.StaticBoxSizer(wx.StaticBox(self.window, wx.ID_ANY, "【No.{0}】".format(set_idx)), orient=wx.VERTICAL)
+
+        if file_set.is_loaded():
+            self.model_name_txt = wx.StaticText(self.window, wx.ID_ANY, file_set.rep_model_file_ctrl.data.name[:15], wx.DefaultPosition, wx.DefaultSize, 0)
+            self.model_name_txt.Wrap(-1)
+            self.set_sizer.Add(self.model_name_txt, 0, wx.ALL, 5)
+
             for rigidbody_name, rigidbody in file_set.rep_model_file_ctrl.data.rigidbodies.items():
                 # 処理対象剛体：有効なボーン追従剛体
                 if rigidbody.isModeStatic() and rigidbody.bone_index in file_set.rep_model_file_ctrl.data.bone_indexes:
                     self.rep_avoidances.append("{0} ({1})".format(rigidbody.name, file_set.rep_model_file_ctrl.data.bone_indexes[rigidbody.bone_index]))
                     self.rep_avoidance_names.append(rigidbody.name)
 
-        self.set_sizer = wx.StaticBoxSizer(wx.StaticBox(self.window, wx.ID_ANY, "【No.{0}】".format(set_idx)), orient=wx.VERTICAL)
-
-        # 選択コントロール
-        self.rep_choices = wx.ListBox(self.window, id=wx.ID_ANY, choices=self.rep_avoidances, style=wx.LB_MULTIPLE | wx.LB_NEEDED_SB, size=(-1, 220))
-        # 頭接触回避はデフォルトで選択
-        self.rep_choices.SetSelection(0)
-        self.set_sizer.Add(self.rep_choices, 0, wx.ALL, 5)
+            # 選択コントロール
+            self.rep_choices = wx.ListBox(self.window, id=wx.ID_ANY, choices=self.rep_avoidances, style=wx.LB_MULTIPLE | wx.LB_NEEDED_SB, size=(-1, 220))
+            # 頭接触回避はデフォルトで選択
+            self.rep_choices.SetSelection(0)
+            self.set_sizer.Add(self.rep_choices, 0, wx.ALL, 5)
+        else:
+            self.no_data_txt = wx.StaticText(self.window, wx.ID_ANY, u"データなし", wx.DefaultPosition, wx.DefaultSize, 0)
+            self.no_data_txt.Wrap(-1)
+            self.set_sizer.Add(self.no_data_txt, 0, wx.ALL, 5)
 
     # 現在のファイルセットのハッシュと同じであるかチェック
     def equal_hashdigest(self, now_file_set: SizingFileSet):

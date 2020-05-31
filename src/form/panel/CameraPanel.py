@@ -74,6 +74,11 @@ class CameraPanel(BasePanel):
         if 1 not in self.camera_set_dict:
             # 空から作る場合、ファイルタブのファイルセット参照
             self.add_set(1, self.frame.file_panel_ctrl.file_set)
+        else:
+            # ある場合、モデル名だけ入替
+            self.camera_set_dict[1].model_name_txt.setValue("{0} → {1}".format(\
+                                                            self.frame.file_panel_ctrl.file_set.org_model_file_ctrl.file_model_ctrl.txt_ctrl.GetValue()[1:-1], \
+                                                            self.frame.file_panel_ctrl.file_set.rep_model_file_ctrl.file_model_ctrl.txt_ctrl.GetValue()[1:-1]))
         
         # multiはあるだけ調べる
         for multi_file_set_idx, multi_file_set in enumerate(self.frame.multi_panel_ctrl.file_set_list):
@@ -81,6 +86,11 @@ class CameraPanel(BasePanel):
             if set_no not in self.camera_set_dict:
                 # 空から作る場合、複数タブのファイルセット参照
                 self.add_set(set_no, multi_file_set)
+            else:
+                # ある場合、モデル名だけ入替
+                self.camera_set_dict[set_no].model_name_txt.setValue("{0} → {1}".format(\
+                                                                     multi_file_set.org_model_file_ctrl.file_model_ctrl.txt_ctrl.GetValue()[1:-1], \
+                                                                     multi_file_set.rep_model_file_ctrl.file_model_ctrl.txt_ctrl.GetValue()[1:-1]))
 
     def add_set(self, set_idx: int, file_set: SizingFileSet):
         new_camera_set = CameraSet(self.frame, self, self.scrolled_window, set_idx, file_set)
@@ -147,11 +157,17 @@ class CameraSet():
 
         self.set_sizer = wx.StaticBoxSizer(wx.StaticBox(self.window, wx.ID_ANY, "【No.{0}】".format(set_idx)), orient=wx.VERTICAL)
 
+        self.model_name_txt = wx.StaticText(self.window, wx.ID_ANY, \
+                                            "{0} → {1}".format(file_set.org_model_file_ctrl.file_model_ctrl.txt_ctrl.GetValue()[1:-1], \
+                                                               file_set.rep_model_file_ctrl.file_model_ctrl.txt_ctrl.GetValue()[1:-1]), wx.DefaultPosition, wx.DefaultSize, 0)
+        self.model_name_txt.Wrap(-1)
+        self.set_sizer.Add(self.model_name_txt, 0, wx.ALL, 5)
+
         # カメラPMXファイルコントロール
         self.camera_model_file_ctrl = HistoryFilePickerCtrl(frame, window, u"カメラ作成元モデルPMX", u"カメラ作成元モデルPMXファイルを開く", ("pmx"), wx.FLP_DEFAULT_STYLE, \
                                                             u"カメラ作成に使用されたモデルのPMXパスを指定してください。\n未指定の場合、モーション作成元モデルPMXを使用します。" \
                                                             + "\n精度は落ちますが、類似したサイズ・ボーン構造のモデルでも代用できます。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。", \
-                                                            file_model_spacer=0, title_parts_ctrl=None, file_histories_key="camera_pmx", \
+                                                            file_model_spacer=20, title_parts_ctrl=None, file_histories_key="camera_pmx", \
                                                             is_change_output=True, is_aster=False, is_save=False, set_no=set_idx)
         self.set_sizer.Add(self.camera_model_file_ctrl.sizer, 1, wx.EXPAND, 0)
 

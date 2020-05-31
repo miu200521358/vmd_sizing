@@ -224,6 +224,9 @@ class VmdMotion():
 
             # 有効キーを取得
             bone_fnos = self.get_bone_fnos(bone_name, is_key=True)
+
+            if len(bone_fnos) <= 0:
+                continue
             
             before_bf = self.calc_bf(bone_name, 0)  # 比較対象bf
             for fno in range(1, bone_fnos[-1]):

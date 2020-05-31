@@ -98,7 +98,7 @@ class MorphPanel(BasePanel):
                 # 空から作る場合、複数タブのファイルセット参照
                 self.add_set(set_no, multi_file_set, replace=False)
 
-    def add_set(self, set_idx: int, file_set: SizingFileSet, replace: bool):
+    def add_set(self, set_idx: int, file_set: SizingFileSet, replace: bool, hide=False):
         new_morph_set = MorphSet(self.frame, self, self.scrolled_window, set_idx, file_set)
         if replace:
             # 置き換え
@@ -143,97 +143,120 @@ class MorphSet():
         self.rep_buttons = []
         self.ratios = []
 
-        for mk in file_set.motion_vmd_file_ctrl.data.morphs.keys():
-            morph_fnos = file_set.motion_vmd_file_ctrl.data.get_morph_fnos(mk)
-            for fno in morph_fnos:
-                if file_set.motion_vmd_file_ctrl.data.morphs[mk][fno].ratio != 0:
-                    # キーが存在しており、かつ初期値ではない値が入っている場合、置換対象
-
-                    if mk in file_set.rep_model_file_ctrl.data.morphs and file_set.rep_model_file_ctrl.data.morphs[mk].display:
-                        if mk in file_set.org_model_file_ctrl.data.morphs and file_set.org_model_file_ctrl.data.morphs[mk].display:
-                            # 作成元・置換先にある場合
-                            txt = file_set.org_model_file_ctrl.data.morphs[mk].get_panel_name() + "○:" + mk[:10]
-                            self.org_morphs.append(txt)
-                            self.org_morph_names[txt] = mk
-                        else:
-                            # 作成元になくて・置換先にある場合
-                            txt = "？●:" + mk[:10]
-                            self.org_morphs.append(txt)
-                            self.org_morph_names[txt] = mk
-                    else:
-                        if mk in file_set.org_model_file_ctrl.data.morphs and file_set.org_model_file_ctrl.data.morphs[mk].display:
-                            # 作成元にあって、変換先にない場合
-                            txt = file_set.org_model_file_ctrl.data.morphs[mk].get_panel_name() + "▲:" + mk[:10]
-                            self.org_morphs.append(txt)
-                            self.org_morph_names[txt] = mk
-                        else:
-                            # 作成元にも変換先にもない場合
-                            txt = "？▲:" + mk[:10]
-                            self.org_morphs.append(txt)
-                            self.org_morph_names[txt] = mk
-                    
-                    # 1件あればOK
-                    break
-
-        # 変換先は表示されているモーフのみ対象とする
-        for rmk, rmv in file_set.rep_model_file_ctrl.data.morphs.items():
-            if rmv.display:
-                txt = rmv.get_panel_name() + ":" + rmk[:10]
-                self.rep_morphs.append(txt)
-                self.rep_morph_names[txt] = rmk
-
         self.set_sizer = wx.StaticBoxSizer(wx.StaticBox(self.window, wx.ID_ANY, "【No.{0}】".format(set_idx)), orient=wx.VERTICAL)
 
-        self.btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        if file_set.is_loaded():
+            for mk in file_set.motion_vmd_file_ctrl.data.morphs.keys():
+                morph_fnos = file_set.motion_vmd_file_ctrl.data.get_morph_fnos(mk)
+                for fno in morph_fnos:
+                    if file_set.motion_vmd_file_ctrl.data.morphs[mk][fno].ratio != 0:
+                        # キーが存在しており、かつ初期値ではない値が入っている場合、置換対象
 
-        # インポートボタン
-        self.import_btn_ctrl = wx.Button(self.window, wx.ID_ANY, u"インポート ...", wx.DefaultPosition, wx.DefaultSize, 0)
-        self.import_btn_ctrl.SetToolTip(u"モーフ置換データをCSVファイルから読み込みます。\nファイル選択ダイアログが開きます。")
-        self.import_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_import)
-        self.btn_sizer.Add(self.import_btn_ctrl, 0, wx.ALL, 5)
+                        if mk in file_set.rep_model_file_ctrl.data.morphs and file_set.rep_model_file_ctrl.data.morphs[mk].display:
+                            if mk in file_set.org_model_file_ctrl.data.morphs and file_set.org_model_file_ctrl.data.morphs[mk].display:
+                                # 作成元・置換先にある場合
+                                txt = file_set.org_model_file_ctrl.data.morphs[mk].get_panel_name() + "○:" + mk[:10]
+                                self.org_morphs.append(txt)
+                                self.org_morph_names[txt] = mk
+                            else:
+                                # 作成元になくて・置換先にある場合
+                                txt = "？●:" + mk[:10]
+                                self.org_morphs.append(txt)
+                                self.org_morph_names[txt] = mk
+                        else:
+                            if mk in file_set.org_model_file_ctrl.data.morphs and file_set.org_model_file_ctrl.data.morphs[mk].display:
+                                # 作成元にあって、変換先にない場合
+                                txt = file_set.org_model_file_ctrl.data.morphs[mk].get_panel_name() + "▲:" + mk[:10]
+                                self.org_morphs.append(txt)
+                                self.org_morph_names[txt] = mk
+                            else:
+                                # 作成元にも変換先にもない場合
+                                txt = "？▲:" + mk[:10]
+                                self.org_morphs.append(txt)
+                                self.org_morph_names[txt] = mk
+                        
+                        # 1件あればOK
+                        break
 
-        # エクスポートボタン
-        self.export_btn_ctrl = wx.Button(self.window, wx.ID_ANY, u"エクスポート ...", wx.DefaultPosition, wx.DefaultSize, 0)
-        self.export_btn_ctrl.SetToolTip(u"モーフ置換データをCSVファイルに出力します。\n調整対象VMDと同じフォルダに出力します。")
-        self.export_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_export)
-        self.btn_sizer.Add(self.export_btn_ctrl, 0, wx.ALL, 5)
+            # 変換先は表示されているモーフのみ対象とする
+            for rmk, rmv in file_set.rep_model_file_ctrl.data.morphs.items():
+                if rmv.display:
+                    txt = rmv.get_panel_name() + ":" + rmk[:10]
+                    self.rep_morphs.append(txt)
+                    self.rep_morph_names[txt] = rmk
 
-        # 行追加ボタン
-        self.add_line_btn_ctrl = wx.Button(self.window, wx.ID_ANY, u"行追加", wx.DefaultPosition, wx.DefaultSize, 0)
-        self.add_line_btn_ctrl.SetToolTip(u"モーフ置換の組み合わせ行を追加します。\n上限はありません。")
-        self.add_line_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_add_line)
-        self.btn_sizer.Add(self.add_line_btn_ctrl, 0, wx.ALL, 5)
+            self.btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.set_sizer.Add(self.btn_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
+            # インポートボタン
+            self.import_btn_ctrl = wx.Button(self.window, wx.ID_ANY, u"インポート ...", wx.DefaultPosition, wx.DefaultSize, 0)
+            self.import_btn_ctrl.SetToolTip(u"モーフ置換データをCSVファイルから読み込みます。\nファイル選択ダイアログが開きます。")
+            self.import_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_import)
+            self.btn_sizer.Add(self.import_btn_ctrl, 0, wx.ALL, 5)
 
-        # タイトル部分
-        self.grid_sizer = wx.FlexGridSizer(0, 4, 0, 0)
-        self.grid_sizer.SetFlexibleDirection(wx.BOTH)
-        self.grid_sizer.SetNonFlexibleGrowMode(wx.FLEX_GROWMODE_SPECIFIED)
+            # エクスポートボタン
+            self.export_btn_ctrl = wx.Button(self.window, wx.ID_ANY, u"エクスポート ...", wx.DefaultPosition, wx.DefaultSize, 0)
+            self.export_btn_ctrl.SetToolTip(u"モーフ置換データをCSVファイルに出力します。\n調整対象VMDと同じフォルダに出力します。")
+            self.export_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_export)
+            self.btn_sizer.Add(self.export_btn_ctrl, 0, wx.ALL, 5)
 
-        self.org_morph_txt = wx.StaticText(self.window, wx.ID_ANY, u"モーションモーフ", wx.DefaultPosition, wx.DefaultSize, 0)
-        self.org_morph_txt.SetToolTip(u"調整対象VMD/VPDに登録されているモーフです。")
-        self.org_morph_txt.Wrap(-1)
-        self.grid_sizer.Add(self.org_morph_txt, 0, wx.ALL, 5)
+            # 行追加ボタン
+            self.add_line_btn_ctrl = wx.Button(self.window, wx.ID_ANY, u"行追加", wx.DefaultPosition, wx.DefaultSize, 0)
+            self.add_line_btn_ctrl.SetToolTip(u"モーフ置換の組み合わせ行を追加します。\n上限はありません。")
+            self.add_line_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_add_line)
+            self.btn_sizer.Add(self.add_line_btn_ctrl, 0, wx.ALL, 5)
 
-        self.arrow_txt = wx.StaticText(self.window, wx.ID_ANY, u"　→　", wx.DefaultPosition, wx.DefaultSize, 0)
-        self.arrow_txt.Wrap(-1)
-        self.grid_sizer.Add(self.arrow_txt, 0, wx.CENTER | wx.ALL, 5)
+            self.set_sizer.Add(self.btn_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
 
-        self.rep_morph_txt = wx.StaticText(self.window, wx.ID_ANY, u"置換後モーフ", wx.DefaultPosition, wx.DefaultSize, 0)
-        self.rep_morph_txt.SetToolTip(u"モーション変換先モデルで定義されているモーフです。")
-        self.rep_morph_txt.Wrap(-1)
-        self.grid_sizer.Add(self.rep_morph_txt, 0, wx.ALL, 5)
+            # タイトル部分
+            self.grid_sizer = wx.FlexGridSizer(0, 4, 0, 0)
+            self.grid_sizer.SetFlexibleDirection(wx.BOTH)
+            self.grid_sizer.SetNonFlexibleGrowMode(wx.FLEX_GROWMODE_SPECIFIED)
 
-        self.ratio_title_txt = wx.StaticText(self.window, wx.ID_ANY, u"大きさ補正", wx.DefaultPosition, wx.DefaultSize, 0)
-        self.ratio_title_txt.SetToolTip(u"置換後モーフの大きさを補正します。")
-        self.ratio_title_txt.Wrap(-1)
-        self.grid_sizer.Add(self.ratio_title_txt, 0, wx.ALL, 5)
+            # モデル名 ----------
+            self.org_model_name_txt = wx.StaticText(self.window, wx.ID_ANY, file_set.org_model_file_ctrl.data.name[:15], wx.DefaultPosition, wx.DefaultSize, 0)
+            self.org_model_name_txt.Wrap(-1)
+            self.grid_sizer.Add(self.org_model_name_txt, 0, wx.ALL, 5)
 
-        # 一行追加
-        self.add_line()
+            self.name_arrow_txt = wx.StaticText(self.window, wx.ID_ANY, u"　", wx.DefaultPosition, wx.DefaultSize, 0)
+            self.name_arrow_txt.Wrap(-1)
+            self.grid_sizer.Add(self.name_arrow_txt, 0, wx.CENTER | wx.ALL, 5)
 
-        self.set_sizer.Add(self.grid_sizer, 0, wx.ALL, 5)
+            self.rep_model_name_txt = wx.StaticText(self.window, wx.ID_ANY, file_set.rep_model_file_ctrl.data.name[:15], wx.DefaultPosition, wx.DefaultSize, 0)
+            self.rep_model_name_txt.Wrap(-1)
+            self.grid_sizer.Add(self.rep_model_name_txt, 0, wx.ALL, 5)
+
+            self.name_ratio_txt = wx.StaticText(self.window, wx.ID_ANY, u"　", wx.DefaultPosition, wx.DefaultSize, 0)
+            self.name_ratio_txt.Wrap(-1)
+            self.grid_sizer.Add(self.name_ratio_txt, 0, wx.CENTER | wx.ALL, 5)
+
+            # ------------
+            self.org_morph_txt = wx.StaticText(self.window, wx.ID_ANY, u"モーションモーフ", wx.DefaultPosition, wx.DefaultSize, 0)
+            self.org_morph_txt.SetToolTip(u"調整対象VMD/VPDに登録されているモーフです。")
+            self.org_morph_txt.Wrap(-1)
+            self.grid_sizer.Add(self.org_morph_txt, 0, wx.ALL, 5)
+
+            self.arrow_txt = wx.StaticText(self.window, wx.ID_ANY, u"　→　", wx.DefaultPosition, wx.DefaultSize, 0)
+            self.arrow_txt.Wrap(-1)
+            self.grid_sizer.Add(self.arrow_txt, 0, wx.CENTER | wx.ALL, 5)
+
+            self.rep_morph_txt = wx.StaticText(self.window, wx.ID_ANY, u"置換後モーフ", wx.DefaultPosition, wx.DefaultSize, 0)
+            self.rep_morph_txt.SetToolTip(u"モーション変換先モデルで定義されているモーフです。")
+            self.rep_morph_txt.Wrap(-1)
+            self.grid_sizer.Add(self.rep_morph_txt, 0, wx.ALL, 5)
+
+            self.ratio_title_txt = wx.StaticText(self.window, wx.ID_ANY, u"大きさ補正", wx.DefaultPosition, wx.DefaultSize, 0)
+            self.ratio_title_txt.SetToolTip(u"置換後モーフの大きさを補正します。")
+            self.ratio_title_txt.Wrap(-1)
+            self.grid_sizer.Add(self.ratio_title_txt, 0, wx.ALL, 5)
+
+            # 一行追加
+            self.add_line()
+
+            self.set_sizer.Add(self.grid_sizer, 0, wx.ALL, 5)
+        else:
+            self.no_data_txt = wx.StaticText(self.window, wx.ID_ANY, u"データなし", wx.DefaultPosition, wx.DefaultSize, 0)
+            self.no_data_txt.Wrap(-1)
+            self.set_sizer.Add(self.no_data_txt, 0, wx.ALL, 5)
 
     def get_morph_list(self):
         morph_list = []
