@@ -247,7 +247,7 @@ def is_auto_camera_vmd_output_path(output_camera_vmd_path: str, motion_camera_vm
 # base_file_path: モーションスムージングVMDパス
 # pmx_path: 変換先モデルPMXパス
 # output_smooth_vmd_path: 出力ファイルパス
-def get_output_smooth_vmd_path(base_file_path: str, pmx_path: str, output_smooth_vmd_path: str, is_force=False):
+def get_output_smooth_vmd_path(base_file_path: str, pmx_path: str, output_smooth_vmd_path: str, interpolation: int, loop_cnt: int, is_force=False):
     # モーションスムージングVMDパスの拡張子リスト
     if not os.path.exists(base_file_path) or not os.path.exists(pmx_path):
         return ""
@@ -259,8 +259,20 @@ def get_output_smooth_vmd_path(base_file_path: str, pmx_path: str, output_smooth
     # 変換先モデルファイル名・拡張子
     rep_pmx_file_name, _ = os.path.splitext(os.path.basename(pmx_path))
 
+    # 補間方法
+    suffix = "{0}{1}{2}".format(
+        ("F" if interpolation == 0 else ""),
+        ("C" if interpolation == 1 else ""),
+        ("V" if interpolation == 2 else ""),
+    )
+
+    if len(suffix) > 0:
+        suffix = "_{0}".format(suffix)
+    
+    suffix = "{0}_L{1}".format(suffix, loop_cnt)
+
     # 出力ファイルパス生成
-    new_output_smooth_vmd_path = os.path.join(motion_smooth_vmd_dir_path, "{0}_{1}_{2:%Y%m%d_%H%M%S}{3}".format(motion_smooth_vmd_file_name, rep_pmx_file_name, datetime.now(), ".vmd"))
+    new_output_smooth_vmd_path = os.path.join(motion_smooth_vmd_dir_path, "{0}_{1}{2}_{3:%Y%m%d_%H%M%S}{4}".format(motion_smooth_vmd_file_name, rep_pmx_file_name, suffix, datetime.now(), ".vmd"))
 
     # ファイルパス自体が変更されたか、自動生成ルールに則っている場合、ファイルパス変更
     if is_force or is_auto_smooth_vmd_output_path(output_smooth_vmd_path, motion_smooth_vmd_dir_path, motion_smooth_vmd_file_name, ".vmd", rep_pmx_file_name):
@@ -292,7 +304,7 @@ def is_auto_smooth_vmd_output_path(output_smooth_vmd_path: str, motion_smooth_vm
     escaped_motion_smooth_vmd_ext = escape_filepath(motion_smooth_vmd_ext)
 
     new_output_smooth_vmd_pattern = re.compile(r'^%s_%s%s%s$' % (escaped_motion_smooth_vmd_file_name, \
-                                               escaped_rep_pmx_file_name, r"_\d{8}_\d{6}", escaped_motion_smooth_vmd_ext))
+                                               escaped_rep_pmx_file_name, r"_?\w*_L\d+_\d{8}_\d{6}", escaped_motion_smooth_vmd_ext))
     
     # 自動生成ルールに則ったファイルパスである場合、合致あり
     return re.match(new_output_smooth_vmd_pattern, output_smooth_vmd_path) is not None

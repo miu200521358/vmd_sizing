@@ -37,6 +37,35 @@ MZ_x2_idxs = [10, 25, 55, 40]
 MZ_y2_idxs = [14, 29, 59, 44]
 
 
+# 指定したすべての値をカトマル曲線として計算する
+def calc_value_from_catmullrom(bone_name: str, fnos: int, values: list):
+    try:
+        # カトマル曲線をベジェ曲線に変換する
+        bz_x, bz_y = convert_catmullrom_2_bezier(np.concatenate([[None], fnos, [None]]), np.concatenate([[None], values, [None]]))
+        logger.test("bz_x: %s", bz_x)
+        logger.test("bz_y: %s", bz_y)
+
+        if len(bz_x) == 0:
+            # 始点と終点が指定されていて、カトマル曲線が描けなかった場合、線形補間
+            return LINEAR_MMD_INTERPOLATION
+
+        # 次数
+        degree = len(bz_x) - 1
+        logger.test("degree: %s", degree)
+
+        # すべての制御点を加味したベジェ曲線
+        full_curve = bezier.Curve(np.asfortranarray([bz_x, bz_y]), degree=degree)
+
+        # ベジェ曲線とすべてのキーフレに相当する値
+        ys = intersect_by_x(full_curve, np.arange(fnos[-1] + 1))
+
+        return ys
+    except Exception as e:
+        # エラーレベルは落として表に出さない
+        logger.debug("カトマル曲線値生成失敗", e)
+        return None
+
+
 # 指定したすべての値を通るカトマル曲線からベジェ曲線を計算し、MMD補間曲線範囲内に収められた場合、そのベジェ曲線を返す
 def join_value_2_bezier(fno: int, bone_name: str, values: list, offset=0, diff_limit=0.01):
     if np.isclose(np.max(np.array(values)), np.min(np.array(values)), atol=1e-3) or len(values) <= 2:

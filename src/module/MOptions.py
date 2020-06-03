@@ -351,7 +351,7 @@ class MSmoothOptions():
             model = PmxReader(args.model_path).read_data()
 
             # 出力ファイルパス
-            output_vmd_path = MFileUtils.get_output_smooth_vmd_path(motion.path, model.path, "", True)
+            output_vmd_path = MFileUtils.get_output_smooth_vmd_path(motion.path, model.path, "", args.interpolation, args.loop_cnt, True)
 
             options = MSmoothOptions(\
                 version_name=version_name, \

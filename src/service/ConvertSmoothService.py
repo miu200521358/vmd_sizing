@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 import math
+import numpy as np
 import logging
 import os
 import traceback
@@ -36,8 +37,8 @@ class ConvertSmoothService():
                                     model=os.path.basename(self.options.motion.path), model_name=self.options.model.name) # noqa
             service_data_txt = "{service_data_txt}　処理回数: {loop_cnt}回\n".format(service_data_txt=service_data_txt,
                                     loop_cnt=self.options.loop_cnt) # noqa
-            service_data_txt = "{service_data_txt}　補間: {interpolation}\n".format(service_data_txt=service_data_txt,
-                                    interpolation=("線形補間" if self.options.interpolation == 0 else "円形補間")) # noqa
+            service_data_txt = "{service_data_txt}　補間方法: {interpolation}\n".format(service_data_txt=service_data_txt,
+                                    interpolation=("補間曲線に従う" if self.options.interpolation == 0 else "補間曲線無視（円形）" if self.options.interpolation == 1 else "補間曲線無視（曲線）")) # noqa
 
             logger.info(service_data_txt, decoration=MLogger.DECORATION_BOX)
 
@@ -68,9 +69,12 @@ class ConvertSmoothService():
                     if self.options.interpolation == 0:
                         # 線形補間の場合、そのまま全打ち
                         futures.append(executor.submit(self.prepare_linear, bone_name))
-                    else:
+                    elif self.options.interpolation == 1:
                         # 円形補間の場合、円形全打ち
                         futures.append(executor.submit(self.prepare_circle, bone_name))
+                    else:
+                        # 曲線補間の場合、カトマル曲線全打ち
+                        futures.append(executor.submit(self.prepare_curve, bone_name))
         concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
         for f in futures:
@@ -112,7 +116,7 @@ class ConvertSmoothService():
 
             logger.info("【不要キー削除】%s 開始", bone_name)
             self.options.motion.remove_unnecessary_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
-                                                      self.options.model.bones[bone_name].getTranslatable(), offset=(self.options.loop_cnt * 5))
+                                                      self.options.model.bones[bone_name].getTranslatable(), offset=(self.options.loop_cnt))
             logger.info("【不要キー削除】%s 終了", bone_name)
 
             return True
@@ -154,6 +158,68 @@ class ConvertSmoothService():
             # 各ボーンのbfを全打ち
             self.options.motion.regist_full_bf(1, [bone_name], offset=1)
             
+            logger.info("【スムージング1回目】%s 終了", bone_name)
+
+            return True
+        except SizingException as se:
+            logger.error("スムージング処理が処理できないデータで終了しました。\n\n%s", se.message)
+            return False
+        except Exception as e:
+            logger.error("スムージング処理が意図せぬエラーで終了しました。", e)
+            return False
+        
+    # 曲線補間で全打ち
+    def prepare_curve(self, bone_name: str):
+        try:
+            logger.copy(self.options)
+
+            logger.info("【スムージング1回目】%s 開始", bone_name)
+
+            # 全キーフレを取得
+            fnos = self.options.motion.get_bone_fnos(bone_name, is_read=True)
+
+            rx_values = []
+            ry_values = []
+            rz_values = []
+            mx_values = []
+            my_values = []
+            mz_values = []
+            
+            for fno in fnos:
+                bf = self.options.motion.calc_bf(bone_name, fno)
+                
+                if self.options.model.bones[bone_name].getRotatable():
+                    euler = bf.rotation.toEulerAngles()
+                    rx_values.append(euler.x())
+                    ry_values.append(euler.y())
+                    rz_values.append(euler.z())
+                
+                if self.options.model.bones[bone_name].getTranslatable():
+                    mx_values.append(bf.position.x())
+                    my_values.append(bf.position.y())
+                    mz_values.append(bf.position.z())
+            
+            if self.options.model.bones[bone_name].getRotatable():
+                rx_all_values = MBezierUtils.calc_value_from_catmullrom(bone_name, fnos, rx_values)
+                ry_all_values = MBezierUtils.calc_value_from_catmullrom(bone_name, fnos, ry_values)
+                rz_all_values = MBezierUtils.calc_value_from_catmullrom(bone_name, fnos, rz_values)
+            else:
+                rx_all_values = ry_all_values = rz_all_values = np.zeros(fnos[-1] + 1)
+
+            if self.options.model.bones[bone_name].getTranslatable():
+                mx_all_values = MBezierUtils.calc_value_from_catmullrom(bone_name, fnos, mx_values)
+                my_all_values = MBezierUtils.calc_value_from_catmullrom(bone_name, fnos, my_values)
+                mz_all_values = MBezierUtils.calc_value_from_catmullrom(bone_name, fnos, mz_values)
+            else:
+                mx_all_values = my_all_values = mz_all_values = np.zeros(fnos[-1] + 1)
+
+            # カトマル曲線で生成した値を全打ち
+            for fno, (rx, ry, rz, mx, my, mz) in enumerate(zip(rx_all_values, ry_all_values, rz_all_values, mx_all_values, my_all_values, mz_all_values)):
+                bf = self.options.motion.calc_bf(bone_name, fno)
+                bf.rotation = MQuaternion.fromEulerAngles(rx, ry, rz)
+                bf.position = MVector3D(mx, my, mz)
+                self.options.motion.regist_bf(bf, bone_name, fno)
+
             logger.info("【スムージング1回目】%s 終了", bone_name)
 
             return True

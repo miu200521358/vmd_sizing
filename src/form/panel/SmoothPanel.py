@@ -62,15 +62,19 @@ class SmoothPanel(BasePanel):
 
         self.loop_cnt_ctrl = wx.SpinCtrl(self, id=wx.ID_ANY, size=wx.Size(60, -1), value="2", min=1, max=99999999, initial=2)
         self.loop_cnt_ctrl.SetToolTip(u"スムージングを行う回数を指定してください。\n1回だと全打ちになります。\n2回目以降はフィルタをかけた上で間引きします。\n回数が増えると、変化が遅く、弱くなります。")
+        self.loop_cnt_ctrl.Bind(wx.EVT_SPINCTRL, self.on_change_file)
         self.setting_sizer.Add(self.loop_cnt_ctrl, 0, wx.ALL, 5)
 
         # 補間
-        self.interpolation_txt = wx.StaticText(self, wx.ID_ANY, u"補間", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.interpolation_txt = wx.StaticText(self, wx.ID_ANY, u"補間方法", wx.DefaultPosition, wx.DefaultSize, 0)
         self.setting_sizer.Add(self.interpolation_txt, 0, wx.ALL, 5)
 
-        self.interpolation_ctrl = wx.Choice(self, id=wx.ID_ANY, choices=["線形補間", "円形補間"])
-        self.interpolation_ctrl.SetSelection(1)
-        self.interpolation_ctrl.SetToolTip(u"キーとキーの補間方法を指定してください。\n線形は、真っ直ぐに繋ぎます。\n円形は、3つのキーを円周上に置いた円になるように補間します。")
+        self.interpolation_ctrl = wx.Choice(self, id=wx.ID_ANY, choices=["補間曲線に従う", "補間曲線無視（円形）", "補間曲線無視（曲線）"])
+        self.interpolation_ctrl.SetSelection(0)
+        self.interpolation_ctrl.SetToolTip(u"キーとキーの補間方法を指定してください。\n「補間曲線に従う」は、補間曲線に従って繋ぎます。" \
+                                           + "\n「補間曲線無視（円形）」は、補間曲線を無視して、\n3つのキーを円周上に置いた円になるように補間します。" \
+                                           + "\n「補間曲線無視（曲線）」は、補間曲線を無視して、\nキーを滑らかな曲線（カトマル曲線）で繋いで補間します。")
+        self.interpolation_ctrl.Bind(wx.EVT_CHOICE, self.on_change_file)
         self.setting_sizer.Add(self.interpolation_ctrl, 0, wx.ALL, 5)
 
         self.sizer.Add(self.setting_sizer, 0, wx.EXPAND | wx.ALL, 5)
@@ -111,7 +115,9 @@ class SmoothPanel(BasePanel):
         output_smooth_vmd_path = MFileUtils.get_output_smooth_vmd_path(
             self.smooth_vmd_file_ctrl.file_ctrl.GetPath(),
             self.smooth_model_file_ctrl.file_ctrl.GetPath(),
-            self.output_smooth_vmd_file_ctrl.file_ctrl.GetPath(), is_force)
+            self.output_smooth_vmd_file_ctrl.file_ctrl.GetPath(),
+            self.interpolation_ctrl.GetSelection(),
+            self.loop_cnt_ctrl.GetValue(), is_force)
 
         self.output_smooth_vmd_file_ctrl.file_ctrl.SetPath(output_smooth_vmd_path)
 
