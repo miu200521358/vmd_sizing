@@ -34,7 +34,11 @@
                 // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/らぶ式ミク/らぶ式ミク_準標準.pmx",
                 // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/Appearance Miku/Appearance Miku_準標準.pmx",
 
-                "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/ファンサ 【七河みこさんVer】 0729robo/【MMDモーショントレース】ファンサ【七河みこさん振付】配布用_1010-2010.vmd",
+                // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/にんじゃりばんばんMiku（修正版）たこはち/にんじゃりばんばんMiku（修正版）_0-1000.vmd",
+                // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/初音ミクVer2 準標準.pmx",
+                // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ゲーム/ドラクエ/竜酸式ホメロス ver0.99.3/竜酸式ホメロス.pmx",
+
+                "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/ファンサ 【七河みこさんVer】 0729robo/【MMDモーショントレース】ファンサ【七河みこさん振付】配布用_0-200.vmd",
                 "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/重音テト/Tda式改変テト・えんじぇぅccvセットVer1.01 coa/Tda式改変テト・えんじぇぅccv ver.1.01/Tda式改変テト・えんじぇうccv Ver1.01.pmx",
                 "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/艦隊これくしょん/つかさ式満潮アリスVer1.0/満潮アリスVer1.0.pmx",
 
@@ -148,7 +152,7 @@
                 // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/017_数珠丸恒次/数珠丸恒次 hzeo式 ver0.5/hzeo式数珠丸恒次ver0.5_準標準.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/019_にっかり青江/にっかり青江ver1.2 azure式/にっかり青江ver1.2.pmx",
                 "--detail_stance_flg", "0",           // スタンス追加補正FLG
                 "--twist_flg", "1",                   // 捩り分散
-                "--arm_process_flg_avoidance", "1",     // 剛体接触回避
+                "--arm_process_flg_avoidance", "0",     // 剛体接触回避
                 "--avoidance_target_list", "頭接触回避;上半身2",          // 対象剛体名
                 "--arm_process_flg_alignment", "0",     // 手首位置合わせ
                 "--alignment_finger_flg", "0",          // 指位置合わせ

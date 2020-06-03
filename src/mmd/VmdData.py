@@ -217,7 +217,8 @@ class VmdMotion():
                     logger.info("-- %sフレーム目:終了(%s％)【No.%s - 全打ち - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
                     prev_sep_fno = fno // 500
     
-    def regist_differ_bf(self, data_set_no: int, bone_name_list: str, limit_degrees: float):
+    def get_differ_fnos(self, data_set_no: int, bone_name_list: str, limit_degrees: float):
+        limit_radians = math.cos(math.radians(limit_degrees))
         fnos = [0]
         for bone_name in bone_name_list:
             prev_sep_fno = 0
@@ -242,33 +243,19 @@ class VmdMotion():
 
                     # 読み込みキーとの差
                     dot = MQuaternion.dotProduct(before_bf.rotation, bf.rotation)
-                    if dot < 1 - math.radians(limit_degrees):
+                    if dot < limit_radians:
                         # 前と今回の内積の差が指定度数より離れている場合、追加
                         logger.test("★ 追加 set: %s, %s, f: %s, dot: %s", data_set_no, bone_name, fno, dot)
                         fnos.append(fno)
                         # 前回キーとして保持
                         before_bf = bf.copy()
-                    else:
-                        logger.test("－ スルー set: %s, %s, f: %s, dot: %s, degree: %s", data_set_no, bone_name, fno, dot, math.degrees(1 - dot))
 
-                if data_set_no > 0 and fno // 500 > prev_sep_fno and bone_fnos[-1] > 0:
+                if data_set_no > 0 and fno // 1000 > prev_sep_fno and bone_fnos[-1] > 0:
                     logger.info("-- %sフレーム目:終了(%s％)【No.%s - キーフレ追加準備 - %s】", fno, round((fno / bone_fnos[-1]) * 100, 3), data_set_no, bone_name)
-                    prev_sep_fno = fno // 500
+                    prev_sep_fno = fno // 1000
 
         # 重複を除いて再計算
-        fnos = sorted(list(set(fnos)))
-
-        # 指定ボーン名でキーフレ登録
-        for bone_name in bone_name_list:
-            prev_sep_fno = 0
-
-            for fno in fnos:
-                bf = self.calc_bf(bone_name, fno)
-                self.regist_bf(bf, bone_name, fno)
-
-                if data_set_no > 0 and fno // 500 > prev_sep_fno and fnos[-1] > 0:
-                    logger.info("-- %sフレーム目:終了(%s％)【No.%s - キーフレ追加 - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
-                    prev_sep_fno = fno // 500
+        return sorted(list(set(fnos)))
 
     # 指定ボーンが跳ねてたりするのを回避
     def smooth_bf(self, data_set_no: int, bone_name: str, is_rot: bool, is_mov: bool, limit_degrees: float):
@@ -297,9 +284,9 @@ class VmdMotion():
 
                         now_bf.rotation = MQuaternion.slerp(prev_bf.rotation, next_bf.rotation, ((now_bf.fno - prev_bf.fno) / (next_bf.fno - prev_bf.fno)))
 
-                if data_set_no > 0 and fno // 200 > prev_sep_fno and fnos[-1] > 0:
+                if data_set_no > 0 and fno // 500 > prev_sep_fno and fnos[-1] > 0:
                     logger.info("-- %sフレーム目:終了(%s％)【No.%s - 円滑化 - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
-                    prev_sep_fno = fno // 200
+                    prev_sep_fno = fno // 500
 
     # フィルターをかける
     def smooth_filter_bf(self, data_set_no: int, bone_name: str, is_rot: bool, is_mov: bool, loop=1, config={"freq": 30, "mincutoff": 0.3, "beta": 0.01, "dcutoff": 0.25}):
@@ -342,9 +329,107 @@ class VmdMotion():
                     new_qq = MQuaternion.fromEulerAngles(rx, ry, rz)
                     now_bf.rotation = new_qq
 
-                if data_set_no > 0 and fno // 500 > prev_sep_fno and fnos[-1] > 0:
+                if data_set_no > 0 and fno // 1000 > prev_sep_fno and fnos[-1] > 0:
                     logger.info("-- %sフレーム目:終了(%s％)【No.%s - フィルタリング - %s(%s)】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, bone_name, (n + 1))
-                    prev_sep_fno = fno // 500
+                    prev_sep_fno = fno // 1000
+
+    # 無効なキーを物理削除する
+    def remove_unkey_bf(self, data_set_no: int, bone_name: str):
+        for fno in self.get_bone_fnos(bone_name):
+            bf = self.calc_bf(bone_name, fno)
+
+            if fno in self.bones[bone_name] and not bf.key:
+                del self.bones[bone_name][fno]
+
+    # # 腕ボーンの不要キーを削除する
+    # def remove_unnecessary_arm_bf(self, data_set_no: int, arm_bone_name: str, arm_twist_bone_name: str, elbow_bone_name: str, \
+    #                               wrist_twist_bone_name: str, wrist_bone_name: str, offset=0):
+    #     # 各ボーンのキーフレを取得する
+    #     total_fnos = self.get_bone_fnos(arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name)
+
+    #     prev_sep_fno = 0
+        
+    #     if len(total_fnos) > 2:
+    #         # 結合開始キーフレ
+    #         start_fnos = {
+    #             arm_bone_name: total_fnos[0],
+    #             arm_twist_bone_name: total_fnos[0],
+    #             elbow_bone_name: total_fnos[0],
+    #             wrist_twist_bone_name: total_fnos[0],
+    #             wrist_bone_name: total_fnos[0]
+    #         }
+
+    #         # 中間キー
+    #         fill_bfs = {
+    #             arm_bone_name: [],
+    #             arm_twist_bone_name: [],
+    #             elbow_bone_name: [],
+    #             wrist_twist_bone_name: [],
+    #             wrist_bone_name: []
+    #         }
+
+    #         for fno in range(total_fnos[-1]):
+    #             # 末端から順に除去していく
+    #             for bone_idx, bone_name in enumerate([wrist_bone_name, wrist_twist_bone_name, elbow_bone_name, arm_twist_bone_name, arm_bone_name]):
+    #                 prev_bf = self.calc_bf(bone_name, start_fnos[bone_name])    # 繋ぐ元のbf
+    #                 now_bf = self.calc_bf(bone_name, fno)           # 繋ぐ対象のbf
+    #                 next_bf = self.calc_bf(bone_name, fno + 1)      # 繋ぐ先のbf
+    #                 is_next_key = next_bf.key                       # nextの有効有無
+                    
+    #                 # 読み込みキーではない場合、結合を試す
+    #                 logger.test("now: %s", now_bf)
+
+    #                 if not now_bf.key:
+    #                     # 結合対象キーが有効でない場合、スルー
+    #                     continue
+
+    #                 if not now_bf.read:
+    #                     # 現在キーを追加
+    #                     fill_bfs[bone_name].append(now_bf)
+
+    #                     if self.join_bf(prev_bf, fill_bfs[bone_name], next_bf, True, False, offset):
+    #                         # 全ての補間曲線が繋ぐのに成功した場合、繋ぐ
+    #                         logger.debug("f: %s, %s, ○補間曲線結合", fno, bone_name)
+
+    #                         # nowキーを物理的に削除
+    #                         if fno in self.bones[bone_name]:
+    #                             del self.bones[bone_name][fno]
+                            
+    #                         # nextキーをキーの有効有無は問わずに登録
+    #                         self.regist_bf(next_bf, bone_name, fno + 1)
+    #                         self.bones[bone_name][fno + 1].key = is_next_key
+    #                     else:
+    #                         logger.debug("f: %s, %s, ×補間曲線結合失敗", fno, bone_name)
+    #                         # どれか失敗してたら、そのまま残す
+
+    #                         # nowキーを有効にする
+    #                         now_bf.key = True
+
+    #                         start_fnos[bone_name] = fno     # 開始を現在フレーム
+    #                         fill_bfs[bone_name] = []        # 中間キーをクリア
+                        
+    #                         # 末端が有効である場合、親も有効
+    #                         break
+    #                 else:
+    #                     logger.debug("f: %s, %s, ▲読み込みキー", fno, bone_name)
+    #                     # 読み込み時のキーである場合、強制的に残す
+    #                     start_fnos[bone_name] = fno     # 開始を現在フレーム
+    #                     fill_bfs[bone_name] = []        # 中間キーをクリア
+                        
+    #                     # 末端が有効である場合、親も有効
+    #                     break
+                
+    #             # 抜けた場合、最後に対象であったボーンより親のボーンの開始を切り替え
+    #             for bone_name in [wrist_bone_name, wrist_twist_bone_name, elbow_bone_name, arm_twist_bone_name, arm_bone_name][bone_idx + 1:]:
+    #                 start_fnos[bone_name] = fno     # 開始を現在フレーム
+    #                 fill_bfs[bone_name] = []        # 中間キーをクリア
+                
+    #             if fno // 100 > prev_sep_fno:
+    #                 logger.info("-- %sフレーム目:終了(%s％)【No.%s - 不要キー削除 - %s】", fno, round((fno / total_fnos[-1]) * 100, 3), data_set_no, wrist_bone_name)
+    #                 prev_sep_fno = fno // 100
+
+    #     active_fnos = self.get_bone_fnos(bone_name, is_key=True)
+    #     logger.debug("remove_unnecessary_bf after: %s, %s, all: %s", bone_name, active_fnos, len(total_fnos))
 
     # 指定ボーンの不要キーを削除する
     def remove_unnecessary_bf(self, data_set_no: int, bone_name: str, is_rot: bool, is_mov: bool, offset=0):
@@ -362,7 +447,7 @@ class VmdMotion():
                 now_bf = self.calc_bf(bone_name, fno)           # 繋ぐ対象のbf
                 next_bf = self.calc_bf(bone_name, fno + 1)      # 繋ぐ先のbf
                 is_next_key = next_bf.key                       # nextの有効有無
-                
+
                 # 読み込みキーではない場合、結合を試す
                 logger.test("now: %s", now_bf)
 
@@ -396,6 +481,46 @@ class VmdMotion():
                     start_fno = fno     # 開始を現在フレーム
                     fill_bfs = []       # 中間キーをクリア
 
+            # sfno = fnos[0]     # 開始フレーム番号
+            # for fno, nfno in zip(fnos[1:-1], fnos[2:]):
+            #     prev_bf = self.calc_bf(bone_name, sfno)     # 繋ぐ元のbf
+            #     now_bf = self.calc_bf(bone_name, fno)       # 繋ぐ対象のbf
+            #     next_bf = self.calc_bf(bone_name, nfno)     # 繋ぐ先のbf
+
+            #     fill_bfs = []
+            #     for f in range(sfno + 1, nfno):
+            #         fill_bfs.append(self.calc_bf(bone_name, f))   # 繋ぐ対象のbf
+                
+            #     is_next_key = next_bf.key                       # nextの有効有無
+                
+            #     if now_bf.read:
+            #         # 読み込みキーである場合、残す
+            #         logger.debug("f: %s, %s, ▲読み込みキー", fno, bone_name)
+            #         # 読み込み時のキーである場合、強制的に残す
+            #         sfno = fno     # 開始を現在フレーム
+            #         continue
+
+            #     if self.join_bf(prev_bf, fill_bfs, next_bf, is_rot, is_mov, offset):
+            #         # 全ての補間曲線が繋ぐのに成功した場合、繋ぐ
+            #         logger.debug("f: %s, %s, ○補間曲線結合", fno, bone_name)
+
+            #         # 間のキーを物理的に削除
+            #         for f in range(sfno + 1, nfno):
+            #             if f in self.bones[bone_name]:
+            #                 del self.bones[bone_name][f]
+                    
+            #         # nextキーをキーの有効有無は問わずに登録
+            #         self.regist_bf(next_bf, bone_name, nfno)
+            #         self.bones[bone_name][nfno].key = is_next_key
+            #     else:
+            #         logger.debug("f: %s, %s, ×補間曲線結合失敗", fno, bone_name)
+            #         # どれか失敗してたら、そのまま残す
+
+            #         # nowキーを有効にする(nextで補間曲線は登録済)
+            #         now_bf.key = True
+
+            #         sfno = fno     # 開始を現在フレーム
+
                 if fno // 100 > prev_sep_fno:
                     if data_set_no == 0:
                         logger.info("-- %sフレーム目:終了(%s％)【不要キー削除 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
@@ -415,7 +540,9 @@ class VmdMotion():
         z_values = []
 
         if is_rot:
-            rot_values = np.array([prev_bf.rotation.toDegree()] + [bf.rotation.toDegree() for bf in fill_bfs] + [next_bf.rotation.toDegree()]) - prev_bf.rotation.toDegree()
+            rot_values = np.array([prev_bf.rotation.toDegree() * np.sign(prev_bf.rotation.x())] \
+                                  + [bf.rotation.toDegree() * np.sign(bf.rotation.x()) for bf in fill_bfs] \
+                                  + [next_bf.rotation.toDegree() * np.sign(next_bf.rotation.x())]) - (prev_bf.rotation.toDegree() * np.sign(next_bf.rotation.x()))
             
             logger.test("f: %s, %s, rot_values: %s", prev_bf.fno, prev_bf.name, rot_values)
 
@@ -481,12 +608,9 @@ class VmdMotion():
             fill_bf.set_name(bone_name)
             return fill_bf
         
-        # # 条件に合致するフレーム番号を探す
-        # # is_key: 登録対象のキーを探す
-        # # is_read: データ読み込み時のキーを探す
-        # fnos = [x for x in sorted(self.bones[bone_name].keys()) if (x == fno) \
-        #         and (not is_key or (is_key and self.bones[bone_name][x].key)) and (not is_read or (is_read and self.bones[bone_name][x].read))]
-        
+        # 条件に合致するフレーム番号を探す
+        # is_key: 登録対象のキーを探す
+        # is_read: データ読み込み時のキーを探す
         if fno in self.bones[bone_name] and (not is_key or (is_key and self.bones[bone_name][fno].key)) and (not is_read or (is_read and self.bones[bone_name][fno].read)):
             # 合致するキーが見つかった場合、それを返す
             return self.bones[bone_name][fno]

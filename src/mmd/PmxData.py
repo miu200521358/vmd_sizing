@@ -857,7 +857,7 @@ class PmxModel():
 
         if bone.fixed_axis != MVector3D():
             # 軸制限がある場合、親からの向きを保持
-            x_axis = bone.fixed_axis
+            x_axis = bone.fixed_axis.normalized()
         else:
             from_pos = self.bones[bone.name].position
             if bone.tail_position != MVector3D():
@@ -1182,25 +1182,25 @@ class PmxModel():
             x_len = abs(left_max_vertex.position.x() - right_max_vertex.position.x())
             z_len = abs(back_max_vertex.position.z() - front_max_vertex.position.z())
 
-            # 頂点同士の長さの半分
+            # 頂点同士の長さの半分よりちょっと大きめ
             radius = (max(x_len, y_len, z_len) / 2)
-            # radius += radius / 15
+            radius += radius * 0.1
 
-            center = MVector3D()
+            # center = MVector3D()
+            # # Yは下辺から半径分上
+            # center.setY(down_max_vertex.position.y() + (radius * 0.95))
+            # # Zは前面から半径分後ろ
+            # center.setZ(front_max_vertex.position.z() + (radius * 0.95))
+
+            # 中点
+            center = MVector3D(np.mean([up_max_vertex.position.data(), down_max_vertex.position.data(), left_max_vertex.position.data(), \
+                                        right_max_vertex.position.data(), back_max_vertex.position.data(), front_max_vertex.position.data()], axis=0))
             # XZはど真ん中
             center.setX(0)
-            # Yは下辺から半径分上
-            center.setY(down_max_vertex.position.y() + (radius * 0.95))
-            # Zは前面から半径分後ろ
-            center.setZ(front_max_vertex.position.z() + (radius * 0.95))
-
-            # # 中点
-            # center = MVector3D(np.mean([up_max_vertex.position.data(), down_max_vertex.position.data(), left_max_vertex.position.data(), \
-            #                             right_max_vertex.position.data(), back_max_vertex.position.data(), front_max_vertex.position.data()], axis=0))
             # # Yは下辺から半径分上ちょっと下くらい
-            # center.setY(down_max_vertex.position.y() + (radius * 0.9))
+            # center.setY(down_max_vertex.position.y() + (radius * 0.95))
             # # Zはちょっと前に
-            # center.setZ(center.z() - (radius * 0.1))
+            # center.setZ(center.z() - (radius * 0.05))
 
             head_rigidbody = RigidBody("頭接触回避", None, self.bones["頭"].index, None, None, 0, \
                                        MVector3D(radius, radius, radius), center, MVector3D(), None, None, None, None, None, 0)

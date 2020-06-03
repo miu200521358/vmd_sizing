@@ -1197,7 +1197,7 @@ class MMatrix4x4():
         
     # 単位行列
     def setToIdentity(self):
-        self.__data = np.identity(4)
+        self.__data = np.eye(4)
     
     def lookAt(self, eye, center, up):
         forward = center - eye

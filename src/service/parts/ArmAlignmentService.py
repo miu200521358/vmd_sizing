@@ -120,10 +120,10 @@ class ArmAlignmentService():
                                              data_set.rep_model.bones[bone_name].getTranslatable(), \
                                              config={"freq": 30, "mincutoff": 0.03, "beta": 0.1, "dcutoff": 1}, loop=1)
 
-            logger.info("位置合わせ処理 - 不要キー削除【No.%s - %s】", (data_set_idx + 1), bone_name)
+            # logger.info("位置合わせ処理 - 不要キー削除【No.%s - %s】", (data_set_idx + 1), bone_name)
 
-            data_set.motion.remove_unnecessary_bf(data_set_idx + 1, bone_name, data_set.rep_model.bones[bone_name].getRotatable(), \
-                                                  data_set.rep_model.bones[bone_name].getTranslatable(), offset=15)
+            # data_set.motion.remove_unnecessary_bf(data_set_idx + 1, bone_name, data_set.rep_model.bones[bone_name].getRotatable(), \
+            #                                       data_set.rep_model.bones[bone_name].getTranslatable(), offset=15)
 
             return True
         except SizingException as se:
@@ -754,7 +754,7 @@ class ArmAlignmentService():
                                    "{0}手首".format(direction), "{0}手首".format(direction), tip_bone_name, self.options.arm_options.alignment_distance_wrist, data_set.xz_ratio)
 
             # 腕・ひじ・手首のキーフレ
-            bone_names.extend(["{0}腕".format(direction), "{0}腕捩り".format(direction), "{0}ひじ".format(direction), "{0}手捩り".format(direction), "{0}手首".format(direction)])
+            bone_names.extend(["{0}腕".format(direction), "{0}腕捩".format(direction), "{0}ひじ".format(direction), "{0}手捩".format(direction), "{0}手首".format(direction)])
 
             # 床位置合わせも行う場合、リンク追加生成
             if self.options.arm_options.alignment_floor_flg:

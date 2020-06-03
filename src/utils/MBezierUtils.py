@@ -130,7 +130,7 @@ def join_value_2_bezier(fno: int, bone_name: str, values: list, offset=0, diff_l
         logger.test("f: %s, %s, reduced_ys: %s", fno, bone_name, reduced_ys)
 
         # 交点の差を取得する
-        diff_ys = np.asfortranarray(full_ys) - np.asfortranarray(reduced_ys)
+        diff_ys = np.array(full_ys) - np.array(reduced_ys)
 
         # 差が大きい箇所をピックアップする
         diff_large = np.where(np.abs(diff_ys) > (diff_limit * offset), 1, 0)
@@ -229,7 +229,7 @@ def convert_catmullrom_2_bezier(xs: list, ys: list):
 
 # 指定された複数のXと交わるそれぞれのYを返す
 def intersect_by_x(curve, xs):
-    ys = []
+    s_vals = np.array([])
     for x in xs:
         # 交点を求める為のX線上の直線
         line1 = bezier.Curve(np.asfortranarray([[x, x], [-99999, 99999]]), degree=1)
@@ -238,17 +238,16 @@ def intersect_by_x(curve, xs):
         intersections = curve.intersect(line1, _verify=False)
 
         # tからyを求め直す
-        s_vals = np.asfortranarray(intersections[0, :])
+        s_vals = np.append(s_vals, intersections[0, :])
 
-        # 評価する
-        es = curve.evaluate_multi(s_vals)
-        
-        # 値が取れている場合、その値を設定する
-        if es.shape == (2, 1):
-            ys.append(es[1][0])
-        # 取れていない場合、無視
-        else:
-            ys.append(0)
+    # 評価する
+    es = curve.evaluate_multi(s_vals)
+    
+    # 値が取れている場合、その値を設定する
+    ys = es[1]
+    # 値が取れなかった場合、無視
+    ys[np.isnan(ys)] = 0
+    ys[np.isinf(ys)] = 0
     
     return ys
 
