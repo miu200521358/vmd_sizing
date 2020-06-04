@@ -150,13 +150,13 @@ class ArmAvoidanceService():
                 # 回避ブロックが始まったら、保持
                 avoidance_axis = all_avoidance_axis[fno]
 
-            # キーフレ処理前のデータ
-            total_org_bfs = {}
-            for ik_links_list in avoidance_options.ik_links_list.values():
-                for ik_links in ik_links_list:
-                    for link_name in ik_links.all().keys():
-                        if link_name not in total_org_bfs:
-                            total_org_bfs[link_name] = data_set.motion.calc_bf(link_name, fno).copy()
+            # # キーフレ処理前のデータ
+            # total_org_bfs = {}
+            # for ik_links_list in avoidance_options.ik_links_list.values():
+            #     for ik_links in ik_links_list:
+            #         for link_name in ik_links.all().keys():
+            #             if link_name not in total_org_bfs:
+            #                 total_org_bfs[link_name] = data_set.motion.calc_bf(link_name, fno).copy()
 
             for ((avoidance_name, avodance_link), avoidance) in zip(avoidance_options.avoidance_links.items(), avoidance_options.avoidances.values()):
                 # 剛体の現在位置をチェック
@@ -372,15 +372,16 @@ class ArmAvoidanceService():
                         # 衝突していたら、その中にキーフレ/ボーン名で登録
                         all_avoidance_list[-1][(fno, avoidance_name, arm_link.last_name())] = \
                             {"fno": fno, "avoidance_name": avoidance_name, "bone_name": arm_link.last_name(), "collision": collision, "near_collision": near_collision, \
-                                "x_distance": x_distance, "z_distance": z_distance, "rep_x_collision_vec": rep_x_collision_vec, "rep_z_collision_vec": rep_z_collision_vec}                    
+                                "x_distance": x_distance, "z_distance": z_distance, "rep_x_collision_vec": rep_x_collision_vec, "rep_z_collision_vec": rep_z_collision_vec}
 
                     prev_collisions.append(collision)
                     prev_collisions.append(near_collision)
 
-            if fno // 200 > prev_block_fno and fnos[-1] > 0:
-                logger.info("-- %sフレーム目:終了(%s％)【No.%s - 接触回避準備 - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1, direction)
-                prev_block_fno = fno // 200
+            if fno // 500 > prev_block_fno and fnos[-1] > 0:
+                logger.info("-- %sフレーム目:終了(%s％)【No.%s - 接触回避準備① - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1, direction)
+                prev_block_fno = fno // 500
 
+        prev_block_fno = 0
         all_avoidance_axis = {}
         for aidx, avoidance_list in enumerate(all_avoidance_list):
             # 衝突ブロック単位で判定
@@ -406,6 +407,10 @@ class ArmAvoidanceService():
                 # 回避距離があって、総合的な回避距離が近い方を採用(若干Z優先)
                 all_avoidance_axis[from_fno] = {"from_fno": from_fno, "to_fno": to_fno, "axis": ("x" if block_x_distance < block_z_distance else "z")}
                 logger.debug("aidx: %s, d: %s, from: %s, to: %s, axis: %s, xd: %s, zd: %s", aidx, direction, from_fno, to_fno, all_avoidance_axis[from_fno], block_x_distance, block_z_distance)
+
+            if fno // 1000 > prev_block_fno and fnos[-1] > 0:
+                logger.info("-- %sフレーム目:終了(%s％)【No.%s - 接触回避準備② - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1, direction)
+                prev_block_fno = fno // 1000
             
         return all_avoidance_axis
 

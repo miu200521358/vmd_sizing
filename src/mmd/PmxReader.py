@@ -512,6 +512,20 @@ class PmxReader():
                         # インデックス逆引きも登録
                         pmx.bone_indexes[to_bone.index] = to_bone.name
 
+            # 足中間ボーン
+            if "左足" in pmx.bones and "右足" in pmx.bones:
+                leg_center_vertex = Vertex(-1, (pmx.bones["左足"].position + pmx.bones["右足"].position) / 2, MVector3D(), [], [], Vertex.Bdef1(-1), -1)
+                leg_center_vertex.position.setX(0)
+                leg_center_bone = Bone("足中間", "base of neck", leg_center_vertex.position.copy(), -1, 0, 0)
+
+                if "下半身" in pmx.bones:
+                    leg_center_bone.parent_index = pmx.bones["下半身"].index
+                    leg_center_bone.tail_index = pmx.bones["下半身"].index
+
+                leg_center_bone.index = len(pmx.bones.keys())
+                pmx.bones[leg_center_bone.name] = leg_center_bone
+                pmx.bone_indexes[leg_center_bone.index] = leg_center_bone.name
+
             logger.test("len(bones): %s", len(pmx.bones))
 
             logger.info("-- PMX ボーン読み込み完了")

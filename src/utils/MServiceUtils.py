@@ -91,7 +91,7 @@ def calc_IK(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, targ
                 bf.rotation = new_ik_qq
 
         # 回転の差がほとんどない場合、終了
-        if (local_effector_pos - local_target_pos).lengthSquared() < 0.001:
+        if (local_effector_pos - local_target_pos).lengthSquared() < 0.00001:
             return
         
     return
