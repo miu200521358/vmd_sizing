@@ -65,14 +65,14 @@ class ConvertSmoothService():
         futures = []
         with ThreadPoolExecutor(thread_name_prefix="prepare") as executor:
             for bone_name in self.options.motion.bones.keys():
-                if bone_name in self.options.model.bones and len(self.options.motion.bones[bone_name].keys()) > 2:
-                    if self.options.interpolation == 0:
+                if bone_name in self.options.model.bones:
+                    if self.options.interpolation == 0 and len(self.options.motion.bones[bone_name].keys()) >= 2:
                         # 線形補間の場合、そのまま全打ち
                         futures.append(executor.submit(self.prepare_linear, bone_name))
-                    elif self.options.interpolation == 1:
+                    elif self.options.interpolation == 1 and len(self.options.motion.bones[bone_name].keys()) > 2:
                         # 円形補間の場合、円形全打ち
                         futures.append(executor.submit(self.prepare_circle, bone_name))
-                    else:
+                    elif self.options.interpolation == 2 and len(self.options.motion.bones[bone_name].keys()) >= 2:
                         # 曲線補間の場合、カトマル曲線全打ち
                         futures.append(executor.submit(self.prepare_curve, bone_name))
         concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
@@ -204,14 +204,28 @@ class ConvertSmoothService():
                 ry_all_values = MBezierUtils.calc_value_from_catmullrom(bone_name, fnos, ry_values)
                 rz_all_values = MBezierUtils.calc_value_from_catmullrom(bone_name, fnos, rz_values)
             else:
-                rx_all_values = ry_all_values = rz_all_values = np.zeros(fnos[-1] + 1)
+                if len(fnos) > 0:
+                    rx_all_values = np.zeros(fnos[-1] + 1)
+                    ry_all_values = np.zeros(fnos[-1] + 1)
+                    rz_all_values = np.zeros(fnos[-1] + 1)
+                else:
+                    rx_all_values = [0]
+                    ry_all_values = [0]
+                    rz_all_values = [0]
 
             if self.options.model.bones[bone_name].getTranslatable():
                 mx_all_values = MBezierUtils.calc_value_from_catmullrom(bone_name, fnos, mx_values)
                 my_all_values = MBezierUtils.calc_value_from_catmullrom(bone_name, fnos, my_values)
                 mz_all_values = MBezierUtils.calc_value_from_catmullrom(bone_name, fnos, mz_values)
             else:
-                mx_all_values = my_all_values = mz_all_values = np.zeros(fnos[-1] + 1)
+                if len(fnos) > 0:
+                    mx_all_values = np.zeros(fnos[-1] + 1)
+                    my_all_values = np.zeros(fnos[-1] + 1)
+                    mz_all_values = np.zeros(fnos[-1] + 1)
+                else:
+                    mx_all_values = [0]
+                    my_all_values = [0]
+                    mz_all_values = [0]
 
             # カトマル曲線で生成した値を全打ち
             for fno, (rx, ry, rz, mx, my, mz) in enumerate(zip(rx_all_values, ry_all_values, rz_all_values, mx_all_values, my_all_values, mz_all_values)):
