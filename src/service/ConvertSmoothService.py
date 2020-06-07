@@ -116,7 +116,7 @@ class ConvertSmoothService():
 
             logger.info("【不要キー削除】%s 開始", bone_name)
             self.options.motion.remove_unnecessary_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
-                                                      self.options.model.bones[bone_name].getTranslatable(), offset=(self.options.loop_cnt))
+                                                      self.options.model.bones[bone_name].getTranslatable(), offset=(self.options.loop_cnt - 2))
             logger.info("【不要キー削除】%s 終了", bone_name)
 
             return True

@@ -66,8 +66,8 @@ def calc_IK(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, targ
                 # 回転角度
                 rotation_degree = math.degrees(rotation_radian)
 
-                # 関節回転量の補正
-                correct_qq = MQuaternion.fromAxisAndAngle(rotation_axis, rotation_degree)
+                # 関節回転量の補正(最大変位量を制限する)
+                correct_qq = MQuaternion.fromAxisAndAngle(rotation_axis, min(rotation_degree, ik_bone.degree_limit))
 
                 # ジョイントに補正をかける
                 bf = motion.calc_bf(joint_name, fno)
@@ -87,11 +87,11 @@ def calc_IK(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, targ
                     logger.test("limit_qq: %s -> %s", new_ik_qq.toEulerAngles(), MQuaternion.fromEulerAngles(euler_x, euler_y, euler_z).toEulerAngles())
 
                     new_ik_qq = MQuaternion.fromEulerAngles(euler_x, euler_y, euler_z)
-                
+
                 bf.rotation = new_ik_qq
 
         # 回転の差がほとんどない場合、終了
-        if (local_effector_pos - local_target_pos).lengthSquared() < 0.00001:
+        if (local_effector_pos - local_target_pos).lengthSquared() < 0.0001:
             return
         
     return

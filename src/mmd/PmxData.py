@@ -221,6 +221,8 @@ class Bone():
         self.ik_limit_max = MVector3D()
         # IK内積上限値
         self.dot_limit = 0
+        # IK単位角度
+        self.degree_limit = 360
 
         self.BONEFLAG_TAILPOS_IS_BONE = 0x0001
         self.BONEFLAG_CAN_ROTATE = 0x0002
