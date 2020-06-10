@@ -130,7 +130,6 @@ class VmdPanel(BasePanel):
             # 別スレッドで実行
             self.convert_vmd_worker = VmdWorkerThread(self.frame, VmdThreadEvent)
             self.convert_vmd_worker.start()
-            self.convert_vmd_worker.stop_event.set()
 
         return result
 
@@ -148,7 +147,6 @@ class VmdPanel(BasePanel):
         # フォーム有効化
         self.enable()
         # ワーカー終了
-        self.convert_vmd_worker.join()
         self.convert_vmd_worker = None
         # プログレス非表示
         self.gauge_ctrl.SetValue(0)

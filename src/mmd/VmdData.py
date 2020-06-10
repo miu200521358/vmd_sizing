@@ -258,9 +258,15 @@ class VmdMotion():
         return sorted(list(set(fnos)))
 
     # 指定ボーンが跳ねてたりするのを回避
-    def smooth_bf(self, data_set_no: int, bone_name: str, is_rot: bool, is_mov: bool, limit_degrees: float):
+    def smooth_bf(self, data_set_no: int, bone_name: str, is_rot: bool, is_mov: bool, limit_degrees: float, start_fno=-1, end_fno=-1, is_show_log=True):
         # キーフレを取得する
-        fnos = self.get_bone_fnos(bone_name)
+        if start_fno < 0 and end_fno < 0:
+            # 範囲指定がない場合、全範囲
+            fnos = self.get_bone_fnos(bone_name)
+        else:
+            # 範囲指定がある場合はその範囲内だけ
+            fnos = self.get_bone_fnos(bone_name, start_fno=start_fno, end_fno=end_fno)
+
         prev_sep_fno = 0
         if len(fnos) > 2:
             for fno in fnos:
@@ -283,13 +289,14 @@ class VmdMotion():
                                      data_set_no, bone_name, fno, diff, prev_next_dot, now_next_dot)
 
                         now_bf.rotation = MQuaternion.slerp(prev_bf.rotation, next_bf.rotation, ((now_bf.fno - prev_bf.fno) / (next_bf.fno - prev_bf.fno)))
-
-                if data_set_no > 0 and fno // 500 > prev_sep_fno and fnos[-1] > 0:
+                
+                if is_show_log and data_set_no > 0 and fno // 500 > prev_sep_fno and fnos[-1] > 0:
                     logger.info("-- %sフレーム目:終了(%s％)【No.%s - 円滑化 - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
                     prev_sep_fno = fno // 500
 
     # フィルターをかける
-    def smooth_filter_bf(self, data_set_no: int, bone_name: str, is_rot: bool, is_mov: bool, loop=1, config={"freq": 30, "mincutoff": 0.3, "beta": 0.01, "dcutoff": 0.25}):
+    def smooth_filter_bf(self, data_set_no: int, bone_name: str, is_rot: bool, is_mov: bool, loop=1, \
+                         config={"freq": 30, "mincutoff": 0.3, "beta": 0.01, "dcutoff": 0.25}, start_fno=-1, end_fno=-1, is_show_log=True):
         
         for n in range(loop):
             # 移動用フィルタ
@@ -304,6 +311,14 @@ class VmdMotion():
 
             fnos = self.get_bone_fnos(bone_name)
             prev_sep_fno = 0
+
+            # キーフレを取得する
+            if start_fno < 0 and end_fno < 0:
+                # 範囲指定がない場合、全範囲
+                fnos = self.get_bone_fnos(bone_name)
+            else:
+                # 範囲指定がある場合はその範囲内だけ
+                fnos = self.get_bone_fnos(bone_name, start_fno=start_fno, end_fno=end_fno)
 
             # 全区間をフィルタにかける
             for fno in fnos:
@@ -329,7 +344,7 @@ class VmdMotion():
                     new_qq = MQuaternion.fromEulerAngles(rx, ry, rz)
                     now_bf.rotation = new_qq
 
-                if data_set_no > 0 and fno // 1000 > prev_sep_fno and fnos[-1] > 0:
+                if is_show_log and data_set_no > 0 and fno // 1000 > prev_sep_fno and fnos[-1] > 0:
                     logger.info("-- %sフレーム目:終了(%s％)【No.%s - フィルタリング - %s(%s)】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, bone_name, (n + 1))
                     prev_sep_fno = fno // 1000
 
@@ -455,8 +470,10 @@ class VmdMotion():
     def regist_bf(self, bf: VmdBoneFrame, bone_name: str, fno: int):
         # 登録対象の場合のみ、補間曲線リセットで登録する
         regist_bf = self.calc_bf(bone_name, fno, is_reset_interpolation=True)
-        regist_bf.position = bf.position
-        regist_bf.rotation = bf.rotation
+        regist_bf.position = bf.position.copy()
+        regist_bf.rotation = bf.rotation.copy()
+        regist_bf.org_position = bf.org_position.copy()
+        regist_bf.org_rotation = bf.org_rotation.copy()
         # キーを登録
         regist_bf.key = True
         self.bones[bone_name][fno] = regist_bf
@@ -705,12 +722,13 @@ class VmdMotion():
         is_key = True if "is_key" in kwargs and kwargs["is_key"] else False
         is_read = True if "is_read" in kwargs and kwargs["is_read"] else False
         start_fno = kwargs["start_fno"] if "start_fno" in kwargs and kwargs["start_fno"] else 0
+        end_fno = kwargs["end_fno"] if "end_fno" in kwargs and kwargs["end_fno"] else 9999999999
         
         # 条件に合致するフレーム番号を探す
         keys = []
         for bone_name in bone_names:
             if bone_name in self.bones:
-                keys.extend([x for x in self.bones[bone_name].keys() if self.bones[bone_name][x].fno >= start_fno and \
+                keys.extend([x for x in self.bones[bone_name].keys() if self.bones[bone_name][x].fno >= start_fno and self.bones[bone_name][x].fno <= end_fno and \
                             (not is_key or (is_key and self.bones[bone_name][x].key)) and (not is_read or (is_read and self.bones[bone_name][x].read))])
         
         # 重複を除いた昇順フレーム番号リストを返す

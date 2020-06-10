@@ -119,9 +119,6 @@ class MainFrame(wx.Frame):
         # タブ押下時の処理
         self.note_ctrl.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.on_tab_change)
 
-        # 待機中の処理
-        self.Bind(wx.EVT_IDLE, self.on_idle)
-
         # ---------------------------------------------
 
         bSizer1.Add(self.note_ctrl, 1, wx.EXPAND, 5)
@@ -299,7 +296,6 @@ class MainFrame(wx.Frame):
             # 別スレッドで実行
             self.load_worker = LoadWorkerThread(self, LoadThreadEvent, is_exec, is_morph, is_arm)
             self.load_worker.start()
-            self.load_worker.stop_event.set()
 
         return result
 
@@ -312,7 +308,6 @@ class MainFrame(wx.Frame):
         # フォーム有効化
         self.enable()
         # ワーカー終了
-        self.load_worker.join()
         self.load_worker = None
         # プログレス非表示
         self.file_panel_ctrl.gauge_ctrl.SetValue(0)
@@ -357,7 +352,6 @@ class MainFrame(wx.Frame):
                 # 別スレッドで実行
                 self.worker = SizingWorkerThread(self, SizingThreadEvent, self.is_out_log)
                 self.worker.start()
-                self.worker.stop_event.set()
 
         elif event.is_morph:
             # モーフタブを開く場合、モーフタブ初期化処理実行
@@ -390,7 +384,6 @@ class MainFrame(wx.Frame):
         self.sound_finish()
 
         # ワーカー終了
-        self.worker.join()
         self.worker = None
         # タブ移動可
         self.release_tab()

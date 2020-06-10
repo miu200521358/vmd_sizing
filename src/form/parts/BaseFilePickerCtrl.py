@@ -234,7 +234,7 @@ class BaseFilePickerCtrl():
         results[target] = self.load()
 
     # ファイル読み込み処理
-    def load(self, file_idx=0):
+    def load(self, file_idx=0, is_check=True):
         if not self.is_set_path():
             # パスが指定されてない場合、そのまま終了
             self.data = None
@@ -277,7 +277,7 @@ class BaseFilePickerCtrl():
             elif input_ext.lower() == ".vpd":
                 reader = VpdReader(file_path)
             elif input_ext.lower() == ".pmx":
-                reader = PmxReader(file_path)
+                reader = PmxReader(file_path, is_check=is_check)
             else:
                 logger.error("%s%s 読み込み失敗(拡張子不正): %s", display_set_no, self.title, os.path.basename(file_path), decoration=MLogger.DECORATION_BOX)
                 return False

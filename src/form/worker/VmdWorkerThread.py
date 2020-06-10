@@ -3,7 +3,7 @@
 
 import wx
 import time
-from form.worker.BaseWorkerThread import BaseWorkerThread
+from form.worker.BaseWorkerThread import BaseWorkerThread, task_takes_time
 from service.ConvertVmdService import ConvertVmdService
 from module.MOptions import MVmdOptions
 
@@ -14,9 +14,11 @@ class VmdWorkerThread(BaseWorkerThread):
         self.elapsed_time = 0
         self.frame = frame
         self.result_event = result_event
+        self.gauge_ctrl = frame.vmd_panel_ctrl.gauge_ctrl
 
         super().__init__(frame, self.result_event, frame.vmd_panel_ctrl.console_ctrl)
 
+    @task_takes_time
     def thread_event(self):
         start = time.time()
 

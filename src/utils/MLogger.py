@@ -3,7 +3,6 @@
 from datetime import datetime
 import logging
 import traceback
-import sys
 
 
 class MLogger():
@@ -33,6 +32,7 @@ class MLogger():
     def __init__(self, module_name, level=logging.INFO):
         self.module_name = module_name
         self.default_level = level
+        self.child = False
 
         # ロガー
         self.logger = logging.getLogger("VmdSizing").getChild(self.module_name)
@@ -40,14 +40,28 @@ class MLogger():
         # 標準出力ハンドラ
         sh = logging.StreamHandler()
         sh.setLevel(level)
-        sh.setFormatter(logging.Formatter(self.DEFAULT_FORMAT))
+        # sh.setFormatter(logging.Formatter(self.DEFAULT_FORMAT))
+        # sh.setStream(print)
         self.logger.addHandler(sh)
-    
+
     def copy(self, options):
         self.is_file = options.is_file
         self.outout_datetime = options.outout_datetime
-        sys.stdout = options.monitor
-            
+        self.monitor = options.monitor
+        self.child = True
+
+        for f in self.logger.handlers:
+            if isinstance(f, logging.StreamHandler):
+                f.setStream(options.monitor)
+
+        # for f in self.logger.handlers:
+        #     if isinstance(f, MultiProcessingHandler):
+        #         # 既存のマルチスレッドハンドラはすべて削除
+        #         self.logger.removeHandler(f)
+
+        # # マルチスレッド用
+        # self.logger.addHandler(options.monitor)
+        
     def time(self, msg, *args, **kwargs):
         if not kwargs:
             kwargs = {}
@@ -138,8 +152,6 @@ class MLogger():
             else:
                 log_record = self.logger.makeRecord('name', target_level, "(unknown file)", 0, msg, args, None, self.module_name)
             
-            self.logger.handle(log_record)
-
             target_decoration = kwargs.pop("decoration", None)
             title = kwargs.pop("title", None)
             is_time = kwargs.pop("time", None)
@@ -165,7 +177,14 @@ class MLogger():
                 
                 # 出力
                 try:
-                    print(output_msg)
+                    if self.child:
+                        # 子スレッドの場合はレコードを再生成してでコンソールとGUI両方出力
+                        log_record = self.logger.makeRecord('name', target_level, "(unknown file)", 0, output_msg, None, None, self.module_name)
+                        self.logger.handle(log_record)
+                    else:
+                        # サイジングスレッドは、printとloggerで分けて出力
+                        print(output_msg)
+                        self.logger.handle(log_record)
                 except Exception as e:
                     raise e
                 

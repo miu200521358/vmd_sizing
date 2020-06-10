@@ -3,7 +3,7 @@
 
 import wx
 import time
-from form.worker.BaseWorkerThread import BaseWorkerThread
+from form.worker.BaseWorkerThread import BaseWorkerThread, task_takes_time
 
 
 class LoadWorkerThread(BaseWorkerThread):
@@ -13,9 +13,11 @@ class LoadWorkerThread(BaseWorkerThread):
         self.is_exec = is_exec
         self.is_morph = is_morph
         self.is_arm = is_arm
+        self.gauge_ctrl = frame.file_panel_ctrl.gauge_ctrl
 
         super().__init__(frame, result_event, frame.file_panel_ctrl.console_ctrl)
 
+    @task_takes_time
     def thread_event(self):
         start = time.time()
 

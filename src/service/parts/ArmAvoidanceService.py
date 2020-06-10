@@ -404,7 +404,7 @@ class ArmAvoidanceService():
                 from_fno = min([fno for (fno, avoidance_name, bone_name) in avoidance_list.keys()])
                 to_fno = max([fno for (fno, avoidance_name, bone_name) in avoidance_list.keys()])
 
-                # 回避距離があって、総合的な回避距離が近い方を採用(若干Z優先)
+                # 回避距離があって、総合的な回避距離が近い方を採用
                 all_avoidance_axis[from_fno] = {"from_fno": from_fno, "to_fno": to_fno, "axis": ("x" if block_x_distance < block_z_distance else "z")}
                 logger.debug("aidx: %s, d: %s, from: %s, to: %s, axis: %s, xd: %s, zd: %s", aidx, direction, from_fno, to_fno, all_avoidance_axis[from_fno], block_x_distance, block_z_distance)
 
@@ -504,10 +504,7 @@ class ArmAvoidanceService():
 
             effector_bone = arm_link.get(effector_bone_name)
 
-            # ひじは角度制限をつける
             elbow_bone = arm_link.get("{0}ひじ".format(direction))
-            # elbow_bone.ik_limit_min = MVector3D(-180, -0.5, -10)
-            # elbow_bone.ik_limit_max = MVector3D(180, 180, 10)
             elbow_bone.dot_limit = 0.8
 
             arm_bone = arm_link.get("{0}腕".format(direction))

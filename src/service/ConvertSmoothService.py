@@ -201,8 +201,13 @@ class ConvertSmoothService():
             
             if self.options.model.bones[bone_name].getRotatable():
                 rx_all_values = MBezierUtils.calc_value_from_catmullrom(bone_name, fnos, rx_values)
+                logger.info("【スムージング1回目】%s - 回転X 終了", bone_name)
+
                 ry_all_values = MBezierUtils.calc_value_from_catmullrom(bone_name, fnos, ry_values)
+                logger.info("【スムージング1回目】%s - 回転Y 終了", bone_name)
+
                 rz_all_values = MBezierUtils.calc_value_from_catmullrom(bone_name, fnos, rz_values)
+                logger.info("【スムージング1回目】%s - 回転X 終了", bone_name)
             else:
                 if len(fnos) > 0:
                     rx_all_values = np.zeros(fnos[-1] + 1)
@@ -215,8 +220,13 @@ class ConvertSmoothService():
 
             if self.options.model.bones[bone_name].getTranslatable():
                 mx_all_values = MBezierUtils.calc_value_from_catmullrom(bone_name, fnos, mx_values)
+                logger.info("【スムージング1回目】%s - 移動X 終了", bone_name)
+
                 my_all_values = MBezierUtils.calc_value_from_catmullrom(bone_name, fnos, my_values)
+                logger.info("【スムージング1回目】%s - 移動Y 終了", bone_name)
+
                 mz_all_values = MBezierUtils.calc_value_from_catmullrom(bone_name, fnos, mz_values)
+                logger.info("【スムージング1回目】%s - 移動Z 終了", bone_name)
             else:
                 if len(fnos) > 0:
                     mx_all_values = np.zeros(fnos[-1] + 1)
@@ -233,7 +243,7 @@ class ConvertSmoothService():
                 bf.rotation = MQuaternion.fromEulerAngles(rx, ry, rz)
                 bf.position = MVector3D(mx, my, mz)
                 self.options.motion.regist_bf(bf, bone_name, fno)
-
+                
             logger.info("【スムージング1回目】%s 終了", bone_name)
 
             return True

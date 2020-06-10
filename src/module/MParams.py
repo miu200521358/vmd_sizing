@@ -96,6 +96,20 @@ class BoneLinks():
 
         return list(self.__links.keys())[0].replace("実体", "")
 
+    # 指定されたボーン名のみを入れたリンクを取得
+    def pickup_links(self, bone_names: list):
+        new_links = BoneLinks()
+        for lidx, lkey in enumerate(self.__links.keys()):
+            if lidx == 0:
+                # 末端は常に登録
+                new_links.append(self.__links[lkey])
+            else:
+                if lkey in bone_names:
+                    # それ以外はボーン名リストにあること
+                    new_links.append(self.__links[lkey])
+                
+        return new_links
+        
     def __str__(self):
         return "<BoneLinks links:{0}".format(self.__links)
 

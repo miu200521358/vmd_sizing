@@ -3,7 +3,7 @@
 
 import wx
 import time
-from form.worker.BaseWorkerThread import BaseWorkerThread
+from form.worker.BaseWorkerThread import BaseWorkerThread, task_takes_time
 from service.ConvertSmoothService import ConvertSmoothService
 from module.MOptions import MSmoothOptions
 from utils.MLogger import MLogger # noqa
@@ -17,14 +17,16 @@ class SmoothWorkerThread(BaseWorkerThread):
         self.elapsed_time = 0
         self.frame = frame
         self.result_event = result_event
+        self.gauge_ctrl = frame.smooth_panel_ctrl.gauge_ctrl
 
         super().__init__(frame, self.result_event, frame.smooth_panel_ctrl.console_ctrl)
 
+    @task_takes_time
     def thread_event(self):
         start = time.time()
 
         self.result = self.frame.smooth_panel_ctrl.smooth_vmd_file_ctrl.load() and self.result
-        self.result = self.frame.smooth_panel_ctrl.smooth_model_file_ctrl.load() and self.result
+        self.result = self.frame.smooth_panel_ctrl.smooth_model_file_ctrl.load(is_check=False) and self.result
 
         if self.result:
             options = MSmoothOptions(\
@@ -35,7 +37,7 @@ class SmoothWorkerThread(BaseWorkerThread):
                 output_path=self.frame.smooth_panel_ctrl.output_smooth_vmd_file_ctrl.file_ctrl.GetPath(), \
                 loop_cnt=self.frame.smooth_panel_ctrl.loop_cnt_ctrl.GetValue(), \
                 interpolation=self.frame.smooth_panel_ctrl.interpolation_ctrl.GetSelection(), \
-                monitor=self.queue, \
+                monitor=self.frame.smooth_panel_ctrl.console_ctrl, \
                 is_file=False, \
                 outout_datetime=logger.outout_datetime)
             

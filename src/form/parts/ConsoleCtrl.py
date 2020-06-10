@@ -3,6 +3,7 @@
 
 import time
 import wx
+import sys
 from utils.MLogger import MLogger # noqa
 
 logger = MLogger(__name__)
@@ -13,10 +14,16 @@ class ConsoleCtrl(wx.TextCtrl):
     def __init__(self, parent, id=wx.ID_ANY, value="", pos=wx.DefaultPosition, size=wx.DefaultSize, style=0, validator=wx.DefaultValidator, name=wx.TextCtrlNameStr):
         super().__init__(parent, id, value, pos, size, style, validator, name)
 
-    def monitor(self, queue):
-        while True:
-            # super().write(queue.get())
-            wx.CallAfter(queue.get())
-            # 0.1秒待機
-            time.sleep(0.1)
+    def write(self, text):
+        try:
+            wx.CallAfter(self.AppendText, text)
+        except: # noqa
+            pass
+
+    # def monitor(self, queue):
+    #     while True:
+    #         # super().write(queue.get())
+    #         wx.CallAfter(queue.get())
+    #         # 0.1秒待機
+    #         time.sleep(0.1)
 

@@ -184,7 +184,6 @@ class SmoothPanel(BasePanel):
             # 別スレッドで実行
             self.convert_smooth_worker = SmoothWorkerThread(self.frame, SmoothThreadEvent)
             self.convert_smooth_worker.start()
-            self.convert_smooth_worker.stop_event.set()
 
         return result
 
@@ -203,7 +202,6 @@ class SmoothPanel(BasePanel):
         # フォーム有効化
         self.enable()
         # ワーカー終了
-        self.convert_smooth_worker.join()
         self.convert_smooth_worker = None
         # プログレス非表示
         self.gauge_ctrl.SetValue(0)

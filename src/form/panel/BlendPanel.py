@@ -152,7 +152,7 @@ class BlendPanel(BasePanel):
         self.pmx_file_ctrl.on_change_file(event)
 
         # ファイル読み込み処理
-        if self.pmx_file_ctrl.is_valid() and self.pmx_file_ctrl.load():
+        if self.pmx_file_ctrl.is_valid() and self.pmx_file_ctrl.load(is_check=False):
             # モーフ展開処理
             morph_names = {"目": [], "眉": [], "口": [], "他": []}
 
@@ -231,7 +231,6 @@ class BlendPanel(BasePanel):
             # 別スレッドで実行
             self.blend_worker = BlendWorkerThread(self.frame, BlendThreadEvent)
             self.blend_worker.start()
-            self.blend_worker.stop_event.set()
 
         return result
 
@@ -249,7 +248,6 @@ class BlendPanel(BasePanel):
         # フォーム有効化
         self.enable()
         # ワーカー終了
-        self.blend_worker.join()
         self.blend_worker = None
         # プログレス非表示
         self.gauge_ctrl.SetValue(0)

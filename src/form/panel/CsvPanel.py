@@ -109,7 +109,6 @@ class CsvPanel(BasePanel):
             # 別スレッドで実行
             self.convert_csv_worker = CsvWorkerThread(self.frame, CsvThreadEvent)
             self.convert_csv_worker.start()
-            self.convert_csv_worker.stop_event.set()
 
         return result
 
@@ -127,7 +126,6 @@ class CsvPanel(BasePanel):
         # フォーム有効化
         self.enable()
         # ワーカー終了
-        self.convert_csv_worker.join()
         self.convert_csv_worker = None
         # プログレス非表示
         self.gauge_ctrl.SetValue(0)

@@ -13,8 +13,9 @@ logger = MLogger(__name__)
 
 
 class PmxReader():
-    def __init__(self, file_path):
+    def __init__(self, file_path, is_check=True):
         self.file_path = file_path
+        self.is_check = is_check
         self.offset = 0
         self.buffer = None
         self.vertex_index_size = 0
@@ -695,9 +696,10 @@ class PmxReader():
         pmx.digest = self.hexdigest()
         logger.test("pmx: %s, hash: %s", pmx.name, pmx.digest)
 
-        # 腕がサイジング可能かチェック
-        pmx.can_arm_sizing = pmx.check_arm_bone_can_sizing()
-        logger.test("pmx: %s, can_arm_sizing: %s", pmx.name, pmx.can_arm_sizing)
+        if self.is_check:
+            # 腕がサイジング可能かチェック
+            pmx.can_arm_sizing = pmx.check_arm_bone_can_sizing()
+            logger.test("pmx: %s, can_arm_sizing: %s", pmx.name, pmx.can_arm_sizing)
 
         # # 上半身がサイジング可能かチェック
         # pmx.can_upper_sizing = pmx.check_upper_bone_can_sizing()

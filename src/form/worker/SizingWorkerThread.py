@@ -8,7 +8,7 @@ import time
 import wx
 import re
 
-from form.worker.BaseWorkerThread import BaseWorkerThread
+from form.worker.BaseWorkerThread import BaseWorkerThread, task_takes_time
 from module.MOptions import MOptions, MOptionsDataSet, MArmProcessOptions
 from service.SizingService import SizingService
 from utils.MLogger import MLogger # noqa
@@ -21,8 +21,11 @@ class SizingWorkerThread(BaseWorkerThread):
     def __init__(self, frame: wx.Frame, result_event: wx.Event, is_out_log: bool):
         self.elapsed_time = 0
         self.is_out_log = is_out_log
+        self.gauge_ctrl = frame.file_panel_ctrl.gauge_ctrl
+
         super().__init__(frame, result_event, frame.file_panel_ctrl.console_ctrl)
 
+    @task_takes_time
     def thread_event(self):
         try:
             start = time.time()
@@ -102,7 +105,7 @@ class SizingWorkerThread(BaseWorkerThread):
                 ), \
                 camera_motion=self.frame.camera_panel_ctrl.camera_vmd_file_ctrl.data, \
                 camera_output_vmd_path=self.frame.camera_panel_ctrl.output_camera_vmd_file_ctrl.file_ctrl.GetPath(), \
-                monitor=self.queue, \
+                monitor=self.frame.file_panel_ctrl.console_ctrl, \
                 is_file=False, \
                 outout_datetime=logger.outout_datetime)
             
