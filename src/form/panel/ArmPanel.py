@@ -410,11 +410,11 @@ class AvoidanceDialog(wx.Dialog):
         # ボタン
         self.btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.ok_btn = wx.Button(self, wx.ID_OK, "OK")
-        self.btn_sizer.Add(self.ok_btn, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
+        self.btn_sizer.Add(self.ok_btn, 0, wx.ALL, 5)
 
         self.calcel_btn = wx.Button(self, wx.ID_CANCEL, "キャンセル")
         self.btn_sizer.Add(self.calcel_btn, 0, wx.ALL, 5)
-        self.sizer.Add(self.btn_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
+        self.sizer.Add(self.btn_sizer, 0, wx.ALL, 5)
 
         self.static_line01 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
         self.sizer.Add(self.static_line01, 0, wx.EXPAND | wx.ALL, 5)

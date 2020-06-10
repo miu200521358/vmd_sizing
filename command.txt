@@ -4,11 +4,11 @@ pip install numpy
 pip install wxPython 
 pip install numpy-quaternion
 pip install bezier
-pip install multiprocessing-logging
 pip install pypiwin32
 
 np‚Ì‚Ý
 pip install line_profiler
+pip install multiprocessing-logging
 
 https://code.woboq.org/qt5/qtbase/src/gui/math3d/
 
@@ -33,7 +33,7 @@ set CONDA_FORCE_32BIT=
 --------------------------
 [64bit]
 
-conda create -n vmdsizing_np64_2 pip python=3.8
+conda create -n vmdsizing_np64_3 pip python=3.8
 
 pip install pyinstaller
 

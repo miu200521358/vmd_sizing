@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 
-import time
 import wx
-import sys
 from utils.MLogger import MLogger # noqa
 
 logger = MLogger(__name__)

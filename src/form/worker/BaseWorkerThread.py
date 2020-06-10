@@ -7,7 +7,6 @@ from threading import Thread, Event
 from functools import wraps
 import time
 
-from module.StdoutQueue import StdoutQueue
 from utils import MFormUtils # noqa
 from utils.MLogger import MLogger # noqa
 
@@ -29,8 +28,8 @@ class BaseWorkerThread(metaclass=ABCMeta):
         self._stop_event = Event()
         self.result_event = result_event
         self.result = True
-        # メイン終了時にもスレッド終了する
-        self.daemon = True
+        # # メイン終了時にもスレッド終了する
+        # self.daemon = True
         # ログ出力用スレッド
         # self.queue = StdoutQueue()
         # self.monitor = Thread(target=monitering, name="MonitorThread", args=(console, self.queue))
@@ -92,6 +91,7 @@ def task_takes_time(acallable):
     @wraps(acallable)
     def f(base_thread):
         t = SimpleThread(base_thread, acallable)
+        t.daemon = True
         t.start()
         while t.is_alive():
             base_thread.gauge_ctrl.Pulse()
