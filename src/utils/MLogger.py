@@ -41,7 +41,7 @@ class MLogger():
         sh = logging.StreamHandler()
         sh.setLevel(level)
         # sh.setFormatter(logging.Formatter(self.DEFAULT_FORMAT))
-        # sh.setStream(print)
+        # sh.setStream(sys.stdout)
         self.logger.addHandler(sh)
 
     def copy(self, options):
@@ -54,14 +54,6 @@ class MLogger():
             if isinstance(f, logging.StreamHandler):
                 f.setStream(options.monitor)
 
-        # for f in self.logger.handlers:
-        #     if isinstance(f, MultiProcessingHandler):
-        #         # 既存のマルチスレッドハンドラはすべて削除
-        #         self.logger.removeHandler(f)
-
-        # # マルチスレッド用
-        # self.logger.addHandler(options.monitor)
-        
     def time(self, msg, *args, **kwargs):
         if not kwargs:
             kwargs = {}
@@ -162,32 +154,31 @@ class MLogger():
             else:
                 print_msg = "{message}".format(message=log_record.getMessage())
             
-            if not self.is_file and target_level != MLogger.INFO_DEBUG:
-                if target_decoration:
-                    if target_decoration == MLogger.DECORATION_BOX:
-                        output_msg = self.create_box_message(print_msg, target_level, title)
-                    elif target_decoration == MLogger.DECORATION_LINE:
-                        output_msg = self.create_line_message(print_msg, target_level, title)
-                    elif target_decoration == MLogger.DECORATION_IN_BOX:
-                        output_msg = self.create_in_box_message(print_msg, target_level, title)
-                    else:
-                        output_msg = self.create_simple_message(print_msg, target_level, title)
+            if target_decoration:
+                if target_decoration == MLogger.DECORATION_BOX:
+                    output_msg = self.create_box_message(print_msg, target_level, title)
+                elif target_decoration == MLogger.DECORATION_LINE:
+                    output_msg = self.create_line_message(print_msg, target_level, title)
+                elif target_decoration == MLogger.DECORATION_IN_BOX:
+                    output_msg = self.create_in_box_message(print_msg, target_level, title)
                 else:
                     output_msg = self.create_simple_message(print_msg, target_level, title)
-                
-                # 出力
-                try:
-                    if self.child:
-                        # 子スレッドの場合はレコードを再生成してでコンソールとGUI両方出力
-                        log_record = self.logger.makeRecord('name', target_level, "(unknown file)", 0, output_msg, None, None, self.module_name)
-                        self.logger.handle(log_record)
-                    else:
-                        # サイジングスレッドは、printとloggerで分けて出力
-                        print(output_msg)
-                        self.logger.handle(log_record)
-                except Exception as e:
-                    raise e
-                
+            else:
+                output_msg = self.create_simple_message(print_msg, target_level, title)
+        
+            # 出力
+            try:
+                if self.child or self.is_file:
+                    # 子スレッドの場合はレコードを再生成してでコンソールとGUI両方出力
+                    log_record = self.logger.makeRecord('name', target_level, "(unknown file)", 0, output_msg, None, None, self.module_name)
+                    self.logger.handle(log_record)
+                else:
+                    # サイジングスレッドは、printとloggerで分けて出力
+                    print(output_msg)
+                    self.logger.handle(log_record)
+            except Exception as e:
+                raise e
+            
     def create_box_message(self, msg, level, title=None):
         msg_block = []
         msg_block.append("■■■■■■■■■■■■■■■■■")

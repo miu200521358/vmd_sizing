@@ -357,26 +357,35 @@ class VmdMotion():
                 del self.bones[bone_name][fno]
 
     # 指定ボーンの不要キーを削除する
-    def remove_unnecessary_bf(self, data_set_no: int, bone_name: str, is_rot: bool, is_mov: bool, offset=0):
-        # キーフレ（開始フレ以降）を取得する
-        fnos = self.get_bone_fnos(bone_name)
+    def remove_unnecessary_bf(self, data_set_no: int, bone_name: str, is_rot: bool, is_mov: bool, offset=0, start_fno=-1, end_fno=-1, is_show_log=True, is_force=False):
         prev_sep_fno = 0
+
+        # キーフレを取得する
+        if start_fno < 0 and end_fno < 0:
+            # 範囲指定がない場合、全範囲
+            fnos = self.get_bone_fnos(bone_name)
+        else:
+            # 範囲指定がある場合はその範囲内だけ
+            fnos = self.get_bone_fnos(bone_name, start_fno=start_fno, end_fno=end_fno)
         logger.debug("remove_unnecessary_bf prev: %s, %s", bone_name, len(fnos))
 
         if len(fnos) > 2:
-            start_fno = fnos[0]     # 開始フレーム番号
+            sfno = fnos[0]     # 開始フレーム番号
             fno = fnos[1]           # 次のフレーム番号
             fill_bfs = []
-            for fno in fnos:
-                prev_bf = self.calc_bf(bone_name, start_fno)    # 繋ぐ元のbf
+            for fidx, fno in enumerate(fnos):
+                prev_bf = self.calc_bf(bone_name, sfno)    # 繋ぐ元のbf
                 now_bf = self.calc_bf(bone_name, fno)           # 繋ぐ対象のbf
                 next_bf = self.calc_bf(bone_name, fno + 1)      # 繋ぐ先のbf
                 is_next_key = next_bf.key                       # nextの有効有無
 
+                # 一旦登録
+                self.regist_bf(now_bf, bone_name, fno)
+
                 # 読み込みキーではない場合、結合を試す
                 logger.test("now: %s", now_bf)
 
-                if not now_bf.read:
+                if (not now_bf.read or is_force) and fidx > 0:
                     # 現在キーを追加
                     fill_bfs.append(now_bf)
 
@@ -398,12 +407,12 @@ class VmdMotion():
                         # nowキーを有効にする
                         now_bf.key = True
 
-                        start_fno = fno     # 開始を現在フレーム
+                        sfno = fno     # 開始を現在フレーム
                         fill_bfs = []       # 中間キーをクリア
                 else:
                     logger.debug("f: %s, %s, ▲読み込みキー", fno, bone_name)
                     # 読み込み時のキーである場合、強制的に残す
-                    start_fno = fno     # 開始を現在フレーム
+                    sfno = fno     # 開始を現在フレーム
                     fill_bfs = []       # 中間キーをクリア
 
                 if fno // 100 > prev_sep_fno:
@@ -414,7 +423,13 @@ class VmdMotion():
 
                     prev_sep_fno = fno // 100
 
-        active_fnos = self.get_bone_fnos(bone_name, is_key=True)
+        if start_fno < 0 and end_fno < 0:
+            # 範囲指定がない場合、全範囲
+            active_fnos = self.get_bone_fnos(bone_name)
+        else:
+            # 範囲指定がある場合はその範囲内だけ
+            active_fnos = self.get_bone_fnos(bone_name, start_fno=start_fno, end_fno=end_fno)
+
         logger.debug("remove_unnecessary_bf after: %s, %s, all: %s", bone_name, active_fnos, len(fnos))
 
     # 補間曲線込みでbfを結合できる場合、結合する

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 import os
+import sys
 import argparse
 
 from mmd.PmxReader import PmxReader
@@ -231,7 +232,7 @@ class MOptions():
                 arm_options=arm_options, \
                 camera_motion=camera_motion, \
                 camera_output_vmd_path=camera_output_vmd_path, \
-                monitor=None, \
+                monitor=sys.stdout, \
                 is_file=True, \
                 outout_datetime=logger.outout_datetime)
 
@@ -361,7 +362,7 @@ class MSmoothOptions():
                 output_path=output_vmd_path, \
                 loop_cnt=args.loop_cnt, \
                 interpolation=args.interpolation, \
-                monitor=None, \
+                monitor=sys.stdout, \
                 is_file=True, \
                 outout_datetime=logger.outout_datetime)
 
