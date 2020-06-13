@@ -17,7 +17,7 @@ class FloatSliderCtrl(wx.Slider):
         self._max = maxval
         self._res = res
         self._label = label
-        ival, imin, imax = [round(v/res) for v in (value, minval, maxval)]
+        ival, imin, imax = [round(v / res) for v in (value, minval, maxval)]
         self._islider = super(FloatSliderCtrl, self)
         self._islider.__init__(
             parent, id, ival, imin, imax, pos=pos, size=size, style=style, name=name

@@ -158,7 +158,7 @@ class StanceService():
 
                 # 内積差分に基づきキー追加
                 logger.info("%s捩り分散準備開始【No.%s】", direction, (data_set_idx + 1))
-                fnos = data_set.motion.get_differ_fnos((data_set_idx + 1), [arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name], limit_degrees=30)
+                fnos = data_set.motion.get_differ_fnos((data_set_idx + 1), [arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name], limit_degrees=20)
 
                 futures = []
                 with ThreadPoolExecutor(thread_name_prefix="twist_smooth{0}".format(data_set_idx), max_workers=self.options.max_workers) as executor:
@@ -199,18 +199,18 @@ class StanceService():
                     if not f.result():
                         return False
 
-                logger.info("%s捩り分散後処理 - 円滑化【No.%s】", arm_bone_name, (data_set_idx + 1))
+                # logger.info("%s捩り分散後処理 - 円滑化【No.%s】", arm_bone_name, (data_set_idx + 1))
 
-                # 各ボーンのbfを円滑化
-                futures = []
-                with ThreadPoolExecutor(thread_name_prefix="twist_smooth{0}".format(data_set_idx), max_workers=self.options.max_workers) as executor:
-                    for bone_name in [arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name]:
-                        futures.append(executor.submit(self.smooth_twist, data_set_idx, bone_name))
+                # # 各ボーンのbfを円滑化
+                # futures = []
+                # with ThreadPoolExecutor(thread_name_prefix="twist_smooth{0}".format(data_set_idx), max_workers=self.options.max_workers) as executor:
+                #     for bone_name in [arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name]:
+                #         futures.append(executor.submit(self.smooth_twist, data_set_idx, bone_name))
 
-                concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
-                for f in futures:
-                    if not f.result():
-                        return False
+                # concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
+                # for f in futures:
+                #     if not f.result():
+                #         return False
 
                 logger.info("%s捩り分散後処理 - フィルタリング【No.%s】", arm_bone_name, (data_set_idx + 1))
 
@@ -524,15 +524,15 @@ class StanceService():
         local_qq = MQuaternion.rotationTo(separated_vec.normalized(), original_vec.normalized())
         
         # グローバル軸に戻す
-        global_qq = original_twist_qq * twist_qq * local_qq
-        total_degree = original_twist_qq.toDegree() + twist_qq.toDegree() + local_qq.toDegree()
+        # global_qq = original_twist_qq * twist_qq * local_qq
+        total_degree = twist_qq.toDegree() + local_qq.toDegree()    # original_twist_qq.toDegree()
         total_qq = MQuaternion.fromAxisAndAngle(twist_x_axis, total_degree)
         logger.debug("f: %s, 生成: %s, total_degree: %s", fno, bone_name, total_degree)
 
         logger.test("fno: %s, original_twist_qq: %s, %s", fno, original_twist_qq.toDegree(), original_twist_qq)
         logger.test("fno: %s, twist_qq: %s, %s", fno, twist_qq.toDegree(), twist_qq)
         logger.test("fno: %s, local_qq: %s, %s", fno, local_qq.toDegree(), local_qq)
-        logger.test("fno: %s, global_qq: %s, %s", fno, global_qq.toDegree(), global_qq)
+        # logger.test("fno: %s, global_qq: %s, %s", fno, global_qq.toDegree(), global_qq)
         logger.test("fno: %s, total_qq: %s, %s", fno, total_qq.toDegree(), total_qq)
 
         original_mat = MMatrix4x4()                     # オリジナルの回転量に基づく移動量
@@ -559,37 +559,40 @@ class StanceService():
         max_degree = 0
 
         # 捩りの計算が取れなかった場合、再計算してひじ・手首の位置を確認する
+        # 1度単位
         max_dot, max_degree = self.test_twist_qq(fno, bone_name, grand_parent_x_axis, grand_parent_qq, grand_parent_twist_qq, \
                                                  parent_x_axis, parent_qq, twist_x_axis, original_twist_qq, \
                                                  child_x_axis, child_y_axis, original_child_qq, child_qq, original_vec, \
-                                                 max_degree, max_dot, max_degree, np.asarray([(x, -x) for x in range(0, 31, 1)]).flatten())
+                                                 total_degree, max_dot, max_degree, np.asarray([(x, -x) for x in range(0, 31, 1)]).flatten())
 
         if max_dot > RADIANS_2:
             return max_dot, MQuaternion.fromAxisAndAngle(twist_x_axis, max_degree)
 
-        # まず30度範囲でチェック
+        # 30度範囲でチェック(前のチェックは破棄)
         max_dot, max_degree = self.test_twist_qq(fno, bone_name, grand_parent_x_axis, grand_parent_qq, grand_parent_twist_qq, \
                                                  parent_x_axis, parent_qq, twist_x_axis, original_twist_qq, \
                                                  child_x_axis, child_y_axis, original_child_qq, child_qq, original_vec, \
-                                                 total_degree, max_dot, max_degree, np.asarray([(x, -x) for x in range(30, 181, 30)]).flatten())
+                                                 total_degree, max_dot, max_degree, np.asarray([(x, -x) for x in range(0, 181, 10)]).flatten())
 
         if max_dot > RADIANS_2:
             return max_dot, MQuaternion.fromAxisAndAngle(twist_x_axis, max_degree)
 
         # 1度単位
+        total_degree = max_degree
         max_dot, max_degree = self.test_twist_qq(fno, bone_name, grand_parent_x_axis, grand_parent_qq, grand_parent_twist_qq, \
                                                  parent_x_axis, parent_qq, twist_x_axis, original_twist_qq, \
                                                  child_x_axis, child_y_axis, original_child_qq, child_qq, original_vec, \
-                                                 max_degree, max_dot, max_degree, np.asarray([(x, -x) for x in range(1, 31, 1)]).flatten())
+                                                 total_degree, max_dot, max_degree, np.asarray([(x, -x) for x in range(1, 21, 1)]).flatten())
 
         if max_dot > RADIANS_2:
             return max_dot, MQuaternion.fromAxisAndAngle(twist_x_axis, max_degree)
 
         # 整数で取れなかった場合、小数まで割って調べる
+        total_degree = max_degree
         max_dot, max_degree = self.test_twist_qq(fno, bone_name, grand_parent_x_axis, grand_parent_qq, grand_parent_twist_qq, \
                                                  parent_x_axis, parent_qq, twist_x_axis, original_twist_qq, \
                                                  child_x_axis, child_y_axis, original_child_qq, child_qq, original_vec, \
-                                                 max_degree, max_dot, max_degree, np.asarray([(x * 0.1, -x * 0.1) for x in range(1, 11)]).flatten())
+                                                 total_degree, max_dot, max_degree, np.asarray([(x * 0.1, -x * 0.1) for x in range(1, 11)]).flatten())
 
         if max_dot > RADIANS_8:
             return max_dot, MQuaternion.fromAxisAndAngle(twist_x_axis, max_degree)
@@ -660,8 +663,7 @@ class StanceService():
         twisted_dot, twist_degree, result_twist_qq = self.confirm_twist_qq(fno, bone_name, grand_parent_x_axis, grand_parent_qq, grand_parent_twist_qq, \
                                                                            parent_x_axis, parent_qq, twist_x_axis, original_twist_qq, test_degree, \
                                                                            child_x_axis, child_y_axis, original_child_qq, child_qq, original_vec)
-        # logger.test("fno: %s, 正＋ append_degree: %s, twisted_dot: %s, result_twist_qq: %s, result_twist_qq: %s", \
-        #             fno, append_degree, twisted_dot, result_twist_qq.toDegree(), result_twist_qq)
+        logger.test("f: %s, %s, twisted_dot: %s, twist_degree: %s, result_twist_qq: %s", fno, bone_name, twisted_dot, twist_degree, result_twist_qq.toEulerAngles().to_log())
         
         if twisted_dot > RADIANS_2:
             # 充分に近似している場合、このまま終了
@@ -695,8 +697,8 @@ class StanceService():
     def confirm_twist_qq(self, fno: int, bone_name: str, grand_parent_x_axis: MVector3D, grand_parent_qq: MQuaternion, grand_parent_twist_qq: MQuaternion, \
                          parent_x_axis: MVector3D, parent_qq: MQuaternion, twist_x_axis: MVector3D, original_twist_qq: MQuaternion, twist_degree: float, \
                          child_x_axis: MVector3D, child_y_axis: MVector3D, original_child_qq: MQuaternion, child_qq: MQuaternion, original_vec: MVector3D):
-        twist_degree = twist_degree % 180
-
+        # twist_degree = twist_degree % (180 if np.sign(twist_x_axis.x()) == 1 else -180)
+        
         result_twist_qq = MQuaternion.fromAxisAndAngle(twist_x_axis, twist_degree)
         # logger.test("fno: %s, total: %s, %s", fno, result_twist_qq.toDegree(), result_twist_qq)
 

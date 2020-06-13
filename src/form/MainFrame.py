@@ -415,7 +415,12 @@ class MainFrame(wx.Frame):
     def on_popup_finger_warning(self, event: wx.Event):
         if not self.popuped_finger_warning:
             dialog = wx.MessageDialog(self, "複数人数モーションで指位置合わせがONになっています。\n指の数だけ組み合わせが膨大になり時間がかかりますが、" \
-                                      + "その割に余計な指に反応して綺麗になりません。よろしいですか？", style=wx.OK | wx.ICON_WARNING)
-            dialog.ShowModal()
+                                      + "その割に余計な指に反応して綺麗になりません。よろしいですか？", style=wx.YES_NO | wx.ICON_WARNING)
+            if dialog.ShowModal() == wx.ID_NO:
+                # 指位置合わせOFF
+                self.arm_panel_ctrl.arm_alignment_finger_flg_ctrl.SetValue(0)
+                # 改めて手首位置合わせON
+                self.arm_panel_ctrl.arm_process_flg_alignment.SetValue(1)
+
             dialog.Destroy()
             self.popuped_finger_warning = True

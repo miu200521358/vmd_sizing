@@ -259,6 +259,10 @@ class ArmPanel(BasePanel):
             else:
                 # 空から作る場合、複数タブのファイルセット参照
                 self.add_set(set_no, multi_file_set, replace=False)
+            
+            # 複数件ある場合、手首間の距離デフォルト値変更
+            self.alignment_distance_wrist_slider.SetValue(2.5)
+            self.alignment_distance_wrist_label.SetLabel("（2.5）")
 
         # 腕系不可モデル名リスト
         disable_arm_model_names = []
