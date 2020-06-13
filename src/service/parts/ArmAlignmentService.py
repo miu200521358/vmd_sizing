@@ -651,7 +651,8 @@ class ArmAlignmentService():
                             if link_name not in org_bfs:
                                 bf = data_set.motion.calc_bf(link_name, fno)
                                 # bf.org_rotation = bf.rotation.copy()
-                                # logger.debug("f: %s(%s:%s), org保持 now[%s], org[%s]", fno, (data_set_idx + 1), link_name, bf.rotation.toEulerAngles().to_log(), bf.org_rotation.toEulerAngles().to_log())
+                                # logger.debug("f: %s(%s:%s), org保持 now[%s], org[%s]", fno, (data_set_idx + 1), link_name, \
+                                # bf.rotation.toEulerAngles().to_log(), bf.org_rotation.toEulerAngles().to_log())
                                 # data_set.motion.regist_bf(bf, link_name, fno)
 
                                 # 変位前の角度として保持
@@ -687,11 +688,11 @@ class ArmAlignmentService():
                             for link_name, link_bone in now_ik_links.all().items():
                                 prev_fno, _ = data_set.motion.get_bone_prev_next_fno(link_name, fno=fno, start_fno=all_alignment_group["fnos"][0])
 
-                                if 0 <= prev_fno and fno - prev_fno <= 2:
+                                if 0 <= prev_fno and fno - prev_fno <= 1:
                                     # 近く前のキーフレがある場合、そのキーフレの最終的な角度を取得
                                     prev_bf = data_set.motion.calc_bf(link_name, prev_fno)
                                     # 変化量は小さめ
-                                    dot_near_limit_dict[link_name] = 1 - (0.01 * (fno - prev_fno))
+                                    dot_near_limit_dict[link_name] = link_bone.dot_near_limit if is_multi else link_bone.dot_single_limit
                                 else:
                                     # 前のキーフレがない場合、変化前の角度とする
                                     prev_bf = start_org_bfs[link_name]
@@ -706,7 +707,8 @@ class ArmAlignmentService():
                             # どちらにせよ一旦bf確定
                             for link_name, link_bone in now_ik_links.all().items():
                                 ik_bf = data_set.motion.calc_bf(link_name, fno)
-                                logger.test("f: %s(%s:%s), 一旦確定 now[%s], org[%s]", fno, (data_set_idx + 1), link_name, ik_bf.rotation.toEulerAngles().to_log(), ik_bf.org_rotation.toEulerAngles().to_log())
+                                logger.test("f: %s(%s:%s), 一旦確定 now[%s], org[%s]", fno, (data_set_idx + 1), link_name, ik_bf.rotation.toEulerAngles().to_log(), \
+                                            ik_bf.org_rotation.toEulerAngles().to_log())
                                 data_set.motion.regist_bf(ik_bf, link_name, fno)
 
                             if np.count_nonzero(np.where(np.array(list(dot_near_dict.values())) < np.array(list(dot_near_limit_dict.values())), 1, 0)) == 0 and \
@@ -1075,7 +1077,7 @@ class ArmAlignmentService():
             arm_bone = rep_wrist_links.get("{0}腕".format(direction))
             arm_bone.dot_near_limit = 0.97
             arm_bone.dot_far_limit = 0.8
-            arm_bone.dot_single_limit = 0.97
+            arm_bone.dot_single_limit = 0.9
             arm_bone.degree_limit = 57.2957
     
             ik_links = BoneLinks()
@@ -1197,7 +1199,7 @@ class ArmAlignmentService():
                 arm_bone = rep_finger_links.get("{0}腕".format(direction))
                 arm_bone.dot_near_limit = 0.97
                 arm_bone.dot_far_limit = 0.8
-                arm_bone.dot_single_limit = 0.97
+                arm_bone.dot_single_limit = 0.9
                 arm_bone.degree_limit = 57.2957
         
                 ik_links = BoneLinks()

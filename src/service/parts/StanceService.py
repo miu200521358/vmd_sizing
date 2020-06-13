@@ -551,7 +551,7 @@ class StanceService():
         
         # 手捩りの場合、Y軸でチェック
         if grand_parent_x_axis:
-            original_vec = original_mat * child_x_axis      # 手首のY軸方向
+            original_vec = original_mat * child_y_axis      # 手首のY軸方向
         else:
             original_vec = original_mat * child_x_axis      # ひじのX軸方向
 
@@ -695,6 +695,7 @@ class StanceService():
     def confirm_twist_qq(self, fno: int, bone_name: str, grand_parent_x_axis: MVector3D, grand_parent_qq: MQuaternion, grand_parent_twist_qq: MQuaternion, \
                          parent_x_axis: MVector3D, parent_qq: MQuaternion, twist_x_axis: MVector3D, original_twist_qq: MQuaternion, twist_degree: float, \
                          child_x_axis: MVector3D, child_y_axis: MVector3D, original_child_qq: MQuaternion, child_qq: MQuaternion, original_vec: MVector3D):
+        twist_degree = twist_degree % 180
 
         result_twist_qq = MQuaternion.fromAxisAndAngle(twist_x_axis, twist_degree)
         # logger.test("fno: %s, total: %s, %s", fno, result_twist_qq.toDegree(), result_twist_qq)
@@ -715,7 +716,7 @@ class StanceService():
 
         # 手捩りの場合、Y軸でチェック
         if grand_parent_x_axis:
-            twisted_vec = twisted_mat * child_x_axis        # 手首のY軸方向
+            twisted_vec = twisted_mat * child_y_axis        # 手首のY軸方向
         else:
             twisted_vec = twisted_mat * child_x_axis        # ひじのX軸方向
 
