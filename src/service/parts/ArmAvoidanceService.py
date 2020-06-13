@@ -54,8 +54,7 @@ class ArmAvoidanceService():
             self.avoidance_options[(data_set_idx, "右")] = self.prepare_avoidance(data_set_idx, "右")
 
         futures = []
-        # with ThreadPoolExecutor(thread_name_prefix="avoidance", max_workers=1) as executor:
-        with ThreadPoolExecutor(thread_name_prefix="avoidance") as executor:
+        with ThreadPoolExecutor(thread_name_prefix="avoidance", max_workers=self.options.max_workers) as executor:
             for data_set_idx, data_set in enumerate(self.options.data_set_list):
                 futures.append(executor.submit(self.execute_avoidance_pool, data_set_idx, "右"))
                 futures.append(executor.submit(self.execute_avoidance_pool, data_set_idx, "左"))

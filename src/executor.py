@@ -17,7 +17,7 @@ from utils import MFileUtils
 from service.SizingService import SizingService
 from utils.MException import SizingException
 
-VERSION_NAME = "ver5.00_β74"
+VERSION_NAME = "ver5.00_β77"
 
 # 指数表記なし、有効小数点桁数6、30を超えると省略あり、一行の文字数200
 np.set_printoptions(suppress=True, precision=6, threshold=30, linewidth=200)
@@ -54,10 +54,13 @@ if __name__ == '__main__':
         parser = argparse.ArgumentParser()
         parser.add_argument("--verbose", default=20, type=int)
         parser.add_argument("--out_log", default=0, type=int)
+        parser.add_argument("--is_saving", default=1, type=int)
         args = parser.parse_args()
         
         # ロギングレベル
         is_out_log = True if args.out_log == 1 else False
+        # 省エネモード
+        is_saving = True if args.is_saving == 1 else False
 
         MLogger.initialize(level=args.verbose, is_file=False)
 
@@ -74,6 +77,9 @@ if __name__ == '__main__':
         elif args.verbose == MLogger.TIMER:
             # 時間計測の場合
             log_level_name = "（タイマー版）"
+        elif not is_saving:
+            # 省エネOFFの場合
+            log_level_name = "（ハイスペック版）"
         elif is_out_log:
             # ログありの場合
             log_level_name = "（ログあり版）"
@@ -83,7 +89,7 @@ if __name__ == '__main__':
         # 引数指定がない場合、通常起動
         app = wx.App(False)
         icon = wx.Icon(MFileUtils.resource_path('src/vmdsizing.ico'), wx.BITMAP_TYPE_ICO)
-        frame = MainFrame(None, mydir_path, now_version_name, args.verbose, is_out_log)
+        frame = MainFrame(None, mydir_path, now_version_name, args.verbose, is_saving, is_out_log)
         frame.SetIcon(icon)
         frame.Show(True)
         app.MainLoop()

@@ -33,10 +33,11 @@ logger = MLogger(__name__)
 
 class MainFrame(wx.Frame):
 
-    def __init__(self, parent, mydir_path: str, version_name: str, logging_level: int, is_out_log: bool):
+    def __init__(self, parent, mydir_path: str, version_name: str, logging_level: int, is_saving: bool, is_out_log: bool):
         self.version_name = version_name
         self.logging_level = logging_level
         self.is_out_log = is_out_log
+        self.is_saving = is_saving
         self.mydir_path = mydir_path
         self.elapsed_time = 0
         self.popuped_finger_warning = False
@@ -66,6 +67,9 @@ class MainFrame(wx.Frame):
         elif self.logging_level == MLogger.TIMER:
             # 時間計測の場合
             self.note_ctrl.SetBackgroundColour("YELLOW")
+        elif not is_saving:
+            # ログありの場合、色変え
+            self.note_ctrl.SetBackgroundColour("BLUE")
         elif is_out_log:
             # ログありの場合、色変え
             self.note_ctrl.SetBackgroundColour("AQUAMARINE")
@@ -350,7 +354,7 @@ class MainFrame(wx.Frame):
                 logger.error("まだ処理が実行中です。終了してから再度実行してください。", decoration=MLogger.DECORATION_BOX)
             else:
                 # 別スレッドで実行
-                self.worker = SizingWorkerThread(self, SizingThreadEvent, self.is_out_log)
+                self.worker = SizingWorkerThread(self, SizingThreadEvent, self.is_saving, self.is_out_log)
                 self.worker.start()
 
         elif event.is_morph:

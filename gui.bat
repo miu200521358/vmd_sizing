@@ -8,5 +8,5 @@ cd /d %~dp0
 
 cls
 
-activate vmdsizing_np && python src\executor.py --out_log 1 --verbose 20
+activate vmdsizing_np && python src\executor.py --out_log 1 --verbose 20 --is_saving 0
 

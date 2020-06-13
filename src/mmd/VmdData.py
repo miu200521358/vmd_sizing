@@ -250,9 +250,9 @@ class VmdMotion():
                         # 前回キーとして保持
                         before_bf = bf.copy()
 
-                if data_set_no > 0 and fno // 1000 > prev_sep_fno and bone_fnos[-1] > 0:
+                if data_set_no > 0 and fno // 500 > prev_sep_fno and bone_fnos[-1] > 0:
                     logger.info("-- %sフレーム目:終了(%s％)【No.%s - キーフレ追加準備 - %s】", fno, round((fno / bone_fnos[-1]) * 100, 3), data_set_no, bone_name)
-                    prev_sep_fno = fno // 1000
+                    prev_sep_fno = fno // 500
 
         # 重複を除いて再計算
         return sorted(list(set(fnos)))

@@ -63,7 +63,7 @@ class ConvertSmoothService():
         # 最初に全打ち
 
         futures = []
-        with ThreadPoolExecutor(thread_name_prefix="prepare") as executor:
+        with ThreadPoolExecutor(thread_name_prefix="prepare", max_workers=self.options.max_workers) as executor:
             for bone_name in self.options.motion.bones.keys():
                 if bone_name in self.options.model.bones:
                     if self.options.interpolation == 0 and len(self.options.motion.bones[bone_name].keys()) >= 2:
@@ -84,7 +84,7 @@ class ConvertSmoothService():
         # 処理回数が3回以上の場合、フィルタをかける
         if self.options.loop_cnt >= 3:
             futures = []
-            with ThreadPoolExecutor(thread_name_prefix="filter") as executor:
+            with ThreadPoolExecutor(thread_name_prefix="filter", max_workers=self.options.max_workers) as executor:
                 for bone_name in self.options.motion.bones.keys():
                     if bone_name in self.options.model.bones:
                         futures.append(executor.submit(self.fitering, bone_name))
@@ -97,7 +97,7 @@ class ConvertSmoothService():
         # 処理回数が2回以上の場合、不要キー削除
         if self.options.loop_cnt >= 2:
             futures = []
-            with ThreadPoolExecutor(thread_name_prefix="remove") as executor:
+            with ThreadPoolExecutor(thread_name_prefix="remove", max_workers=self.options.max_workers) as executor:
                 for bone_name in self.options.motion.bones.keys():
                     if bone_name in self.options.model.bones:
                         futures.append(executor.submit(self.remove_unnecessary_bf, bone_name))

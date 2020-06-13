@@ -28,7 +28,7 @@ class StanceService():
 
     def execute(self):
         futures = []
-        with ThreadPoolExecutor(thread_name_prefix="stance", max_workers=5) as executor:
+        with ThreadPoolExecutor(thread_name_prefix="stance", max_workers=min(5, self.options.max_workers)) as executor:
             for data_set_idx, data_set in enumerate(self.options.data_set_list):
                 if data_set.motion.motion_cnt <= 0:
                     # モーションデータが無い場合、処理スキップ
@@ -107,7 +107,7 @@ class StanceService():
         logger.info("捩り分散　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
         
         futures = []
-        with ThreadPoolExecutor(thread_name_prefix="twist{0}".format(data_set_idx), max_workers=2) as executor:
+        with ThreadPoolExecutor(thread_name_prefix="twist{0}".format(data_set_idx), max_workers=min(5, self.options.max_workers)) as executor:
             for direction in ["左", "右"]:
                 futures.append(executor.submit(self.spread_twist_lr, data_set_idx, direction))
         concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
@@ -161,7 +161,7 @@ class StanceService():
                 fnos = data_set.motion.get_differ_fnos((data_set_idx + 1), [arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name], limit_degrees=30)
 
                 futures = []
-                with ThreadPoolExecutor(thread_name_prefix="twist_smooth{0}".format(data_set_idx)) as executor:
+                with ThreadPoolExecutor(thread_name_prefix="twist_smooth{0}".format(data_set_idx), max_workers=self.options.max_workers) as executor:
                     for bone_name in [arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name]:
                         futures.append(executor.submit(self.regist_twist_bf, data_set_idx, bone_name, fnos))
 
@@ -187,7 +187,7 @@ class StanceService():
                 log_target_idxs.append(fnos[-1])
 
                 futures = []
-                with ThreadPoolExecutor(thread_name_prefix="twist_exec{0}".format(data_set_idx), max_workers=10) as executor:
+                with ThreadPoolExecutor(thread_name_prefix="twist_exec{0}".format(data_set_idx), max_workers=min(5, self.options.max_workers)) as executor:
                     for fno_idx, fno in enumerate(fnos):
                         futures.append(executor.submit(self.spread_twist_pool, data_set_idx, fno_idx, fno, fnos[-1], \
                                                        arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name, \
@@ -203,7 +203,7 @@ class StanceService():
 
                 # 各ボーンのbfを円滑化
                 futures = []
-                with ThreadPoolExecutor(thread_name_prefix="twist_smooth{0}".format(data_set_idx)) as executor:
+                with ThreadPoolExecutor(thread_name_prefix="twist_smooth{0}".format(data_set_idx), max_workers=self.options.max_workers) as executor:
                     for bone_name in [arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name]:
                         futures.append(executor.submit(self.smooth_twist, data_set_idx, bone_name))
 
@@ -216,7 +216,7 @@ class StanceService():
 
                 # 捩りボーンのbfにフィルターをかける
                 futures = []
-                with ThreadPoolExecutor(thread_name_prefix="twist_smooth_twist{0}".format(data_set_idx)) as executor:
+                with ThreadPoolExecutor(thread_name_prefix="twist_smooth_twist{0}".format(data_set_idx), max_workers=self.options.max_workers) as executor:
                     for bone_name in [arm_twist_bone_name, wrist_twist_bone_name]:
                         futures.append(executor.submit(self.smooth_filter_twist, data_set_idx, bone_name, \
                                        config={"freq": 30, "mincutoff": 0.01, "beta": 0.05, "dcutoff": 0.5}))
@@ -228,7 +228,7 @@ class StanceService():
 
                 # 各ボーンのbfにフィルターをかける
                 futures = []
-                with ThreadPoolExecutor(thread_name_prefix="twist_smooth{0}".format(data_set_idx)) as executor:
+                with ThreadPoolExecutor(thread_name_prefix="twist_smooth{0}".format(data_set_idx), max_workers=self.options.max_workers) as executor:
                     for bone_name in [arm_bone_name, elbow_bone_name, wrist_bone_name, arm_twist_bone_name, wrist_twist_bone_name]:
                         futures.append(executor.submit(self.smooth_filter_twist, data_set_idx, bone_name, \
                                        config={"freq": 30, "mincutoff": 0.03, "beta": 0.1, "dcutoff": 1}))
@@ -729,7 +729,7 @@ class StanceService():
         logger.info("つま先補正　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
 
         futures = []
-        with ThreadPoolExecutor(thread_name_prefix="toe{0}".format(data_set_idx), max_workers=2) as executor:
+        with ThreadPoolExecutor(thread_name_prefix="toe{0}".format(data_set_idx), max_workers=min(2, self.options.max_workers)) as executor:
             for direction in ["左", "右"]:
                 futures.append(executor.submit(self.adjust_toe_stance_lr, data_set_idx, direction))
 
@@ -1629,7 +1629,7 @@ class StanceService():
         logger.info("肩スタンス補正　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
 
         futures = []
-        with ThreadPoolExecutor(thread_name_prefix="shoulder{0}".format(data_set_idx), max_workers=2) as executor:
+        with ThreadPoolExecutor(thread_name_prefix="shoulder{0}".format(data_set_idx), max_workers=min(2, self.options.max_workers)) as executor:
             for direction in ["左", "右"]:
                 futures.append(executor.submit(self.adjust_shoulder_stance_lr, data_set_idx, "{0}肩P".format(direction), "{0}肩".format(direction), "{0}腕".format(direction)))
 
@@ -1950,7 +1950,7 @@ class StanceService():
         arm_diff_qq_dic = self.calc_arm_stance(data_set)
 
         futures = []
-        with ThreadPoolExecutor(thread_name_prefix="arm{0}".format(data_set_idx)) as executor:
+        with ThreadPoolExecutor(thread_name_prefix="arm{0}".format(data_set_idx), max_workers=self.options.max_workers) as executor:
             for bone_name in ["左腕", "左ひじ", "左手首", "右腕", "右ひじ", "右手首"]:
                 futures.append(executor.submit(self.adjust_arm_stance_pool, data_set_idx, arm_diff_qq_dic, bone_name))
             for bone_name in ["左腕捩", "左手捩", "右腕捩", "右手捩"]:

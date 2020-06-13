@@ -17,9 +17,11 @@ logger = MLogger(__name__)
 
 class MOptions():
 
-    def __init__(self, version_name, logging_level, data_set_list, arm_options, camera_motion, camera_output_vmd_path, monitor, is_file, outout_datetime):
+    def __init__(self, version_name, logging_level, max_workers, data_set_list, arm_options, \
+                 camera_motion, camera_output_vmd_path, monitor, is_file, outout_datetime):
         self.version_name = version_name
         self.logging_level = logging_level
+        self.max_workers = max_workers
         self.data_set_list = data_set_list
         self.arm_options = arm_options
         self.camera_motion = camera_motion
@@ -234,7 +236,8 @@ class MOptions():
                 camera_output_vmd_path=camera_output_vmd_path, \
                 monitor=sys.stdout, \
                 is_file=True, \
-                outout_datetime=logger.outout_datetime)
+                outout_datetime=logger.outout_datetime, \
+                max_workers=min(32, os.cpu_count() + 4))
 
             return options
         except SizingException as se:

@@ -221,8 +221,12 @@ class Bone():
         self.ik_limit_max = MVector3D()
         # IK内積上限値
         self.dot_limit = 0
-        # IK内積上限値(複数人)
-        self.dot_mult_limit = 0
+        # IK内積上限値(近接)
+        self.dot_near_limit = 0
+        # IK内積上限値(遠目)
+        self.dot_far_limit = 0
+        # IK内積上限値(単体)
+        self.dot_single_limit = 0
         # IK単位角度
         self.degree_limit = 360
 

@@ -18,9 +18,10 @@ logger = MLogger(__name__)
 
 class SizingWorkerThread(BaseWorkerThread):
 
-    def __init__(self, frame: wx.Frame, result_event: wx.Event, is_out_log: bool):
+    def __init__(self, frame: wx.Frame, result_event: wx.Event, is_exec_saving: bool, is_out_log: bool):
         self.elapsed_time = 0
         self.is_out_log = is_out_log
+        self.is_exec_saving = is_exec_saving
         self.gauge_ctrl = frame.file_panel_ctrl.gauge_ctrl
 
         super().__init__(frame, result_event, frame.file_panel_ctrl.console_ctrl)
@@ -107,7 +108,8 @@ class SizingWorkerThread(BaseWorkerThread):
                 camera_output_vmd_path=self.frame.camera_panel_ctrl.output_camera_vmd_file_ctrl.file_ctrl.GetPath(), \
                 monitor=self.frame.file_panel_ctrl.console_ctrl, \
                 is_file=False, \
-                outout_datetime=logger.outout_datetime)
+                outout_datetime=logger.outout_datetime, \
+                max_workers=(1 if self.is_exec_saving else min(32, os.cpu_count() + 4)))
             
             self.result = SizingService(options).execute() and self.result
 
