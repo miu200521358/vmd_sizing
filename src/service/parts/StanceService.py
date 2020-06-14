@@ -940,7 +940,7 @@ class StanceService():
         logger.info("センター腕スタンス補正　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
 
         # センター調整に必要なボーン群（腕チェック済み）
-        center_target_bones = ["センター"]
+        center_target_bones = ["センター", "上半身", "首根元"]
 
         if set(center_target_bones).issubset(data_set.org_model.bones) and set(center_target_bones).issubset(data_set.rep_model.bones) and "センター" in data_set.motion.bones:
             # 判定用のセンターボーン名（グルーブがある場合、グルーブまでを対象とする）
@@ -983,25 +983,30 @@ class StanceService():
                                   org_center_bone_name: str, rep_center_bone_name: str):
 
         # 元モデルのセンターオフセット
-        org_left_wrist_pos, org_right_wrist_pos = \
+        org_left_wrist_pos, org_right_wrist_pos, org_upper_pos, org_neck_base_pos = \
             self.calc_center_offset_by_arm_model(bf, data_set_idx, data_set, data_set.org_model, data_set.org_motion, \
                                                  org_center_links, org_arm_links, org_center_bone_name)
         logger.test("f: %s, org_left_wrist_pos: %s, org_right_wrist_pos: %s", bf.fno, org_left_wrist_pos, org_right_wrist_pos)
 
         # 先モデルのセンターオフセット
-        rep_left_wrist_pos, rep_right_wrist_pos = \
+        rep_left_wrist_pos, rep_right_wrist_pos, rep_upper_pos, rep_neck_base_pos = \
             self.calc_center_offset_by_arm_model(bf, data_set_idx, data_set, data_set.rep_model, data_set.motion, \
                                                  rep_center_links, rep_arm_links, rep_center_bone_name)
         logger.test("f: %s, rep_left_wrist_pos: %s, rep_right_wrist_pos: %s", bf.fno, rep_left_wrist_pos, rep_right_wrist_pos)
         
         rep_center_arm_offset = MVector3D()
 
-        # 元モデルの床に近い方（Yが小さい方）が先モデルで床に潜ってる場合、センターの位置を元モデルも合わせる
-        if org_left_wrist_pos.y() < org_right_wrist_pos.y() and rep_left_wrist_pos.y() < 0 < org_left_wrist_pos.y() * data_set.original_xz_ratio:
-            rep_center_arm_offset.setY(org_left_wrist_pos.y() * data_set.original_xz_ratio - rep_left_wrist_pos.y())
+        # 首が上半身よりも大体上の場合、座ってる可能性があるので調整しない
+        is_sit = org_neck_base_pos.y() * 1.2 > org_upper_pos.y()
+        logger.debug("f: %s, org_neck_base_pos: %s, org_upper_pos: %s, is_sit: %s", bf.fno, org_neck_base_pos, org_upper_pos, is_sit)
 
-        elif org_right_wrist_pos.y() < org_left_wrist_pos.y() and rep_right_wrist_pos.y() < 0 < org_right_wrist_pos.y() * data_set.original_xz_ratio:
-            rep_center_arm_offset.setY(org_right_wrist_pos.y() * data_set.original_xz_ratio - rep_right_wrist_pos.y())
+        # 元モデルの床に近い方（Yが小さい方）が先モデルで床に潜ってる場合、センターの位置を元モデルも合わせる
+        if not is_sit:
+            if org_left_wrist_pos.y() < org_right_wrist_pos.y() and rep_left_wrist_pos.y() < 0 < org_left_wrist_pos.y() * data_set.original_xz_ratio:
+                rep_center_arm_offset.setY(org_left_wrist_pos.y() * data_set.original_xz_ratio - rep_left_wrist_pos.y())
+
+            elif org_right_wrist_pos.y() < org_left_wrist_pos.y() and rep_right_wrist_pos.y() < 0 < org_right_wrist_pos.y() * data_set.original_xz_ratio:
+                rep_center_arm_offset.setY(org_right_wrist_pos.y() * data_set.original_xz_ratio - rep_right_wrist_pos.y())
 
         return rep_center_arm_offset
 
@@ -1018,7 +1023,7 @@ class StanceService():
         right_arm_global_3ds, front_right_arm_global_3ds, right_arm_direction_qq = \
             MServiceUtils.calc_front_global_pos(model, arm_links["右"], motion, bf.fno)
 
-        return left_arm_global_3ds["左手首"], right_arm_global_3ds["右手首"]
+        return left_arm_global_3ds["左手首"], right_arm_global_3ds["右手首"], right_arm_global_3ds["上半身"], right_arm_global_3ds["首根元"]
 
     # 足IKによるセンターオフセット値
     def calc_center_offset_by_leg_ik(self, bf: VmdBoneFrame, data_set_idx: int, data_set: MOptionsDataSet, \

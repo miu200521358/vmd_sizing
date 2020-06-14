@@ -307,6 +307,9 @@ class ArmPanel(BasePanel):
             # 置き換え
             self.avoidance_dialog.set_list_sizer.Hide(self.avoidance_set_dict[set_idx].set_sizer, recursive=True)
             self.avoidance_dialog.set_list_sizer.Replace(self.avoidance_set_dict[set_idx].set_sizer, new_avoidance_set.set_sizer, recursive=True)
+
+            # 置き換えの場合、剛体リストクリア
+            self.avoidance_target_txt_ctrl.SetValue("")
         else:
             # 新規追加
             self.avoidance_dialog.set_list_sizer.Add(new_avoidance_set.set_sizer, 0, wx.EXPAND | wx.ALL, 5)
