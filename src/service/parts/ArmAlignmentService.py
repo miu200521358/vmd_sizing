@@ -78,6 +78,8 @@ class ArmAlignmentService():
         all_org_global_trunk_matrixs = {}
         all_org_global_neck_vec = {}
         all_org_global_upper_vec = {}
+        all_org_global_tip_vec = {}
+        all_org_global_effector_matrixs = {}
 
         prev_block_fno = 0
 
@@ -94,6 +96,8 @@ class ArmAlignmentService():
             all_org_global_trunk_matrixs[fno] = {}
             all_org_global_neck_vec[fno] = {}
             all_org_global_upper_vec[fno] = {}
+            all_org_global_tip_vec[fno] = {}
+            all_org_global_effector_matrixs[fno] = {}
 
             # 処理対象キーフレを先頭からひとつずつチェックしていく
             for data_set_idx, alignment_options in self.target_links.items():
@@ -114,6 +118,11 @@ class ArmAlignmentService():
                     all_org_global_trunk_matrixs[fno][(data_set_idx, alignment_idx)] = org_global_matrixs["首根元"]
                     all_org_global_neck_vec[fno][(data_set_idx, alignment_idx)] = org_global_3ds["首根元"]
                     all_org_global_upper_vec[fno][(data_set_idx, alignment_idx)] = org_global_3ds["上半身"]
+
+                    if target_link.tip_ik_links:
+                        # 指先合わせが必要な場合、保持
+                        all_org_global_tip_vec[fno][(data_set_idx, alignment_idx)] = org_global_3ds[target_link.tip_bone_name]
+                        all_org_global_effector_matrixs[fno][(data_set_idx, alignment_idx)] = org_global_matrixs[target_link.effector_bone_name]
 
             if fno // 200 > prev_block_fno:
                 logger.info("-- %sフレーム目:終了(%s％)【位置合わせ準備①】", fno, round((fno / fnos[-1]) * 100, 3))
@@ -263,7 +272,8 @@ class ArmAlignmentService():
                                 all_alignment_group_list.append({
                                     "fnos": [], "alignment_idxs": {}, "org_fno_global_effector": {}, \
                                     "org_mean_vec": {}, "org_origin_matrix": {}, "rep_fno_global_effector": {}, \
-                                    "rep_fno_trunk_matrix": {}, "rep_fno_fileset_ratio": {}, "rep_block_fileset_ratio": []
+                                    "rep_fno_trunk_matrix": {}, "rep_fno_fileset_ratio": {}, "rep_block_fileset_ratio": [], \
+                                    "org_effector_matrix": {}, "org_local_tip": {}
                                 })
                                 alignment_idx = len(all_alignment_group_list) - 1
 
@@ -404,6 +414,28 @@ class ArmAlignmentService():
                     # 再生成した元中央値
                     org_mean_vec = MVector3D(org_trunk_matrix * org_trunk_local_fno_origin)
 
+                    if target_link.tip_ik_links:
+                        # 指先のグローバル位置
+                        org_global_tip = all_org_global_tip_vec[fno][(data_set_idx, alignment_idx)]
+
+                        # 体幹から見たエフェクタ（手首）のローカル位置
+                        org_trunk_local_fno_effector = org_trunk_matrix.inverted() * org_global_effector
+
+                        # 作成元エフェクタのローカル座標系
+                        org_effector_matrix = org_trunk_matrix.copy()
+
+                        # 作成元エフェクタのローカル座標とする
+                        org_effector_matrix.translate(org_trunk_local_fno_effector)
+
+                        # 指先のエフェクタ座標系から見たローカル位置
+                        org_local_tip = org_effector_matrix.inverted() * org_global_tip
+
+                        all_alignment_group["org_local_tip"][(fno, data_set_idx, alignment_idx)] = org_local_tip
+                        all_alignment_group["org_effector_matrix"][(fno, data_set_idx, alignment_idx)] = org_effector_matrix
+
+                    all_alignment_group["org_mean_vec"][(fno, data_set_idx, alignment_idx)] = org_mean_vec
+                    all_alignment_group["org_origin_matrix"][(fno, data_set_idx, alignment_idx)] = org_origin_matrix
+
                     # 作成元の中心点 ---------------
                     debug_bone_name = "左1"
 
@@ -429,9 +461,6 @@ class ArmAlignmentService():
                         data_set.motion.bones[debug_bone_name] = {}
                     
                     data_set.motion.bones[debug_bone_name][fno] = debug_bf
-
-                    all_alignment_group["org_mean_vec"][(fno, data_set_idx, alignment_idx)] = org_mean_vec
-                    all_alignment_group["org_origin_matrix"][(fno, data_set_idx, alignment_idx)] = org_origin_matrix
 
             if fno // 500 > prev_block_fno:
                 logger.info("-- %sフレーム目:終了(%s％)【位置合わせ準備④】", fno, round((fno / fnos[-1]) * 100, 3))
@@ -460,7 +489,7 @@ class ArmAlignmentService():
                         # 処理対象セットを保持
                         group_data_set_idxs.append((data_set_idx, alignment_idx))
 
-                    # 元モデルのそれぞれのグローバル位置
+                    # 先モデルのそれぞれのグローバル位置
                     rep_global_3ds, rep_global_matrixs = \
                         MServiceUtils.calc_global_pos(data_set.rep_model, target_link.rep_links, data_set.motion, fno, return_matrix=True)
 
@@ -473,19 +502,10 @@ class ArmAlignmentService():
                         all_alignment_group["rep_fno_fileset_ratio"][fno] = {}
                     all_alignment_group["rep_fno_fileset_ratio"][fno][(data_set_idx, alignment_idx)] = data_set.original_xz_ratio
 
-                    # キーフレ単位の座標系情報
+                    # キーフレ単位の体幹座標系情報
                     if fno not in all_alignment_group["rep_fno_trunk_matrix"]:
                         all_alignment_group["rep_fno_trunk_matrix"][fno] = {}
                     all_alignment_group["rep_fno_trunk_matrix"][fno][(data_set_idx, alignment_idx)] = rep_global_matrixs["首根元"]
-
-                    # # ブロック単位のエフェクタ位置情報（とりあえず全部まとめて）
-                    # all_alignment_group["rep_block_global_effector"].append(rep_global_3ds[target_link.effector_bone_name].data())
-                    # all_alignment_group["rep_block_fileset_ratio"].append(data_set.original_xz_ratio)
-
-            # # ブロック単位の中央値
-            # rep_block_mean_vec = MVector3D(np.mean(all_alignment_group["rep_block_global_effector"], axis=0))
-            # rep_block_mean_vec = MVector3D(np.average(all_alignment_group["rep_block_global_effector"],
-            #                                           weights=all_alignment_group["rep_block_fileset_ratio"], axis=0))
             
             results = {}
             for fidx, fno in enumerate(all_alignment_group["fnos"]):
@@ -591,7 +611,7 @@ class ArmAlignmentService():
                         if target_link.ratio < 1:
                             rep_local_effector.setX(rep_local_effector.x() * target_link.ratio)
 
-                        # 床と合わせる場合、元のローカル位置のまま                        
+                        # 床と合わせる場合、元のローカル位置のまま
                         if not is_floor:
                             # Yは体格差
                             rep_local_effector.setY(rep_local_effector.y() * target_link.ratio)
@@ -906,6 +926,66 @@ class ArmAlignmentService():
                                         # 成功と見なす
                                         results[(fno, data_set_idx, alignment_idx)] = True
 
+            # 指先位置合わせ
+            for fidx, fno in enumerate(all_alignment_group["fnos"]):
+
+                # 床との位置合わせがある場合、TRUE
+                is_floor = ([ai < 0 for (di, ai) in all_alignment_group["alignment_idxs"][fno]].count(True) > 0)
+                # 他データとの位置合わせ（床との組合せは除く）がある場合、TRUE
+                is_multi = len(set([di for (di, ai) in all_alignment_group["alignment_idxs"][fno]])) > 1 and not is_floor
+
+                for data_set_idx, alignment_idx in all_alignment_group["alignment_idxs"][fno]:
+                    # 処理対象データセット
+                    data_set = self.options.data_set_list[data_set_idx]
+                    # 処理対象
+                    target_link = self.target_links[data_set_idx][alignment_idx]
+
+                    if target_link.tip_ik_links:
+                        # 指先合わせが必要な場合
+
+                        # 先モデルのそれぞれのグローバル位置最新データ
+                        rep_global_3ds, rep_global_matrixs = \
+                            MServiceUtils.calc_global_pos(data_set.rep_model, target_link.rep_links, data_set.motion, fno, return_matrix=True)
+
+                        # 指先のローカル位置
+                        org_local_tip = MVector3D(all_alignment_group["org_local_tip"][(fno, data_set_idx, alignment_idx)])
+
+                        # 首根先（体幹の最終的な向き）までの行列
+                        rep_effector_matrix = rep_global_matrixs["首根元"].copy()
+
+                        # エフェクタのグローバル位置
+                        rep_global_effector = rep_global_3ds[target_link.effector_bone_name]
+
+                        # 体幹から見たキーフレ中央値のローカル位置
+                        rep_trunk_local_fno_effector = rep_effector_matrix.inverted() * rep_global_effector
+
+                        # 変換先エフェクタのローカル座標とする
+                        rep_effector_matrix.translate(rep_trunk_local_fno_effector)
+
+                        # 先モデルの指先座標系
+                        rep_global_tip = rep_global_3ds[target_link.tip_bone_name]
+
+                        # 変換先エフェクタから見た指先のローカル座標
+                        rep_local_tip = rep_effector_matrix.inverted() * rep_global_tip
+
+                        # ローカルのXZを元に合わせる
+                        rep_local_tip.setX(org_local_tip.x())
+                        rep_local_tip.setZ(org_local_tip.z())
+
+                        # 目標とする指先の位置
+                        rep_new_global_tip = rep_effector_matrix * rep_local_tip
+                        
+                        logger.debug("先端IK計算開始(%s): f: %s(%s:%s), 現在[%s], 指定[%s]", now_ik_max_count, fno, (data_set_idx + 1), \
+                                     list(target_link.tip_ik_links.all().keys()), rep_effector_vec.to_log(), rep_new_global_tip.to_log())
+                        
+                        # IK計算実行
+                        MServiceUtils.calc_IK(data_set.rep_model, target_link.rep_links, data_set.motion, fno, rep_new_global_tip, target_link.tip_ik_links, max_count=1)
+
+                        ik_bf = data_set.motion.calc_bf(target_link.effector_bone_name, fno)
+                        logger.test("f: %s(%s:%s), 指先確定 now[%s], org[%s]", fno, (data_set_idx + 1), target_link.effector_bone_name, ik_bf.rotation.toEulerAngles().to_log(), \
+                                    ik_bf.org_rotation.toEulerAngles().to_log())
+                        data_set.motion.regist_bf(ik_bf, target_link.effector_bone_name, fno)
+
             if fno // 500 > prev_block_fno:
                 logger.info("-- %sフレーム目:終了(%s％)【位置合わせ】", fno, round((fno / fnos[-1]) * 100, 3))
                 prev_block_fno = fno // 500
@@ -978,7 +1058,7 @@ class ArmAlignmentService():
                                    org_palm_length, rep_palm_length, data_set.org_model, data_set.rep_model, "{0}腕".format(direction), \
                                    "{0}手首".format(direction), "{0}手首".format(direction), tip_bone_name, self.options.arm_options.alignment_distance_wrist, data_set.xz_ratio, 1)
 
-            # 腕・ひじ・手首のキーフレ
+            # 腕・ひじのキーフレ
             bone_names.extend(["{0}腕".format(direction), "{0}腕捩".format(direction), "{0}ひじ".format(direction), "{0}手捩".format(direction), "{0}手首".format(direction)])
 
             # 床位置合わせも行う場合、リンク追加生成
@@ -1076,14 +1156,14 @@ class ArmAlignmentService():
                 ik_links_list.append(ik_links)
                 ik_count_list.append(20)
 
-                # 先端リンク
-                tip_ik_links = BoneLinks()
-                tip_ik_links.append(rep_finger_links.get(total_finger_name))
-                tip_ik_links.append(rep_finger_links.get("{0}手首".format(direction)))
+                # # 先端リンクは不要
+                # tip_ik_links = BoneLinks()
+                # tip_ik_links.append(rep_finger_links.get(total_finger_name))
+                # tip_ik_links.append(rep_finger_links.get("{0}手首".format(direction)))
 
                 # 指リンク登録
                 self.target_links[data_set_idx][alignment_idx] = \
-                    ArmAlignmentOption(org_finger_links, rep_finger_links, ik_links_list, ik_count_list, tip_ik_links, \
+                    ArmAlignmentOption(org_finger_links, rep_finger_links, ik_links_list, ik_count_list, None, \
                                        org_palm_length, rep_palm_length, data_set.org_model, data_set.rep_model, "{0}腕".format(direction), \
                                        total_finger_name, total_finger_name[:3], total_finger_name, self.options.arm_options.alignment_distance_finger, data_set.xz_ratio, 3)
 
