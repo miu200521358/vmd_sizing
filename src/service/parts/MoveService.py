@@ -89,7 +89,6 @@ class MoveService():
 
             # 足IKのオフセット上限
             leg_ik_offset = {"左": MVector3D(), "右": MVector3D()}
-            IK_RATE = data_set.original_xz_ratio * 1.2
             for direction in ["左", "右"]:
                 org_leg_ik_pos = data_set.org_model.bones["{0}足ＩＫ".format(direction)].position
                 rep_leg_ik_global_pos = data_set.rep_model.bones["{0}足ＩＫ".format(direction)].position
@@ -99,11 +98,12 @@ class MoveService():
                 leg_ik_offset[direction] = ((org_leg_ik_pos - org_leg_pos) * leg_ratio) - (rep_leg_ik_global_pos - rep_leg_pos)
                 leg_ik_offset[direction].effective()
                 leg_ik_offset[direction].setY(0)
+                leg_ik_offset[direction].setZ(0)
                 logger.test("leg_ik_offset(%s): %s", direction, leg_ik_offset[direction])
 
-                if abs(leg_ik_offset[direction].x()) > abs(rep_leg_ik_global_pos.x() * IK_RATE):
+                if abs(leg_ik_offset[direction].x() * data_set.original_xz_ratio) > abs(rep_leg_ik_global_pos.x()):
                     # IKオフセットが、元々の足の位置の一定以上に広がっている場合、縮める
-                    re_x = rep_leg_ik_global_pos.x() * IK_RATE
+                    re_x = (rep_leg_ik_global_pos.x() - (leg_ik_offset[direction].x() * data_set.original_xz_ratio)) * data_set.original_xz_ratio
                     # オフセットの広がり具合が、元々と同じ場合は正、反対の場合、負
                     leg_ik_offset[direction].setX(re_x * (1 if np.sign(leg_ik_offset[direction].x()) == np.sign(rep_leg_ik_global_pos.x()) else -1))
 

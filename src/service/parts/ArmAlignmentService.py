@@ -107,7 +107,7 @@ class ArmAlignmentService():
 
                     # 元モデルのそれぞれのグローバル位置
                     org_global_3ds, org_global_matrixs = \
-                        MServiceUtils.calc_global_pos(data_set.org_model, target_link.org_links, data_set.org_motion, fno, return_matrix=True)
+                        MServiceUtils.calc_global_pos(data_set.org_model, target_link.org_links, data_set.org_motion, fno, return_matrix=True, is_local_x=True)
                    
                     all_org_global_effector_vec[fno][(data_set_idx, alignment_idx)] = org_global_3ds[target_link.effector_bone_name]
 
@@ -242,7 +242,7 @@ class ArmAlignmentService():
                         if (from_data_set_idx, from_target_link.effector_bone_name[0]) in alignment_pairs or \
                                 (to_data_set_idx, to_target_link.effector_bone_name[0]) in alignment_pairs:
                             # 既にその方向の位置合わせが発生している場合、位置合わせOFF
-                            break
+                            continue
                             
                         # 位置合わせする方向
                         alignment_pairs.append((from_data_set_idx, from_target_link.effector_bone_name[0]))
@@ -253,10 +253,10 @@ class ArmAlignmentService():
                             # 位置合わせする場合
 
                             # 前回既に位置合わせが必要であった場合、そのINDEXを使用する
-                            if prev_from_alignment:  # and to_alignment_idx >= 0 and all_alignment_idx[(from_data_set_idx, from_alignment_idx)] >= 0:
+                            if prev_from_alignment and all_alignment_idx[(from_data_set_idx, from_alignment_idx)] >= 0:
                                 # FROM前回が位置合わせONの場合、FROMに寄せる
                                 alignment_idx = all_alignment_idx[(from_data_set_idx, from_alignment_idx)]
-                            elif prev_to_alignment:  # and from_alignment_idx >= 0 and all_alignment_idx[(to_data_set_idx, to_alignment_idx)] >= 0:
+                            elif prev_to_alignment and all_alignment_idx[(to_data_set_idx, to_alignment_idx)] >= 0:
                                 # FROMが前回位置合わせOFFで、前回TOがONの場合、TOに寄せる
                                 alignment_idx = all_alignment_idx[(to_data_set_idx, to_alignment_idx)]
                             # elif (prev_floor_left_alignment or now_floor_left_alignment) and (to_data_set_idx, -1) in all_alignment_idx \
@@ -473,6 +473,7 @@ class ArmAlignmentService():
     # 位置合わせ実行
     def execute_alignment(self, fnos: list, all_alignment_group_list: list, all_messages: dict):
         
+        fno = 0
         prev_block_fno = 0
         for all_alignment_group in all_alignment_group_list:
             group_data_set_idxs = []
@@ -491,7 +492,7 @@ class ArmAlignmentService():
 
                     # 先モデルのそれぞれのグローバル位置
                     rep_global_3ds, rep_global_matrixs = \
-                        MServiceUtils.calc_global_pos(data_set.rep_model, target_link.rep_links, data_set.motion, fno, return_matrix=True)
+                        MServiceUtils.calc_global_pos(data_set.rep_model, target_link.rep_links, data_set.motion, fno, return_matrix=True, is_local_x=True)
 
                     # キーフレ単位のエフェクタ位置情報
                     if fno not in all_alignment_group["rep_fno_global_effector"]:
@@ -945,7 +946,7 @@ class ArmAlignmentService():
 
                         # 先モデルのそれぞれのグローバル位置最新データ
                         rep_global_3ds, rep_global_matrixs = \
-                            MServiceUtils.calc_global_pos(data_set.rep_model, target_link.rep_links, data_set.motion, fno, return_matrix=True)
+                            MServiceUtils.calc_global_pos(data_set.rep_model, target_link.rep_links, data_set.motion, fno, return_matrix=True, is_local_x=True)
 
                         # 指先のローカル位置
                         org_local_tip = MVector3D(all_alignment_group["org_local_tip"][(fno, data_set_idx, alignment_idx)])

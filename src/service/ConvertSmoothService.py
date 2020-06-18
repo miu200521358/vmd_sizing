@@ -399,45 +399,45 @@ def calc_local_axis(model, bone_name):
     links = model.create_link_2_top_one(bone_name, is_defined=False)
 
     # 初期スタンスのボーングローバル位置と行列を取得
-    global_3ds_dic, total_mats = MServiceUtils.calc_global_pos(model, links, VmdMotion(), 0, return_matrix=True)
+    global_3ds_dic, total_mats = MServiceUtils.calc_global_pos(model, links, VmdMotion(), 0, return_matrix=True, is_local_x=True)
     
-    target_mat = MMatrix4x4()
-    target_mat.setToIdentity()
+    # target_mat = MMatrix4x4()
+    # target_mat.setToIdentity()
 
-    # 処理対象行列
-    for n, (lname, mat) in enumerate(total_mats.items()):
-        target_link = links.get(lname)
+    # # 処理対象行列
+    # for n, (lname, mat) in enumerate(total_mats.items()):
+    #     target_link = links.get(lname)
 
-        if n == 0:
-            # 最初は行列そのもの
-            target_mat = mat.copy()
-        else:
-            # 2番目以降は行列をかける
-            target_mat *= mat.copy()
+    #     if n == 0:
+    #         # 最初は行列そのもの
+    #         target_mat = mat.copy()
+    #     else:
+    #         # 2番目以降は行列をかける
+    #         target_mat *= mat.copy()
 
-        if n > 0:
-            # ボーン自身にローカル軸が設定されているか
-            local_x_matrix = MMatrix4x4()
-            local_x_matrix.setToIdentity()
+    #     if n > 0:
+    #         # ボーン自身にローカル軸が設定されているか
+    #         local_x_matrix = MMatrix4x4()
+    #         local_x_matrix.setToIdentity()
 
-            local_axis_qq = MQuaternion()
+    #         local_axis_qq = MQuaternion()
 
-            if target_link.local_x_vector == MVector3D():
-                # ローカル軸が設定されていない場合、計算
+    #         if target_link.local_x_vector == MVector3D():
+    #             # ローカル軸が設定されていない場合、計算
 
-                # 自身から親を引いた軸の向き
-                local_axis = target_link.position - links.get(lname, offset=-1).position
-                local_axis_qq = MQuaternion.fromDirection(local_axis.normalized(), MVector3D(0, 0, 1))
-            else:
-                # ローカル軸が設定されている場合、その値を採用
-                local_axis_qq = MQuaternion.fromDirection(target_link.local_x_vector.normalized(), MVector3D(0, 0, 1))
+    #             # 自身から親を引いた軸の向き
+    #             local_axis = target_link.position - links.get(lname, offset=-1).position
+    #             local_axis_qq = MQuaternion.fromDirection(local_axis.normalized(), MVector3D(0, 0, 1))
+    #         else:
+    #             # ローカル軸が設定されている場合、その値を採用
+    #             local_axis_qq = MQuaternion.fromDirection(target_link.local_x_vector.normalized(), MVector3D(0, 0, 1))
             
-            local_x_matrix.rotate(local_axis_qq)
+    #         local_x_matrix.rotate(local_axis_qq)
 
-            target_mat *= local_x_matrix
+    #         target_mat *= local_x_matrix
 
     # ワールド座標系から注目ノードの局所座標系への変換
-    inv_coord = mat.inverted()
+    inv_coord = total_mats[bone_name].inverted()
 
     # 自身のボーンからの向き先を取得
     axis = model.get_local_x_axis(bone_name)

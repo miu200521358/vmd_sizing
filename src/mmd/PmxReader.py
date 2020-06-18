@@ -9,7 +9,7 @@ from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # 
 from utils.MException import MParseException # noqa
 from utils.MLogger import MLogger # noqa
 
-logger = MLogger(__name__)
+logger = MLogger(__name__, level=1)
 
 
 class PmxReader():

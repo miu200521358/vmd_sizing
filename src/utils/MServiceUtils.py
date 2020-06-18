@@ -189,7 +189,7 @@ def calc_front_global_pos(model: PmxModel, links: BoneLinks, motion: VmdMotion, 
 
 
 # グローバル位置算出
-def calc_global_pos(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, limit_links=None, return_matrix=False):
+def calc_global_pos(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, limit_links=None, return_matrix=False, is_local_x=False):
     trans_vs = calc_relative_position(model, links, motion, fno, limit_links)
     add_qs = calc_relative_rotation(model, links, motion, fno, limit_links)
 
@@ -228,6 +228,28 @@ def calc_global_pos(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: i
         
         # 最後の行列をかけ算する
         total_mats[lname] *= matrixs[n].copy()
+        
+        # ローカル軸の向きを調整する
+        if n > 0 and is_local_x:
+            # ボーン自身にローカル軸が設定されているか
+            local_x_matrix = MMatrix4x4()
+            local_x_matrix.setToIdentity()
+
+            local_axis_qq = MQuaternion()
+
+            if model.bones[lname].local_x_vector == MVector3D():
+                # ローカル軸が設定されていない場合、計算
+
+                # 自身から親を引いた軸の向き
+                local_axis = model.bones[lname].position - links.get(lname, offset=-1).position
+                local_axis_qq = MQuaternion.fromDirection(local_axis.normalized(), MVector3D(0, 0, 1))
+            else:
+                # ローカル軸が設定されている場合、その値を採用
+                local_axis_qq = MQuaternion.fromDirection(model.bones[lname].local_x_vector.normalized(), MVector3D(0, 0, 1))
+            
+            local_x_matrix.rotate(local_axis_qq)
+
+            total_mats[lname] *= local_x_matrix
 
     if return_matrix:
         # 行列も返す場合

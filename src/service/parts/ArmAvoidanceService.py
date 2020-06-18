@@ -350,7 +350,7 @@ class ArmAvoidanceService():
             for ((avoidance_name, avodance_link), avoidance) in zip(avoidance_options.avoidance_links.items(), avoidance_options.avoidances.values()):
                 # 剛体の現在位置をチェック
                 rep_avbone_global_3ds, rep_avbone_global_mats = \
-                    MServiceUtils.calc_global_pos(data_set.rep_model, avodance_link, data_set.motion, fno, return_matrix=True)
+                    MServiceUtils.calc_global_pos(data_set.rep_model, avodance_link, data_set.motion, fno, return_matrix=True, is_local_x=True)
 
                 obb = avoidance.get_obb(fno, avodance_link.get(avodance_link.last_name()).position, rep_avbone_global_mats, self.options.arm_options.alignment, direction == "左")
             

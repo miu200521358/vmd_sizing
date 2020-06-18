@@ -820,7 +820,7 @@ class PmxModel():
         self.material_indexes = {}
         # ボーンデータ
         self.bones = {}
-        # ボーンINDEXデータ
+        # ボーンINDEXデータ（キー：ボーンINDEX、値：ボーン名）
         self.bone_indexes = {}
         # モーフデータ(順番保持)
         self.morphs = OrderedDict()
@@ -1206,8 +1206,8 @@ class PmxModel():
                                         right_max_vertex.position.data(), back_max_vertex.position.data(), front_max_vertex.position.data()], axis=0))
             # XZはど真ん中
             center.setX(0)
-            # # Yは下辺から半径分上ちょっと下くらい
-            # center.setY(down_max_vertex.position.y() + (radius * 0.95))
+            # Yは下辺から半径分上ちょっと下くらい
+            center.setY(down_max_vertex.position.y() + (radius * 0.95))
             # # Zはちょっと前に
             # center.setZ(center.z() - (radius * 0.05))
 
