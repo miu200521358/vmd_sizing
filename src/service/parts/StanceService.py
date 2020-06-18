@@ -63,6 +63,9 @@ class StanceService():
                 # 足IKスタンス補正
                 self.adjust_leg_ik_stance(data_set_idx, data_set)
 
+                # つま先IKスタンス補正
+                self.adjust_toe_ik_stance(data_set_idx, data_set)
+
                 # つま先補正
                 self.adjust_toe_stance(data_set_idx, data_set)
 
@@ -759,7 +762,6 @@ class StanceService():
             if set(leg_ik_target_bones).issubset(data_set.org_model.bones) and set(leg_ik_target_bones).issubset(data_set.rep_model.bones):
                 prev_sep_fno = 0
                 # 足ＩＫのそれぞれでフレーム番号をチェックする
-                # , "{0}つま先ＩＫ".format(direction)
                 for target_bone_name in ["{0}足ＩＫ".format(direction)]:
                     if target_bone_name in data_set.org_model.bones and target_bone_name in data_set.rep_model.bones and target_bone_name in data_set.motion.bones:
                         # ボーンとモーションが揃ってある場合のみ補正
@@ -784,10 +786,6 @@ class StanceService():
                                         
                         org_leg_ik_links = data_set.org_model.create_link_2_top_one(target_bone_name)
                         rep_leg_ik_links = data_set.rep_model.create_link_2_top_one(target_bone_name)
-
-                        # 足IKの計算対象ボーン名
-                        ik_target_bone_names = [data_set.rep_model.bone_indexes[x.bone_index] for x in reversed(data_set.rep_model.bones[target_bone_name].ik.link)]
-                        ik_target_bone_names.append(data_set.rep_model.bone_indexes[data_set.rep_model.bones[target_bone_name].ik.target_index])
 
                         # 初期立ち位置の足IKのグローバル位置と行列
                         _, rep_initial_leg_ik_matrixs = MServiceUtils.calc_global_pos(data_set.rep_model, rep_leg_ik_links, VmdMotion(), 0, return_matrix=True)
@@ -847,7 +845,7 @@ class StanceService():
                                          rep_global_leg_ik_pos.to_log(), rep_ik_root_global_3ds[rep_ik_root_bone_name].to_log(), rep_local_leg_ik_pos.to_log())
 
                             # 足IKのローカル座標系
-                            rep_leg_ik_matrix = rep_initial_leg_ik_matrixs[rep_leg_ik_links.get(target_bone_name).name]
+                            rep_leg_ik_matrix = rep_initial_leg_ik_matrixs[target_bone_name]
                             # IKの親から見た、計算後IKのローカル位置
                             rep_leg_ik_recalc_local_pos = rep_leg_ik_matrix.inverted() * recalc_rep_global_leg_ik_pos
 
@@ -864,6 +862,133 @@ class StanceService():
                                 prev_sep_fno = fno // 500
 
                 logger.info("%s足ＩＫ補正:終了【No.%s】", direction, (data_set_idx + 1))
+
+            return True
+        except SizingException as se:
+            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
+            return se
+        except Exception as e:
+            import traceback
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            raise e
+
+    # つま先ＩＫ補正
+    def adjust_toe_ik_stance(self, data_set_idx: int, data_set: MOptionsDataSet):
+        logger.info("つま先ＩＫ補正　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
+
+        futures = []
+        with ThreadPoolExecutor(thread_name_prefix="toe_ik{0}".format(data_set_idx), max_workers=min(2, self.options.max_workers)) as executor:
+            for direction in ["左", "右"]:
+                futures.append(executor.submit(self.adjust_toe_ik_stance_lr, data_set_idx, direction))
+
+        concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
+
+        for f in futures:
+            if not f.result():
+                return False
+
+        return True
+                 
+    # つま先ＩＫ補正
+    def adjust_toe_ik_stance_lr(self, data_set_idx: int, direction: str):
+        try:
+            logger.copy(self.options)
+            data_set = self.options.data_set_list[data_set_idx]
+
+            # つま先ＩＫ調整に必要なボーン群
+            toe_ik_target_bones = ["{0}つま先ＩＫ".format(direction), "{0}足ＩＫ".format(direction), "{0}足首".format(direction)]
+
+            if set(toe_ik_target_bones).issubset(data_set.org_model.bones) and set(toe_ik_target_bones).issubset(data_set.rep_model.bones):
+                prev_sep_fno = 0
+                # つま先ＩＫのそれぞれでフレーム番号をチェックする
+                for target_bone_name in ["{0}つま先ＩＫ".format(direction)]:
+                    if target_bone_name in data_set.org_model.bones and target_bone_name in data_set.rep_model.bones and target_bone_name in data_set.motion.bones:
+                        # ボーンとモーションが揃ってある場合のみ補正
+
+                        logger.info("%s補正【No.%s】", target_bone_name, (data_set_idx + 1))
+
+                        org_ik_root_bone_name = "{0}足ＩＫ".format(direction)
+                        rep_ik_root_bone_name = "{0}足ＩＫ".format(direction)
+                    
+                        # 足首から見た、つま先IKの位置差異
+                        org_toe_diff = data_set.org_model.bones[org_ik_root_bone_name].position - data_set.org_model.bones[target_bone_name].position
+                        rep_toe_diff = data_set.rep_model.bones[rep_ik_root_bone_name].position - data_set.rep_model.bones[target_bone_name].position
+                        # つま先IKの差分
+                        toe_ratio = rep_toe_diff / org_toe_diff
+                        
+                        org_ik_root_links = data_set.org_model.create_link_2_top_one(org_ik_root_bone_name)
+                        rep_ik_root_links = data_set.rep_model.create_link_2_top_one(rep_ik_root_bone_name)
+                                        
+                        org_toe_ik_links = data_set.org_model.create_link_2_top_one(target_bone_name)
+                        rep_toe_ik_links = data_set.rep_model.create_link_2_top_one(target_bone_name)
+
+                        fnos = data_set.motion.get_bone_fnos(target_bone_name)
+                        for fno_idx, fno in enumerate(fnos):
+                            # つま先ＩＫのbf
+                            ik_bf = data_set.motion.calc_bf(target_bone_name, fno)
+                            
+                            # 処理対象ボーンまでの位置とグローバル座標
+                            org_ik_root_global_3ds = MServiceUtils.calc_global_pos(data_set.org_model, org_ik_root_links, data_set.org_motion, fno)
+                            org_toe_ik_global_3ds = MServiceUtils.calc_global_pos(data_set.org_model, org_toe_ik_links, data_set.org_motion, fno)
+
+                            # 先リンク元（足首ボーン）
+                            rep_ik_root_global_3ds = MServiceUtils.calc_global_pos(data_set.rep_model, rep_ik_root_links, data_set.motion, fno)
+                            rep_toe_ik_global_3ds, rep_toe_ik_matrixs \
+                                = MServiceUtils.calc_global_pos(data_set.rep_model, rep_toe_ik_links, data_set.motion, fno, \
+                                                                limit_links=rep_toe_ik_links.from_links(rep_ik_root_bone_name), return_matrix=True)
+
+                            # 足首ボーンから見た、処理対象つま先IKボーンの親のローカル位置
+
+                            # 元モデル
+                            # つま先IKのグローバル位置
+                            org_global_toe_ik_pos = org_toe_ik_global_3ds[target_bone_name]
+                            
+                            # 足首ボーンのローカル座標系
+                            org_toe_matrix = MMatrix4x4()
+                            org_toe_matrix.setToIdentity()
+                            org_toe_matrix.translate(org_ik_root_global_3ds[org_ik_root_bone_name])
+
+                            # 足首ボーンから見たつま先IKのローカル位置
+                            org_local_toe_ik_pos = org_toe_matrix.inverted() * org_global_toe_ik_pos
+
+                            logger.debug("f: %s, %s, org_global_toe_ik_pos: %s, org_ik_root_pos: %s, org_local_toe_ik_pos: %s", fno, target_bone_name, \
+                                         org_global_toe_ik_pos.to_log(), org_ik_root_global_3ds[org_ik_root_bone_name].to_log(), org_local_toe_ik_pos.to_log())
+                            
+                            # 先モデル
+                            # つま先IKのグローバル位置
+                            rep_global_toe_ik_pos = rep_toe_ik_global_3ds[target_bone_name]
+
+                            # 足首ボーンのローカル座標系
+                            rep_toe_matrix = rep_toe_ik_matrixs[rep_ik_root_bone_name]
+                            # 先モデルのつま先IKのローカル位置は、つま先の長さの縮尺
+                            rep_local_toe_ik_pos = org_local_toe_ik_pos * toe_ratio
+                            if rep_toe_diff.length() < rep_local_toe_ik_pos.length():
+                                # つま先までの長さよりつま先ＩＫが先にある場合、つま先IKを安定させるため、縮尺を合わせる
+                                rep_local_toe_ik_pos *= rep_toe_diff.length() / rep_local_toe_ik_pos.length()
+                            # 先モデルの再計算したつま先IKグローバル座標
+                            recalc_rep_global_toe_ik_pos = rep_toe_matrix * rep_local_toe_ik_pos
+
+                            logger.debug("f: %s, %s, rep_global_toe_ik_pos: %s, rep_ik_root_pos: %s, rep_local_toe_ik_pos: %s", fno, target_bone_name, \
+                                         rep_global_toe_ik_pos.to_log(), rep_ik_root_global_3ds[rep_ik_root_bone_name].to_log(), rep_local_toe_ik_pos.to_log())
+
+                            # つま先IKのローカル座標系
+                            rep_toe_ik_matrix = rep_toe_ik_matrixs[target_bone_name]
+                            # IKの初期位置から見た、計算後IKのローカル位置
+                            rep_toe_ik_recalc_local_pos = rep_toe_ik_matrix.inverted() * recalc_rep_global_toe_ik_pos
+
+                            # 計算後IKのローカル位置を加算
+                            ik_bf.position = rep_toe_ik_recalc_local_pos
+
+                            logger.debug("f: %s, %s, 先IKローカル(計算前): %s, 先IKローカル(計算後): %s, 変更後IK: %s", fno, target_bone_name, \
+                                         rep_local_toe_ik_pos.to_log(), rep_toe_ik_recalc_local_pos.to_log(), ik_bf.position.to_log())
+
+                            data_set.motion.regist_bf(ik_bf, target_bone_name, fno)
+                            
+                            if fno // 500 > prev_sep_fno and fnos[-1] > 0:
+                                logger.info("-- %sフレーム目:終了(%s％)【No.%s - %s補正】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1, target_bone_name)
+                                prev_sep_fno = fno // 500
+
+                logger.info("%sつま先ＩＫ補正:終了【No.%s】", direction, (data_set_idx + 1))
 
             return True
         except SizingException as se:
@@ -2127,8 +2252,7 @@ class StanceService():
             bf = motion.bones[target_bone_name][fno]
 
             # 内積で離れ具合をチェック
-            dot = MQuaternion.dotProduct(prev_bf.rotation, bf.rotation)
-            if abs(dot) < 0.2:
+            if bf.rotation.calcTheata(prev_bf.rotation) < 0.3:
                 # 回転量が約150度以上の場合、半分に分割しておく
                 half_fno = prev_bf.fno + round((bf.fno - prev_bf.fno) / 2)
 
