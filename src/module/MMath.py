@@ -311,6 +311,14 @@ class MVector3D():
 
         return self
     
+    def non_zero(self):
+        self.effective()
+        self.setX(0.0001 if is_almost_null(self.x()) else self.x())
+        self.setY(0.0001 if is_almost_null(self.y()) else self.y())
+        self.setZ(0.0001 if is_almost_null(self.z()) else self.z())
+
+        return self
+    
     def isnan(self):
         self.__data = self.data().astype(np.float64)
         return np.isnan(self.data()).any()

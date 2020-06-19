@@ -204,7 +204,8 @@ class MOptions():
                     twist_flg,
                     [],
                     camera_org_model,
-                    camera_offset_y
+                    camera_offset_y, 
+                    ["センタースタンス補正", "上半身スタンス補正", "下半身スタンス補正", "足ＩＫスタンス補正", "つま先ＩＫスタンス補正", "つま先補正", "肩スタンス補正", "センター腕スタンス補正"]
                 )
 
                 data_set_list.append(data_set)

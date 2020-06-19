@@ -440,6 +440,28 @@ class PmxReader():
                 pmx.bones[neck_base_bone.name] = neck_base_bone
                 pmx.bone_indexes[neck_base_bone.index] = neck_base_bone.name
 
+            # 首根元2ボーン
+            if "左腕" in pmx.bones and "右腕" in pmx.bones:
+                neck_base2_vertex = Vertex(-1, (pmx.bones["左腕"].position + pmx.bones["右腕"].position) / 2, MVector3D(), [], [], Vertex.Bdef1(-1), -1)
+                neck_base2_vertex.position.setX(0)
+                neck_base2_bone = Bone("首根元2", "base of neck", neck_base2_vertex.position.copy(), -1, 0, 0)
+
+                if "首根元" in pmx.bones:
+                    # 首根元が既にある場合は首根元
+                    neck_base2_bone.parent_index = pmx.bones["首根元"].index
+                    neck_base2_bone.tail_index = pmx.bones["首根元"].index
+                elif "上半身2" in pmx.bones:
+                    # 上半身2がある場合、表示先は、上半身2
+                    neck_base2_bone.parent_index = pmx.bones["上半身2"].index
+                    neck_base2_bone.tail_index = pmx.bones["上半身2"].index
+                elif "上半身" in pmx.bones:
+                    neck_base2_bone.parent_index = pmx.bones["上半身"].index
+                    neck_base2_bone.tail_index = pmx.bones["上半身"].index
+
+                neck_base2_bone.index = len(pmx.bones.keys())
+                pmx.bones[neck_base2_bone.name] = neck_base2_bone
+                pmx.bone_indexes[neck_base2_bone.index] = neck_base2_bone.name
+
             if "右肩" in pmx.bones:
                 # 右肩下延長ボーン
                 right_shoulder_under_pos = pmx.bones["右肩"].position.copy()
