@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 
+import os
 import wx
 import time
 from form.worker.BaseWorkerThread import BaseWorkerThread, task_takes_time
@@ -13,11 +14,12 @@ logger = MLogger(__name__)
 
 class SmoothWorkerThread(BaseWorkerThread):
 
-    def __init__(self, frame: wx.Frame, result_event: wx.Event):
+    def __init__(self, frame: wx.Frame, result_event: wx.Event, is_exec_saving: bool):
         self.elapsed_time = 0
         self.frame = frame
         self.result_event = result_event
         self.gauge_ctrl = frame.smooth_panel_ctrl.gauge_ctrl
+        self.is_exec_saving = is_exec_saving
 
         super().__init__(frame, self.result_event, frame.smooth_panel_ctrl.console_ctrl)
 
@@ -39,7 +41,8 @@ class SmoothWorkerThread(BaseWorkerThread):
                 interpolation=self.frame.smooth_panel_ctrl.interpolation_ctrl.GetSelection(), \
                 monitor=self.frame.smooth_panel_ctrl.console_ctrl, \
                 is_file=False, \
-                outout_datetime=logger.outout_datetime)
+                outout_datetime=logger.outout_datetime, \
+                max_workers=(1 if self.is_exec_saving else min(32, os.cpu_count() + 4)))
             
             self.result = ConvertSmoothService(options).execute() and self.result
 

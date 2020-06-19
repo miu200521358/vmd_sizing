@@ -248,7 +248,8 @@ class MOptions():
 
 class MOptionsDataSet():
 
-    def __init__(self, motion, org_model, rep_model, output_vmd_path, detail_stance_flg, twist_flg, morph_list, camera_org_model, camera_offset_y):
+    def __init__(self, motion, org_model=None, rep_model=None, output_vmd_path=None, detail_stance_flg=0, twist_flg=0, morph_list=[], \
+                 camera_org_model=None, camera_offset_y=0, selected_stance_details=[]):
         self.motion = motion
         self.org_model = org_model
         self.rep_model = rep_model
@@ -258,6 +259,7 @@ class MOptionsDataSet():
         self.morph_list = morph_list
         self.camera_org_model = camera_org_model
         self.camera_offset_y = camera_offset_y
+        self.selected_stance_details = selected_stance_details
 
         self.org_motion = self.motion.copy()
         self.test_params = None
@@ -322,7 +324,7 @@ class MBlendOptions():
 
 class MSmoothOptions():
 
-    def __init__(self, version_name, logging_level, motion, model, output_path, loop_cnt, interpolation, monitor, is_file, outout_datetime):
+    def __init__(self, version_name, logging_level, max_workers, motion, model, output_path, loop_cnt, interpolation, monitor, is_file, outout_datetime):
         self.version_name = version_name
         self.logging_level = logging_level
         self.motion = motion
@@ -333,6 +335,7 @@ class MSmoothOptions():
         self.monitor = monitor
         self.is_file = is_file
         self.outout_datetime = outout_datetime
+        self.max_workers = max_workers
 
     @classmethod
     def parse(cls, version_name: str):

@@ -27,7 +27,7 @@ class BaseFilePickerCtrl():
     }
 
     def __init__(self, frame, parent, title, message, file_type, style, tooltip, file_model_spacer=0, \
-                 title_parts_ctrl=None, file_parts_ctrl=None, is_change_output=False, is_aster=False, is_save=False, set_no=0, required=True):
+                 title_parts_ctrl=None, file_parts_ctrl=None, title_parts2_ctrl=None, is_change_output=False, is_aster=False, is_save=False, set_no=0, required=True):
         super().__init__()
 
         self.frame = frame
@@ -37,6 +37,7 @@ class BaseFilePickerCtrl():
         self.file_type = file_type
         self.style = style
         self.title_parts_ctrl = None
+        self.title_parts2_ctrl = None
         self.file_parts_ctrl = None
         self.file_model_ctrl = None
         self.is_change_output = is_change_output
@@ -61,6 +62,11 @@ class BaseFilePickerCtrl():
         if title_parts_ctrl:
             self.title_parts_ctrl = title_parts_ctrl
             self.title_sizer.Add(self.title_parts_ctrl, 0, wx.ALL, 5)
+        
+        # ファイルタイトルパーツ2
+        if title_parts2_ctrl:
+            self.title_parts2_ctrl = title_parts2_ctrl
+            self.title_sizer.Add(self.title_parts2_ctrl, 0, wx.ALL, 5)
 
         # ファイルモデル
         if file_model_spacer > 0:
@@ -133,6 +139,9 @@ class BaseFilePickerCtrl():
         if self.title_parts_ctrl:
             self.title_parts_ctrl.Disable()
         
+        if self.title_parts2_ctrl:
+            self.title_parts2_ctrl.Disable()
+        
         if self.file_parts_ctrl:
             self.file_parts_ctrl.Disable()
 
@@ -142,6 +151,9 @@ class BaseFilePickerCtrl():
         
         if self.title_parts_ctrl:
             self.title_parts_ctrl.Enable()
+        
+        if self.title_parts2_ctrl:
+            self.title_parts2_ctrl.Enable()
         
         if self.file_parts_ctrl:
             self.file_parts_ctrl.Enable()

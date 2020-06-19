@@ -51,29 +51,36 @@ class StanceService():
 
             # スタンス追加補正をする場合
             if data_set.detail_stance_flg:
-                # センタースタンス補正
-                self.adjust_center_stance(data_set_idx, data_set)
+                if "センタースタンス補正" in data_set.selected_stance_details:
+                    # センタースタンス補正
+                    self.adjust_center_stance(data_set_idx, data_set)
 
-                # 上半身スタンス補正
-                self.adjust_upper_stance(data_set_idx, data_set)
+                if "上半身スタンス補正" in data_set.selected_stance_details:
+                    # 上半身スタンス補正
+                    self.adjust_upper_stance(data_set_idx, data_set)
 
-                # 下半身スタンス補正
-                self.adjust_lower_stance(data_set_idx, data_set)
+                if "下半身スタンス補正" in data_set.selected_stance_details:
+                    # 下半身スタンス補正
+                    self.adjust_lower_stance(data_set_idx, data_set)
 
-                # 足IKスタンス補正
-                self.adjust_leg_ik_stance(data_set_idx, data_set)
+                if "足ＩＫスタンス補正" in data_set.selected_stance_details:
+                    # 足IKスタンス補正
+                    self.adjust_leg_ik_stance(data_set_idx, data_set)
 
-                # つま先IKスタンス補正
-                self.adjust_toe_ik_stance(data_set_idx, data_set)
+                if "つま先ＩＫスタンス補正" in data_set.selected_stance_details:
+                    # つま先IKスタンス補正
+                    self.adjust_toe_ik_stance(data_set_idx, data_set)
 
-                # つま先補正
-                self.adjust_toe_stance(data_set_idx, data_set)
+                if "つま先補正" in data_set.selected_stance_details:
+                    # つま先補正
+                    self.adjust_toe_stance(data_set_idx, data_set)
 
             # 腕系サイジング可能（もしくはチェックスキップ）であれば、腕スタンス補正
             if (data_set.org_model.can_arm_sizing and data_set.rep_model.can_arm_sizing) or self.options.arm_options.arm_check_skip_flg:
                 if data_set.detail_stance_flg:
-                    # 肩スタンス補正
-                    self.adjust_shoulder_stance(data_set_idx, data_set)
+                    if "肩スタンス補正" in data_set.selected_stance_details:
+                        # 肩スタンス補正
+                        self.adjust_shoulder_stance(data_set_idx, data_set)
 
                 if data_set.twist_flg:
                     # 捩り分散あり
@@ -771,15 +778,14 @@ class StanceService():
                         org_ik_root_bone_name = data_set.org_model.bone_indexes[data_set.org_model.bones[target_bone_name].ik.link[-1].bone_index]
                         rep_ik_root_bone_name = data_set.rep_model.bone_indexes[data_set.rep_model.bones[target_bone_name].ik.link[-1].bone_index]
                     
+                        # 足IKの長さ比率
+                        leg_ratio = MVector3D(data_set.original_xz_ratio, data_set.original_y_ratio, data_set.original_xz_ratio)
+                        
                         # 足から見た、足IKの位置差異
-                        org_leg_diff = ((data_set.org_model.bones[org_ik_root_bone_name].position - data_set.org_model.bones[target_bone_name].position) \
-                                        * MVector3D(data_set.original_xz_ratio, data_set.original_y_ratio, data_set.original_xz_ratio))
+                        org_leg_diff = ((data_set.org_model.bones[org_ik_root_bone_name].position - data_set.org_model.bones[target_bone_name].position) * leg_ratio)
                         rep_leg_diff = data_set.rep_model.bones[rep_ik_root_bone_name].position - data_set.rep_model.bones[target_bone_name].position
                         # 足IKの差分
                         leg_diff = org_leg_diff - rep_leg_diff
-                        
-                        # 足IKの長さ比率
-                        leg_ratio = MVector3D(data_set.original_xz_ratio, data_set.original_y_ratio, data_set.original_xz_ratio)
                         
                         org_ik_root_links = data_set.org_model.create_link_2_top_one(org_ik_root_bone_name)
                         rep_ik_root_links = data_set.rep_model.create_link_2_top_one(rep_ik_root_bone_name)
@@ -910,12 +916,15 @@ class StanceService():
                         org_ik_root_bone_name = "{0}足ＩＫ".format(direction)
                         rep_ik_root_bone_name = "{0}足ＩＫ".format(direction)
                     
-                        # 足首から見た、つま先IKの位置差異
-                        org_toe_diff = data_set.org_model.bones[org_ik_root_bone_name].position - data_set.org_model.bones[target_bone_name].position
-                        rep_toe_diff = data_set.rep_model.bones[rep_ik_root_bone_name].position - data_set.rep_model.bones[target_bone_name].position
-                        # つま先IKの差分
-                        toe_ratio = rep_toe_diff / org_toe_diff
+                        # つま先ＩＫの長さ比率
+                        toe_ratio = MVector3D(data_set.original_xz_ratio, data_set.original_y_ratio, data_set.original_xz_ratio)
                         
+                        # 足首から見た、つま先IKの位置差異
+                        org_toe_diff = ((data_set.org_model.bones[org_ik_root_bone_name].position - data_set.org_model.bones[target_bone_name].position) * toe_ratio)
+                        rep_toe_diff = data_set.rep_model.bones[rep_ik_root_bone_name].position - data_set.rep_model.bones[target_bone_name].position
+                        # つま先ＩＫの差分
+                        toe_diff = org_toe_diff - rep_toe_diff
+
                         org_ik_root_links = data_set.org_model.create_link_2_top_one(org_ik_root_bone_name)
                         rep_ik_root_links = data_set.rep_model.create_link_2_top_one(rep_ik_root_bone_name)
                                         
@@ -960,6 +969,8 @@ class StanceService():
 
                             # 足首ボーンのローカル座標系
                             rep_toe_matrix = rep_toe_ik_matrixs[rep_ik_root_bone_name]
+                            # つま先ＩＫの位置を、元に合わせた感じで計算する
+                            rep_toe_matrix.translate(toe_diff)
                             # 先モデルのつま先IKのローカル位置は、つま先の長さの縮尺
                             rep_local_toe_ik_pos = org_local_toe_ik_pos * toe_ratio
                             if rep_toe_diff.length() < rep_local_toe_ik_pos.length():
@@ -1505,7 +1516,7 @@ class StanceService():
             # 初期状態の上半身2の傾き
             initial_bf = VmdBoneFrame(fno=0)
             initial_bf.set_name("上半身")
-            initial_dataset = MOptionsDataSet(VmdMotion(), data_set.org_model, data_set.rep_model, data_set.output_vmd_path, data_set.detail_stance_flg, data_set.twist_flg, [], None, 0)
+            initial_dataset = MOptionsDataSet(VmdMotion(), data_set.org_model, data_set.rep_model, data_set.output_vmd_path, data_set.detail_stance_flg, data_set.twist_flg, [], None, 0, [])
 
             self.calc_rotation_stance_trunk(initial_bf, data_set_idx, initial_dataset, \
                                             org_upper_links, org_head_links, org_arm_links, \
@@ -1606,7 +1617,7 @@ class StanceService():
                 # 初期状態の上半身2の傾き
                 initial_bf = VmdBoneFrame(fno=0)
                 initial_bf.set_name("上半身2")
-                initial_dataset = MOptionsDataSet(VmdMotion(), data_set.org_model, data_set.rep_model, data_set.output_vmd_path, data_set.detail_stance_flg, data_set.twist_flg, [], None, 0)
+                initial_dataset = MOptionsDataSet(VmdMotion(), data_set.org_model, data_set.rep_model, data_set.output_vmd_path, data_set.detail_stance_flg, data_set.twist_flg, [], None, 0, [])
 
                 self.calc_rotation_stance_trunk(initial_bf, data_set_idx, initial_dataset, \
                                                 org_upper2_links, org_head_links, org_arm_links, \
@@ -1728,7 +1739,7 @@ class StanceService():
             # 初期状態の下半身の傾き
             initial_bf = VmdBoneFrame(fno=0)
             initial_bf.set_name("下半身")
-            initial_dataset = MOptionsDataSet(VmdMotion(), data_set.org_model, data_set.rep_model, data_set.output_vmd_path, data_set.detail_stance_flg, data_set.twist_flg, [], None, 0)
+            initial_dataset = MOptionsDataSet(VmdMotion(), data_set.org_model, data_set.rep_model, data_set.output_vmd_path, data_set.detail_stance_flg, data_set.twist_flg, [], None, 0, [])
 
             self.calc_rotation_stance_trunk(initial_bf, data_set_idx, initial_dataset, \
                                             org_lower_links, org_leg_center_links, org_leg_links, \
@@ -1982,7 +1993,7 @@ class StanceService():
                 # 初期状態の肩の傾き
                 initial_bf = VmdBoneFrame(fno=0)
                 initial_bf.set_name(shoulder_name)
-                initial_dataset = MOptionsDataSet(VmdMotion(), data_set.org_model, data_set.rep_model, data_set.output_vmd_path, data_set.detail_stance_flg, data_set.twist_flg, [], None, 0)
+                initial_dataset = MOptionsDataSet(VmdMotion(), data_set.org_model, data_set.rep_model, data_set.output_vmd_path, data_set.detail_stance_flg, data_set.twist_flg, [], None, 0, [])
 
                 self.calc_rotation_stance_shoulder(initial_bf, data_set_idx, initial_dataset, \
                                                    org_shoulder_links, org_arm_links[shoulder_name[0]], rep_shoulder_links, \

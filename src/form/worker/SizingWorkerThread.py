@@ -60,7 +60,8 @@ class SizingWorkerThread(BaseWorkerThread):
                         twist_flg=self.frame.file_panel_ctrl.file_set.rep_model_file_ctrl.title_parts_ctrl.GetValue(), \
                         morph_list=self.frame.morph_panel_ctrl.get_morph_list(1), \
                         camera_org_model=camera_org_model, \
-                        camera_offset_y=camera_offset_y
+                        camera_offset_y=camera_offset_y, \
+                        selected_stance_details=self.frame.file_panel_ctrl.file_set.get_selected_stance_details()
                     )
                     data_set_list.append(first_data_set)
 
@@ -85,7 +86,8 @@ class SizingWorkerThread(BaseWorkerThread):
                         twist_flg=file_set.rep_model_file_ctrl.title_parts_ctrl.GetValue(), \
                         morph_list=self.frame.morph_panel_ctrl.get_morph_list(file_set.set_no), \
                         camera_org_model=camera_org_model, \
-                        camera_offset_y=camera_offset_y
+                        camera_offset_y=camera_offset_y, \
+                        selected_stance_details=file_set.get_selected_stance_details()
                     )
                     data_set_list.append(multi_data_set)
 

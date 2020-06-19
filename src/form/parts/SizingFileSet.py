@@ -20,6 +20,8 @@ class SizingFileSet():
         self.frame = frame
         self.panel = panel
         self.set_no = set_no
+        self.STANCE_DETAIL_CHOICES = ["センタースタンス補正", "上半身スタンス補正", "下半身スタンス補正", "足ＩＫスタンス補正", "つま先ＩＫスタンス補正", "つま先補正", "肩スタンス補正"]
+        self.selected_stance_details = range(len(self.STANCE_DETAIL_CHOICES))
 
         if self.set_no == 1:
             # ファイルパネルのはそのまま追加
@@ -31,19 +33,25 @@ class SizingFileSet():
         # VMD/VPDファイルコントロール
         self.motion_vmd_file_ctrl = HistoryFilePickerCtrl(frame, panel, u"調整対象モーションVMD/VPD", u"調整対象モーションVMD/VPDファイルを開く", ("vmd", "vpd"), wx.FLP_DEFAULT_STYLE, \
                                                           u"調整したいモーションのVMD/VPDパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。\n{0}".format(able_aster_toottip), \
-                                                          file_model_spacer=35, title_parts_ctrl=None, file_histories_key="vmd", is_change_output=True, is_aster=True, is_save=False, set_no=set_no)
+                                                          file_model_spacer=43, title_parts_ctrl=None, title_parts2_ctrl=None, file_histories_key="vmd", is_change_output=True, \
+                                                          is_aster=True, is_save=False, set_no=set_no)
         self.set_sizer.Add(self.motion_vmd_file_ctrl.sizer, 1, wx.EXPAND, 0)
 
         # 作成元のスタンス詳細再現FLG
         detail_stance_flg_ctrl = wx.CheckBox(panel, wx.ID_ANY, u"スタンス追加補正", wx.DefaultPosition, wx.DefaultSize, 0)
-        detail_stance_flg_ctrl.SetToolTip(u"チェックを入れると、細かいスタンス補正を追加で行う事ができます。\n対象：センター・上半身・肩・つま先")
+        detail_stance_flg_ctrl.SetToolTip(u"チェックを入れると、細かいスタンス補正を追加で行う事ができます。\n補正内容の詳細は隣の「＊」ボタンを押してみてください。")
         detail_stance_flg_ctrl.Bind(wx.EVT_CHECKBOX, self.set_output_vmd_path)
+
+        # スタンス補正
+        detail_btn_ctrl = wx.Button(panel, wx.ID_ANY, u"＊", wx.DefaultPosition, (20, 20), 0)
+        detail_btn_ctrl.SetToolTip("スタンス追加補正詳細の確認、および取捨選択を行う事が出来ます。")
+        detail_btn_ctrl.Bind(wx.EVT_BUTTON, self.select_detail)
 
         # 作成元PMXファイルコントロール
         self.org_model_file_ctrl = HistoryFilePickerCtrl(frame, panel, u"モーション作成元モデルPMX", u"モーション作成元モデルPMXファイルを開く", ("pmx"), wx.FLP_DEFAULT_STYLE, \
                                                          u"モーション作成に使用されたモデルのPMXパスを指定してください。\n精度は落ちますが、類似したサイズ・ボーン構造のモデルでも代用できます。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。", \
-                                                         file_model_spacer=1, title_parts_ctrl=detail_stance_flg_ctrl, file_histories_key="org_pmx", is_change_output=False, is_aster=False, \
-                                                         is_save=False, set_no=set_no)
+                                                         file_model_spacer=1, title_parts_ctrl=detail_stance_flg_ctrl, title_parts2_ctrl=detail_btn_ctrl, \
+                                                         file_histories_key="org_pmx", is_change_output=False, is_aster=False, is_save=False, set_no=set_no)
         self.set_sizer.Add(self.org_model_file_ctrl.sizer, 1, wx.EXPAND, 0)
 
         # 捩り分散追加FLG
@@ -54,8 +62,8 @@ class SizingFileSet():
         # 変換先PMXファイルコントロール
         self.rep_model_file_ctrl = HistoryFilePickerCtrl(frame, panel, u"モーション変換先モデルPMX", u"モーション変換先モデルPMXファイルを開く", ("pmx"), wx.FLP_DEFAULT_STYLE, \
                                                          u"実際にモーションを読み込ませたいモデルのPMXパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。", \
-                                                         file_model_spacer=8, title_parts_ctrl=twist_flg_ctrl, file_histories_key="rep_pmx", is_change_output=True, is_aster=False, \
-                                                         is_save=False, set_no=set_no)
+                                                         file_model_spacer=15, title_parts_ctrl=twist_flg_ctrl, title_parts2_ctrl=None, file_histories_key="rep_pmx", \
+                                                         is_change_output=True, is_aster=False, is_save=False, set_no=set_no)
         self.set_sizer.Add(self.rep_model_file_ctrl.sizer, 1, wx.EXPAND, 0)
 
         # 出力先VMDファイルコントロール
@@ -63,6 +71,27 @@ class SizingFileSet():
                                                        u"調整結果のVMD出力パスを指定してください。\nVMDファイルと変換先PMXのファイル名に基づいて自動生成されますが、任意のパスに変更することも可能です。", \
                                                        is_aster=False, is_save=True, set_no=set_no)
         self.set_sizer.Add(self.output_vmd_file_ctrl.sizer, 1, wx.EXPAND, 0)
+
+    def get_selected_stance_details(self):
+        # 選択されたINDEXの名称を返す
+        return [self.STANCE_DETAIL_CHOICES[n] for n in self.selected_stance_details]
+
+    def select_detail(self, event: wx.Event):
+
+        with wx.MultiChoiceDialog(self.panel, "スタンス追加補正のうち、チェックが入っている補正のみ実施します", caption="スタンス追加補正選択", \
+                                  choices=self.STANCE_DETAIL_CHOICES, style=wx.CHOICEDLG_STYLE) as choiceDialog:
+
+            choiceDialog.SetSelections(self.selected_stance_details)
+
+            if choiceDialog.ShowModal() == wx.ID_CANCEL:
+                return     # the user changed their mind
+            
+            self.selected_stance_details = choiceDialog.GetSelections()
+
+            if len(self.selected_stance_details) == 0:
+                self.org_model_file_ctrl.title_parts_ctrl.SetValue(0)
+            else:
+                self.org_model_file_ctrl.title_parts_ctrl.SetValue(1)
 
     def save(self):
         self.motion_vmd_file_ctrl.save()

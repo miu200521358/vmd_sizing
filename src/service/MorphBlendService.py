@@ -149,7 +149,7 @@ class MorphBlendService():
 
                     morph_total_cnt += 1
         
-        data_set = MOptionsDataSet(bone_motion, None, self.options.model, blend_fpath, False, False, [], None, None)
+        data_set = MOptionsDataSet(bone_motion, None, self.options.model, blend_fpath, False, False, [], None, None, [])
 
         VmdWriter(data_set).write()
 

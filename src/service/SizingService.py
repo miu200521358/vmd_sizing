@@ -43,12 +43,17 @@ class SizingService():
                                         trace_model=os.path.basename(data_set.camera_org_model.path), model_name=data_set.camera_org_model.name, offset_y=data_set.camera_offset_y) # noqa
                 service_data_txt = "{service_data_txt}　　スタンス追加補正有無: {detail_stance_flg}\n".format(service_data_txt=service_data_txt,
                                         detail_stance_flg=data_set.detail_stance_flg) # noqa
+                if data_set.detail_stance_flg:
+                    # スタンス追加補正がある場合、そのリストを表示
+                    service_data_txt = "{service_data_txt}　　　　{detail_stance_flg}\n".format(service_data_txt=service_data_txt,
+                                            detail_stance_flg=", ".join(data_set.selected_stance_details)) # noqa
+                    
                 service_data_txt = "{service_data_txt}　　捩り分散有無: {twist_flg}\n".format(service_data_txt=service_data_txt,
                                         twist_flg=data_set.twist_flg) # noqa
 
                 if data_set_idx in self.options.arm_options.avoidance_target_list:
                     service_data_txt = "{service_data_txt}　　対象剛体名: {avoidance_target}\n".format(service_data_txt=service_data_txt,
-                                            avoidance_target=",".join(self.options.arm_options.avoidance_target_list[data_set_idx])) # noqa
+                                            avoidance_target=", ".join(self.options.arm_options.avoidance_target_list[data_set_idx])) # noqa
 
             service_data_txt = "{service_data_txt}\n--------- \n".format(service_data_txt=service_data_txt) # noqa
 
@@ -127,7 +132,7 @@ class SizingService():
                 try:
                     camera_model = PmxModel()
                     camera_model.name = "カメラ・照明"
-                    data_set = MOptionsDataSet(self.options.camera_motion, None, camera_model, self.options.camera_output_vmd_path, 0, 0, [], None, 0)
+                    data_set = MOptionsDataSet(self.options.camera_motion, None, camera_model, self.options.camera_output_vmd_path, 0, 0, [], None, 0, [])
                     # 出力
                     VmdWriter(data_set).write()
 

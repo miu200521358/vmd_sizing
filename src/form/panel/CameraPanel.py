@@ -31,7 +31,8 @@ class CameraPanel(BasePanel):
         # カメラVMDファイルコントロール
         self.camera_vmd_file_ctrl = HistoryFilePickerCtrl(self.frame, self.header_panel, u"カメラモーションVMD", u"カメラモーションVMDファイルを開く", ("vmd"), wx.FLP_DEFAULT_STYLE, \
                                                           u"調整したいカメラモーションのVMDパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。", \
-                                                          file_model_spacer=0, title_parts_ctrl=None, file_histories_key="camera_vmd", is_change_output=True, is_aster=False, is_save=False, set_no=1)
+                                                          file_model_spacer=0, title_parts_ctrl=None, title_parts2_ctrl=None, file_histories_key="camera_vmd", is_change_output=True, \
+                                                          is_aster=False, is_save=False, set_no=1)
         self.header_sizer.Add(self.camera_vmd_file_ctrl.sizer, 1, wx.EXPAND, 0)
 
         # 出力先VMDファイルコントロール
