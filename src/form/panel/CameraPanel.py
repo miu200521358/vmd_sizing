@@ -77,7 +77,7 @@ class CameraPanel(BasePanel):
             self.add_set(1, self.frame.file_panel_ctrl.file_set)
         else:
             # ある場合、モデル名だけ入替
-            self.camera_set_dict[1].model_name_txt.setValue("{0} → {1}".format(\
+            self.camera_set_dict[1].model_name_txt.setLabel("{0} → {1}".format(\
                                                             self.frame.file_panel_ctrl.file_set.org_model_file_ctrl.file_model_ctrl.txt_ctrl.GetValue()[1:-1], \
                                                             self.frame.file_panel_ctrl.file_set.rep_model_file_ctrl.file_model_ctrl.txt_ctrl.GetValue()[1:-1]))
         
@@ -89,7 +89,7 @@ class CameraPanel(BasePanel):
                 self.add_set(set_no, multi_file_set)
             else:
                 # ある場合、モデル名だけ入替
-                self.camera_set_dict[set_no].model_name_txt.setValue("{0} → {1}".format(\
+                self.camera_set_dict[set_no].model_name_txt.setLabel("{0} → {1}".format(\
                                                                      multi_file_set.org_model_file_ctrl.file_model_ctrl.txt_ctrl.GetValue()[1:-1], \
                                                                      multi_file_set.rep_model_file_ctrl.file_model_ctrl.txt_ctrl.GetValue()[1:-1]))
 
@@ -168,7 +168,7 @@ class CameraSet():
         self.camera_model_file_ctrl = HistoryFilePickerCtrl(frame, window, u"カメラ作成元モデルPMX", u"カメラ作成元モデルPMXファイルを開く", ("pmx"), wx.FLP_DEFAULT_STYLE, \
                                                             u"カメラ作成に使用されたモデルのPMXパスを指定してください。\n未指定の場合、モーション作成元モデルPMXを使用します。" \
                                                             + "\n精度は落ちますが、類似したサイズ・ボーン構造のモデルでも代用できます。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。", \
-                                                            file_model_spacer=20, title_parts_ctrl=None, file_histories_key="camera_pmx", \
+                                                            file_model_spacer=20, title_parts_ctrl=None, title_parts2_ctrl=None, file_histories_key="camera_pmx", \
                                                             is_change_output=True, is_aster=False, is_save=False, set_no=set_idx)
         self.set_sizer.Add(self.camera_model_file_ctrl.sizer, 1, wx.EXPAND, 0)
 

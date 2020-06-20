@@ -87,6 +87,7 @@ class CameraService():
 
         # カメラの原点（グローバル座標）
         mat_origin = MMatrix4x4()
+        mat_origin.setToIdentity()
         mat_origin.translate(cf.position)
         mat_origin.rotate(camera_qq)
         mat_origin.translate(MVector3D(0, 0, cf.length))
@@ -104,6 +105,7 @@ class CameraService():
         logger.debug("cf_pos: %s", cf_pos)
 
         mat_len = MMatrix4x4()
+        mat_len.setToIdentity()
         mat_len.translate(cf_pos)
         mat_len.rotate(camera_qq)
         mat_len.translate(MVector3D(0, 0, -cf.length * ratio))
@@ -162,7 +164,7 @@ class CameraService():
 
                 cnt += 1
 
-        logger.info("%sフレーム目 縮尺比率: %s, 注視点: %s-%s, 上辺: %s-%s, 下辺: %s-%s, 調整: %s, 距離: %s, 視野角: %s", \
+        logger.info("%sフレーム目 縮尺比率: %s, 注視点: %s-%s, 上辺: %s-%s, 下辺: %s-%s, 座標: %s, 距離: %s, 視野角: %s", \
                     cf.fno, round(ratio, 5), (nearest_data_set_idx + 1), nearest_bone_name.replace("実体", ""), \
                     (top_data_set_idx + 1), top_bone_name.replace("実体", ""), (bottom_data_set_idx + 1), bottom_bone_name.replace("実体", ""), \
                     org_nearest_relative_vec.to_log(), round(offset_length, 5), offset_angle)
@@ -480,7 +482,7 @@ class CameraService():
 
         # プロジェクション座標正規位置
         project_square_vec = MVector3D()
-        project_square_vec.setX(project_vec.x() / 16 / (16 / 9))
+        project_square_vec.setX(project_vec.x() / 16)
 
         if cf.length <= 0:
             project_square_vec.setY((-project_vec.y() + 9) / 9)
@@ -494,6 +496,7 @@ class CameraService():
     # プロジェクション座標系作成
     def create_projection_view(self, cf: VmdCameraFrame):
         mat = MMatrix4x4()
+        mat.setToIdentity()
         # MMDの縦の視野角。
         # https://ch.nicovideo.jp/t-ebiing/blomaga/ar510610
         mat.perspective(cf.angle * 0.98, 16 / 9, 0.001, 50000)
@@ -519,12 +522,14 @@ class CameraService():
 
         # カメラの原点（グローバル座標）
         mat_origin = MMatrix4x4()
+        mat_origin.setToIdentity()
         mat_origin.translate(cf.position)
         mat_origin.rotate(camera_qq)
         mat_origin.translate(MVector3D(0, 0, cf.length))
         camera_origin = mat_origin * MVector3D()
 
         mat_up = MMatrix4x4()
+        mat_up.setToIdentity()
         mat_up.rotate(camera_qq)
         camera_up = mat_up * MVector3D(0, 1, 0)
 

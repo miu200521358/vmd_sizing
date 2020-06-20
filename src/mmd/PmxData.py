@@ -934,7 +934,7 @@ class PmxModel():
 
         target_bones = ["左腕", "左ひじ", "左手首", "右腕", "右ひじ", "右手首"]
 
-        cannot_sizing = "腕系処理をスキップします。\n腕系処理（腕スタンス補正・接触回避・位置合わせ）を実行したい場合、\n腕タブのチェックスキップFLGをONにして再実行してください。"
+        cannot_sizing = "腕系処理をスキップします。\n腕系処理（腕スタンス補正・捩り分散・接触回避・位置合わせ）を実行したい場合、\n腕タブのチェックスキップFLGをONにして再実行してください。"
 
         if not set(target_bones).issubset(self.bones.keys()):
             logger.warning("腕・ひじ・手首の左右ボーンが揃ってないため、%s\nモデル: %s", cannot_sizing, self.name, decoration=MLogger.DECORATION_BOX)
@@ -943,7 +943,7 @@ class PmxModel():
         for bone_name in self.bones.keys():
             if ("腕IK" in bone_name or "腕ＩＫ" in bone_name or "うでIK" in bone_name or "うでＩＫ" in bone_name or "腕XIK" in bone_name):
                 # 腕IKが入ってて、かつそれが表示されてる場合、NG
-                logger.warning("モデルに「腕IK」が含まれているため、%s\nモデル: %s", cannot_sizing, self.name, decoration=MLogger.DECORATION_BOX)
+                logger.warning("モデルに「腕IK」が入っているボーンが含まれているため、%s\nモデル: %s", cannot_sizing, self.name, decoration=MLogger.DECORATION_BOX)
                 return False
 
         return True

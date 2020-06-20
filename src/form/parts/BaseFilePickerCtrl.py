@@ -330,7 +330,7 @@ class FileModelCtrl():
         self.set_no = set_no
         self.spacer_ctrl = wx.StaticText(parent, wx.ID_ANY, "".join([" " for n in range(spacer_cnt)]))
 
-        width = 350 if self.set_no == 1 else 250
+        width = 350 if self.set_no == 1 else 220
 
         self.txt_ctrl = wx.TextCtrl(parent, wx.ID_ANY, "（未設定）", wx.DefaultPosition, (width, -1), wx.TE_READONLY | wx.BORDER_NONE | wx.WANTS_CHARS)
         self.txt_ctrl.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DLIGHT))
