@@ -1257,7 +1257,7 @@ class PmxModel():
         up_max_pos, up_max_vertex, down_max_pos, down_max_vertex, right_max_pos, right_max_vertex, left_max_pos, left_max_vertex, \
             back_max_pos, back_max_vertex, front_max_pos, front_max_vertex, multi_max_pos, multi_max_vertex \
             = self.get_bone_end_vertex(bone_name_list, self.def_calc_vertex_pos_original, def_is_target=None, \
-                                       def_is_multi_target=None, multi_target_default_val=None)
+                                       def_is_multi_target=self.def_is_multi_target_down_front, multi_target_default_val=MVector3D(0, 99999, 99999))
 
         if not front_max_vertex:
             # つま先頂点が取れなかった場合
@@ -1304,7 +1304,7 @@ class PmxModel():
         up_max_pos, up_max_vertex, down_max_pos, down_max_vertex, right_max_pos, right_max_vertex, left_max_pos, left_max_vertex, \
             back_max_pos, back_max_vertex, front_max_pos, front_max_vertex, multi_max_pos, multi_max_vertex \
             = self.get_bone_end_vertex(bone_name_list, self.def_calc_vertex_pos_original, def_is_target=None, \
-                                       def_is_multi_target=self.def_is_multi_target_down_front, multi_target_default_val=MVector3D(0, 99999, 99999))
+                                       def_is_multi_target=self.def_is_multi_target_down_front_sole, multi_target_default_val=MVector3D(0, 99999, 99999))
 
         if not multi_max_vertex:
             # 足底頂点が取れなかった場合
@@ -1404,6 +1404,10 @@ class PmxModel():
     # 最も底面でかつ前面にある頂点であるか
     def def_is_multi_target_down_front(self, multi_max_pos: MVector3D, v_pos: MVector3D):
         return v_pos.y() <= multi_max_pos.y() + 0.1 and v_pos.z() <= multi_max_pos.z()
+    
+    # 最も底面でかつ前面にある頂点であるか
+    def def_is_multi_target_down_front_sole(self, multi_max_pos: MVector3D, v_pos: MVector3D):
+        return v_pos.y() <= multi_max_pos.y() + 0.1 and v_pos.z() <= multi_max_pos.z() + 2
     
     # 指定ボーンにウェイトが乗っている頂点とそのINDEX
     def get_bone_end_vertex(self, bone_name_list, def_calc_vertex_pos, def_is_target=None, def_is_multi_target=None, multi_target_default_val=None, qq4calc=None):

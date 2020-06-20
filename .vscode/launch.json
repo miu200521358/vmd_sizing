@@ -31,9 +31,9 @@
                 // "--camera_offset_y", "0;0",
 
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/愛言葉III なつき/nac_aikotoba3_1020-1120.vmd",
-                "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/愛言葉III なつき/nac_aikotoba3_0-500.vmd",
-                "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/らぶ式ミク/らぶ式ミク_準標準.pmx",
-                "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/Appearance Miku/Appearance Miku_準標準.pmx",
+                // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/愛言葉III なつき/nac_aikotoba3_0-500.vmd",
+                // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/らぶ式ミク/らぶ式ミク_準標準.pmx",
+                // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/Appearance Miku/Appearance Miku_準標準.pmx",
 
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/にんじゃりばんばんMiku（修正版）たこはち/にんじゃりばんばんMiku（修正版）_0-1000.vmd",
                 // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/初音ミクVer2 準標準.pmx",
@@ -106,6 +106,15 @@
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/蜜月アン・ドゥ・トロワ モーション つん/モーション_YYB式鏡音リン足のみ調整_0-1000.vmd",
                 // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/鏡音リン/YYB式鏡音リンver1.02/YYB式鏡音リンv1.02.pmx",
                 // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/107_髭切/【刀犬】源氏mkmk002b/髭切【刀犬】mkmk002a刀犬男士/髭切刀犬男士小mkmk002a.pmx",
+
+                // "--motion_path", "E:/MMD/MikuMikuDance_v926x64/Work/202001_sizing/つま先ＩＫ/kakatoawase.vmd",
+                // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/Tda式デフォ服ミク_ver1.1 金子卵黄/Tda式初音ミク_デフォ服ver.pmx",
+                // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/107_髭切/髭切mkmk009c 刀剣乱舞/髭切mkmk009c/髭切特3mkmk(Se)009b_準標準.pmx",
+
+                "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/カガリビト あっきー/カガリビト_2032.vmd",
+                "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ヘタリア/kurokuma式スウェーデン軍服2種ver.2.71/ヘタリア・スウェーデンVer.2.71/スウェーデンver.2.71.pmx",
+                // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ゲーム/Fate/キャス狐0.6_なかむら式/キャス狐v0.6.pmx",
+                "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/107_髭切/髭切mkmk009c 刀剣乱舞/髭切mkmk009c/髭切特3mkmk(Se)009b_準標準.pmx",
 
                 "--detail_stance_flg", "1;0",           // スタンス追加補正FLG
                 "--twist_flg", "0;0",                   // 捩り分散

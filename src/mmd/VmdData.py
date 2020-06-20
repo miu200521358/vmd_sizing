@@ -217,7 +217,7 @@ class VmdMotion():
                     logger.info("-- %sフレーム目:終了(%s％)【No.%s - 全打ち - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
                     prev_sep_fno = fno // 500
     
-    def get_differ_fnos(self, data_set_no: int, bone_name_list: str, limit_degrees: float):
+    def get_differ_fnos(self, data_set_no: int, bone_name_list: str, limit_degrees: float, limit_length: float):
         limit_radians = math.cos(math.radians(limit_degrees))
         fnos = [0]
         for bone_name in bone_name_list:
@@ -245,6 +245,15 @@ class VmdMotion():
                     dot = MQuaternion.dotProduct(before_bf.rotation, bf.rotation)
                     if dot < limit_radians:
                         # 前と今回の内積の差が指定度数より離れている場合、追加
+                        logger.test("★ 追加 set: %s, %s, f: %s, dot: %s", data_set_no, bone_name, fno, dot)
+                        fnos.append(fno)
+                        # 前回キーとして保持
+                        before_bf = bf.copy()
+
+                    # 読み込みキーとの差
+                    diff = before_bf.position.distanceToPoint(bf.position)
+                    if diff > limit_length:
+                        # 前と今回の移動量の差が指定値より離れている場合、追加
                         logger.test("★ 追加 set: %s, %s, f: %s, dot: %s", data_set_no, bone_name, fno, dot)
                         fnos.append(fno)
                         # 前回キーとして保持
@@ -726,6 +735,16 @@ class VmdMotion():
         # キーの終点は、C
         bf.interpolation[x2_idxs[0]] = bf.interpolation[x2_idxs[1]] = bf.interpolation[x2_idxs[2]] = bf.interpolation[x2_idxs[3]] = int(bzs[2].x())
         bf.interpolation[y2_idxs[0]] = bf.interpolation[y2_idxs[1]] = bf.interpolation[y2_idxs[2]] = bf.interpolation[y2_idxs[3]] = int(bzs[2].y())
+
+    # 有効なキーフレが入っているか
+    def is_active_bones(self, bone_name):
+        for bf in self.bones[bone_name].values():
+            if bf.position != MVector3D():
+                return True
+            if bf.rotation != MQuaternion():
+                return True
+        
+        return False
 
     # ボーンモーション：フレーム番号リスト
     def get_bone_fnos(self, *bone_names, **kwargs):
