@@ -77,7 +77,7 @@ class CameraPanel(BasePanel):
             self.add_set(1, self.frame.file_panel_ctrl.file_set)
         else:
             # ある場合、モデル名だけ入替
-            self.camera_set_dict[1].model_name_txt.setLabel("{0} → {1}".format(\
+            self.camera_set_dict[1].model_name_txt.SetLabel("{0} → {1}".format(\
                                                             self.frame.file_panel_ctrl.file_set.org_model_file_ctrl.file_model_ctrl.txt_ctrl.GetValue()[1:-1], \
                                                             self.frame.file_panel_ctrl.file_set.rep_model_file_ctrl.file_model_ctrl.txt_ctrl.GetValue()[1:-1]))
         
@@ -89,7 +89,7 @@ class CameraPanel(BasePanel):
                 self.add_set(set_no, multi_file_set)
             else:
                 # ある場合、モデル名だけ入替
-                self.camera_set_dict[set_no].model_name_txt.setLabel("{0} → {1}".format(\
+                self.camera_set_dict[set_no].model_name_txt.SetLabel("{0} → {1}".format(\
                                                                      multi_file_set.org_model_file_ctrl.file_model_ctrl.txt_ctrl.GetValue()[1:-1], \
                                                                      multi_file_set.rep_model_file_ctrl.file_model_ctrl.txt_ctrl.GetValue()[1:-1]))
 

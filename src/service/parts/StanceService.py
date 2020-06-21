@@ -979,18 +979,7 @@ class StanceService():
                                                                                 limit_links=org_toe_ik_links.from_links(leg_ik_bone_name))
 
                         # 先モデルデータ -------------
-                        # 処理対象ボーンまでの位置とグローバル座標
-                        rep_toe_ik_global_3ds = MServiceUtils.calc_global_pos(data_set.rep_model, rep_toe_ik_links, data_set.motion, fno)
 
-                        # 足首のグローバル位置
-                        rep_global_ankle_pos = rep_toe_ik_global_3ds[leg_ik_bone_name]
-                        # つま先IKのグローバル位置
-                        rep_global_toe_ik_pos = rep_toe_ik_global_3ds[toe_ik_bone_name]
-
-                        # 足IKの親までのグローバル座標と行列
-                        _, rep_initial_toe_ik_matrixs \
-                            = MServiceUtils.calc_global_pos(data_set.rep_model, rep_toe_ik_links, data_set.motion, fno, \
-                                                            limit_links=rep_toe_ik_links.from_links(leg_parent_name), return_matrix=True)
                         # つま先IKまでの相対位置
                         rep_toe_trans_vs = MServiceUtils.calc_relative_position(data_set.rep_model, rep_toe_ik_links, data_set.motion, fno, \
                                                                                 limit_links=rep_toe_ik_links.from_links(leg_ik_bone_name))
@@ -1006,13 +995,6 @@ class StanceService():
                         # さらにつま先IKの移動量をかけて、つま先IKの初期グローバル位置を求める
                         org_initial_global_toe_ik_pos = org_initial_leg_ik_matrix * rep_toe_trans_vs[rep_toe_ik_links.index(toe_ik_bone_name)]
 
-                        # # 足IKの親までの行列
-                        # rep_leg_ik_matrix = rep_initial_toe_ik_matrixs[leg_parent_name].copy()
-                        # # 足IKの回転を殺して、移動量のみで移動させる（足IKの回転を見ないことで、つま先IKのニュートラルな初期位置取得）
-                        # rep_leg_ik_matrix.translate(rep_toe_trans_vs[rep_toe_ik_links.index(leg_ik_bone_name)])
-                        # # さらにつま先IKの移動量をかけて、つま先IKの初期グローバル位置を求める
-                        # rep_initial_global_toe_ik_pos = rep_leg_ik_matrix * rep_toe_trans_vs[rep_toe_ik_links.index(toe_ik_bone_name)]
-
                         # 足IKからみた初期つま先IKローカル位置
                         initial_local_toe_ik_pos = org_initial_leg_ik_matrix.inverted() * org_initial_global_toe_ik_pos
                         # 足IKからみた目標つま先IKローカル位置
@@ -1023,7 +1005,8 @@ class StanceService():
                         toe_qq.normalize()
 
                         logger.debug("f: %s, %s, org_global_ankle_pos: %s, org_global_toe_ik_pos: %s, initial_local_toe_ik_pos: %s, target_local_toe_ik_pos: %s, toe_qq: %s", fno, toe_ik_bone_name, \
-                                     org_global_ankle_pos.to_log(), org_global_toe_ik_pos.to_log(), initial_local_toe_ik_pos.to_log(), target_local_toe_ik_pos.to_log(), toe_qq.toEulerAngles().to_log())
+                                     org_global_ankle_pos.to_log(), org_global_toe_ik_pos.to_log(), initial_local_toe_ik_pos.to_log(), target_local_toe_ik_pos.to_log(), \
+                                     toe_qq.toEulerAngles().to_log())
 
                         # 計算後つま先ＩＫの移動をクリア
                         toe_ik_bf.position = MVector3D()
@@ -2429,24 +2412,24 @@ class StanceService():
 
     # スタンス用細分化
     def prepare_split_stance(self, data_set_idx: int, data_set: MOptionsDataSet, target_bone_name: str):
-        motion = data_set.motion
-        fnos = motion.get_bone_fnos(target_bone_name)
+        fnos = data_set.motion.get_bone_fnos(target_bone_name)
 
         for fidx, fno in enumerate(fnos):
             if fidx == 0:
                 continue
 
-            prev_bf = motion.bones[target_bone_name][fnos[fidx - 1]]
-            bf = motion.bones[target_bone_name][fno]
+            prev_bf = data_set.motion.bones[target_bone_name][fnos[fidx - 1]]
+            bf = data_set.motion.bones[target_bone_name][fno]
+            diff_degree = abs(prev_bf.rotation.toDegree() - bf.rotation.toDegree())
 
-            # 内積で離れ具合をチェック
-            if bf.rotation.calcTheata(prev_bf.rotation) < 0.3:
+            if diff_degree >= 150:
                 # 回転量が約150度以上の場合、半分に分割しておく
                 half_fno = prev_bf.fno + round((bf.fno - prev_bf.fno) / 2)
 
-                if bf.fno < half_fno < prev_bf.fno:
+                if prev_bf.fno < half_fno < bf.fno:
                     # キーが追加できる状態であれば、追加
-                    motion.split_bf_by_fno(target_bone_name, prev_bf, bf, half_fno)
+                    half_bf = data_set.motion.calc_bf(target_bone_name, half_fno)
+                    data_set.motion.regist_bf(half_bf, target_bone_name, half_fno)
 
     # 腕スタンス補正
     def adjust_arm_stance(self, data_set_idx: int, data_set: MOptionsDataSet):

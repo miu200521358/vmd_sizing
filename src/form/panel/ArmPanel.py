@@ -289,7 +289,7 @@ class ArmPanel(BasePanel):
             
         if len(disable_arm_model_names) > 0:
             # 腕不可モデルがいる場合、ダイアログ表示
-            with wx.MessageDialog(self, "下記モデルに「腕IK」が含まれているため、該当ファイルセットの腕系処理\n（腕スタンス補正・接触回避・位置合わせ）がこのままではスルーされます。\n" \
+            with wx.MessageDialog(self, "下記モデルに「腕IK」に類する文字列が含まれているため、該当ファイルセットの腕系処理\n（腕スタンス補正・捩り分散・接触回避・位置合わせ）がこのままではスルーされます。\n" \
                                   + "腕チェックスキップFLGをONにすると、強制的に腕系処理が実行されます。\n※ただし、結果がおかしくなってもサポート対象外となります。\n" \
                                   + "腕チェックスキップFLGをONにしますか？ \n\n{0}".format('\n'.join(disable_arm_model_names)), style=wx.YES_NO | wx.ICON_WARNING) as dialog:
                 if dialog.ShowModal() == wx.ID_NO:

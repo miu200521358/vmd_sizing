@@ -25,6 +25,9 @@ def calc_IK(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, targ
         bf = motion.calc_bf(bone_name, fno)
         motion.regist_bf(bf, bone_name, fno)
     
+    local_effector_pos = MVector3D()
+    local_target_pos = MVector3D()
+
     for cnt in range(max_count):
         # 規定回数ループ
         for ik_idx, joint_name in enumerate(list(ik_links.all().keys())[1:]):

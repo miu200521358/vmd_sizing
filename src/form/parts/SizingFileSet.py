@@ -44,7 +44,7 @@ class SizingFileSet():
 
         # スタンス補正
         detail_btn_ctrl = wx.Button(panel, wx.ID_ANY, u"＊", wx.DefaultPosition, (20, 20), 0)
-        detail_btn_ctrl.SetToolTip("スタンス追加補正詳細の確認、および取捨選択を行う事が出来ます。")
+        detail_btn_ctrl.SetToolTip("スタンス追加補正の内訳確認、および取捨選択を行う事が出来ます。")
         detail_btn_ctrl.Bind(wx.EVT_BUTTON, self.select_detail)
 
         # 作成元PMXファイルコントロール

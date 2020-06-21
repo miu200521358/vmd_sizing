@@ -183,13 +183,13 @@ class CameraService():
 
         # まず全体のグローバル位置とプロジェクション座標正規位置を算出
         self.calc_org_project_square_poses(fno, cf, 0, -1, all_org_global_poses, all_org_project_square_poses)
-        # 画面内に映っているINDEXリスト
-        org_inner_global_poses, org_inner_square_poses = self.calc_inner_index(fno, all_org_global_poses, all_org_project_square_poses, None, 0, 0.1)
+        # 画面内に映っているINDEXリスト（確実に映っているボーンだけにするため、画面より少しだけ小さめに判定する）
+        org_inner_global_poses, org_inner_square_poses = self.calc_inner_index(fno, all_org_global_poses, all_org_project_square_poses, None, -0.01, -0.01)
         logger.debug("f: %s, inner: %s", fno, org_inner_global_poses.keys())
 
-        # 画面内に映っている顔系INDEX
+        # 画面内に映っている顔系INDEX(注視点直近算出のためなので、ちょっと範囲広め)
         org_face_inner_global_poses, org_face_inner_square_poses = self.calc_inner_index(fno, org_inner_global_poses, org_inner_square_poses, HEAD_BONE_NAMES, 0, 0.1)
-        # 画面内に映っている体幹系INDEX
+        # 画面内に映っている体幹系INDEX(同上)
         org_trunk_inner_global_poses, org_trunk_inner_square_poses = self.calc_inner_index(fno, org_inner_global_poses, org_inner_square_poses, \
                                                                                            HEAD_BONE_NAMES + TRUNK_BONE_NAMES + LEG_BOTTOM_BONE_NAMES, 0, 0.1)
 
@@ -303,6 +303,8 @@ class CameraService():
                     # 大体画面内に映っていたら、INDEX保持
                     inner_square_poses[(data_set_idx, bone_name)] = square_pos
                     inner_global_poses[(data_set_idx, bone_name)] = all_global_poses[(data_set_idx, bone_name)]
+
+        logger.debug("f: %s, inner_square_poses: %s", fno, inner_square_poses)
 
         return inner_global_poses, inner_square_poses
 
