@@ -71,11 +71,11 @@ class SizingWorkerThread(BaseWorkerThread):
                     
                     camera_offset_y = 0
                     camera_org_model = file_set.org_model_file_ctrl.data
-                    if multi_idx + 1 in self.frame.camera_panel_ctrl.camera_set_dict:
-                        if self.frame.camera_panel_ctrl.camera_set_dict[multi_idx + 1].camera_model_file_ctrl.is_set_path():
+                    if multi_idx + 2 in self.frame.camera_panel_ctrl.camera_set_dict:
+                        if self.frame.camera_panel_ctrl.camera_set_dict[multi_idx + 2].camera_model_file_ctrl.is_set_path():
                             # カメラ元モデルが指定されている場合、カメラ元モデル再指定
-                            camera_org_model = self.frame.camera_panel_ctrl.camera_set_dict[multi_idx + 1].camera_model_file_ctrl.data
-                        camera_offset_y = self.frame.camera_panel_ctrl.camera_set_dict[multi_idx + 1].camera_offset_y_ctrl.GetValue()
+                            camera_org_model = self.frame.camera_panel_ctrl.camera_set_dict[multi_idx + 2].camera_model_file_ctrl.data
+                        camera_offset_y = self.frame.camera_panel_ctrl.camera_set_dict[multi_idx + 2].camera_offset_y_ctrl.GetValue()
 
                     multi_data_set = MOptionsDataSet(
                         motion=file_set.motion_vmd_file_ctrl.data.copy(), \
