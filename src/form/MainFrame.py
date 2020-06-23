@@ -2,6 +2,7 @@
 #
 import os
 import sys
+import glob
 import wx
 
 from form.panel.FilePanel import FilePanel
@@ -261,9 +262,26 @@ class MainFrame(wx.Frame):
             worked_time = "{0:02d}分{1:02d}秒".format(int(td_m), int(td_s))
 
         return worked_time
+    
+    # ファイルタブの処理対象VMD/VPDパス
+    def get_target_vmd_path(self, target_idx):
+        if self.file_panel_ctrl.file_set.motion_vmd_file_ctrl.astr_path:
+            # アスタリスク指定の場合、指定されたINDEXのファイルパスを取得
+            base_file_path = self.file_panel_ctrl.file_set.motion_vmd_file_ctrl.astr_path
+            if os.path.exists(base_file_path):
+                file_path_list = [base_file_path]
+            else:
+                file_path_list = [p for p in glob.glob(base_file_path) if os.path.isfile(p)]
+
+            if len(file_path_list) > target_idx:
+                return file_path_list[target_idx]
+            else:
+                return None
+
+        return self.file_panel_ctrl.file_set.motion_vmd_file_ctrl.file_ctrl.GetPath()
 
     # 読み込み
-    def load(self, is_exec=False, is_morph=False, is_arm=False):
+    def load(self, target_idx, is_exec=False, is_morph=False, is_arm=False):
         # フォーム無効化
         self.file_panel_ctrl.disable()
         # タブ固定
@@ -297,8 +315,13 @@ class MainFrame(wx.Frame):
         if self.load_worker:
             logger.error("まだ処理が実行中です。終了してから再度実行してください。", decoration=MLogger.DECORATION_BOX)
         else:
+            # ファイルタブの処理対象VMD/VPDの実値設定
+            self.file_panel_ctrl.file_set.motion_vmd_file_ctrl.file_ctrl.SetPath(self.get_target_vmd_path(target_idx))
+            # 出力パス強制変更
+            self.file_panel_ctrl.file_set.set_output_vmd_path(is_force=True)
+
             # 別スレッドで実行
-            self.load_worker = LoadWorkerThread(self, LoadThreadEvent, is_exec, is_morph, is_arm)
+            self.load_worker = LoadWorkerThread(self, LoadThreadEvent, target_idx, is_exec, is_morph, is_arm)
             self.load_worker.start()
 
         return result
@@ -354,7 +377,7 @@ class MainFrame(wx.Frame):
                 logger.error("まだ処理が実行中です。終了してから再度実行してください。", decoration=MLogger.DECORATION_BOX)
             else:
                 # 別スレッドで実行
-                self.worker = SizingWorkerThread(self, SizingThreadEvent, self.is_saving, self.is_out_log)
+                self.worker = SizingWorkerThread(self, SizingThreadEvent, event.target_idx, self.is_saving, self.is_out_log)
                 self.worker.start()
 
         elif event.is_morph:
@@ -381,14 +404,20 @@ class MainFrame(wx.Frame):
         self.elapsed_time += event.elapsed_time
         logger.info("\n処理時間: %s", self.show_worked_time())
 
+        # ワーカー終了
+        self.worker = None
+
+        if self.file_panel_ctrl.file_set.motion_vmd_file_ctrl.astr_path and self.get_target_vmd_path(event.target_idx + 1):
+            # アスタリスク付きパスの場合、次の存在チェック
+
+            return self.load(event.target_idx + 1, is_exec=True)
+
         # ファイルタブのコンソール
         sys.stdout = self.file_panel_ctrl.console_ctrl
 
         # 終了音を鳴らす
         self.sound_finish()
 
-        # ワーカー終了
-        self.worker = None
         # タブ移動可
         self.release_tab()
         # フォーム有効化

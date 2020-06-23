@@ -109,7 +109,7 @@ class FilePanel(BasePanel):
         self.save()
 
         # サイジング可否チェックの後に実行
-        self.frame.load(is_exec=True)
+        self.frame.load(is_exec=True, target_idx=0)
 
         event.Skip()
 

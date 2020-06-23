@@ -46,6 +46,7 @@ class BaseFilePickerCtrl():
         self.set_no = set_no
         self.required = required
         self.data = None
+        self.astr_path = None
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -98,7 +99,7 @@ class BaseFilePickerCtrl():
         self.file_ctrl.GetPickerCtrl().Bind(wx.EVT_BUTTON, self.on_pick_file)
 
         # D&Dの実装
-        self.file_ctrl.SetDropTarget(MFileDropTarget(self))
+        self.file_ctrl.SetDropTarget(MFileDropTarget(self, self.is_aster))
 
         # ファイルパス変更時
         self.file_ctrl.Bind(wx.EVT_FILEPICKER_CHANGED, self.on_change_file)
@@ -131,6 +132,10 @@ class BaseFilePickerCtrl():
         # 出力ファイル変更対象の場合、出力ファイル更新
         if self.is_change_output:
             self.parent.set_output_vmd_path(True)
+        
+        # アスタリスクを含む場合、オリジナルパス更新
+        if "*" in self.file_ctrl.GetPath():
+            self.astr_path = "{0}".format(self.file_ctrl.GetPath())
 
     def disable(self):
         self.file_ctrl.GetPickerCtrl().Disable()
@@ -330,7 +335,7 @@ class FileModelCtrl():
         self.set_no = set_no
         self.spacer_ctrl = wx.StaticText(parent, wx.ID_ANY, "".join([" " for n in range(spacer_cnt)]))
 
-        width = 350 if self.set_no == 1 else 220
+        width = 300 if self.set_no == 1 else 220
 
         self.txt_ctrl = wx.TextCtrl(parent, wx.ID_ANY, "（未設定）", wx.DefaultPosition, (width, -1), wx.TE_READONLY | wx.BORDER_NONE | wx.WANTS_CHARS)
         self.txt_ctrl.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DLIGHT))
@@ -384,8 +389,9 @@ class FileModelCtrl():
 
 
 class MFileDropTarget(wx.FileDropTarget):
-    def __init__(self, parent):
+    def __init__(self, parent, is_aster):
         self.parent = parent
+        self.is_aster = is_aster
 
         wx.FileDropTarget.__init__(self)
     
@@ -408,6 +414,19 @@ class MFileDropTarget(wx.FileDropTarget):
             self.parent.on_change_file(wx.FileDirPickerEvent())
 
             return True
+        
+        # アスタリスクOKの場合、フォルダの投入を許可する
+        if os.path.isdir(files[0]) and self.is_aster:
+            # フォルダを投入された場合、フォルダ内にvmdもしくはvpdがあれば、受け付ける
+            child_file_name_exts = [os.path.splitext(filename) for filename in os.listdir(files[0]) if os.path.isfile(os.path.join(files[0], filename))]
+
+            for ft in self.parent.file_type:
+                # 親の許容ファイルパス
+                for (child_file_name, child_file_ext) in child_file_name_exts:
+                    if child_file_ext[1:].lower() == ft:
+                        # 子のファイル拡張子が許容拡張子である場合、アスタリスクを入れて許可する
+                        self.parent.file_ctrl.SetPath("{0}\\*.{1}".format(files[0], ft))
+                        return True
         
         display_file_type = self.parent.file_type
         if type(self.parent.file_type) == tuple:

@@ -3,7 +3,6 @@
 
 import logging
 import os
-import glob
 import time
 import wx
 import re
@@ -11,6 +10,7 @@ import re
 from form.worker.BaseWorkerThread import BaseWorkerThread, task_takes_time
 from module.MOptions import MOptions, MOptionsDataSet, MArmProcessOptions
 from service.SizingService import SizingService
+from utils import MFileUtils # noqa
 from utils.MLogger import MLogger # noqa
 
 logger = MLogger(__name__)
@@ -18,10 +18,11 @@ logger = MLogger(__name__)
 
 class SizingWorkerThread(BaseWorkerThread):
 
-    def __init__(self, frame: wx.Frame, result_event: wx.Event, is_exec_saving: bool, is_out_log: bool):
+    def __init__(self, frame: wx.Frame, result_event: wx.Event, target_idx: int, is_exec_saving: bool, is_out_log: bool):
         self.elapsed_time = 0
         self.is_out_log = is_out_log
         self.is_exec_saving = is_exec_saving
+        self.target_idx = target_idx
         self.gauge_ctrl = frame.file_panel_ctrl.gauge_ctrl
 
         super().__init__(frame, result_event, frame.file_panel_ctrl.console_ctrl)
@@ -32,38 +33,31 @@ class SizingWorkerThread(BaseWorkerThread):
             start = time.time()
             # データセットリスト
             data_set_list = []
-            
-            base_file_path = self.frame.file_panel_ctrl.file_set.motion_vmd_file_ctrl.file_ctrl.GetPath()
-            if os.path.exists(base_file_path):
-                file_path_list = [base_file_path]
-            else:
-                file_path_list = [p for p in glob.glob(base_file_path) if os.path.isfile(p)]
 
-            for file_idx in range(len(file_path_list)):
-                if self.frame.file_panel_ctrl.file_set.motion_vmd_file_ctrl.load(file_idx):
+            if self.frame.file_panel_ctrl.file_set.motion_vmd_file_ctrl.load():
 
-                    camera_org_model = self.frame.file_panel_ctrl.file_set.org_model_file_ctrl.data
-                    camera_offset_y = 0
-                    if 1 in self.frame.camera_panel_ctrl.camera_set_dict:
-                        if self.frame.camera_panel_ctrl.camera_set_dict[1].camera_model_file_ctrl.is_set_path():
-                            # カメラ元モデルが指定されている場合、カメラ元モデル再指定
-                            camera_org_model = self.frame.camera_panel_ctrl.camera_set_dict[1].camera_model_file_ctrl.data
-                        camera_offset_y = self.frame.camera_panel_ctrl.camera_set_dict[1].camera_offset_y_ctrl.GetValue()
-                    
-                    # 1件目は必ず読み込む
-                    first_data_set = MOptionsDataSet(
-                        motion=self.frame.file_panel_ctrl.file_set.motion_vmd_file_ctrl.data.copy(), \
-                        org_model=self.frame.file_panel_ctrl.file_set.org_model_file_ctrl.data, \
-                        rep_model=self.frame.file_panel_ctrl.file_set.rep_model_file_ctrl.data, \
-                        output_vmd_path=self.frame.file_panel_ctrl.file_set.output_vmd_file_ctrl.file_ctrl.GetPath(), \
-                        detail_stance_flg=self.frame.file_panel_ctrl.file_set.org_model_file_ctrl.title_parts_ctrl.GetValue(), \
-                        twist_flg=self.frame.file_panel_ctrl.file_set.rep_model_file_ctrl.title_parts_ctrl.GetValue(), \
-                        morph_list=self.frame.morph_panel_ctrl.get_morph_list(1), \
-                        camera_org_model=camera_org_model, \
-                        camera_offset_y=camera_offset_y, \
-                        selected_stance_details=self.frame.file_panel_ctrl.file_set.get_selected_stance_details()
-                    )
-                    data_set_list.append(first_data_set)
+                camera_org_model = self.frame.file_panel_ctrl.file_set.org_model_file_ctrl.data
+                camera_offset_y = 0
+                if 1 in self.frame.camera_panel_ctrl.camera_set_dict:
+                    if self.frame.camera_panel_ctrl.camera_set_dict[1].camera_model_file_ctrl.is_set_path():
+                        # カメラ元モデルが指定されている場合、カメラ元モデル再指定
+                        camera_org_model = self.frame.camera_panel_ctrl.camera_set_dict[1].camera_model_file_ctrl.data
+                    camera_offset_y = self.frame.camera_panel_ctrl.camera_set_dict[1].camera_offset_y_ctrl.GetValue()
+                
+                # 1件目は必ず読み込む
+                first_data_set = MOptionsDataSet(
+                    motion=self.frame.file_panel_ctrl.file_set.motion_vmd_file_ctrl.data.copy(), \
+                    org_model=self.frame.file_panel_ctrl.file_set.org_model_file_ctrl.data, \
+                    rep_model=self.frame.file_panel_ctrl.file_set.rep_model_file_ctrl.data, \
+                    output_vmd_path=self.frame.file_panel_ctrl.file_set.output_vmd_file_ctrl.file_ctrl.GetPath(), \
+                    detail_stance_flg=self.frame.file_panel_ctrl.file_set.org_model_file_ctrl.title_parts_ctrl.GetValue(), \
+                    twist_flg=self.frame.file_panel_ctrl.file_set.rep_model_file_ctrl.title_parts_ctrl.GetValue(), \
+                    morph_list=self.frame.morph_panel_ctrl.get_morph_list(1), \
+                    camera_org_model=camera_org_model, \
+                    camera_offset_y=camera_offset_y, \
+                    selected_stance_details=self.frame.file_panel_ctrl.file_set.get_selected_stance_details()
+                )
+                data_set_list.append(first_data_set)
 
             # 2件目以降は有効なのだけ読み込む
             for multi_idx, file_set in enumerate(self.frame.multi_panel_ctrl.file_set_list):
@@ -134,5 +128,5 @@ class SizingWorkerThread(BaseWorkerThread):
             logging.shutdown()
 
     def post_event(self):
-        wx.PostEvent(self.frame, self.result_event(result=self.result, elapsed_time=self.elapsed_time))
+        wx.PostEvent(self.frame, self.result_event(result=self.result, target_idx=self.target_idx, elapsed_time=self.elapsed_time))
 

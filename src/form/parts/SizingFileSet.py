@@ -33,7 +33,7 @@ class SizingFileSet():
         # VMD/VPDファイルコントロール
         self.motion_vmd_file_ctrl = HistoryFilePickerCtrl(frame, panel, u"調整対象モーションVMD/VPD", u"調整対象モーションVMD/VPDファイルを開く", ("vmd", "vpd"), wx.FLP_DEFAULT_STYLE, \
                                                           u"調整したいモーションのVMD/VPDパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。\n{0}".format(able_aster_toottip), \
-                                                          file_model_spacer=43, title_parts_ctrl=None, title_parts2_ctrl=None, file_histories_key="vmd", is_change_output=True, \
+                                                          file_model_spacer=46, title_parts_ctrl=None, title_parts2_ctrl=None, file_histories_key="vmd", is_change_output=True, \
                                                           is_aster=True, is_save=False, set_no=set_no)
         self.set_sizer.Add(self.motion_vmd_file_ctrl.sizer, 1, wx.EXPAND, 0)
 
@@ -62,7 +62,7 @@ class SizingFileSet():
         # 変換先PMXファイルコントロール
         self.rep_model_file_ctrl = HistoryFilePickerCtrl(frame, panel, u"モーション変換先モデルPMX", u"モーション変換先モデルPMXファイルを開く", ("pmx"), wx.FLP_DEFAULT_STYLE, \
                                                          u"実際にモーションを読み込ませたいモデルのPMXパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。", \
-                                                         file_model_spacer=15, title_parts_ctrl=twist_flg_ctrl, title_parts2_ctrl=None, file_histories_key="rep_pmx", \
+                                                         file_model_spacer=18, title_parts_ctrl=twist_flg_ctrl, title_parts2_ctrl=None, file_histories_key="rep_pmx", \
                                                          is_change_output=True, is_aster=False, is_save=False, set_no=set_no)
         self.set_sizer.Add(self.rep_model_file_ctrl.sizer, 1, wx.EXPAND, 0)
 
