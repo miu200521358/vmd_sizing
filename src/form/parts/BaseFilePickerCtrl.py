@@ -47,6 +47,7 @@ class BaseFilePickerCtrl():
         self.required = required
         self.data = None
         self.astr_path = None
+        self.target_paths = []
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -129,14 +130,15 @@ class BaseFilePickerCtrl():
         if self.file_model_ctrl:
             self.file_model_ctrl.set_model(target_path)
         
+        # アスタリスクを含む場合、オリジナルパス更新
+        if "*" in self.file_ctrl.GetPath():
+            self.astr_path = "{0}".format(self.file_ctrl.GetPath())
+            self.target_paths = [p for p in glob.glob(self.astr_path) if os.path.isfile(p)]
+
         # 出力ファイル変更対象の場合、出力ファイル更新
         if self.is_change_output:
             self.parent.set_output_vmd_path(True)
         
-        # アスタリスクを含む場合、オリジナルパス更新
-        if "*" in self.file_ctrl.GetPath():
-            self.astr_path = "{0}".format(self.file_ctrl.GetPath())
-
     def disable(self):
         self.file_ctrl.GetPickerCtrl().Disable()
         self.file_ctrl.GetTextCtrl().Disable()
@@ -425,7 +427,10 @@ class MFileDropTarget(wx.FileDropTarget):
                 for (child_file_name, child_file_ext) in child_file_name_exts:
                     if child_file_ext[1:].lower() == ft:
                         # 子のファイル拡張子が許容拡張子である場合、アスタリスクを入れて許可する
-                        self.parent.file_ctrl.SetPath("{0}\\*.{1}".format(files[0], ft))
+                        astr_path = "{0}\\*.{1}".format(files[0], ft)
+                        self.parent.file_ctrl.SetPath(astr_path)
+                        self.parent.astr_path = astr_path
+                        self.parent.target_paths = [p for p in glob.glob(astr_path) if os.path.isfile(p)]
                         return True
         
         display_file_type = self.parent.file_type
