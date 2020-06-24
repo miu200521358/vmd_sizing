@@ -1409,7 +1409,7 @@ class PmxModel():
     
     # 最も底面でかつ前面にある頂点であるか
     def def_is_multi_target_down_front_sole(self, multi_max_pos: MVector3D, v_pos: MVector3D):
-        return v_pos.y() <= multi_max_pos.y() + 0.1 and v_pos.z() <= multi_max_pos.z() + 2
+        return v_pos.y() <= multi_max_pos.y() + 0.1 and v_pos.z() <= multi_max_pos.z()
     
     # 指定ボーンにウェイトが乗っている頂点とそのINDEX
     def get_bone_end_vertex(self, bone_name_list, def_calc_vertex_pos, def_is_target=None, def_is_multi_target=None, multi_target_default_val=None, qq4calc=None):

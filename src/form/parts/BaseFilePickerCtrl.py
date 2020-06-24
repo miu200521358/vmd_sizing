@@ -134,6 +134,9 @@ class BaseFilePickerCtrl():
         if "*" in self.file_ctrl.GetPath():
             self.astr_path = "{0}".format(self.file_ctrl.GetPath())
             self.target_paths = [p for p in glob.glob(self.astr_path) if os.path.isfile(p)]
+        else:
+            self.astr_path = None
+            self.target_paths = []
 
         # 出力ファイル変更対象の場合、出力ファイル更新
         if self.is_change_output:
@@ -429,8 +432,10 @@ class MFileDropTarget(wx.FileDropTarget):
                         # 子のファイル拡張子が許容拡張子である場合、アスタリスクを入れて許可する
                         astr_path = "{0}\\*.{1}".format(files[0], ft)
                         self.parent.file_ctrl.SetPath(astr_path)
-                        self.parent.astr_path = astr_path
-                        self.parent.target_paths = [p for p in glob.glob(astr_path) if os.path.isfile(p)]
+
+                        # ファイル変更処理
+                        self.parent.on_change_file(wx.FileDirPickerEvent())
+
                         return True
         
         display_file_type = self.parent.file_type

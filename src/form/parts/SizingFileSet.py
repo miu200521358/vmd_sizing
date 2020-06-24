@@ -20,7 +20,7 @@ class SizingFileSet():
         self.frame = frame
         self.panel = panel
         self.set_no = set_no
-        self.STANCE_DETAIL_CHOICES = ["センタースタンス補正", "上半身スタンス補正", "下半身スタンス補正", "つま先ＩＫスタンス補正", "足ＩＫスタンス補正", "つま先補正", "肩スタンス補正", "センター腕スタンス補正"]
+        self.STANCE_DETAIL_CHOICES = ["センターXZ補正", "上半身補正", "下半身補正", "足ＩＫ補正", "つま先補正", "つま先ＩＫ補正", "肩補正", "センターY補正"]
         self.selected_stance_details = range(len(self.STANCE_DETAIL_CHOICES))
 
         if self.set_no == 1:

@@ -88,7 +88,7 @@ class FilePanel(BasePanel):
         self.save()
 
         # 一旦読み込み(そのままチェック)
-        self.frame.load()
+        self.frame.load(target_idx=0)
 
         event.Skip()
 

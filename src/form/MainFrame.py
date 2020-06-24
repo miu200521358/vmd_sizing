@@ -2,7 +2,6 @@
 #
 import os
 import sys
-import glob
 import wx
 
 from form.panel.FilePanel import FilePanel
@@ -198,7 +197,7 @@ class MainFrame(wx.Frame):
             logger.info("モーフタブ表示準備開始\nファイル読み込み処理を実行します。少しお待ちください....", decoration=MLogger.DECORATION_BOX)
 
             # 読み込み処理実行
-            self.load(is_morph=True)
+            self.load(target_idx=0, is_morph=True)
 
         if self.note_ctrl.GetSelection() == self.arm_panel_ctrl.tab_idx:
             # コンソールクリア
@@ -212,7 +211,7 @@ class MainFrame(wx.Frame):
             logger.info("腕タブ表示準備開始\nファイル読み込み処理を実行します。少しお待ちください....", decoration=MLogger.DECORATION_BOX)
 
             # 読み込み処理実行
-            self.load(is_arm=True)
+            self.load(target_idx=0, is_arm=True)
                 
         if self.note_ctrl.GetSelection() == self.camera_panel_ctrl.tab_idx:
             # カメラタブを開く場合、カメラタブ初期化処理実行

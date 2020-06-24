@@ -17,10 +17,10 @@
                 // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/オリジナル/折岸みつ つみだんご/折岸みつ.pmx",
                 // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/055_鶯丸/鶯丸 さばそ式ver1.75配布用/さばそ式鶯丸(通常・刀無)ver1.75.pmx",
 
-                // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/運動/バレエっぽいターン グレイ/バレエっぽいターン.vmd",
-                // // "--motion_path", "E:/MMD/MikuMikuDance_v926x64/Work/202001_sizing/肩/あぴミク肩.vmd",
-                // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/あぴミク01_Ver.1.04 アレン・ベルル/Appearance Miku_01_Ver.1.04_準標準.pmx",
-                // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/底辺508式初音ミク_素足モデル せんと(鈍棒P)/miku_v3(素足_袖なし).pmx",
+                "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/運動/バレエっぽいターン グレイ/バレエっぽいターン.vmd",
+                // "--motion_path", "E:/MMD/MikuMikuDance_v926x64/Work/202001_sizing/肩/あぴミク肩.vmd",
+                "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/あぴミク01_Ver.1.04 アレン・ベルル/Appearance Miku_01_Ver.1.04_準標準.pmx",
+                "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/底辺508式初音ミク_素足モデル せんと(鈍棒P)/miku_v3(素足_袖なし).pmx",
                 
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_2人/ニア_vmd P.I.P/汎用_原曲音源/ニア_いくら汎用_1377-1498.vmd;D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_2人/ニア_vmd P.I.P/汎用_原曲音源/ニア_やっこ汎用_1377-1498.vmd",
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_2人/ニア_vmd P.I.P/汎用_原曲音源/ニア_いくら汎用_0-2000.vmd;D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_2人/ニア_vmd P.I.P/汎用_原曲音源/ニア_やっこ汎用_0-2000.vmd",
@@ -111,18 +111,18 @@
                 // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/Tda式デフォ服ミク_ver1.1 金子卵黄/Tda式初音ミク_デフォ服ver.pmx",
                 // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/107_髭切/髭切mkmk009c 刀剣乱舞/髭切mkmk009c/髭切特3mkmk(Se)009b_準標準.pmx",
 
-                // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/カガリビト あっきー/カガリビト_0.vmd",
-                // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ヘタリア/kurokuma式スウェーデン軍服2種ver.2.71/ヘタリア・スウェーデンVer.2.71/スウェーデンver.2.71.pmx",
-                // // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ゲーム/Fate/キャス狐0.6_なかむら式/キャス狐v0.6.pmx",
-                // // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/107_髭切/髭切mkmk009c 刀剣乱舞/髭切mkmk009c/髭切特3mkmk(Se)009b_準標準.pmx",
-                // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/_VMDサイジング/fumizuki_14th_shirt/文月14歳_シャツ_サイジングチェック用.pmx",
+                "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/カガリビト あっきー/カガリビト_0.vmd",
+                "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ヘタリア/kurokuma式スウェーデン軍服2種ver.2.71/ヘタリア・スウェーデンVer.2.71/スウェーデンver.2.71.pmx",
+                // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ゲーム/Fate/キャス狐0.6_なかむら式/キャス狐v0.6.pmx",
+                // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/107_髭切/髭切mkmk009c 刀剣乱舞/髭切mkmk009c/髭切特3mkmk(Se)009b_準標準.pmx",
+                "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/艦隊これくしょん/摩耶改二・鳥海改二ver1.04 cham/鳥海改二ver1.04.pmx",
 
-                "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_多人数/REVOLVER　シガー/Revolver（ミク）.vmd;D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_多人数/REVOLVER　シガー/Revolver（ネル）.vmd;D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_多人数/REVOLVER　シガー/Revolver（ハク）.vmd;D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_多人数/REVOLVER　シガー/Revolver（GUMI）.vmd",
-                "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/YYB式初音ミクver1.02 im4344222/YYB式初音ミクv1.02.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/亞北ネル/Tda式改変亞北ネル・ワンピース vk/Tda_Akita_Neru_one-piece_v7_00.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/弱音ハク/Tda式改変弱音ハクccvセット1.05 coa/Tda式改変弱音ハクccv 1.05/Tda式改変弱音ハクccv ver1.05.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/GUMI/ままま式GUMI v3/GUMIβ_V3.pmx",
-                "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ゲーム/Fate/キャス狐0.6_なかむら式/キャス狐v0.6_剛体.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/艦隊これくしょん/響 エボシ/Hibiki_410.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ツイステ/02_サバナクロー/tank式レオナver1.01/tank式レオナver1.01.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/009_岩融/岩融 mkmk式 刀ミュ 002/岩融【刀ミュ】mkmk002/岩融【刀ミュ3】mkmk002 刀剣乱舞_準標準_剛体.pmx",
-                "--camera_motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_多人数/REVOLVERカメラ  春依/配布用REVOLVERカメラ（踊ってみた音源）_調整.vmd",
-                "--camera_org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/081_宗三左文字/宗三左文字 Mt式 v1.00/Mt式宗三左文字ジャージ.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/120_不動行光/不動行光ver.1.01 AKI式/AKI式不動行光ver.1.01/AKI式不動行光内番.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/118_へし切長谷部/へし切長谷部 ｻｸﾗｺ式 ver1.20/ｻｸﾗｺ式へし切長谷部（内番）ver1.20.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/049_薬研藤四郎/薬研藤四郎 melou式 風モデル2.0/薬研藤四郎内番.pmx",
-                "--camera_offset_y", "0;0;0;0",
+                // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_多人数/REVOLVER　シガー/Revolver（ミク）.vmd;D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_多人数/REVOLVER　シガー/Revolver（ネル）.vmd;D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_多人数/REVOLVER　シガー/Revolver（ハク）.vmd;D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_多人数/REVOLVER　シガー/Revolver（GUMI）.vmd",
+                // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/YYB式初音ミクver1.02 im4344222/YYB式初音ミクv1.02.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/亞北ネル/Tda式改変亞北ネル・ワンピース vk/Tda_Akita_Neru_one-piece_v7_00.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/弱音ハク/Tda式改変弱音ハクccvセット1.05 coa/Tda式改変弱音ハクccv 1.05/Tda式改変弱音ハクccv ver1.05.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/GUMI/ままま式GUMI v3/GUMIβ_V3.pmx",
+                // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ゲーム/Fate/キャス狐0.6_なかむら式/キャス狐v0.6_剛体.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/艦隊これくしょん/響 エボシ/Hibiki_410.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/ツイステ/02_サバナクロー/tank式レオナver1.01/tank式レオナver1.01.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/009_岩融/岩融 mkmk式 刀ミュ 002/岩融【刀ミュ】mkmk002/岩融【刀ミュ3】mkmk002 刀剣乱舞_準標準_剛体.pmx",
+                // "--camera_motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_多人数/REVOLVERカメラ  春依/配布用REVOLVERカメラ（踊ってみた音源）_調整.vmd",
+                // "--camera_org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/081_宗三左文字/宗三左文字 Mt式 v1.00/Mt式宗三左文字ジャージ.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/120_不動行光/不動行光ver.1.01 AKI式/AKI式不動行光ver.1.01/AKI式不動行光内番.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/118_へし切長谷部/へし切長谷部 ｻｸﾗｺ式 ver1.20/ｻｸﾗｺ式へし切長谷部（内番）ver1.20.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/049_薬研藤四郎/薬研藤四郎 melou式 風モデル2.0/薬研藤四郎内番.pmx",
+                // "--camera_offset_y", "0;0;0;0",
 
                 "--detail_stance_flg", "1;1;1;1",           // スタンス追加補正FLG
                 "--twist_flg", "0;0;0;0",                   // 捩り分散
