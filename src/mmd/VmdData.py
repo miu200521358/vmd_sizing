@@ -10,7 +10,7 @@ from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MM
 from utils import MBezierUtils # noqa
 from utils.MLogger import MLogger
 
-logger = MLogger(__name__, level=1)
+logger = MLogger(__name__)
 
 
 class VmdBoneFrame():

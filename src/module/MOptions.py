@@ -204,7 +204,7 @@ class MOptions():
                     twist_flg,
                     [],
                     camera_org_model,
-                    camera_offset_y, 
+                    camera_offset_y,
                     ["センターXZ補正", "上半身補正", "下半身補正", "足ＩＫ補正", "つま先ＩＫ補正", "つま先補正", "肩補正", "センターY補正"]
                 )
 
