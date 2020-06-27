@@ -28,7 +28,13 @@ class MultiPanel(BasePanel):
 
         self.btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        # 変換前チェックボタン
+        # ファイルセットクリアボタン
+        self.clear_btn_ctrl = wx.Button(self.header_panel, wx.ID_ANY, u"ファイルセットクリア", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.clear_btn_ctrl.SetToolTip(u"既に入力されたデータをすべて空にします。")
+        self.clear_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_clear_set)
+        self.btn_sizer.Add(self.clear_btn_ctrl, 0, wx.ALL, 5)
+
+        # ファイルセットクリアボタン
         self.add_btn_ctrl = wx.Button(self.header_panel, wx.ID_ANY, u"ファイルセット追加", wx.DefaultPosition, wx.DefaultSize, 0)
         self.add_btn_ctrl.SetToolTip(u"サイジングに必要なファイルセットをパネルに追加します。")
         self.add_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_add_set)
@@ -69,6 +75,13 @@ class MultiPanel(BasePanel):
             self.frame.on_popup_finger_warning(event)
 
         event.Skip()
+
+    def on_clear_set(self, event: wx.Event):
+        for file_set in self.file_set_list:
+            file_set.motion_vmd_file_ctrl.file_ctrl.SetPath("")
+            file_set.rep_model_file_ctrl.file_ctrl.SetPath("")
+            file_set.org_model_file_ctrl.file_ctrl.SetPath("")
+            file_set.output_vmd_file_ctrl.file_ctrl.SetPath("")
 
     # フォーム無効化
     def disable(self):
