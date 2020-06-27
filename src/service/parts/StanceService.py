@@ -12,7 +12,7 @@ from module.MOptions import MOptions, MOptionsDataSet
 from module.MParams import BoneLinks
 from utils import MUtils, MServiceUtils, MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
-from utils.MException import SizingException
+from utils.MException import SizingException, MKilledException
 
 logger = MLogger(__name__, level=MLogger.DEBUG)
 
@@ -109,6 +109,8 @@ class StanceService():
                 logger.warning("No.%sの%sモデルの腕構造にサイジングが対応していない為、腕系処理をスキップします。", (data_set_idx + 1), target_model_type, decoration=MLogger.DECORATION_BOX)
 
             return True
+        except MKilledException as ke:
+            raise ke
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
             return se
@@ -259,6 +261,8 @@ class StanceService():
                 logger.info("%s捩り分散: 【No.%s】[%s]のボーン群が、作成元もしくは変換先のいずれかで足りないため、処理をスキップします。", direction, (data_set_idx + 1), ", ".join(twist_target_bones))
 
             return True
+        except MKilledException as ke:
+            raise ke
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
             return se
@@ -275,6 +279,8 @@ class StanceService():
                                                   data_set.rep_model.bones[bone_name].getTranslatable(), offset=offset)
 
             return True
+        except MKilledException as ke:
+            raise ke
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
             return se
@@ -298,6 +304,8 @@ class StanceService():
                     prev_sep_fno = fno // 500
 
             return True
+        except MKilledException as ke:
+            raise ke
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
             return se
@@ -315,6 +323,8 @@ class StanceService():
                                       data_set.rep_model.bones[bone_name].getTranslatable(), limit_degrees=1)
 
             return True
+        except MKilledException as ke:
+            raise ke
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
             return se
@@ -332,6 +342,8 @@ class StanceService():
                                              data_set.rep_model.bones[bone_name].getTranslatable(), config=config, loop=1)
 
             return True
+        except MKilledException as ke:
+            raise ke
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
             return se
@@ -389,6 +401,8 @@ class StanceService():
             data_set.motion.bones[wrist_twist_bone_name][fno] = wrist_twist_bf
 
             return True
+        except MKilledException as ke:
+            raise ke
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
             return se
@@ -500,6 +514,8 @@ class StanceService():
                 logger.info("-- %sフレーム目:終了(%s％)【No.%s - 捩り分散 - %s】", fno, round((fno / last_fno) * 100, 3), data_set_idx + 1, arm_twist_bone_name)
 
             return True
+        except MKilledException as ke:
+            raise ke
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
             return se
@@ -878,6 +894,8 @@ class StanceService():
                 logger.info("%s足ＩＫ補正: 【No.%s】[%s]のボーン群が、作成元もしくは変換先のいずれかで足りないため、処理をスキップします。", direction, (data_set_idx + 1), ", ".join(leg_ik_target_bones))
 
             return True
+        except MKilledException as ke:
+            raise ke
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
             return se
@@ -1037,6 +1055,8 @@ class StanceService():
                 logger.info("%sつま先ＩＫ補正: 【No.%s】[%s]のボーン群が、作成元もしくは変換先のいずれかで足りないため、処理をスキップします。", direction, (data_set_idx + 1), ", ".join(toe_ik_target_bones))
 
             return True
+        except MKilledException as ke:
+            raise ke
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
             return se
@@ -1152,6 +1172,8 @@ class StanceService():
                 logger.info("%sつま先補正: 【No.%s】[%s]のボーン群が、作成元もしくは変換先のいずれかで足りないため、処理をスキップします。", direction, (data_set_idx + 1), ", ".join(toe_target_bones))
 
             return True
+        except MKilledException as ke:
+            raise ke
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
             return se
@@ -1960,6 +1982,8 @@ class StanceService():
                 logger.info("%s補正: 【No.%s】[%s]のボーン群が、作成元もしくは変換先のいずれかで足りないため、処理をスキップします。", shoulder_name, (data_set_idx + 1), ", ".join(shoulder_target_bones))
 
             return True
+        except MKilledException as ke:
+            raise ke
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
             return se
@@ -2452,6 +2476,8 @@ class StanceService():
                 logger.info("腕スタンス補正【No.%s - %s】", (data_set_idx + 1), bone_name)
 
             return True
+        except MKilledException as ke:
+            raise ke
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
             return se
@@ -2480,6 +2506,8 @@ class StanceService():
                 logger.test("to: %s", arm_diff_qq_dic[bone_name]["to"].toEulerAngles())
 
             return True
+        except MKilledException as ke:
+            raise ke
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
             return se

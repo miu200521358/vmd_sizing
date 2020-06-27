@@ -6,6 +6,7 @@ import os
 import time
 import wx
 import re
+import gc
 
 from form.worker.BaseWorkerThread import BaseWorkerThread, task_takes_time
 from module.MOptions import MOptions, MOptionsDataSet, MArmProcessOptions
@@ -24,6 +25,7 @@ class SizingWorkerThread(BaseWorkerThread):
         self.is_exec_saving = is_exec_saving
         self.target_idx = target_idx
         self.gauge_ctrl = frame.file_panel_ctrl.gauge_ctrl
+        self.options = None
 
         super().__init__(frame, result_event, frame.file_panel_ctrl.console_ctrl)
 
@@ -85,7 +87,7 @@ class SizingWorkerThread(BaseWorkerThread):
                     )
                     data_set_list.append(multi_data_set)
 
-            options = MOptions(\
+            self.options = MOptions(\
                 version_name=self.frame.version_name, \
                 logging_level=self.frame.logging_level, \
                 data_set_list=data_set_list, \
@@ -107,7 +109,7 @@ class SizingWorkerThread(BaseWorkerThread):
                 outout_datetime=logger.outout_datetime, \
                 max_workers=(1 if self.is_exec_saving else min(32, os.cpu_count() + 4)))
             
-            self.result = SizingService(options).execute() and self.result
+            self.result = SizingService(self.options).execute() and self.result
 
             self.elapsed_time = time.time() - start
         except Exception as e:
@@ -127,6 +129,10 @@ class SizingWorkerThread(BaseWorkerThread):
 
             logging.shutdown()
 
+    def thread_delete(self):
+        del self.options
+        gc.collect()
+
     def post_event(self):
-        wx.PostEvent(self.frame, self.result_event(result=self.result, target_idx=self.target_idx, elapsed_time=self.elapsed_time))
+        wx.PostEvent(self.frame, self.result_event(result=self.result and not self.is_killed, target_idx=self.target_idx, elapsed_time=self.elapsed_time))
 

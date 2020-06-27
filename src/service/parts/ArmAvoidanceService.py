@@ -11,7 +11,7 @@ from module.MOptions import MOptions, MOptionsDataSet # noqa
 from module.MParams import BoneLinks # noqa
 from utils import MUtils, MServiceUtils, MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
-from utils.MException import SizingException
+from utils.MException import SizingException, MKilledException
 
 logger = MLogger(__name__, level=1)
 
@@ -88,6 +88,8 @@ class ArmAvoidanceService():
                     return False
 
             return True
+        except MKilledException as ke:
+            raise ke
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
             return se

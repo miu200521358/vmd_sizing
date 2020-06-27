@@ -314,6 +314,10 @@ class MainFrame(wx.Frame):
             # 出力パス変更
             self.file_panel_ctrl.file_set.set_output_vmd_path(event)
 
+            # 停止ボタンに切り替え
+            self.file_panel_ctrl.check_btn_ctrl.SetLabel("読み込み処理停止")
+            self.file_panel_ctrl.check_btn_ctrl.Enable()
+
             # 別スレッドで実行
             self.load_worker = LoadWorkerThread(self, LoadThreadEvent, target_idx, is_exec, is_morph, is_arm)
             self.load_worker.start()
@@ -333,8 +337,13 @@ class MainFrame(wx.Frame):
         # プログレス非表示
         self.file_panel_ctrl.gauge_ctrl.SetValue(0)
 
+        # チェックボタンに切り替え
+        self.file_panel_ctrl.check_btn_ctrl.SetLabel("変換前チェック")
+        self.file_panel_ctrl.check_btn_ctrl.Enable()
+
         if not event.result:
-            logger.error("ファイル読み込み処理に失敗したため、処理を中断します。", decoration=MLogger.DECORATION_BOX)
+            # 終了音を鳴らす
+            self.sound_finish()
             
             event.Skip()
             return False
@@ -370,6 +379,10 @@ class MainFrame(wx.Frame):
             if self.worker:
                 logger.error("まだ処理が実行中です。終了してから再度実行してください。", decoration=MLogger.DECORATION_BOX)
             else:
+                # 停止ボタンに切り替え
+                self.file_panel_ctrl.exec_btn_ctrl.SetLabel("VMDサイジング停止")
+                self.file_panel_ctrl.exec_btn_ctrl.Enable()
+
                 # 別スレッドで実行
                 self.worker = SizingWorkerThread(self, SizingThreadEvent, event.target_idx, self.is_saving, self.is_out_log)
                 self.worker.start()
@@ -395,6 +408,17 @@ class MainFrame(wx.Frame):
 
     # スレッド実行結果
     def on_exec_result(self, event: wx.Event):
+        # 実行ボタンに切り替え
+        self.file_panel_ctrl.exec_btn_ctrl.SetLabel("VMDサイジング実行")
+        self.file_panel_ctrl.exec_btn_ctrl.Enable()
+
+        if not event.result:
+            # 終了音を鳴らす
+            self.sound_finish()
+
+            event.Skip()
+            return False
+        
         self.elapsed_time += event.elapsed_time
         logger.info("\n処理時間: %s", self.show_worked_time())
 

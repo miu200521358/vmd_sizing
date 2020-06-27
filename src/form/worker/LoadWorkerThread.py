@@ -40,5 +40,9 @@ class LoadWorkerThread(BaseWorkerThread):
         
         self.elapsed_time = time.time() - start
 
+    def thread_delete(self):
+        pass
+
     def post_event(self):
-        wx.PostEvent(self.frame, self.result_event(result=self.result, target_idx=self.target_idx, elapsed_time=self.elapsed_time, is_exec=self.is_exec, is_morph=self.is_morph, is_arm=self.is_arm))
+        wx.PostEvent(self.frame, self.result_event(result=self.result and not self.is_killed, target_idx=self.target_idx, \
+                                                   elapsed_time=self.elapsed_time, is_exec=self.is_exec, is_morph=self.is_morph, is_arm=self.is_arm))

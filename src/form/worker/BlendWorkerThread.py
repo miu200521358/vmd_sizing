@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 
+import gc
 import wx
 import time
 from form.worker.BaseWorkerThread import BaseWorkerThread, task_takes_time
@@ -15,6 +16,7 @@ class BlendWorkerThread(BaseWorkerThread):
         self.frame = frame
         self.result_event = result_event
         self.gauge_ctrl = frame.blend_panel_ctrl.gauge_ctrl
+        self.options = None
 
         super().__init__(frame, self.result_event, frame.blend_panel_ctrl.console_ctrl)
 
@@ -30,7 +32,7 @@ class BlendWorkerThread(BaseWorkerThread):
             lip_list = [self.frame.blend_panel_ctrl.morph_lip_list.GetString(idx) for idx in self.frame.blend_panel_ctrl.morph_lip_list.GetSelections()]
             other_list = [self.frame.blend_panel_ctrl.morph_other_list.GetString(idx) for idx in self.frame.blend_panel_ctrl.morph_other_list.GetSelections()]
 
-            options = MBlendOptions(\
+            self.options = MBlendOptions(\
                 version_name=self.frame.version_name, \
                 logging_level=self.frame.logging_level, \
                 model=self.frame.blend_panel_ctrl.pmx_file_ctrl.data, \
@@ -42,9 +44,13 @@ class BlendWorkerThread(BaseWorkerThread):
                 max_value=self.frame.blend_panel_ctrl.morph_spin_max.GetValue(), \
                 inc_value=self.frame.blend_panel_ctrl.morph_spin_inc.GetValue())
             
-            self.result = MorphBlendService(options).execute() and self.result
+            self.result = MorphBlendService(self.options).execute() and self.result
 
         self.elapsed_time = time.time() - start
+
+    def thread_delete(self):
+        del self.options
+        gc.collect()
 
     def post_event(self):
         wx.PostEvent(self.frame, self.result_event(result=self.result, elapsed_time=self.elapsed_time))

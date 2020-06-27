@@ -7,6 +7,7 @@ from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdL
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from utils.MException import MParseException # noqa
 from utils.MLogger import MLogger # noqa
+from utils.MException import SizingException, MKilledException
 
 logger = MLogger(__name__)
 
@@ -44,78 +45,89 @@ class VpdReader():
         # VPDファイルを通常読み込み
         lines = []
 
-        with open(self.file_path, "r", encoding=self.get_file_encoding(self.file_path)) as f:
-            lines = f.readlines()
+        try:
+            with open(self.file_path, "r", encoding=self.get_file_encoding(self.file_path)) as f:
+                lines = f.readlines()
 
-        if len(lines) > 0:
-            # vpdバージョン
-            signature = lines[0]
-            logger.test("signature %s", signature)
+            if len(lines) > 0:
+                # vpdバージョン
+                signature = lines[0]
+                logger.test("signature %s", signature)
 
-        motion = VmdMotion()
-        # モーション数(常に1)
-        motion.motion_cnt = 1
-        motion.last_motion_frame = 0
+            motion = VmdMotion()
+            # モーション数(常に1)
+            motion.motion_cnt = 1
+            motion.last_motion_frame = 0
 
-        # 各パターン（括弧はひとつのみ実体として取得する）
-        model_name_pattern = re.compile(r'(.*)(?:\.osm;)(?:.*// 親ファイル名.*)', flags=re.IGNORECASE)
-        bone_start_pattern = re.compile(r'(?:.*)(?:{)(.*)', flags=re.IGNORECASE)
-        bone_pos_pattern = re.compile(r'([+-]?\d+(?:\.\d+))(?:,)([+-]?\d+(?:\.\d+))(?:,)([+-]?\d+(?:\.\d+))(?:;)(?:.*trans.*)', flags=re.IGNORECASE)
-        bone_rot_pattern = re.compile(r'([+-]?\d+(?:\.\d+))(?:,)([+-]?\d+(?:\.\d+))(?:,)([+-]?\d+(?:\.\d+))(?:,)([+-]?\d+(?:\.\d+))(?:;)(?:.*Quaternion.*)', flags=re.IGNORECASE)
-        bone_end_pattern = re.compile(r'(?:.*)(})(?:.*)', flags=re.IGNORECASE)
+            # 各パターン（括弧はひとつのみ実体として取得する）
+            model_name_pattern = re.compile(r'(.*)(?:\.osm;)(?:.*// 親ファイル名.*)', flags=re.IGNORECASE)
+            bone_start_pattern = re.compile(r'(?:.*)(?:{)(.*)', flags=re.IGNORECASE)
+            bone_pos_pattern = re.compile(r'([+-]?\d+(?:\.\d+))(?:,)([+-]?\d+(?:\.\d+))(?:,)([+-]?\d+(?:\.\d+))(?:;)(?:.*trans.*)', flags=re.IGNORECASE)
+            bone_rot_pattern = re.compile(r'([+-]?\d+(?:\.\d+))(?:,)([+-]?\d+(?:\.\d+))(?:,)([+-]?\d+(?:\.\d+))(?:,)([+-]?\d+(?:\.\d+))(?:;)(?:.*Quaternion.*)', flags=re.IGNORECASE)
+            bone_end_pattern = re.compile(r'(?:.*)(})(?:.*)', flags=re.IGNORECASE)
 
-        frame = None
+            frame = None
 
-        for n in range(len(lines)):
-            # モデル名
-            result_values = self.read_line(lines[n], model_name_pattern, n)
-            if result_values:
-                motion.model_name = result_values[0]
-
-                continue
-            
-            # 括弧開始
-            result_values = self.read_line(lines[n], bone_start_pattern, n)
-            if result_values:
-                bone_name = result_values[0]
-                
-                # キーフレ生成
-                frame = VmdBoneFrame(0)
-                frame.set_name(bone_name)
-                frame.key = True
-                frame.read = True
-
-                continue
-            
-            if frame:
-                # 括弧内のチェック
-                
-                # 位置
-                result_values = self.read_line(lines[n], bone_pos_pattern, n)
+            for n in range(len(lines)):
+                # モデル名
+                result_values = self.read_line(lines[n], model_name_pattern, n)
                 if result_values:
-                    # 位置X,Y,Z
-                    frame.position = MVector3D(float(result_values[0]), float(result_values[1]), float(result_values[2]))
+                    motion.model_name = result_values[0]
+
                     continue
                 
-                # 角度
-                result_values = self.read_line(lines[n], bone_rot_pattern, n)
+                # 括弧開始
+                result_values = self.read_line(lines[n], bone_start_pattern, n)
                 if result_values:
-                    # 回転scalar,X,Y,Z
-                    frame.rotation = MQuaternion(float(result_values[3]), float(result_values[0]), float(result_values[1]), float(result_values[2]))
+                    bone_name = result_values[0]
+                    
+                    # キーフレ生成
+                    frame = VmdBoneFrame(0)
+                    frame.set_name(bone_name)
+                    frame.key = True
+                    frame.read = True
+
                     continue
+                
+                if frame:
+                    # 括弧内のチェック
+                    
+                    # 位置
+                    result_values = self.read_line(lines[n], bone_pos_pattern, n)
+                    if result_values:
+                        # 位置X,Y,Z
+                        frame.position = MVector3D(float(result_values[0]), float(result_values[1]), float(result_values[2]))
+                        continue
+                    
+                    # 角度
+                    result_values = self.read_line(lines[n], bone_rot_pattern, n)
+                    if result_values:
+                        # 回転scalar,X,Y,Z
+                        frame.rotation = MQuaternion(float(result_values[3]), float(result_values[0]), float(result_values[1]), float(result_values[2]))
+                        continue
 
-                # 括弧終了
-                result_values = self.read_line(lines[n], bone_end_pattern, n)
-                if result_values:
-                    motion.bones[bone_name] = {0: frame}
-                    frame = None
-                    continue
+                    # 括弧終了
+                    result_values = self.read_line(lines[n], bone_end_pattern, n)
+                    if result_values:
+                        motion.bones[bone_name] = {0: frame}
+                        frame = None
+                        continue
 
-        # ハッシュを設定
-        motion.digest = self.hexdigest()
-        logger.test("motion: %s, hash: %s", motion.path, motion.digest)
+            # ハッシュを設定
+            motion.digest = self.hexdigest()
+            logger.test("motion: %s, hash: %s", motion.path, motion.digest)
 
-        return motion
+            return motion
+        except MKilledException as ke:
+            # 終了命令
+            raise ke
+        except SizingException as se:
+            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
+            return se
+        except Exception as e:
+            import traceback
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            raise e
 
     # 一行を読み込む
     def read_line(self, line, test_pattern, n):

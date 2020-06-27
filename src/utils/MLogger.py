@@ -3,6 +3,9 @@
 from datetime import datetime
 import logging
 import traceback
+import threading
+
+from utils.MException import MKilledException
 
 
 class MLogger():
@@ -116,6 +119,10 @@ class MLogger():
 
     # 実際に出力する実態
     def print_logger(self, msg, *args, **kwargs):
+
+        if "is_killed" in threading.current_thread()._kwargs and threading.current_thread()._kwargs["is_killed"]:
+            # 停止命令が出ている場合、エラー
+            raise MKilledException()
 
         target_level = kwargs.pop("level", logging.INFO)
         # if self.logger.isEnabledFor(target_level) and self.default_level <= target_level:

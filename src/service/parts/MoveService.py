@@ -9,7 +9,7 @@ from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # 
 from module.MOptions import MOptions, MOptionsDataSet
 from utils import MUtils, MServiceUtils, MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
-from utils.MException import SizingException
+from utils.MException import SizingException, MKilledException
 
 
 logger = MLogger(__name__)
@@ -72,6 +72,8 @@ class MoveService():
                 logger.info("移動補正:終了【No.%s - %s】", data_set_idx + 1, bone_name)
             
             return True
+        except MKilledException as ke:
+            raise ke
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
             return se

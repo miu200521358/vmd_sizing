@@ -15,7 +15,7 @@ from service.parts.ArmAvoidanceService import ArmAvoidanceService
 from service.parts.MorphService import MorphService
 from service.parts.CameraService import CameraService
 from utils import MServiceUtils
-from utils.MException import SizingException
+from utils.MException import SizingException, MKilledException
 from utils.MLogger import MLogger # noqa
 
 logger = MLogger(__name__)
@@ -143,9 +143,13 @@ class SizingService():
                     logger.error("カメラ出力VMDファイルが正常に作成されなかったようです。\nパスを確認してください。%s\n\n%s", self.options.camera_output_vmd_path, fe.message, decoration=MLogger.DECORATION_BOX)
 
             return True
+        except MKilledException:
+            return False
         except SizingException as se:
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
+            return False
         except Exception as e:
             logger.critical("サイジング処理が意図せぬエラーで終了しました。", e, decoration=MLogger.DECORATION_BOX)
+            return False
         finally:
             logging.shutdown()

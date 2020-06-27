@@ -3,9 +3,10 @@
 import wx
 import wx.xrc
 from abc import ABCMeta, abstractmethod
-from threading import Thread, Event
+from threading import Thread
 from functools import wraps
 import time
+import threading
 
 from utils import MFormUtils # noqa
 from utils.MLogger import MLogger # noqa
@@ -25,44 +26,33 @@ class BaseWorkerThread(metaclass=ABCMeta):
         self.frame = frame
         # self._want_abort = 0
         self.event_id = wx.NewId()
-        self._stop_event = Event()
         self.result_event = result_event
         self.result = True
-        # # メイン終了時にもスレッド終了する
-        # self.daemon = True
-        # ログ出力用スレッド
-        # self.queue = StdoutQueue()
-        # self.monitor = Thread(target=monitering, name="MonitorThread", args=(console, self.queue))
-        # self.monitor.daemon = True
         self.monitor = None
+        self.is_killed = False
 
     def start(self):
         self.run()
 
     def stop(self):
-        self._stop_event.set()
+        self.is_killed = True
 
     def run(self):
-        # # モニタリング開始
-        # self.monitor.start()
-
         # スレッド実行
         self.thread_event()
-
-        # # モニター除去
-        # self.monitor._delete()
 
         # 後処理実行
         self.post_event()
     
     def post_event(self):
         wx.PostEvent(self.frame, self.result_event(result=self.result))
-
-    # def abort(self):
-    #     self._want_abort = 1
     
     @abstractmethod
     def thread_event(self):
+        pass
+
+    @abstractmethod
+    def thread_delete(self):
         pass
 
 
@@ -73,7 +63,7 @@ class SimpleThread(Thread):
         self.base_thread = base_thread
         self.acallable = acallable
         self._result = None
-        super(SimpleThread, self).__init__()
+        super(SimpleThread, self).__init__(name="simple_thread", kwargs={"is_killed": False})
     
     def run(self):
         self._result = self.acallable(self.base_thread)
@@ -97,6 +87,13 @@ def task_takes_time(acallable):
             base_thread.gauge_ctrl.Pulse()
             wx.YieldIfNeeded()
             time.sleep(0.01)
+
+            if base_thread.is_killed:
+                # 呼び出し元から停止命令が出ている場合、自分以外の全部のスレッドに終了命令
+                for th in threading.enumerate():
+                    if th.ident != threading.current_thread().ident:
+                        th._kwargs["is_killed"] = True
+                break
         
         return t.result()
     return f

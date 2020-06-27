@@ -11,6 +11,7 @@ from module.MOptions import MOptions, MOptionsDataSet # noqa
 from module.MParams import BoneLinks # noqa
 from utils import MUtils, MServiceUtils, MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
+from utils.MException import SizingException, MKilledException
 
 logger = MLogger(__name__, level=1)
 
@@ -41,36 +42,46 @@ class ArmAlignmentService():
 
         logger.info("位置合わせ　", decoration=MLogger.DECORATION_LINE)
 
-        for data_set_idx in self.target_data_set_idxs:
-            # 処理対象データセットに対して、準備実行
+        try:
+            for data_set_idx in self.target_data_set_idxs:
+                # 処理対象データセットに対して、準備実行
 
-            # 手首位置合わせ用準備（床位置合わせも含む）
-            bone_names.extend(self.prepare_wrist(data_set_idx))
+                # 手首位置合わせ用準備（床位置合わせも含む）
+                bone_names.extend(self.prepare_wrist(data_set_idx))
 
-            if self.options.arm_options.alignment_finger_flg:
-                # 指位置合わせ用準備
-                bone_names.extend(self.prepare_finger(data_set_idx))
+                if self.options.arm_options.alignment_finger_flg:
+                    # 指位置合わせ用準備
+                    bone_names.extend(self.prepare_finger(data_set_idx))
 
-        # ボーン名重複除去
-        bone_names = list(set(bone_names))
+            # ボーン名重複除去
+            bone_names = list(set(bone_names))
 
-        fnos = []
-        # 処理対象全ファイルセット単位でキーフレ検出
-        for data_set_idx in self.target_data_set_idxs:
-            # 処理対象データセット
-            data_set = self.options.data_set_list[data_set_idx]
-            fnos.extend(data_set.motion.get_bone_fnos(*bone_names))
+            fnos = []
+            # 処理対象全ファイルセット単位でキーフレ検出
+            for data_set_idx in self.target_data_set_idxs:
+                # 処理対象データセット
+                data_set = self.options.data_set_list[data_set_idx]
+                fnos.extend(data_set.motion.get_bone_fnos(*bone_names))
 
-        # キーフレを重複除外してソートする
-        fnos = sorted(list(set(fnos)))
+            # キーフレを重複除外してソートする
+            fnos = sorted(list(set(fnos)))
 
-        # 位置合わせ準備
-        all_alignment_group_list, all_messages = self.prepare_alignment(fnos)
+            # 位置合わせ準備
+            all_alignment_group_list, all_messages = self.prepare_alignment(fnos)
 
-        # 位置合わせ実行
-        self.execute_alignment(fnos, all_alignment_group_list, all_messages)
+            # 位置合わせ実行
+            self.execute_alignment(fnos, all_alignment_group_list, all_messages)
 
-        return True
+            return True
+        except MKilledException as ke:
+            raise ke
+        except SizingException as se:
+            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
+            return se
+        except Exception as e:
+            import traceback
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            raise e
 
     # 位置合わせ準備
     def prepare_alignment(self, fnos: list):
@@ -558,8 +569,8 @@ class ArmAlignmentService():
                     # 変換先中点のローカル座標とする
                     rep_origin_matrix.translate(rep_trunk_local_fno_origin)
                 
-                    # 再生成した先中央値
-                    rep_mean_vec = MVector3D(rep_trunk_matrix * rep_trunk_local_fno_origin)
+                    # # 再生成した先中央値
+                    # rep_mean_vec = MVector3D(rep_trunk_matrix * rep_trunk_local_fno_origin)
 
                     # 現在のエフェクタ位置
                     rep_effector_vec = MVector3D(all_alignment_group["rep_fno_global_effector"][fno][(data_set_idx, alignment_idx)])

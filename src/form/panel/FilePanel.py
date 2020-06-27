@@ -76,13 +76,30 @@ class FilePanel(BasePanel):
         # 出力先をファイルパネルのコンソールに変更
         sys.stdout = self.console_ctrl
 
+        if self.check_btn_ctrl.GetLabel() == "読み込み処理停止" and self.frame.load_worker:
+            # 停止状態でボタン押下時、停止
+            self.frame.load_worker.stop()
+
+            # タブ移動可
+            self.frame.release_tab()
+            # フォーム有効化
+            self.frame.enable()
+            # ワーカー終了
+            self.frame.load_worker = None
+            # プログレス非表示
+            self.gauge_ctrl.SetValue(0)
+
+            logger.warning("読み込み処理を中断します。", decoration=MLogger.DECORATION_BOX)
+
+            event.Skip()
+            return False
+
         # フォーム無効化
         self.disable()
         # タブ固定
         self.fix_tab()
         # コンソールクリア
         self.console_ctrl.Clear()
-        wx.GetApp().Yield()
 
         # 履歴保持
         self.save()
@@ -97,13 +114,30 @@ class FilePanel(BasePanel):
         # 出力先をファイルパネルのコンソールに変更
         sys.stdout = self.console_ctrl
 
+        if self.exec_btn_ctrl.GetLabel() == "VMDサイジング停止" and self.frame.worker:
+            # 停止状態でボタン押下時、停止
+            self.frame.worker.stop()
+
+            # タブ移動可
+            self.frame.release_tab()
+            # フォーム有効化
+            self.frame.enable()
+            # ワーカー終了
+            self.frame.worker = None
+            # プログレス非表示
+            self.gauge_ctrl.SetValue(0)
+
+            logger.warning("VMDサイジングを中断します。", decoration=MLogger.DECORATION_BOX)
+
+            event.Skip()
+            return False
+
         # フォーム無効化
         self.disable()
         # タブ固定
         self.fix_tab()
         # コンソールクリア
         self.console_ctrl.Clear()
-        wx.GetApp().Yield()
 
         # 履歴保持
         self.save()

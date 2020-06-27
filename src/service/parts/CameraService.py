@@ -9,6 +9,7 @@ from module.MOptions import MOptions, MOptionsDataSet # noqa
 from module.MParams import BoneLinks # noqa
 from utils import MUtils, MServiceUtils, MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
+from utils.MException import SizingException, MKilledException
 
 logger = MLogger(__name__, level=1)
 
@@ -30,45 +31,55 @@ class CameraService():
     def execute(self):
         logger.info("カメラ補正　", decoration=MLogger.DECORATION_LINE)
 
-        # 腕処理対象データセットを取得
-        self.target_data_set_idxs = self.get_target_set_idxs()
-        logger.test("target_data_set_idxs: %s", self.target_data_set_idxs)
+        try:
+            # 腕処理対象データセットを取得
+            self.target_data_set_idxs = self.get_target_set_idxs()
+            logger.test("target_data_set_idxs: %s", self.target_data_set_idxs)
 
-        if len(self.target_data_set_idxs) == 0:
-            # データセットがない場合、処理スキップ
-            logger.warning("カメラ補正ができるファイルセットが見つからなかったため、カメラ補正をスキップします。", decoration=MLogger.DECORATION_BOX)
-            return True
+            if len(self.target_data_set_idxs) == 0:
+                # データセットがない場合、処理スキップ
+                logger.warning("カメラ補正ができるファイルセットが見つからなかったため、カメラ補正をスキップします。", decoration=MLogger.DECORATION_BOX)
+                return True
 
-        self.camera_options = {}
+            self.camera_options = {}
 
-        for data_set_idx in self.target_data_set_idxs:
-            self.prepare(data_set_idx)
-        
-        prev_fno = -1
-        for fno in sorted(self.options.camera_motion.cameras.keys()):
-            cf = self.options.camera_motion.cameras[fno]
-            # 1キーフレごとに見ていく（同一キーフレの可能性があるので、並列化不可）
-            if prev_fno >= 0:
-                # 前回と同じカメラ位置の場合、前回のサイジング済みカメラ位置コピー
-                past_cf = self.options.camera_motion.cameras[prev_fno]
-                if past_cf.org_length == cf.length and past_cf.org_position == cf.position and past_cf.euler == cf.euler:
-                    logger.info("%sフレーム目 前位置・距離コピー", fno)
-                    cf.position = past_cf.position.copy()
-                    cf.length = past_cf.length
-                    continue
-
-            # 比率計算
-            org_inner_global_poses, org_inner_square_poses, rep_inner_global_poses, ratio, (nearest_data_set_idx, nearest_bone_name), \
-                (left_data_set_idx, left_bone_name), (right_data_set_idx, right_bone_name), (top_data_set_idx, top_bone_name), (bottom_data_set_idx, bottom_bone_name) \
-                = self.calc_camera_ratio(fno, cf)
+            for data_set_idx in self.target_data_set_idxs:
+                self.prepare(data_set_idx)
             
-            # カメラサイジング実行
-            self.execute_rep_camera(fno, cf, org_inner_global_poses, org_inner_square_poses, rep_inner_global_poses, ratio, nearest_data_set_idx, nearest_bone_name, \
-                                    left_data_set_idx, left_bone_name, right_data_set_idx, right_bone_name, top_data_set_idx, top_bone_name, bottom_data_set_idx, bottom_bone_name)
+            prev_fno = -1
+            for fno in sorted(self.options.camera_motion.cameras.keys()):
+                cf = self.options.camera_motion.cameras[fno]
+                # 1キーフレごとに見ていく（同一キーフレの可能性があるので、並列化不可）
+                if prev_fno >= 0:
+                    # 前回と同じカメラ位置の場合、前回のサイジング済みカメラ位置コピー
+                    past_cf = self.options.camera_motion.cameras[prev_fno]
+                    if past_cf.org_length == cf.length and past_cf.org_position == cf.position and past_cf.euler == cf.euler:
+                        logger.info("%sフレーム目 前位置・距離コピー", fno)
+                        cf.position = past_cf.position.copy()
+                        cf.length = past_cf.length
+                        continue
 
-            prev_fno = fno
-        
-        return True
+                # 比率計算
+                org_inner_global_poses, org_inner_square_poses, rep_inner_global_poses, ratio, (nearest_data_set_idx, nearest_bone_name), \
+                    (left_data_set_idx, left_bone_name), (right_data_set_idx, right_bone_name), (top_data_set_idx, top_bone_name), (bottom_data_set_idx, bottom_bone_name) \
+                    = self.calc_camera_ratio(fno, cf)
+                
+                # カメラサイジング実行
+                self.execute_rep_camera(fno, cf, org_inner_global_poses, org_inner_square_poses, rep_inner_global_poses, ratio, nearest_data_set_idx, nearest_bone_name, \
+                                        left_data_set_idx, left_bone_name, right_data_set_idx, right_bone_name, top_data_set_idx, top_bone_name, bottom_data_set_idx, bottom_bone_name)
+
+                prev_fno = fno
+            
+            return True
+        except MKilledException as ke:
+            raise ke
+        except SizingException as se:
+            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
+            return se
+        except Exception as e:
+            import traceback
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            raise e
     
     # 変換先モデル用カメラ作成
     def execute_rep_camera(self, fno: int, cf: VmdCameraFrame, org_inner_global_poses: dict, org_inner_square_poses: dict, rep_inner_global_poses: dict, \

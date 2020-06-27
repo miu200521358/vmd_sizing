@@ -34,5 +34,8 @@ class CsvWorkerThread(BaseWorkerThread):
 
         self.elapsed_time = time.time() - start
 
+    def thread_delete(self):
+        pass
+
     def post_event(self):
         wx.PostEvent(self.frame, self.result_event(result=self.result, elapsed_time=self.elapsed_time))
