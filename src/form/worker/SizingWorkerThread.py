@@ -116,7 +116,8 @@ class SizingWorkerThread(BaseWorkerThread):
             logger.critical("VMDサイジング処理が意図せぬエラーで終了しました。", e, decoration=MLogger.DECORATION_BOX)
         finally:
             try:
-                if self.is_out_log or not self.result:
+                logger.debug("★★★result: %s, is_killed: %s", self.result, self.is_killed)
+                if self.is_out_log or (not self.result and not self.is_killed):
                     # ログパス生成
                     output_vmd_path = self.frame.file_panel_ctrl.file_set.output_vmd_file_ctrl.file_ctrl.GetPath()
                     output_log_path = re.sub(r'\.vmd$', '.log', output_vmd_path)

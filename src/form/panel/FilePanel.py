@@ -12,6 +12,7 @@ from utils import MFormUtils, MFileUtils # noqa
 from utils.MLogger import MLogger # noqa
 
 logger = MLogger(__name__)
+TIMER_ID = wx.NewId()
 
 
 class FilePanel(BasePanel):
@@ -19,6 +20,7 @@ class FilePanel(BasePanel):
     def __init__(self, frame: wx.Frame, parent: wx.Notebook, tab_idx: int, file_hitories: dict):
         super().__init__(frame, parent, tab_idx)
         self.file_hitories = file_hitories
+        self.timer = None
 
         # ファイルセット
         self.file_set = SizingFileSet(frame, self, self.file_hitories, 1)
@@ -29,13 +31,15 @@ class FilePanel(BasePanel):
         # 変換前チェックボタン
         self.check_btn_ctrl = wx.Button(self, wx.ID_ANY, u"変換前チェック", wx.DefaultPosition, wx.Size(200, 50), 0)
         self.check_btn_ctrl.SetToolTip(u"入力されたファイル情報で処理可能かどうか、チェックを行います。")
-        self.check_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_check)
+        self.check_btn_ctrl.Bind(wx.EVT_LEFT_DCLICK, self.on_doubleclick)
+        self.check_btn_ctrl.Bind(wx.EVT_LEFT_DOWN, self.on_check_click)
         btn_sizer.Add(self.check_btn_ctrl, 0, wx.ALL, 5)
 
         # 実行ボタン
         self.exec_btn_ctrl = wx.Button(self, wx.ID_ANY, u"VMDサイジング実行", wx.DefaultPosition, wx.Size(200, 50), 0)
         self.exec_btn_ctrl.SetToolTip(u"VMDサイジング処理を実行します。")
-        self.exec_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_exec)
+        self.exec_btn_ctrl.Bind(wx.EVT_LEFT_DCLICK, self.on_doubleclick)
+        self.exec_btn_ctrl.Bind(wx.EVT_LEFT_DOWN, self.on_exec_click)
         btn_sizer.Add(self.exec_btn_ctrl, 0, wx.ALL, 5)
 
         self.sizer.Add(btn_sizer, 0, wx.ALIGN_CENTER | wx.SHAPED, 5)
@@ -70,6 +74,17 @@ class FilePanel(BasePanel):
         self.file_set.enable()
         self.check_btn_ctrl.Enable()
         self.exec_btn_ctrl.Enable()
+    
+    def on_doubleclick(self, event: wx.Event):
+        self.timer.Stop()
+        logger.warning("ダブルクリックされました。", decoration=MLogger.DECORATION_BOX)
+        event.Skip(False)
+        return False
+    
+    def on_check_click(self, event: wx.Event):
+        self.timer = wx.Timer(self, TIMER_ID)
+        self.timer.Start(200)
+        self.Bind(wx.EVT_TIMER, self.on_check, id=TIMER_ID)
 
     # 実行前チェック
     def on_check(self, event: wx.Event):
@@ -77,6 +92,8 @@ class FilePanel(BasePanel):
         sys.stdout = self.console_ctrl
 
         if self.check_btn_ctrl.GetLabel() == "読み込み処理停止" and self.frame.load_worker:
+            # フォーム無効化
+            self.disable()
             # 停止状態でボタン押下時、停止
             self.frame.load_worker.stop()
 
@@ -89,25 +106,38 @@ class FilePanel(BasePanel):
             # プログレス非表示
             self.gauge_ctrl.SetValue(0)
 
+            self.timer.Stop()
+
             logger.warning("読み込み処理を中断します。", decoration=MLogger.DECORATION_BOX)
+            
+            event.Skip(False)
+        elif not self.frame.load_worker:
+            # フォーム無効化
+            self.disable()
+            # タブ固定
+            self.fix_tab()
+            # コンソールクリア
+            self.console_ctrl.Clear()
 
+            # 履歴保持
+            self.save()
+
+            self.timer.Stop()
+
+            # 一旦読み込み(そのままチェック)
+            self.frame.load(event, target_idx=0)
+            
             event.Skip()
-            return False
+        else:
+            self.timer.Stop()
 
-        # フォーム無効化
-        self.disable()
-        # タブ固定
-        self.fix_tab()
-        # コンソールクリア
-        self.console_ctrl.Clear()
+            logger.error("まだ処理が実行中です。終了してから再度実行してください。", decoration=MLogger.DECORATION_BOX)
+            event.Skip(False)
 
-        # 履歴保持
-        self.save()
-
-        # 一旦読み込み(そのままチェック)
-        self.frame.load(event, target_idx=0)
-
-        event.Skip()
+    def on_exec_click(self, event: wx.Event):
+        self.timer = wx.Timer(self, TIMER_ID)
+        self.timer.Start(200)
+        self.Bind(wx.EVT_TIMER, self.on_exec, id=TIMER_ID)
 
     # サイジング実行
     def on_exec(self, event: wx.Event):
@@ -115,6 +145,8 @@ class FilePanel(BasePanel):
         sys.stdout = self.console_ctrl
 
         if self.exec_btn_ctrl.GetLabel() == "VMDサイジング停止" and self.frame.worker:
+            # フォーム無効化
+            self.disable()
             # 停止状態でボタン押下時、停止
             self.frame.worker.stop()
 
@@ -127,25 +159,33 @@ class FilePanel(BasePanel):
             # プログレス非表示
             self.gauge_ctrl.SetValue(0)
 
+            self.timer.Stop()
+
             logger.warning("VMDサイジングを中断します。", decoration=MLogger.DECORATION_BOX)
+            
+            event.Skip(False)
+        elif not self.frame.worker:
+            # フォーム無効化
+            self.disable()
+            # タブ固定
+            self.fix_tab()
+            # コンソールクリア
+            self.console_ctrl.Clear()
 
+            # 履歴保持
+            self.save()
+
+            self.timer.Stop()
+
+            # サイジング可否チェックの後に実行
+            self.frame.load(event, is_exec=True, target_idx=0)
+            
             event.Skip()
-            return False
-
-        # フォーム無効化
-        self.disable()
-        # タブ固定
-        self.fix_tab()
-        # コンソールクリア
-        self.console_ctrl.Clear()
-
-        # 履歴保持
-        self.save()
-
-        # サイジング可否チェックの後に実行
-        self.frame.load(event, is_exec=True, target_idx=0)
-
-        event.Skip()
+        else:
+            self.timer.Stop()
+            
+            logger.error("まだ処理が実行中です。終了してから再度実行してください。", decoration=MLogger.DECORATION_BOX)
+            event.Skip(False)
 
     def set_output_vmd_path(self, event, is_force=False):
         self.file_set.set_output_vmd_path(event, is_force)
