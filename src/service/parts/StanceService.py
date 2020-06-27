@@ -932,8 +932,23 @@ class StanceService():
 
                     # つま先と足IKのあるキーフレ
                     fnos = data_set.motion.get_bone_fnos(toe_ik_bone_name, leg_ik_bone_name)
-                    fnos.extend(data_set.motion.get_differ_fnos((data_set_idx + 1), [toe_ik_bone_name], limit_degrees=10, limit_length=1))
+                    fnos.extend(data_set.motion.get_differ_fnos((data_set_idx + 1), [leg_ik_bone_name, toe_ik_bone_name], limit_degrees=20, limit_length=1.5))
                     fnos = sorted(list(set(fnos)))
+
+                    ik_on_fnos = []
+
+                    is_ik_on = True
+                    for fno in range(fnos[-1]):
+                        for showik in data_set.motion.showiks:
+                            if showik.fno == fno and (leg_ik_bone_name in showik.ik and showik.ik[leg_ik_bone_name].onoff == 0) or \
+                                    (toe_ik_bone_name in showik.ik and showik.ik[toe_ik_bone_name].onoff == 0):
+                                # IKOFFになったら、フラグOFF
+                                is_ik_on = False
+                                break
+                        
+                        if is_ik_on:
+                            # フラグONの場合のみ、キーフレ保持
+                            ik_on_fnos.append(fno)
 
                     for fno_idx, fno in enumerate(fnos):
                         # 足ＩＫのキーを追加しておく
@@ -941,6 +956,10 @@ class StanceService():
                         data_set.motion.regist_bf(leg_ik_bf, leg_ik_bone_name, fno)
 
                     for fno_idx, fno in enumerate(fnos):
+                        if fno not in ik_on_fnos:
+                            # IK=ONのキーフレではない場合、処理スルー
+                            continue
+
                         # つま先ＩＫのbf
                         toe_ik_bf = data_set.motion.calc_bf(toe_ik_bone_name, fno)
                         # 足ＩＫのbf
@@ -1277,10 +1296,10 @@ class StanceService():
         # logger.debug("f: %s, org_neck_base_pos: %s, org_upper_pos: %s, is_sit: %s", bf.fno, org_neck_base_pos, org_upper_pos, is_sit)
 
         # 元モデルの床に近い方（Yが小さい方）が先モデルで床に潜ってる場合、センターの位置を元モデルも合わせる
-        if org_left_wrist_pos.y() < org_right_wrist_pos.y() and rep_left_wrist_pos.y() < 0 < org_left_wrist_pos.y() * data_set.original_xz_ratio:
+        if org_left_wrist_pos.y() < org_right_wrist_pos.y() and rep_left_wrist_pos.y() < 0 and rep_left_wrist_pos.y() < org_left_wrist_pos.y() * data_set.original_xz_ratio:
             rep_center_arm_offset.setY(org_left_wrist_pos.y() * data_set.original_xz_ratio - rep_left_wrist_pos.y())
 
-        elif org_right_wrist_pos.y() < org_left_wrist_pos.y() and rep_right_wrist_pos.y() < 0 < org_right_wrist_pos.y() * data_set.original_xz_ratio:
+        elif org_right_wrist_pos.y() < org_left_wrist_pos.y() and rep_right_wrist_pos.y() < 0 and rep_right_wrist_pos.y() < org_right_wrist_pos.y() * data_set.original_xz_ratio:
             rep_center_arm_offset.setY(org_right_wrist_pos.y() * data_set.original_xz_ratio - rep_right_wrist_pos.y())
 
         return rep_center_arm_offset

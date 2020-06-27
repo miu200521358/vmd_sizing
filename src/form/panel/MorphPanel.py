@@ -314,7 +314,7 @@ class MorphSet():
 
     def on_change_choice(self, event: wx.Event, midx: int):
         # 選択肢を変えた場合、まずパス変更
-        self.file_set.set_output_vmd_path()
+        self.file_set.set_output_vmd_path(event)
 
         # 最後である場合、行追加
         if midx == len(self.org_choices) - 1 and self.org_choices[midx].GetSelection() > 0 and self.rep_choices[midx].GetSelection() > 0:

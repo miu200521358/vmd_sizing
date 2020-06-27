@@ -197,7 +197,7 @@ class MainFrame(wx.Frame):
             logger.info("モーフタブ表示準備開始\nファイル読み込み処理を実行します。少しお待ちください....", decoration=MLogger.DECORATION_BOX)
 
             # 読み込み処理実行
-            self.load(target_idx=0, is_morph=True)
+            self.load(event, target_idx=0, is_morph=True)
 
         if self.note_ctrl.GetSelection() == self.arm_panel_ctrl.tab_idx:
             # コンソールクリア
@@ -211,7 +211,7 @@ class MainFrame(wx.Frame):
             logger.info("腕タブ表示準備開始\nファイル読み込み処理を実行します。少しお待ちください....", decoration=MLogger.DECORATION_BOX)
 
             # 読み込み処理実行
-            self.load(target_idx=0, is_arm=True)
+            self.load(event, target_idx=0, is_arm=True)
                 
         if self.note_ctrl.GetSelection() == self.camera_panel_ctrl.tab_idx:
             # カメラタブを開く場合、カメラタブ初期化処理実行
@@ -273,7 +273,7 @@ class MainFrame(wx.Frame):
         return self.file_panel_ctrl.file_set.motion_vmd_file_ctrl.file_ctrl.GetPath()
 
     # 読み込み
-    def load(self, target_idx, is_exec=False, is_morph=False, is_arm=False):
+    def load(self, event, target_idx, is_exec=False, is_morph=False, is_arm=False):
         # フォーム無効化
         self.file_panel_ctrl.disable()
         # タブ固定
@@ -311,8 +311,8 @@ class MainFrame(wx.Frame):
             target_path = self.get_target_vmd_path(target_idx)
             self.file_panel_ctrl.file_set.motion_vmd_file_ctrl.file_ctrl.SetPath(target_path)
             self.file_panel_ctrl.file_set.motion_vmd_file_ctrl.file_model_ctrl.set_model(target_path)
-            # 出力パス強制変更
-            self.file_panel_ctrl.file_set.set_output_vmd_path(is_force=True)
+            # 出力パス変更
+            self.file_panel_ctrl.file_set.set_output_vmd_path(event)
 
             # 別スレッドで実行
             self.load_worker = LoadWorkerThread(self, LoadThreadEvent, target_idx, is_exec, is_morph, is_arm)
@@ -356,11 +356,11 @@ class MainFrame(wx.Frame):
             # そのまま実行する場合、サイジング実行処理に遷移
 
             # 念のため出力ファイルパス自動生成（空の場合設定）
-            self.file_panel_ctrl.file_set.set_output_vmd_path()
+            self.file_panel_ctrl.file_set.set_output_vmd_path(event)
 
             # multiのも出力ファイルパス自動生成（空の場合設定）
             for file_set in self.multi_panel_ctrl.file_set_list:
-                file_set.set_output_vmd_path()
+                file_set.set_output_vmd_path(event)
 
             # フォーム無効化
             self.file_panel_ctrl.disable()
@@ -405,7 +405,7 @@ class MainFrame(wx.Frame):
             # アスタリスク付きパスの場合、次の存在チェック
             logger.info("\n----------------------------------")
 
-            return self.load(event.target_idx + 1, is_exec=True)
+            return self.load(event, event.target_idx + 1, is_exec=True)
 
         # ファイルタブのコンソール
         sys.stdout = self.file_panel_ctrl.console_ctrl

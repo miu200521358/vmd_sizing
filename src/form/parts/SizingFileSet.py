@@ -230,7 +230,7 @@ class SizingFileSet():
         return result
 
     # VMD出力ファイルパス生成
-    def set_output_vmd_path(self, is_force=False):
+    def set_output_vmd_path(self, event, is_force=False):
         output_vmd_path = MFileUtils.get_output_vmd_path(
             self.motion_vmd_file_ctrl.file_ctrl.GetPath(),
             self.rep_model_file_ctrl.file_ctrl.GetPath(),

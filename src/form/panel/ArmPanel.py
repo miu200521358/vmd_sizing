@@ -320,13 +320,13 @@ class ArmPanel(BasePanel):
         self.avoidance_dialog.set_list_sizer.FitInside(self.avoidance_dialog.scrolled_window)
 
     # VMD出力ファイルパス生成
-    def set_output_vmd_path(self, is_force=False):
+    def set_output_vmd_path(self, event, is_force=False):
         # 念のため出力ファイルパス自動生成（空の場合設定）
-        self.frame.file_panel_ctrl.file_set.set_output_vmd_path()
+        self.frame.file_panel_ctrl.file_set.set_output_vmd_path(event)
 
         # multiのも出力ファイルパス自動生成（空の場合設定）
         for file_set in self.frame.multi_panel_ctrl.file_set_list:
-            file_set.set_output_vmd_path()
+            file_set.set_output_vmd_path(event)
     
     # 処理対象：接触回避ON
     def on_check_arm_process_avoidance(self, event: wx.Event):
@@ -338,7 +338,7 @@ class ArmPanel(BasePanel):
             else:
                 self.arm_process_flg_avoidance.SetValue(0)
             # パス再生成
-            self.set_output_vmd_path()
+            self.set_output_vmd_path(event)
         event.Skip()
 
     # 処理対象：手首位置合わせON
@@ -357,6 +357,9 @@ class ArmPanel(BasePanel):
 
         if self.arm_alignment_finger_flg_ctrl.GetValue() and len(self.frame.multi_panel_ctrl.file_set_list) > 0:
             self.frame.on_popup_finger_warning(event)
+
+        # パス再生成
+        self.set_output_vmd_path(event)
 
         event.Skip()
 

@@ -436,31 +436,31 @@ class ArmAlignmentService():
                     all_alignment_group["org_mean_vec"][(fno, data_set_idx, alignment_idx)] = org_mean_vec
                     all_alignment_group["org_origin_matrix"][(fno, data_set_idx, alignment_idx)] = org_origin_matrix
 
-                    # 作成元の中心点 ---------------
-                    debug_bone_name = "左1"
+                    # # 作成元の中心点 ---------------
+                    # debug_bone_name = "左1"
 
-                    debug_bf = VmdBoneFrame(fno)
-                    debug_bf.key = True
-                    debug_bf.set_name(debug_bone_name)
-                    debug_bf.position = org_mean_vec
+                    # debug_bf = VmdBoneFrame(fno)
+                    # debug_bf.key = True
+                    # debug_bf.set_name(debug_bone_name)
+                    # debug_bf.position = org_mean_vec
                     
-                    if debug_bone_name not in data_set.motion.bones:
-                        data_set.motion.bones[debug_bone_name] = {}
+                    # if debug_bone_name not in data_set.motion.bones:
+                    #     data_set.motion.bones[debug_bone_name] = {}
                     
-                    data_set.motion.bones[debug_bone_name][fno] = debug_bf
+                    # data_set.motion.bones[debug_bone_name][fno] = debug_bf
 
-                    # 作成元のエフェクタボーン位置 -------------
-                    debug_bone_name = "{0}2".format(target_link.effector_bone_name[0])
+                    # # 作成元のエフェクタボーン位置 -------------
+                    # debug_bone_name = "{0}2".format(target_link.effector_bone_name[0])
 
-                    debug_bf = VmdBoneFrame(fno)
-                    debug_bf.key = True
-                    debug_bf.set_name(debug_bone_name)
-                    debug_bf.position = org_global_effector
+                    # debug_bf = VmdBoneFrame(fno)
+                    # debug_bf.key = True
+                    # debug_bf.set_name(debug_bone_name)
+                    # debug_bf.position = org_global_effector
                     
-                    if debug_bone_name not in data_set.motion.bones:
-                        data_set.motion.bones[debug_bone_name] = {}
+                    # if debug_bone_name not in data_set.motion.bones:
+                    #     data_set.motion.bones[debug_bone_name] = {}
                     
-                    data_set.motion.bones[debug_bone_name][fno] = debug_bf
+                    # data_set.motion.bones[debug_bone_name][fno] = debug_bf
 
             if fno // 500 > prev_block_fno:
                 logger.info("-- %sフレーム目:終了(%s％)【位置合わせ準備④】", fno, round((fno / fnos[-1]) * 100, 3))
@@ -564,18 +564,18 @@ class ArmAlignmentService():
                     # 現在のエフェクタ位置
                     rep_effector_vec = MVector3D(all_alignment_group["rep_fno_global_effector"][fno][(data_set_idx, alignment_idx)])
 
-                    # 変換先の中心点 ---------------
-                    debug_bone_name = "右1"
+                    # # 変換先の中心点 ---------------
+                    # debug_bone_name = "右1"
 
-                    debug_bf = VmdBoneFrame(fno)
-                    debug_bf.key = True
-                    debug_bf.set_name(debug_bone_name)
-                    debug_bf.position = rep_mean_vec
+                    # debug_bf = VmdBoneFrame(fno)
+                    # debug_bf.key = True
+                    # debug_bf.set_name(debug_bone_name)
+                    # debug_bf.position = rep_mean_vec
                     
-                    if debug_bone_name not in data_set.motion.bones:
-                        data_set.motion.bones[debug_bone_name] = {}
+                    # if debug_bone_name not in data_set.motion.bones:
+                    #     data_set.motion.bones[debug_bone_name] = {}
                     
-                    data_set.motion.bones[debug_bone_name][fno] = debug_bf
+                    # data_set.motion.bones[debug_bone_name][fno] = debug_bf
 
                     org_fno_global_effector = MVector3D(all_alignment_group["org_fno_global_effector"][fno][(data_set_idx, alignment_idx)])
 
@@ -625,18 +625,18 @@ class ArmAlignmentService():
                     # 変換先エフェクタのグローバル位置
                     rep_global_effector = rep_origin_matrix * rep_local_effector
 
-                    # 変換先のエフェクタボーン位置 -------------
-                    debug_bone_name = "{0}3".format(target_link.effector_bone_name[0])
+                    # # 変換先のエフェクタボーン位置 -------------
+                    # debug_bone_name = "{0}3".format(target_link.effector_bone_name[0])
 
-                    debug_bf = VmdBoneFrame(fno)
-                    debug_bf.key = True
-                    debug_bf.set_name(debug_bone_name)
-                    debug_bf.position = rep_global_effector
+                    # debug_bf = VmdBoneFrame(fno)
+                    # debug_bf.key = True
+                    # debug_bf.set_name(debug_bone_name)
+                    # debug_bf.position = rep_global_effector
                     
-                    if debug_bone_name not in data_set.motion.bones:
-                        data_set.motion.bones[debug_bone_name] = {}
+                    # if debug_bone_name not in data_set.motion.bones:
+                    #     data_set.motion.bones[debug_bone_name] = {}
                     
-                    data_set.motion.bones[debug_bone_name][fno] = debug_bf
+                    # data_set.motion.bones[debug_bone_name][fno] = debug_bf
 
                     is_success = []
 
@@ -719,19 +719,19 @@ class ArmAlignmentService():
                                                  aligned_rep_effector_vec.to_log(), rep_diff.to_log(), list(dot_near_dict.values()), list(dot_start_dict.values()), \
                                                  start_org_bfs[link_name].rotation.toEulerAngles().to_log(), bf.rotation.toEulerAngles().to_log())
 
-                                    # 位置合わせ後のエフェクタボーン位置 -------------
-                                    debug_bone_name = "{0}4".format(target_link.effector_bone_name[0])
+                                    # # 位置合わせ後のエフェクタボーン位置 -------------
+                                    # debug_bone_name = "{0}4".format(target_link.effector_bone_name[0])
 
-                                    debug_bf = VmdBoneFrame(fno)
-                                    debug_bf.key = True
-                                    debug_bf.set_name(debug_bone_name)
-                                    debug_bf.position = aligned_rep_effector_vec
+                                    # debug_bf = VmdBoneFrame(fno)
+                                    # debug_bf.key = True
+                                    # debug_bf.set_name(debug_bone_name)
+                                    # debug_bf.position = aligned_rep_effector_vec
                                     
-                                    if debug_bone_name not in data_set.motion.bones:
-                                        data_set.motion.bones[debug_bone_name] = {}
+                                    # if debug_bone_name not in data_set.motion.bones:
+                                    #     data_set.motion.bones[debug_bone_name] = {}
                                     
-                                    data_set.motion.bones[debug_bone_name][fno] = debug_bf
-                                    # ----------
+                                    # data_set.motion.bones[debug_bone_name][fno] = debug_bf
+                                    # # ----------
 
                                     # 大体同じ位置にあって、角度もそう大きくズレてない場合、OK(全部上書き)
                                     is_success = [True]
@@ -757,19 +757,19 @@ class ArmAlignmentService():
                                     # 採用されたらOK
                                     is_success.append(True)
 
-                                    # 位置合わせ後のエフェクタボーン位置 -------------
-                                    debug_bone_name = "{0}4".format(target_link.effector_bone_name[0])
+                                    # # 位置合わせ後のエフェクタボーン位置 -------------
+                                    # debug_bone_name = "{0}4".format(target_link.effector_bone_name[0])
 
-                                    debug_bf = VmdBoneFrame(fno)
-                                    debug_bf.key = True
-                                    debug_bf.set_name(debug_bone_name)
-                                    debug_bf.position = aligned_rep_effector_vec
+                                    # debug_bf = VmdBoneFrame(fno)
+                                    # debug_bf.key = True
+                                    # debug_bf.set_name(debug_bone_name)
+                                    # debug_bf.position = aligned_rep_effector_vec
                                     
-                                    if debug_bone_name not in data_set.motion.bones:
-                                        data_set.motion.bones[debug_bone_name] = {}
+                                    # if debug_bone_name not in data_set.motion.bones:
+                                    #     data_set.motion.bones[debug_bone_name] = {}
                                     
-                                    data_set.motion.bones[debug_bone_name][fno] = debug_bf
-                                    # ----------
+                                    # data_set.motion.bones[debug_bone_name][fno] = debug_bf
+                                    # # ----------
 
                                     # ちょっと失敗初回か、前回より差が小さくなってる場合、org_bfを保持し直して、もう一周試す
                                     for link_name in now_ik_links.all().keys():

@@ -110,9 +110,9 @@ class SmoothPanel(BasePanel):
 
     # ファイル変更時の処理
     def on_change_file(self, event: wx.Event):
-        self.set_output_vmd_path()
+        self.set_output_vmd_path(event)
     
-    def set_output_vmd_path(self, is_force=False):
+    def set_output_vmd_path(self, event, is_force=False):
         output_smooth_vmd_path = MFileUtils.get_output_smooth_vmd_path(
             self.smooth_vmd_file_ctrl.file_ctrl.GetPath(),
             self.smooth_model_file_ctrl.file_ctrl.GetPath(),

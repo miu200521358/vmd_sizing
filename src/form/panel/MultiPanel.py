@@ -86,8 +86,8 @@ class MultiFileSetScrolledWindow(wx.ScrolledWindow):
     def set_file_set_list(self, file_set_list):
         self.file_set_list = file_set_list
 
-    def set_output_vmd_path(self, is_force=False):
+    def set_output_vmd_path(self, event, is_force=False):
         for file_set in self.file_set_list:
-            file_set.set_output_vmd_path(is_force)
+            file_set.set_output_vmd_path(event, is_force)
 
         

@@ -140,7 +140,7 @@ class BaseFilePickerCtrl():
 
         # 出力ファイル変更対象の場合、出力ファイル更新
         if self.is_change_output:
-            self.parent.set_output_vmd_path(True)
+            self.parent.set_output_vmd_path(event, True)
         
     def disable(self):
         self.file_ctrl.GetPickerCtrl().Disable()

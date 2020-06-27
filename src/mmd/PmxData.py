@@ -515,7 +515,7 @@ class RigidBody():
 
                 x = self.shape_size.x() * 1.1 * self.h_sign
                 y = self.shape_size.x() * 1.1 * self.v_sign
-                z = self.shape_size.x() * 1.1 * (np.sign(local_point.z()) if self.is_arm_upper else -1)
+                z = self.shape_size.x() * 1.1 * -1  # (np.sign(local_point.z()) if self.is_arm_upper else -1)
 
                 # 各軸方向の離れ具合
                 x_theta = math.acos(max(-1, min(1, local_point.x() / x)))
@@ -734,7 +734,7 @@ class RigidBody():
                 # 距離分だけ離した場合の球
                 x = d * 1.1 * self.h_sign
                 y = d * 1.1 * self.v_sign
-                z = d * 1.1 * (np.sign(local_point.z()) if self.is_arm_upper else -1)
+                z = d * 1.1 * -1    # (np.sign(local_point.z()) if self.is_arm_upper else -1)
 
                 # 各軸方向の離れ具合
                 x_theta = math.acos(max(-1, min(1, local_point.x() / x)))

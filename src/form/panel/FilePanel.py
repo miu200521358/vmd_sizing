@@ -88,7 +88,7 @@ class FilePanel(BasePanel):
         self.save()
 
         # 一旦読み込み(そのままチェック)
-        self.frame.load(target_idx=0)
+        self.frame.load(event, target_idx=0)
 
         event.Skip()
 
@@ -109,14 +109,14 @@ class FilePanel(BasePanel):
         self.save()
 
         # サイジング可否チェックの後に実行
-        self.frame.load(is_exec=True, target_idx=0)
+        self.frame.load(event, is_exec=True, target_idx=0)
 
         event.Skip()
 
-    def set_output_vmd_path(self, is_force=False):
-        self.file_set.set_output_vmd_path(is_force)
+    def set_output_vmd_path(self, event, is_force=False):
+        self.file_set.set_output_vmd_path(event, is_force)
         # カメラ出力パスも一緒に変更する
-        self.frame.camera_panel_ctrl.header_panel.set_output_vmd_path()
+        self.frame.camera_panel_ctrl.header_panel.set_output_vmd_path(event)
 
     def save(self):
 

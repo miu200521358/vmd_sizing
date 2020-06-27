@@ -184,6 +184,8 @@ def is_auto_vmd_output_path(output_vmd_path: str, motion_vmd_dir_path: str, moti
     new_output_vmd_pattern = re.compile(r'^%s_%s%s%s$' % (escaped_motion_vmd_file_name, \
                                         escaped_rep_pmx_file_name, r"_?\w*_\d{8}_\d{6}", escaped_motion_vmd_ext))
     
+    logger.debug("new_output_vmd_pattern: %s", new_output_vmd_pattern)
+    
     # 自動生成ルールに則ったファイルパスである場合、合致あり
     return re.match(new_output_vmd_pattern, output_vmd_path) is not None
 

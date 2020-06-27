@@ -133,9 +133,9 @@ class CameraHeaderPanel(wx.Panel):
 
     # ファイル変更時の処理
     def on_change_file(self, event: wx.Event):
-        self.set_output_vmd_path()
+        self.set_output_vmd_path(event)
     
-    def set_output_vmd_path(self, is_force=False):
+    def set_output_vmd_path(self, event, is_force=False):
         output_camera_vmd_path = MFileUtils.get_output_camera_vmd_path(
             self.parent.camera_vmd_file_ctrl.file_ctrl.GetPath(),
             self.frame.file_panel_ctrl.file_set.rep_model_file_ctrl.file_ctrl.GetPath(),
