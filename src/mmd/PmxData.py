@@ -1003,6 +1003,9 @@ class PmxModel():
         parent_name = None
         if is_defined:
             # 定義済みの場合
+            if target_bone_name not in self.PARENT_BORN_PAIR:
+                raise SizingException("ボーンリンクの生成に失敗しました。モデル「%s」の「%s」ボーンが準標準までの構造ではない可能性があります。" % (self.name, target_bone_name))
+                
             for pname in self.PARENT_BORN_PAIR[target_bone_name]:
                 # 親子関係のボーンリストから親ボーンが存在した場合
                 if pname in self.bones:

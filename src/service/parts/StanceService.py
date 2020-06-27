@@ -787,109 +787,117 @@ class StanceService():
             # 足ＩＫ調整に必要なボーン群(足IK親は必須としない)
             leg_ik_target_bones = ["{0}足ＩＫ".format(direction), "{0}足".format(direction), "下半身"]
 
+            target_bone_name = "{0}足ＩＫ".format(direction)
+
             if set(leg_ik_target_bones).issubset(data_set.org_model.bones) and set(leg_ik_target_bones).issubset(data_set.rep_model.bones):
-                prev_sep_fno = 0
+
                 # 足ＩＫのそれぞれでフレーム番号をチェックする
-                for target_bone_name in ["{0}足ＩＫ".format(direction)]:
-                    if target_bone_name in data_set.org_model.bones and target_bone_name in data_set.rep_model.bones and target_bone_name in data_set.motion.bones:
-                        # ボーンとモーションが揃ってある場合のみ補正
+                prev_sep_fno = 0
+                if target_bone_name in data_set.motion.bones and \
+                    data_set.org_model.bones[target_bone_name].getIkFlag() and \
+                    "{0}足".format(direction) == data_set.org_model.bone_indexes[data_set.org_model.bones[target_bone_name].ik.link[-1].bone_index] and \
+                    data_set.rep_model.bones[target_bone_name].getIkFlag() and \
+                        "{0}足".format(direction) == data_set.rep_model.bone_indexes[data_set.rep_model.bones[target_bone_name].ik.link[-1].bone_index]:
 
-                        logger.info("%s補正【No.%s】", target_bone_name, (data_set_idx + 1))
+                    # ボーンとモーションが揃ってある場合のみ補正
+                    logger.info("%s補正【No.%s】", target_bone_name, (data_set_idx + 1))
 
-                        org_ik_root_bone_name = data_set.org_model.bone_indexes[data_set.org_model.bones[target_bone_name].ik.link[-1].bone_index]
-                        rep_ik_root_bone_name = data_set.rep_model.bone_indexes[data_set.rep_model.bones[target_bone_name].ik.link[-1].bone_index]
+                    org_ik_root_bone_name = data_set.org_model.bone_indexes[data_set.org_model.bones[target_bone_name].ik.link[-1].bone_index]
+                    rep_ik_root_bone_name = data_set.rep_model.bone_indexes[data_set.rep_model.bones[target_bone_name].ik.link[-1].bone_index]
+                
+                    # 足IKの長さ比率
+                    leg_ratio = MVector3D(data_set.original_xz_ratio, data_set.original_y_ratio, data_set.original_xz_ratio)
                     
-                        # 足IKの長さ比率
-                        leg_ratio = MVector3D(data_set.original_xz_ratio, data_set.original_y_ratio, data_set.original_xz_ratio)
+                    # # 足から見た、足IKの位置差異
+                    # org_leg_diff = ((data_set.org_model.bones["下半身"].position - data_set.org_model.bones[org_ik_root_bone_name].position) * leg_ratio)
+                    # rep_leg_diff = data_set.rep_model.bones["下半身"].position - data_set.rep_model.bones[rep_ik_root_bone_name].position
+                    # # 足IKの差分
+                    # leg_diff = rep_leg_diff - org_leg_diff
+                    
+                    org_ik_root_links = data_set.org_model.create_link_2_top_one(org_ik_root_bone_name)
+                    rep_ik_root_links = data_set.rep_model.create_link_2_top_one(rep_ik_root_bone_name)
+                                    
+                    org_leg_ik_links = data_set.org_model.create_link_2_top_one(target_bone_name)
+                    rep_leg_ik_links = data_set.rep_model.create_link_2_top_one(target_bone_name)
+
+                    # 初期立ち位置の足IKのグローバル位置と行列
+                    _, rep_initial_leg_ik_matrixs = MServiceUtils.calc_global_pos(data_set.rep_model, rep_leg_ik_links, VmdMotion(), 0, return_matrix=True)
+
+                    fnos = data_set.motion.get_bone_fnos(target_bone_name)
+                    for fno_idx, fno in enumerate(fnos):
+                        # 足ＩＫのbf
+                        ik_bf = data_set.motion.calc_bf(target_bone_name, fno)
                         
-                        # # 足から見た、足IKの位置差異
-                        # org_leg_diff = ((data_set.org_model.bones["下半身"].position - data_set.org_model.bones[org_ik_root_bone_name].position) * leg_ratio)
-                        # rep_leg_diff = data_set.rep_model.bones["下半身"].position - data_set.rep_model.bones[rep_ik_root_bone_name].position
-                        # # 足IKの差分
-                        # leg_diff = rep_leg_diff - org_leg_diff
+                        # 処理対象ボーンまでの位置とグローバル座標
+                        org_ik_root_global_3ds = MServiceUtils.calc_global_pos(data_set.org_model, org_ik_root_links, data_set.org_motion, fno)
+                        org_leg_ik_global_3ds = MServiceUtils.calc_global_pos(data_set.org_model, org_leg_ik_links, data_set.org_motion, fno)
+
+                        # 先リンク元（足ボーン）
+                        rep_ik_root_global_3ds = MServiceUtils.calc_global_pos(data_set.rep_model, rep_ik_root_links, data_set.motion, fno)
+                        rep_leg_ik_global_3ds = MServiceUtils.calc_global_pos(data_set.rep_model, rep_leg_ik_links, data_set.motion, fno)
+
+                        # 足ボーンから見た、処理対象足IKボーンの親のローカル位置
+
+                        # 元モデル
+                        # 足IKのグローバル位置
+                        org_global_leg_ik_pos = org_leg_ik_global_3ds[target_bone_name]
                         
-                        org_ik_root_links = data_set.org_model.create_link_2_top_one(org_ik_root_bone_name)
-                        rep_ik_root_links = data_set.rep_model.create_link_2_top_one(rep_ik_root_bone_name)
-                                        
-                        org_leg_ik_links = data_set.org_model.create_link_2_top_one(target_bone_name)
-                        rep_leg_ik_links = data_set.rep_model.create_link_2_top_one(target_bone_name)
+                        # 足ボーンのローカル座標系
+                        org_leg_matrix = MMatrix4x4()
+                        org_leg_matrix.setToIdentity()
+                        org_leg_matrix.translate(org_ik_root_global_3ds[org_ik_root_bone_name])
 
-                        # 初期立ち位置の足IKのグローバル位置と行列
-                        _, rep_initial_leg_ik_matrixs = MServiceUtils.calc_global_pos(data_set.rep_model, rep_leg_ik_links, VmdMotion(), 0, return_matrix=True)
+                        # 足ボーンから見た足IKのローカル位置
+                        org_local_leg_ik_pos = org_leg_matrix.inverted() * org_global_leg_ik_pos
 
-                        fnos = data_set.motion.get_bone_fnos(target_bone_name)
-                        for fno_idx, fno in enumerate(fnos):
-                            # 足ＩＫのbf
-                            ik_bf = data_set.motion.calc_bf(target_bone_name, fno)
-                            
-                            # 処理対象ボーンまでの位置とグローバル座標
-                            org_ik_root_global_3ds = MServiceUtils.calc_global_pos(data_set.org_model, org_ik_root_links, data_set.org_motion, fno)
-                            org_leg_ik_global_3ds = MServiceUtils.calc_global_pos(data_set.org_model, org_leg_ik_links, data_set.org_motion, fno)
+                        logger.debug("f: %s, %s, org_global_leg_ik_pos: %s, org_ik_root_pos: %s, org_local_leg_ik_pos: %s", fno, target_bone_name, \
+                                     org_global_leg_ik_pos.to_log(), org_ik_root_global_3ds[org_ik_root_bone_name].to_log(), org_local_leg_ik_pos.to_log())
 
-                            # 先リンク元（足ボーン）
-                            rep_ik_root_global_3ds = MServiceUtils.calc_global_pos(data_set.rep_model, rep_ik_root_links, data_set.motion, fno)
-                            rep_leg_ik_global_3ds = MServiceUtils.calc_global_pos(data_set.rep_model, rep_leg_ik_links, data_set.motion, fno)
+                        # 先モデル
+                        # 足IKのグローバル位置
+                        rep_global_leg_ik_pos = rep_leg_ik_global_3ds[target_bone_name]
 
-                            # 足ボーンから見た、処理対象足IKボーンの親のローカル位置
+                        # 足ボーンのローカル座標系
+                        rep_leg_matrix = MMatrix4x4()
+                        rep_leg_matrix.setToIdentity()
+                        rep_leg_matrix.translate(rep_ik_root_global_3ds[rep_ik_root_bone_name])
+                        # 足IKの起点位置を、元に合わせた感じで計算する
+                        # rep_leg_matrix.translate(leg_diff)
 
-                            # 元モデル
-                            # 足IKのグローバル位置
-                            org_global_leg_ik_pos = org_leg_ik_global_3ds[target_bone_name]
-                            
-                            # 足ボーンのローカル座標系
-                            org_leg_matrix = MMatrix4x4()
-                            org_leg_matrix.setToIdentity()
-                            org_leg_matrix.translate(org_ik_root_global_3ds[org_ik_root_bone_name])
+                        # # 足ボーンから見た足IKの本来のローカル位置
+                        # original_rep_local_leg_ik_pos = rep_leg_matrix.inverted() * rep_global_leg_ik_pos
 
-                            # 足ボーンから見た足IKのローカル位置
-                            org_local_leg_ik_pos = org_leg_matrix.inverted() * org_global_leg_ik_pos
+                        # 先モデルの足IKのローカル位置は、足の長さの縮尺
+                        rep_local_leg_ik_pos = org_local_leg_ik_pos * leg_ratio
+                        # # Yは元の位置そのまま
+                        # rep_local_leg_ik_pos.setY(original_rep_local_leg_ik_pos.y())
+                        # 先モデルの再計算した足IKグローバル座標
+                        recalc_rep_global_leg_ik_pos = rep_leg_matrix * rep_local_leg_ik_pos
 
-                            logger.debug("f: %s, %s, org_global_leg_ik_pos: %s, org_ik_root_pos: %s, org_local_leg_ik_pos: %s", fno, target_bone_name, \
-                                         org_global_leg_ik_pos.to_log(), org_ik_root_global_3ds[org_ik_root_bone_name].to_log(), org_local_leg_ik_pos.to_log())
+                        logger.debug("f: %s, %s, rep_global_leg_ik_pos: %s, rep_ik_root_pos: %s, rep_local_leg_ik_pos: %s", fno, target_bone_name, \
+                                     rep_global_leg_ik_pos.to_log(), rep_ik_root_global_3ds[rep_ik_root_bone_name].to_log(), rep_local_leg_ik_pos.to_log())
 
-                            # 先モデル
-                            # 足IKのグローバル位置
-                            rep_global_leg_ik_pos = rep_leg_ik_global_3ds[target_bone_name]
+                        # 足IKのローカル座標系
+                        rep_leg_ik_matrix = rep_initial_leg_ik_matrixs[target_bone_name]
+                        # IKの親から見た、計算後IKのローカル位置
+                        rep_leg_ik_recalc_local_pos = rep_leg_ik_matrix.inverted() * recalc_rep_global_leg_ik_pos
+                        rep_leg_ik_recalc_local_pos.setY(ik_bf.position.y())
 
-                            # 足ボーンのローカル座標系
-                            rep_leg_matrix = MMatrix4x4()
-                            rep_leg_matrix.setToIdentity()
-                            rep_leg_matrix.translate(rep_ik_root_global_3ds[rep_ik_root_bone_name])
-                            # 足IKの起点位置を、元に合わせた感じで計算する
-                            # rep_leg_matrix.translate(leg_diff)
+                        logger.debug("f: %s, %s, 先IKローカル(計算前): %s, 先IKローカル(計算後): %s, 変更後IK: %s", fno, target_bone_name, \
+                                     rep_local_leg_ik_pos.to_log(), rep_leg_ik_recalc_local_pos.to_log(), ik_bf.position.to_log())
 
-                            # # 足ボーンから見た足IKの本来のローカル位置
-                            # original_rep_local_leg_ik_pos = rep_leg_matrix.inverted() * rep_global_leg_ik_pos
+                        # 計算後IKのローカル位置を加算
+                        ik_bf.position = rep_leg_ik_recalc_local_pos
 
-                            # 先モデルの足IKのローカル位置は、足の長さの縮尺
-                            rep_local_leg_ik_pos = org_local_leg_ik_pos * leg_ratio
-                            # # Yは元の位置そのまま
-                            # rep_local_leg_ik_pos.setY(original_rep_local_leg_ik_pos.y())
-                            # 先モデルの再計算した足IKグローバル座標
-                            recalc_rep_global_leg_ik_pos = rep_leg_matrix * rep_local_leg_ik_pos
+                        data_set.motion.regist_bf(ik_bf, target_bone_name, fno)
+                        
+                        if fno // 500 > prev_sep_fno and fnos[-1] > 0:
+                            logger.info("-- %sフレーム目:終了(%s％)【No.%s - %s補正】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1, target_bone_name)
+                            prev_sep_fno = fno // 500
+                    logger.info("%s足ＩＫ補正:終了【No.%s】", direction, (data_set_idx + 1))
 
-                            logger.debug("f: %s, %s, rep_global_leg_ik_pos: %s, rep_ik_root_pos: %s, rep_local_leg_ik_pos: %s", fno, target_bone_name, \
-                                         rep_global_leg_ik_pos.to_log(), rep_ik_root_global_3ds[rep_ik_root_bone_name].to_log(), rep_local_leg_ik_pos.to_log())
-
-                            # 足IKのローカル座標系
-                            rep_leg_ik_matrix = rep_initial_leg_ik_matrixs[target_bone_name]
-                            # IKの親から見た、計算後IKのローカル位置
-                            rep_leg_ik_recalc_local_pos = rep_leg_ik_matrix.inverted() * recalc_rep_global_leg_ik_pos
-                            rep_leg_ik_recalc_local_pos.setY(ik_bf.position.y())
-
-                            logger.debug("f: %s, %s, 先IKローカル(計算前): %s, 先IKローカル(計算後): %s, 変更後IK: %s", fno, target_bone_name, \
-                                         rep_local_leg_ik_pos.to_log(), rep_leg_ik_recalc_local_pos.to_log(), ik_bf.position.to_log())
-
-                            # 計算後IKのローカル位置を加算
-                            ik_bf.position = rep_leg_ik_recalc_local_pos
-
-                            data_set.motion.regist_bf(ik_bf, target_bone_name, fno)
-                            
-                            if fno // 500 > prev_sep_fno and fnos[-1] > 0:
-                                logger.info("-- %sフレーム目:終了(%s％)【No.%s - %s補正】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1, target_bone_name)
-                                prev_sep_fno = fno // 500
-
-                logger.info("%s足ＩＫ補正:終了【No.%s】", direction, (data_set_idx + 1))
+                else:
+                    logger.info("%s足ＩＫ補正: 【No.%s】作成元もしくは変換先の%s足ＩＫのＩＫルートボーンが、「%s足」ボーンではないため、処理をスキップします。", direction, (data_set_idx + 1), direction, direction)
             else:
                 logger.info("%s足ＩＫ補正: 【No.%s】[%s]のボーン群が、作成元もしくは変換先のいずれかで足りないため、処理をスキップします。", direction, (data_set_idx + 1), ", ".join(leg_ik_target_bones))
 
