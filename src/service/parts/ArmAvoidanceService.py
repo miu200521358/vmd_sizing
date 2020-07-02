@@ -172,19 +172,19 @@ class ArmAvoidanceService():
                 
                 obb = avoidance.get_obb(fno, avodance_link.get(avodance_link.last_name()).position, rep_avbone_global_mats, self.options.arm_options.alignment, direction == "左")
 
-                # 剛体の原点 ---------------
-                debug_bone_name = "原点"
+                # # 剛体の原点 ---------------
+                # debug_bone_name = "原点"
 
-                debug_bf = VmdBoneFrame(fno)
-                debug_bf.key = True
-                debug_bf.set_name(debug_bone_name)
-                debug_bf.position = obb.origin
+                # debug_bf = VmdBoneFrame(fno)
+                # debug_bf.key = True
+                # debug_bf.set_name(debug_bone_name)
+                # debug_bf.position = obb.origin
                 
-                if debug_bone_name not in data_set.motion.bones:
-                    data_set.motion.bones[debug_bone_name] = {}
+                # if debug_bone_name not in data_set.motion.bones:
+                #     data_set.motion.bones[debug_bone_name] = {}
                 
-                data_set.motion.bones[debug_bone_name][fno] = debug_bf
-                # --------------
+                # data_set.motion.bones[debug_bone_name][fno] = debug_bf
+                # # --------------
             
                 for arm_link in avoidance_options.arm_links:
                     # 先モデルのそれぞれのグローバル位置
@@ -227,19 +227,19 @@ class ArmAvoidanceService():
                             logger.info("－近接あり: f: %s(%s-%s:%s:%s), 元: %s, 回避: %s", fno, \
                                         (data_set_idx + 1), arm_link.last_display_name(), avoidance_name, axis, rep_global_3ds[arm_link.last_name()].to_log(), rep_collision_vec.to_log())
 
-                        # 回避後の先端ボーン位置 -------------
-                        debug_bone_name = "{0}A".format(arm_link.last_name())
+                        # # 回避後の先端ボーン位置 -------------
+                        # debug_bone_name = "{0}A".format(arm_link.last_name())
 
-                        debug_bf = VmdBoneFrame(fno)
-                        debug_bf.key = True
-                        debug_bf.set_name(debug_bone_name)
-                        debug_bf.position = rep_collision_vec
+                        # debug_bf = VmdBoneFrame(fno)
+                        # debug_bf.key = True
+                        # debug_bf.set_name(debug_bone_name)
+                        # debug_bf.position = rep_collision_vec
                         
-                        if debug_bone_name not in data_set.motion.bones:
-                            data_set.motion.bones[debug_bone_name] = {}
+                        # if debug_bone_name not in data_set.motion.bones:
+                        #     data_set.motion.bones[debug_bone_name] = {}
                         
-                        data_set.motion.bones[debug_bone_name][fno] = debug_bf
-                        # ----------
+                        # data_set.motion.bones[debug_bone_name][fno] = debug_bf
+                        # # ----------
 
                         # IK処理実行
                         for ik_cnt, (ik_links, ik_max_count) in enumerate(zip(avoidance_options.ik_links_list[arm_link.last_name()], \
@@ -279,19 +279,19 @@ class ArmAvoidanceService():
                                                      list(ik_links.all().keys()), avoidance_name, axis, rep_collision_vec.to_log(), \
                                                      now_rep_effector_pos.to_log(), rep_diff.to_log(), list(dot_dict.values()))
 
-                                        # 回避後の先端ボーン位置 -------------
-                                        debug_bone_name = "{0}B".format(arm_link.last_name())
+                                        # # 回避後の先端ボーン位置 -------------
+                                        # debug_bone_name = "{0}B".format(arm_link.last_name())
 
-                                        debug_bf = VmdBoneFrame(fno)
-                                        debug_bf.key = True
-                                        debug_bf.set_name(debug_bone_name)
-                                        debug_bf.position = now_rep_effector_pos
+                                        # debug_bf = VmdBoneFrame(fno)
+                                        # debug_bf.key = True
+                                        # debug_bf.set_name(debug_bone_name)
+                                        # debug_bf.position = now_rep_effector_pos
                                         
-                                        if debug_bone_name not in data_set.motion.bones:
-                                            data_set.motion.bones[debug_bone_name] = {}
+                                        # if debug_bone_name not in data_set.motion.bones:
+                                        #     data_set.motion.bones[debug_bone_name] = {}
                                         
-                                        data_set.motion.bones[debug_bone_name][fno] = debug_bf
-                                        # ----------
+                                        # data_set.motion.bones[debug_bone_name][fno] = debug_bf
+                                        # # ----------
 
                                         # org_bfを保持し直し
                                         for link_name in ik_links.all().keys():
@@ -322,19 +322,19 @@ class ArmAvoidanceService():
                                                      list(ik_links.all().keys()), avoidance_name, axis, rep_collision_vec.to_log(), \
                                                      now_rep_effector_pos.to_log(), rep_diff.to_log(), list(dot_dict.values()))
 
-                                        # 回避後の先端ボーン位置 -------------
-                                        debug_bone_name = "{0}B".format(arm_link.last_name())
+                                        # # 回避後の先端ボーン位置 -------------
+                                        # debug_bone_name = "{0}B".format(arm_link.last_name())
 
-                                        debug_bf = VmdBoneFrame(fno)
-                                        debug_bf.key = True
-                                        debug_bf.set_name(debug_bone_name)
-                                        debug_bf.position = now_rep_effector_pos
+                                        # debug_bf = VmdBoneFrame(fno)
+                                        # debug_bf.key = True
+                                        # debug_bf.set_name(debug_bone_name)
+                                        # debug_bf.position = now_rep_effector_pos
                                         
-                                        if debug_bone_name not in data_set.motion.bones:
-                                            data_set.motion.bones[debug_bone_name] = {}
+                                        # if debug_bone_name not in data_set.motion.bones:
+                                        #     data_set.motion.bones[debug_bone_name] = {}
                                         
-                                        data_set.motion.bones[debug_bone_name][fno] = debug_bf
-                                        # ----------
+                                        # data_set.motion.bones[debug_bone_name][fno] = debug_bf
+                                        # # ----------
 
                                         # org_bfを保持し直し
                                         for link_name in ik_links.all().keys():
