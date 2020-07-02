@@ -528,18 +528,20 @@ class PmxReader():
                 for direction in ["左", "右"]:
                     for (finger_name, end_joint_name) in [("親指", "２"), ("人指", "３"), ("中指", "３"), ("薬指", "３"), ("小指", "３")]:
                         end_joint_name = "{0}{1}{2}".format(direction, finger_name, end_joint_name)
-                        to_joint_name = "{0}{1}{2}".format(direction, finger_name, "先")
 
-                        if end_joint_name in pmx.bones and to_joint_name not in pmx.bones:
-                            # 指先端があって、指先がない場合挿入
-                            to_pos = self.calc_tail_pos(pmx, end_joint_name)
-                            to_bone = Bone(to_joint_name, None, to_pos, -1, 0, 0)
+                        if end_joint_name not in pmx.bones:
+                            continue
 
-                            # ボーンのINDEX
-                            to_bone.index = len(pmx.bones.keys())
-                            pmx.bones[to_bone.name] = to_bone
-                            # インデックス逆引きも登録
-                            pmx.bone_indexes[to_bone.index] = to_bone.name
+                        to_joint_name = "{0}{1}{2}".format(direction, finger_name, "先実体")
+
+                        finger_tail_vertex = pmx.get_finger_tail_vertex(end_joint_name, to_joint_name)
+                        if finger_tail_vertex:
+                            pmx.finger_tail_vertex = finger_tail_vertex
+                            finger_tail_pos = finger_tail_vertex.position.copy()
+                            finger_tail_bone = Bone(to_joint_name, "", finger_tail_pos, -1, 0, 0)
+                            finger_tail_bone.index = len(pmx.bones.keys())
+                            pmx.bones[finger_tail_bone.name] = finger_tail_bone
+                            pmx.bone_indexes[finger_tail_bone.index] = finger_tail_bone.name
 
                 # 足中間ボーン
                 if "左足" in pmx.bones and "右足" in pmx.bones:
@@ -988,27 +990,3 @@ class PmxReader():
             result = None
 
         return result
-
-    # 指定されたボーンの先を取得する
-    def calc_tail_pos(self, model, bone_name: str):
-        if bone_name not in model.bones:
-            return MVector3D()
-        
-        bone = model.bones[bone_name]
-        to_pos = MVector3D()
-
-        from_pos = model.bones[bone.name].position
-        if bone.tail_position != MVector3D():
-            # 表示先が相対パスの場合、保持
-            to_pos = from_pos + bone.tail_position
-        elif bone.tail_index >= 0 and bone.tail_index in model.bone_indexes and model.bones[model.bone_indexes[bone.tail_index]].position != bone.position:
-            # 表示先が指定されているの場合、保持
-            to_pos = model.bones[model.bone_indexes[bone.tail_index]].position
-        else:
-            # 表示先がない場合、とりあえず子ボーンのどれかを選択
-            for b in model.bones.values():
-                if b.parent_index == bone.index and model.bones[model.bone_indexes[b.index]].position != bone.position:
-                    to_pos = model.bones[model.bone_indexes[b.index]].position
-                    break
-
-        return to_pos

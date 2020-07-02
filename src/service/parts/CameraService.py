@@ -574,17 +574,6 @@ class CameraService():
         for direction in ["左", "右"]:
             self.prepare_link(data_set.camera_org_model, data_set.rep_model, org_links, org_link_target, rep_links, ["{0}手首".format(direction), "{0}手首".format(direction)], \
                               ["{0}手首".format(direction)])
-            # self.prepare_link(data_set.camera_org_model, data_set.rep_model, org_links, org_link_target, rep_links, ["{0}親指先".format(direction), "{0}手首".format(direction)], \
-            #                   ["{0}親指先".format(direction), "{0}親指２".format(direction), "{0}親指１".format(direction)])
-            # self.prepare_link(data_set.camera_org_model, data_set.rep_model, org_links, org_link_target, rep_links, ["{0}人指先".format(direction), "{0}手首".format(direction)], \
-            #                   ["{0}人指先".format(direction), "{0}人指３".format(direction), "{0}人指２".format(direction), "{0}人指１".format(direction), \
-            #                   "{0}手首".format(direction), "{0}ひじ".format(direction), "{0}腕".format(direction), "{0}肩".format(direction)])
-            # self.prepare_link(data_set.camera_org_model, data_set.rep_model, org_links, org_link_target, rep_links, ["{0}中指先".format(direction), "{0}手首".format(direction)], \
-            #                   ["{0}中指先".format(direction), "{0}中指３".format(direction), "{0}中指２".format(direction), "{0}中指１".format(direction)])
-            # self.prepare_link(data_set.camera_org_model, data_set.rep_model, org_links, org_link_target, rep_links, ["{0}薬指先".format(direction), "{0}手首".format(direction)], \
-            #                   ["{0}薬指先".format(direction), "{0}薬指３".format(direction), "{0}薬指２".format(direction), "{0}薬指１".format(direction)])
-            # self.prepare_link(data_set.camera_org_model, data_set.rep_model, org_links, org_link_target, rep_links, ["{0}小指先".format(direction), "{0}手首".format(direction)], \
-            #                   ["{0}小指先".format(direction), "{0}小指３".format(direction), "{0}小指２".format(direction), "{0}小指１".format(direction)])
             self.prepare_link(data_set.camera_org_model, data_set.rep_model, org_links, org_link_target, rep_links, ["{0}つま先実体".format(direction), "{0}足ＩＫ".format(direction)], \
                               ["{0}つま先実体".format(direction), "{0}足底実体".format(direction), "{0}足ＩＫ".format(direction)])
             self.prepare_link(data_set.camera_org_model, data_set.rep_model, org_links, org_link_target, rep_links, ["{0}足".format(direction), "下半身"], ["{0}足".format(direction)])

@@ -393,6 +393,9 @@ class MorphSet():
                         # 行追加
                         self.add_line()
 
+                # パス変更
+                self.file_set.set_output_vmd_path(event)
+
             except Exception:
                 dialog = wx.MessageDialog(self.frame, "CSVファイルが読み込めませんでした '%s'\n\n%s." % (target_morph_path, traceback.format_exc()), style=wx.OK)
                 dialog.ShowModal()

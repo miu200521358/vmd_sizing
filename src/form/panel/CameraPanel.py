@@ -119,7 +119,7 @@ class CameraScrolledWindow(wx.ScrolledWindow):
         super().__init__(*args, **kw)
 
     # 複数モーション用カメラの場合、出力パスは変わらないのでスルー
-    def set_output_vmd_path(self, is_force=False):
+    def set_output_vmd_path(self, event: wx.Event, is_force=False):
         pass
 
 

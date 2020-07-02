@@ -68,7 +68,7 @@ class ArmPanel(BasePanel):
         self.avoidance_target_txt_ctrl.Bind(wx.EVT_TEXT, self.on_check_arm_process_avoidance)
         self.avoidance_target_sizer.Add(self.avoidance_target_txt_ctrl, 1, wx.EXPAND | wx.ALL, 5)
 
-        self.avoidance_target_btn_ctrl = wx.Button(self, wx.ID_ANY, u"選択", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.avoidance_target_btn_ctrl = wx.Button(self, wx.ID_ANY, u"剛体選択", wx.DefaultPosition, wx.DefaultSize, 0)
         self.avoidance_target_btn_ctrl.SetToolTip(u"変換先モデルにあるボーン追従剛体を選択できます")
         self.avoidance_target_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_click_avoidance_target)
         self.avoidance_target_sizer.Add(self.avoidance_target_btn_ctrl, 0, wx.ALIGN_BOTTOM | wx.ALL, 5)
@@ -101,7 +101,7 @@ class ArmPanel(BasePanel):
         self.alignment_option_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
         # 指位置合わせ
-        self.arm_alignment_finger_flg_ctrl = wx.CheckBox(self, wx.ID_ANY, u"指の位置で手首位置合わせを行う", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.arm_alignment_finger_flg_ctrl = wx.CheckBox(self, wx.ID_ANY, u"指の位置で位置合わせを行う", wx.DefaultPosition, wx.DefaultSize, 0)
         self.arm_alignment_finger_flg_ctrl.SetToolTip(u"チェックを入れると、フィンガータットモーション等、指間の距離を基準に手首位置を調整できます。" \
                                                       + "複数人数モーションではOFFのままの方が綺麗になります。")
         self.arm_alignment_finger_flg_ctrl.Bind(wx.EVT_CHECKBOX, self.on_check_arm_process_alignment)
@@ -201,7 +201,8 @@ class ArmPanel(BasePanel):
         
         # 選択された剛体リストを入力欄に設定
         for set_no, set_data in self.avoidance_set_dict.items():
-            target[set_no - 1] = [set_data.rep_avoidance_names[n] for n in set_data.rep_choices.GetSelections()]
+            if set_data.rep_choices:
+                target[set_no - 1] = [set_data.rep_avoidance_names[n] for n in set_data.rep_choices.GetSelections()]
         
         return target
     
@@ -215,8 +216,9 @@ class ArmPanel(BasePanel):
         # 選択された剛体リストを入力欄に設定
         for set_no, set_data in self.avoidance_set_dict.items():
             # 選択肢ごとの表示文言
-            selections = [set_data.rep_choices.GetString(n) for n in set_data.rep_choices.GetSelections()]
-            self.avoidance_target_txt_ctrl.WriteText("【No.{0}】{1}\n".format(set_no, ', '.join(selections)))
+            if set_data.rep_choices:
+                selections = [set_data.rep_choices.GetString(n) for n in set_data.rep_choices.GetSelections()]
+                self.avoidance_target_txt_ctrl.WriteText("【No.{0}】{1}\n".format(set_no, ', '.join(selections)))
 
         self.arm_process_flg_avoidance.SetValue(1)
         self.avoidance_dialog.Hide()
@@ -350,9 +352,7 @@ class ArmPanel(BasePanel):
             else:
                 self.arm_process_flg_alignment.SetValue(0)
         else:
-            if self.arm_alignment_finger_flg_ctrl.GetValue() == 0 and self.arm_alignment_floor_flg_ctrl.GetValue() == 0:
-                self.arm_process_flg_alignment.SetValue(0)
-            else:
+            if self.arm_alignment_finger_flg_ctrl.GetValue() == 1 or self.arm_alignment_floor_flg_ctrl.GetValue() == 1:
                 self.arm_process_flg_alignment.SetValue(1)
 
         if self.arm_alignment_finger_flg_ctrl.GetValue() and len(self.frame.multi_panel_ctrl.file_set_list) > 0:
@@ -375,6 +375,7 @@ class AvoidanceSet():
         self.rep_model_digest = 0 if not file_set.rep_model_file_ctrl.data else file_set.rep_model_file_ctrl.data.digest
         self.rep_avoidances = ["頭接触回避 (頭)"]   # 選択肢文言
         self.rep_avoidance_names = ["頭接触回避"]   # 選択肢文言に紐付くモーフ名
+        self.rep_choices = None
 
         self.set_sizer = wx.StaticBoxSizer(wx.StaticBox(self.window, wx.ID_ANY, "【No.{0}】".format(set_idx)), orient=wx.VERTICAL)
 

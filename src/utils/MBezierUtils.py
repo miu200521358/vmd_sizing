@@ -40,30 +40,72 @@ MZ_y2_idxs = [14, 29, 59, 44]
 # 指定したすべての値をカトマル曲線として計算する
 def calc_value_from_catmullrom(bone_name: str, fnos: int, values: list):
     try:
-        # カトマル曲線をベジェ曲線に変換する
-        bz_x, bz_y = convert_catmullrom_2_bezier(np.concatenate([[None], fnos, [None]]), np.concatenate([[None], values, [None]]))
-        logger.test("bz_x: %s", bz_x)
-        logger.test("bz_y: %s", bz_y)
+        # create arrays for spline points
+        y_intpol = np.empty(fnos[-1])
 
-        if len(bz_x) == 0:
-            # 始点と終点が指定されていて、カトマル曲線が描けなかった場合、線形補間
-            return LINEAR_MMD_INTERPOLATION
+        # set the last x- and y-coord, the others will be set in the loop
+        y_intpol[-1] = values[-1]
 
-        # 次数
-        degree = len(bz_x) - 1
-        logger.test("degree: %s", degree)
+        # loop over segments (we have n-1 segments for n points)
+        for fidx, (sfno, efno) in enumerate(zip(fnos[:-1], fnos[1:])):
+            # loop over segments (we have n-1 segments for n points)
+            res = efno - sfno
 
-        # すべての制御点を加味したベジェ曲線
-        full_curve = bezier.Curve(np.asfortranarray([bz_x, bz_y]), degree=degree)
+            if fidx == 0:
+                # need to estimate an additional support point before the first
+                y_intpol[sfno:efno] = np.array([
+                    calc_catmull_rom_one_point(
+                        t,
+                        values[0] - (values[1] - values[0]),    # estimated start point,
+                        values[0],
+                        values[1],
+                        values[2])
+                    for t in np.linspace(0, 1, res, endpoint=False)])
+            elif fidx == len(fnos) - 2:
+                # need to estimate an additional support point after the last
+                y_intpol[sfno:efno] = np.array([
+                    calc_catmull_rom_one_point(
+                        t,
+                        values[fidx - 1],
+                        values[fidx],
+                        values[fidx + 1],
+                        values[fidx + 1] + (values[fidx + 1] - values[fidx])    # estimated end point
+                    ) for t in np.linspace(0, 1, res, endpoint=False)])
+            else:
+                y_intpol[sfno:efno] = np.array([
+                    calc_catmull_rom_one_point(
+                        t,
+                        values[fidx - 1],
+                        values[fidx],
+                        values[fidx + 1],
+                        values[fidx + 2]) for t in np.linspace(0, 1, res, endpoint=False)])
 
-        # ベジェ曲線とすべてのキーフレに相当する値
-        ys = intersect_by_x(full_curve, np.arange(fnos[-1] + 1))
-
-        return ys
+        return y_intpol
     except Exception as e:
         # エラーレベルは落として表に出さない
         logger.debug("カトマル曲線値生成失敗", e)
         return []
+
+
+# https://github.com/vmichals/python-algos/blob/master/catmull_rom_spline.py
+def calc_catmull_rom_one_point(x, v0, v1, v2, v3):
+    """Computes interpolated y-coord for given x-coord using Catmull-Rom.
+    Computes an interpolated y-coordinate for the given x-coordinate between
+    the support points v1 and v2. The neighboring support points v0 and v3 are
+    used by Catmull-Rom to ensure a smooth transition between the spline
+    segments.
+    Args:
+        x: the x-coord, for which the y-coord is needed
+        v0: 1st support point
+        v1: 2nd support point
+        v2: 3rd support point
+        v3: 4th support point
+    """
+    c1 = 1. * v1
+    c2 = -.5 * v0 + .5 * v2
+    c3 = 1. * v0 + -2.5 * v1 + 2. * v2 - 0.5 * v3
+    c4 = -.5 * v0 + 1.5 * v1 + -1.5 * v2 + 0.5 * v3
+    return (((c4 * x + c3) * x + c2) * x + c1)
 
 
 # 指定したすべての値を通るカトマル曲線からベジェ曲線を計算し、MMD補間曲線範囲内に収められた場合、そのベジェ曲線を返す
@@ -162,7 +204,7 @@ def join_value_2_bezier(fno: int, bone_name: str, values: list, offset=0, diff_l
         diff_ys = np.array(full_ys) - np.array(reduced_ys)
 
         # 差が大きい箇所をピックアップする
-        diff_large = np.where(np.abs(diff_ys) > (diff_limit * offset), 1, 0)
+        diff_large = np.where(np.abs(diff_ys) > (diff_limit * (offset + 1)), 1, 0)
         
         # 差が一定未満である場合、ベジェ曲線をMMD補間曲線に合わせる
         nodes = joined_curve.nodes

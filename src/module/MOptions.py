@@ -371,7 +371,8 @@ class MSmoothOptions():
                 interpolation=args.interpolation, \
                 monitor=sys.stdout, \
                 is_file=True, \
-                outout_datetime=logger.outout_datetime)
+                outout_datetime=logger.outout_datetime, \
+                max_workers=1)
 
             return options
         except SizingException as se:

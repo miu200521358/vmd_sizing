@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # -*- mode: python -*-
+# VMDサイジング 64bit版
 
 block_cipher = None
 
@@ -25,7 +26,7 @@ exe = EXE(pyz,
           a.zipfiles,
           a.datas,
           [],
-          name='VmdSizing_5.00_β103_64bit',
+          name='VmdSizing_5.00_β104_64bit',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,

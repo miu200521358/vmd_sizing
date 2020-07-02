@@ -264,12 +264,14 @@ class ArmAlignmentService():
                             # 位置合わせする場合
 
                             # 前回既に位置合わせが必要であった場合、そのINDEXを使用する
-                            if prev_from_alignment and all_alignment_idx[(from_data_set_idx, from_alignment_idx)] >= 0:
+                            if prev_from_alignment and (from_data_set_idx, from_target_link.effector_bone_name[0]) in all_alignment_idx and \
+                                    all_alignment_idx[(from_data_set_idx, from_target_link.effector_bone_name[0])] >= 0:
                                 # FROM前回が位置合わせONの場合、FROMに寄せる
-                                alignment_idx = all_alignment_idx[(from_data_set_idx, from_alignment_idx)]
-                            elif prev_to_alignment and all_alignment_idx[(to_data_set_idx, to_alignment_idx)] >= 0:
+                                alignment_idx = all_alignment_idx[(from_data_set_idx, from_target_link.effector_bone_name[0])]
+                            elif prev_to_alignment and (to_data_set_idx, to_target_link.effector_bone_name[0]) in all_alignment_idx and \
+                                    all_alignment_idx[(to_data_set_idx, to_target_link.effector_bone_name[0])] >= 0:
                                 # FROMが前回位置合わせOFFで、前回TOがONの場合、TOに寄せる
-                                alignment_idx = all_alignment_idx[(to_data_set_idx, to_alignment_idx)]
+                                alignment_idx = all_alignment_idx[(to_data_set_idx, to_target_link.effector_bone_name[0])]
                             # elif (prev_floor_left_alignment or now_floor_left_alignment) and (to_data_set_idx, -1) in all_alignment_idx \
                             #         and all_alignment_idx[(to_data_set_idx, -1)] >= 0 and is_sit:
                             #     # 前回の左床位置合わせがONの場合、左に寄せる
@@ -278,7 +280,7 @@ class ArmAlignmentService():
                             #         and all_alignment_idx[(to_data_set_idx, -2)] >= 0 and is_sit:
                             #     # 前回の右床位置合わせがONの場合、右に寄せる
                             #     alignment_idx = all_alignment_idx[(to_data_set_idx, -2)]
-                            elif to_alignment_idx >= 0 or (to_alignment_idx < 0 and is_sit):
+                            elif not prev_from_alignment and not prev_to_alignment and (to_alignment_idx >= 0 or (to_alignment_idx < 0 and is_sit)):
                                 # FROMもTOも前回位置合わせOFFの場合、新たに発行
                                 all_alignment_group_list.append({
                                     "fnos": [], "alignment_idxs": {}, "org_fno_global_effector": {}, \
@@ -289,8 +291,8 @@ class ArmAlignmentService():
                                 alignment_idx = len(all_alignment_group_list) - 1
 
                                 # 位置合わせIDXを設定
-                                all_alignment_idx[(from_data_set_idx, from_alignment_idx)] = alignment_idx
-                                all_alignment_idx[(to_data_set_idx, to_alignment_idx)] = alignment_idx
+                                all_alignment_idx[(from_data_set_idx, from_target_link.effector_bone_name[0])] = alignment_idx
+                                all_alignment_idx[(to_data_set_idx, to_target_link.effector_bone_name[0])] = alignment_idx
                             else:
                                 # 条件に合致しない場合、対象外
                                 continue
@@ -518,6 +520,13 @@ class ArmAlignmentService():
                     if fno not in all_alignment_group["rep_fno_trunk_matrix"]:
                         all_alignment_group["rep_fno_trunk_matrix"][fno] = {}
                     all_alignment_group["rep_fno_trunk_matrix"][fno][(data_set_idx, alignment_idx)] = rep_global_matrixs["首根元"]
+        
+                    # 一度全部キーを追加する（キー自体は無効化のまま）
+                    for bone_name in ["{0}腕".format(target_link.effector_bone_name[0]), "{0}ひじ".format(target_link.effector_bone_name[0])]:
+                        if bone_name not in data_set.motion.bones:
+                            data_set.motion.bones[bone_name] = {}
+                        data_set.motion.bones[bone_name][fno] = data_set.motion.calc_bf(bone_name, fno)
+
             
             results = {}
             for fidx, fno in enumerate(all_alignment_group["fnos"]):
@@ -654,6 +663,7 @@ class ArmAlignmentService():
                     prev_rep_diff = MVector3D()
 
                     # 位置合わせ前のbf情報
+                    is_avoidance_x = False
                     org_bfs = {}
                     start_org_bfs = {}
                     for ik_links in target_link.ik_links_list:
@@ -668,6 +678,10 @@ class ArmAlignmentService():
                                 # 変位前の角度として保持
                                 org_bfs[link_name] = bf.copy()
                                 start_org_bfs[link_name] = bf.copy()
+                                is_avoidance_x = is_avoidance_x or (bf.avoidance == "x")
+                    
+                    if is_avoidance_x:
+                        logger.info("－X方向回避済みのため、位置合わせスキップ: f: %s(%s-%s)", fno, (data_set_idx + 1), target_link.effector_display_bone_name)
 
                     # IK処理実行
                     for ik_cnt, (ik_links, ik_max_count) in enumerate(zip(target_link.ik_links_list, target_link.ik_count_list)):
@@ -724,7 +738,7 @@ class ArmAlignmentService():
                             if np.count_nonzero(np.where(np.array(list(dot_near_dict.values())) < np.array(list(dot_near_limit_dict.values())), 1, 0)) == 0 and \
                                     np.count_nonzero(np.where(np.array(list(dot_start_dict.values())) < np.array(list(dot_far_limit_dict.values())), 1, 0)) == 0:
                                 if (prev_rep_diff == MVector3D() or np.sum(np.abs(rep_diff.data())) < np.sum(np.abs(prev_rep_diff.data()))) and \
-                                        np.count_nonzero(np.where(np.abs(rep_diff.data()) > 0.2, 1, 0)) == 0:
+                                        np.count_nonzero(np.where(np.abs(rep_diff.data()) > (0.2 if data_set.original_xz_ratio > 0.5 else 0.1), 1, 0)) == 0:
                                     logger.debug("☆位置合わせ実行成功(%s): f: %s(%s:%s), 指定[%s], 結果[%s], diff[%s], dot_near_dict: [%s], dot_start_dict: [%s], org: [%s], now_vec: [%s]", \
                                                  now_ik_max_count, fno, (data_set_idx + 1), list(now_ik_links.all().keys()), rep_global_effector.to_log(), \
                                                  aligned_rep_effector_vec.to_log(), rep_diff.to_log(), list(dot_near_dict.values()), list(dot_start_dict.values()), \
@@ -758,7 +772,7 @@ class ArmAlignmentService():
                                     prev_rep_diff = rep_diff
 
                                 elif (prev_rep_diff == MVector3D() or (prev_rep_diff != MVector3D() and np.sum(np.abs(rep_diff.data())) < np.sum(np.abs(prev_rep_diff.data())))) and \
-                                        (np.count_nonzero(np.where(np.abs(rep_diff.data()) > 0.7, 1, 0)) == 0):
+                                        (np.count_nonzero(np.where(np.abs(rep_diff.data()) > (0.7 if data_set.original_xz_ratio > 0.5 else 0.3), 1, 0)) == 0):
 
                                     logger.debug("☆位置合わせ実行ちょっと失敗採用(%s): f: %s(%s:%s), 指定[%s], 結果[%s], diff[%s], dot_near_dict: [%s], dot_start_dict: [%s], org_vec: [%s], now_vec: [%s]", \
                                                  now_ik_max_count, fno, (data_set_idx + 1), list(now_ik_links.all().keys()), rep_global_effector.to_log(), \
@@ -785,6 +799,10 @@ class ArmAlignmentService():
                                     # ちょっと失敗初回か、前回より差が小さくなってる場合、org_bfを保持し直して、もう一周試す
                                     for link_name in now_ik_links.all().keys():
                                         org_bfs[link_name].rotation = data_set.motion.calc_bf(link_name, fno).rotation.copy()
+
+                                    # 前回とまったく同じ場合か、充分に近い場合、IK的に動きがないので終了
+                                    if prev_rep_diff == rep_diff or np.count_nonzero(np.where(np.abs(rep_diff.data()) > 0.05, 1, 0)) == 0:
+                                        break
 
                                     prev_rep_diff = rep_diff
                                 else:
@@ -891,26 +909,26 @@ class ArmAlignmentService():
                                         next_success_fno = next_success_fnos[0]
 
                                     bf = data_set.motion.calc_bf(link_name, fno)
-                                    if prev_success_fno < 0 or next_success_fno < 0 or fno - prev_success_fno > 2 or next_success_fno - fno > 2:
+                                    if prev_success_fno < 0 or next_success_fno < 0 or fno - prev_success_fno >= 2 or next_success_fno - fno >= 2:
 
                                         # 前後どちらか取れなかった場合、もしくは離れている場合、初期状態に戻す
-                                        if prev_success_fno > 0 and fno - prev_success_fno <= 2:
+                                        if prev_success_fno > 0 and fno - prev_success_fno <= 1:
                                             # 前の成功キーフレがあり、かつ近いの場合、前のキーフレを適用する
                                             prev_bf = data_set.motion.calc_bf(link_name, prev_success_fno)
 
                                             logger.debug("f: %s, (%s:%s), pfno: %s, nfno: %s, 失敗上書き(前) start now[%s], prev[%s]", fno, (data_set_idx + 1), link_name, \
-                                                         prev_success_fno, next_success_fno, bf.rotation.toEulerAngles().to_log(), prev_bf.rotation.toEulerAngles().to_log())                                            
+                                                         prev_success_fno, next_success_fno, bf.rotation.toEulerAngles().to_log(), prev_bf.rotation.toEulerAngles().to_log())
                                             
                                             bf.rotation = prev_bf.rotation
 
                                             # 成功と見なす
                                             results[(fno, data_set_idx, alignment_idx)] = True
-                                        elif next_success_fno > 0 and next_success_fno - fno <= 2:
+                                        elif next_success_fno > 0 and next_success_fno - fno <= 1:
                                             # 後の成功キーフレがあり、かつ近いの場合、後のキーフレを適用する
                                             next_bf = data_set.motion.calc_bf(link_name, next_success_fno)
 
                                             logger.debug("f: %s, (%s:%s), pfno: %s, nfno: %s, 失敗上書き(後) start now[%s], next[%s]", fno, (data_set_idx + 1), link_name, \
-                                                         prev_success_fno, next_success_fno, bf.rotation.toEulerAngles().to_log(), next_bf.rotation.toEulerAngles().to_log())                                            
+                                                         prev_success_fno, next_success_fno, bf.rotation.toEulerAngles().to_log(), next_bf.rotation.toEulerAngles().to_log())
 
                                             bf.rotation = next_bf.rotation
 
@@ -918,7 +936,7 @@ class ArmAlignmentService():
                                             results[(fno, data_set_idx, alignment_idx)] = True
                                         else:
                                             logger.debug("f: %s, (%s:%s), pfno: %s, nfno: %s, 失敗上書き(初) start now[%s], org[%s]", fno, (data_set_idx + 1), link_name, \
-                                                         prev_success_fno, next_success_fno, bf.rotation.toEulerAngles().to_log(), bf.org_rotation.toEulerAngles().to_log())                                            
+                                                         prev_success_fno, next_success_fno, bf.rotation.toEulerAngles().to_log(), bf.org_rotation.toEulerAngles().to_log())
 
                                             bf.rotation = bf.org_rotation.copy()
                                         data_set.motion.regist_bf(bf, link_name, fno)
@@ -955,6 +973,21 @@ class ArmAlignmentService():
                     if target_link.tip_ik_links:
                         # 指先合わせが必要な場合
 
+                        is_success = []
+
+                        prev_rep_diff = MVector3D()
+
+                        # 位置合わせ前のbf情報
+                        org_bfs = {}
+                        start_org_bfs = {}
+                        for link_name in target_link.tip_ik_links.all().keys():
+                            if link_name not in org_bfs:
+                                bf = data_set.motion.calc_bf(link_name, fno)
+
+                                # 変位前の角度として保持
+                                org_bfs[link_name] = bf.copy()
+                                start_org_bfs[link_name] = bf.copy()
+
                         # 先モデルのそれぞれのグローバル位置最新データ
                         rep_global_3ds, rep_global_matrixs = \
                             MServiceUtils.calc_global_pos(data_set.rep_model, target_link.rep_links, data_set.motion, fno, return_matrix=True, is_local_x=True)
@@ -980,23 +1013,141 @@ class ArmAlignmentService():
                         # 変換先エフェクタから見た指先のローカル座標
                         rep_local_tip = rep_effector_matrix.inverted() * rep_global_tip
 
-                        # ローカルのXZを元に合わせる
+                        # ローカルのXを元に合わせる
                         rep_local_tip.setX(org_local_tip.x())
-                        rep_local_tip.setZ(org_local_tip.z())
+                        # rep_local_tip.setZ(org_local_tip.z())
 
                         # 目標とする指先の位置
-                        rep_new_global_tip = rep_effector_matrix * rep_local_tip
-                        
-                        logger.debug("先端IK計算開始(%s): f: %s(%s:%s), 現在[%s], 指定[%s]", now_ik_max_count, fno, (data_set_idx + 1), \
-                                     list(target_link.tip_ik_links.all().keys()), rep_effector_vec.to_log(), rep_new_global_tip.to_log())
-                        
-                        # IK計算実行
-                        MServiceUtils.calc_IK(data_set.rep_model, target_link.rep_links, data_set.motion, fno, rep_new_global_tip, target_link.tip_ik_links, max_count=1)
+                        rep_target_global_tip = rep_effector_matrix * rep_local_tip
 
-                        ik_bf = data_set.motion.calc_bf(target_link.effector_bone_name, fno)
-                        logger.test("f: %s(%s:%s), 指先確定 now[%s], org[%s]", fno, (data_set_idx + 1), target_link.effector_bone_name, ik_bf.rotation.toEulerAngles().to_log(), \
-                                    ik_bf.org_rotation.toEulerAngles().to_log())
-                        data_set.motion.regist_bf(ik_bf, target_link.effector_bone_name, fno)
+                        # 先端ＩＫリンク
+                        now_ik_links = target_link.tip_ik_links
+
+                        # IK処理実行
+                        for now_ik_max_count in range(1, 10):
+                            logger.debug("先端IK計算開始(%s): f: %s(%s:%s), 現在[%s], 指定[%s]", now_ik_max_count, fno, (data_set_idx + 1), \
+                                         list(now_ik_links.all().keys()), rep_global_tip.to_log(), rep_target_global_tip.to_log())
+                            
+                            # IK計算実行
+                            MServiceUtils.calc_IK(data_set.rep_model, target_link.rep_links, data_set.motion, fno, rep_target_global_tip, now_ik_links, max_count=1)
+
+                            # 現在のエフェクタ位置
+                            aligned_rep_global_3ds = MServiceUtils.calc_global_pos(data_set.rep_model, target_link.rep_links, data_set.motion, fno)
+                            aligned_rep_effector_vec = aligned_rep_global_3ds[target_link.tip_bone_name]
+
+                            # 現在のエフェクタ位置との差分(エフェクタ位置が指定されている場合のみ)
+                            rep_diff = rep_target_global_tip - aligned_rep_effector_vec
+
+                            # IKの関連ボーンの内積チェック(処理前のbfと比較)
+                            dot_near_dict = {}
+                            dot_start_dict = {}
+                            dot_near_limit_dict = {}
+                            dot_far_limit_dict = {}
+                            for link_name, link_bone in now_ik_links.all().items():
+                                prev_fno, _ = data_set.motion.get_bone_prev_next_fno(link_name, fno=fno, start_fno=all_alignment_group["fnos"][0])
+
+                                if 0 <= prev_fno and fno - prev_fno <= 1:
+                                    # 近く前のキーフレがある場合、そのキーフレの最終的な角度を取得
+                                    prev_bf = data_set.motion.calc_bf(link_name, prev_fno)
+                                    # 変化量は小さめ
+                                    dot_near_limit_dict[link_name] = link_bone.dot_near_limit if is_multi else link_bone.dot_single_limit
+                                else:
+                                    # 前のキーフレがない場合、変化前の角度とする
+                                    prev_bf = start_org_bfs[link_name]
+                                    # 変化量は多め
+                                    dot_near_limit_dict[link_name] = link_bone.dot_far_limit if is_multi else link_bone.dot_single_limit
+
+                                bf = data_set.motion.calc_bf(link_name, fno)
+                                dot_near_dict[link_name] = MQuaternion.dotProduct(prev_bf.rotation, bf.rotation)
+                                dot_start_dict[link_name] = MQuaternion.dotProduct(start_org_bfs[link_name].rotation, bf.rotation)
+                                dot_far_limit_dict[link_name] = link_bone.dot_far_limit if is_multi else link_bone.dot_single_limit
+
+                            # どちらにせよ一旦bf確定
+                            for link_name, link_bone in now_ik_links.all().items():
+                                ik_bf = data_set.motion.calc_bf(link_name, fno)
+                                logger.test("f: %s(%s:%s), 一旦確定 now[%s], org[%s]", fno, (data_set_idx + 1), link_name, ik_bf.rotation.toEulerAngles().to_log(), \
+                                            ik_bf.org_rotation.toEulerAngles().to_log())
+                                data_set.motion.regist_bf(ik_bf, link_name, fno)
+
+                            if np.count_nonzero(np.where(np.array(list(dot_near_dict.values())) < np.array(list(dot_near_limit_dict.values())), 1, 0)) == 0 and \
+                                    np.count_nonzero(np.where(np.array(list(dot_start_dict.values())) < np.array(list(dot_far_limit_dict.values())), 1, 0)) == 0:
+                                if (prev_rep_diff == MVector3D() or np.sum(np.abs(rep_diff.data())) < np.sum(np.abs(prev_rep_diff.data()))) and \
+                                        np.count_nonzero(np.where(np.abs(rep_diff.data()) > 0.2 * data_set.original_xz_ratio, 1, 0)) == 0:
+                                    logger.debug("☆先端位置合わせ実行成功(%s): f: %s(%s:%s), 指定[%s], 結果[%s], diff[%s], dot_near_dict: [%s], dot_start_dict: [%s], org: [%s], now_vec: [%s]", \
+                                                 now_ik_max_count, fno, (data_set_idx + 1), list(now_ik_links.all().keys()), rep_target_global_tip.to_log(), \
+                                                 aligned_rep_effector_vec.to_log(), rep_diff.to_log(), list(dot_near_dict.values()), list(dot_start_dict.values()), \
+                                                 start_org_bfs[link_name].rotation.toEulerAngles().to_log(), bf.rotation.toEulerAngles().to_log())
+
+                                    # 大体同じ位置にあって、角度もそう大きくズレてない場合、OK(全部上書き)
+                                    is_success = [True]
+
+                                    # org保持し直す
+                                    for link_name in now_ik_links.all().keys():
+                                        org_bfs[link_name].rotation = data_set.motion.calc_bf(link_name, fno).rotation.copy()
+
+                                    # 前回とまったく同じ場合か、充分に近い場合、IK的に動きがないので終了
+                                    if prev_rep_diff == rep_diff or np.count_nonzero(np.where(np.abs(rep_diff.data()) > 0.05, 1, 0)) == 0:
+                                        break
+
+                                    prev_rep_diff = rep_diff
+
+                                elif (prev_rep_diff == MVector3D() or (prev_rep_diff != MVector3D() and np.sum(np.abs(rep_diff.data())) < np.sum(np.abs(prev_rep_diff.data())))) and \
+                                        (np.count_nonzero(np.where(np.abs(rep_diff.data()) > 0.7 * data_set.original_xz_ratio, 1, 0)) == 0):
+
+                                    logger.debug("☆先端位置合わせ実行ちょっと失敗採用(%s): f: %s(%s:%s), 指定[%s], 結果[%s], diff[%s], dot_near_dict: [%s], dot_start_dict: [%s], org_vec: [%s], now_vec: [%s]", \
+                                                 now_ik_max_count, fno, (data_set_idx + 1), list(now_ik_links.all().keys()), rep_target_global_tip.to_log(), \
+                                                 aligned_rep_effector_vec.to_log(), rep_diff.to_log(), list(dot_near_dict.values()), list(dot_start_dict.values()), \
+                                                 start_org_bfs[link_name].rotation.toEulerAngles().to_log(), bf.rotation.toEulerAngles().to_log())
+
+                                    # 採用されたらOK
+                                    is_success.append(True)
+
+                                    # ちょっと失敗初回か、前回より差が小さくなってる場合、org_bfを保持し直して、もう一周試す
+                                    for link_name in now_ik_links.all().keys():
+                                        org_bfs[link_name].rotation = data_set.motion.calc_bf(link_name, fno).rotation.copy()
+
+                                    prev_rep_diff = rep_diff
+                                else:
+                                    logger.debug("★先端位置合わせ実行ちょっと失敗不採用(%s): f: %s(%s:%s), 指定[%s], 結果[%s], diff[%s], dot_near_dict: [%s], dot_start_dict: [%s], org_vec: [%s], now_vec: [%s]", \
+                                                 now_ik_max_count, fno, (data_set_idx + 1), list(now_ik_links.all().keys()), rep_target_global_tip.to_log(), \
+                                                 aligned_rep_effector_vec.to_log(), rep_diff.to_log(), list(dot_near_dict.values()), list(dot_start_dict.values()), \
+                                                 start_org_bfs[link_name].rotation.toEulerAngles().to_log(), bf.rotation.toEulerAngles().to_log())
+
+                                    is_success.append(False)
+
+                                    if prev_rep_diff == MVector3D():
+                                        # 初回失敗の場合、とりあえず設定
+                                        prev_rep_diff = rep_diff
+
+                            else:
+                                logger.debug("★先端位置合わせ実行失敗(%s): f: %s(%s:%s), 指定[%s], 結果[%s], diff[%s], dot_near_dict: [%s], dot_start_dict: [%s], org_vec: [%s], now_vec: [%s]", \
+                                             now_ik_max_count, fno, (data_set_idx + 1), list(now_ik_links.all().keys()), rep_target_global_tip.to_log(), \
+                                             aligned_rep_effector_vec.to_log(), rep_diff.to_log(), list(dot_near_dict.values()), list(dot_start_dict.values()), \
+                                             start_org_bfs[link_name].rotation.toEulerAngles().to_log(), bf.rotation.toEulerAngles().to_log())
+
+                                is_success.append(False)
+
+                        if len(is_success) > 0:
+                            if is_success.count(True) == 0:
+                                # 全てのパターンで失敗してる場合、失敗ログ
+                                dot_values = ",".join([str(round(dot, 5)) for dot in list(dot_start_dict.values())])
+                                logger.info("×先端位置合わせ失敗: f: %s(%s-%s), 近似度: %s", fno, (data_set_idx + 1), target_link.effector_display_bone_name, dot_values)
+
+                                # 最初に戻す
+                                for link_name in list(now_ik_links.all().keys())[1:]:
+                                    data_set.motion.regist_bf(start_org_bfs[link_name].copy(), link_name, fno)
+                            else:
+                                # どっか成功していたら、最後に成功したトコまで戻す
+                                for link_name in list(now_ik_links.all().keys())[1:]:
+                                    data_set.motion.regist_bf(org_bfs[link_name].copy(), link_name, fno)
+
+                                if len(is_success) > 1 and is_success.count(False) > 0:
+                                    # どこかのパターンで失敗している場合、一部成功ログ
+                                    dot_values = ",".join([str(round(dot, 5)) for dot in list(dot_start_dict.values())])
+                                    logger.info("△先端位置合わせ一部成功: f: %s(%s-%s), 近似度: %s", fno, (data_set_idx + 1), target_link.effector_display_bone_name, dot_values)
+                                else:
+                                    # 全部成功している場合、成功ログ
+                                    logger.info("○先端位置合わせ成功: f: %s(%s-%s)", fno, (data_set_idx + 1), target_link.effector_display_bone_name)
 
             if fno // 500 > prev_block_fno:
                 logger.info("-- %sフレーム目:終了(%s％)【位置合わせ】", fno, round((fno / fnos[-1]) * 100, 3))
@@ -1012,7 +1163,7 @@ class ArmAlignmentService():
         bone_names = []
 
         for (alignment_idx, direction) in [(1, "左"), (2, "右")]:
-            tip_bone_name = "{0}人指先".format(direction)
+            tip_bone_name = "{0}人指先実体".format(direction)
             if tip_bone_name not in data_set.org_model.bones or tip_bone_name not in data_set.rep_model.bones:
                 # 指先がどっちかにない場合、手首を対象とする
                 tip_bone_name = "{0}手首".format(direction)
@@ -1123,9 +1274,9 @@ class ArmAlignmentService():
         finger_name_list = []
         for direction in ["左", "右"]:
             for finger_name in ["親指", "人指", "中指", "薬指", "小指"]:
-                finger_name_list.append("{0}{1}先".format(direction, finger_name))
+                finger_name_list.append("{0}{1}先実体".format(direction, finger_name))
         
-        if not set(finger_name_list).issubset(data_set.org_model.bones) or not set(finger_name_list).issubset(data_set.org_model.bones):
+        if not set(finger_name_list).issubset(data_set.org_model.bones) or not set(finger_name_list).issubset(data_set.rep_model.bones):
             logger.warning("指ボーンが不足しているため、指位置合わせはスキップします。", decoration=MLogger.DECORATION_BOX)
             return []
         
@@ -1135,7 +1286,11 @@ class ArmAlignmentService():
             for finger_idx, finger_name in enumerate(["親指", "人指", "中指", "薬指", "小指"]):
                 alignment_idx = (direction_idx * 5) + finger_idx + alignment_start_idx
             
-                total_finger_name = "{0}{1}先".format(direction, finger_name)
+                total_finger_name = "{0}{1}先実体".format(direction, finger_name)
+
+                if total_finger_name not in data_set.org_model.bones or total_finger_name not in data_set.rep_model.bones:
+                    # どっちかボーンがなければスルー
+                    continue
 
                 # 手のひらの長さ
                 org_palm_length = (data_set.org_model.bones["{0}手首".format(direction)].position.distanceToPoint(data_set.org_model.bones[total_finger_name].position))

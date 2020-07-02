@@ -10,7 +10,7 @@ from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MM
 from utils import MBezierUtils # noqa
 from utils.MLogger import MLogger
 
-logger = MLogger(__name__)
+logger = MLogger(__name__, level=1)
 
 
 class VmdBoneFrame():
@@ -29,6 +29,8 @@ class VmdBoneFrame():
         self.key = False
         # VMD読み込み処理で読み込んだキーか
         self.read = False
+        # 接触回避の方向
+        self.avoidance = ""
     
     def set_name(self, name):
         self.name = name

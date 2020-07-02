@@ -12,7 +12,7 @@ from mmd.VpdReader import VpdReader
 from utils import MFileUtils
 from utils.MException import SizingException
 from utils.MLogger import MLogger # noqa
-from utils.MException import SizingException, MKilledException
+from utils.MException import MKilledException
 
 
 logger = MLogger(__name__)

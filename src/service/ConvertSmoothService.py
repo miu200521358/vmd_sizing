@@ -69,12 +69,22 @@ class ConvertSmoothService():
                     if self.options.interpolation == 0 and len(self.options.motion.bones[bone_name].keys()) >= 2:
                         # 線形補間の場合、そのまま全打ち
                         futures.append(executor.submit(self.prepare_linear, bone_name))
-                    elif self.options.interpolation == 1 and len(self.options.motion.bones[bone_name].keys()) > 2:
-                        # 円形補間の場合、円形全打ち
-                        futures.append(executor.submit(self.prepare_circle, bone_name))
-                    elif self.options.interpolation == 2 and len(self.options.motion.bones[bone_name].keys()) >= 2:
-                        # 曲線補間の場合、カトマル曲線全打ち
-                        futures.append(executor.submit(self.prepare_curve, bone_name))
+                    elif self.options.interpolation == 1:
+                        if len(self.options.motion.bones[bone_name].keys()) > 2:
+                            # 円形補間の場合、円形全打ち
+                            futures.append(executor.submit(self.prepare_circle, bone_name))
+                        else:
+                            # 円形補間でキー数が足りない場合、線形補間
+                            logger.warning("円形補間が指定されましたが、キー数が3つに満たないため、計算出来ません。ボーン名: %s", bone_name)
+                            futures.append(executor.submit(self.prepare_linear, bone_name))
+                    elif self.options.interpolation == 2:
+                        if len(self.options.motion.bones[bone_name].keys()) > 2:
+                            # 曲線補間の場合、カトマル曲線全打ち
+                            futures.append(executor.submit(self.prepare_curve, bone_name))
+                        else:
+                            # 曲線補間でキー数が足りない場合、線形補間
+                            logger.warning("曲線補間が指定されましたが、キー数が3つに満たないため、計算出来ません。ボーン名: %s", bone_name)
+                            futures.append(executor.submit(self.prepare_linear, bone_name))
         concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
         for f in futures:
@@ -136,7 +146,7 @@ class ConvertSmoothService():
                 logger.info("【フィルタリング%s回目】%s 開始", n, bone_name)
                 self.options.motion.smooth_filter_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
                                                      self.options.model.bones[bone_name].getTranslatable(), \
-                                                     config={"freq": 30, "mincutoff": 0.01, "beta": 0.01, "dcutoff": 1})
+                                                     config={"freq": 30, "mincutoff": 0.1, "beta": 0.1, "dcutoff": 1})
 
             logger.info("【フィルタリング】%s 終了", bone_name)
 

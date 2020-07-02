@@ -1282,6 +1282,9 @@ class StanceService():
 
             logger.info("センターY補正: 準備終了【No.%s】", (data_set_idx + 1))
 
+            org_upper_length = (data_set.org_model.bones["首根元"].position.distanceToPoint(data_set.org_model.bones["上半身"].position))
+            rep_upper_length = (data_set.rep_model.bones["首根元"].position.distanceToPoint(data_set.rep_model.bones["上半身"].position))
+
             prev_fno = 0
             fnos = data_set.motion.get_bone_fnos("センター")
             for fno in fnos:
@@ -1289,7 +1292,7 @@ class StanceService():
                 if bf.key:
                     logger.debug("f: %s, 調整前: %s", bf.fno, bf.position)
                     bf.position += self.calc_center_offset_by_arm(bf, data_set_idx, data_set, org_center_links, org_arm_links, \
-                                                                  rep_center_links, rep_arm_links, org_center_bone_name, rep_center_bone_name)
+                                                                  rep_center_links, rep_arm_links, org_center_bone_name, rep_center_bone_name, org_upper_length, rep_upper_length)
                     logger.debug("f: %s, 腕オフセット後: %s", bf.fno, bf.position)
 
                 if fno // 500 > prev_fno and fnos[-1] > 0:
@@ -1304,7 +1307,7 @@ class StanceService():
     def calc_center_offset_by_arm(self, bf: VmdBoneFrame, data_set_idx: int, data_set: MOptionsDataSet, \
                                   org_center_links: BoneLinks, org_arm_links: BoneLinks, \
                                   rep_center_links: BoneLinks, rep_arm_links: BoneLinks, \
-                                  org_center_bone_name: str, rep_center_bone_name: str):
+                                  org_center_bone_name: str, rep_center_bone_name: str, org_upper_length: float, rep_upper_length: float):
 
         # 元モデルのセンターオフセット
         org_left_wrist_pos, org_right_wrist_pos, org_upper_pos, org_neck_base_pos = \
@@ -1320,17 +1323,12 @@ class StanceService():
         
         rep_center_arm_offset = MVector3D()
 
-        # # 首が上半身よりも大体上の場合、座ってる可能性があるので調整しない
-        # is_sit = org_neck_base_pos.y() * 1.2 > org_upper_pos.y()
-        # # 腰が浮いている（上半身がちょっと上）の場合、
-        # logger.debug("f: %s, org_neck_base_pos: %s, org_upper_pos: %s, is_sit: %s", bf.fno, org_neck_base_pos, org_upper_pos, is_sit)
-
-        # 元モデルの床に近い方（Yが小さい方）が先モデルで床に潜ってる場合、センターの位置を元モデルも合わせる
-        if org_left_wrist_pos.y() < org_right_wrist_pos.y() and rep_left_wrist_pos.y() < 0 and rep_left_wrist_pos.y() < org_left_wrist_pos.y() * data_set.original_xz_ratio:
-            rep_center_arm_offset.setY(org_left_wrist_pos.y() * data_set.original_xz_ratio - rep_left_wrist_pos.y())
-
-        elif org_right_wrist_pos.y() < org_left_wrist_pos.y() and rep_right_wrist_pos.y() < 0 and rep_right_wrist_pos.y() < org_right_wrist_pos.y() * data_set.original_xz_ratio:
-            rep_center_arm_offset.setY(org_right_wrist_pos.y() * data_set.original_xz_ratio - rep_right_wrist_pos.y())
+        if org_left_wrist_pos.y() < org_upper_length / 2:
+            # 左手首が上半身の半分以下の場合、位置合わせ
+            rep_center_arm_offset.setY(org_left_wrist_pos.y() * data_set.original_y_ratio - rep_left_wrist_pos.y())
+        elif org_right_wrist_pos.y() < org_upper_length / 2:
+            # 右手首が上半身の半分以下の場合、位置合わせ
+            rep_center_arm_offset.setY(org_right_wrist_pos.y() * data_set.original_y_ratio - rep_right_wrist_pos.y())
 
         return rep_center_arm_offset
 
