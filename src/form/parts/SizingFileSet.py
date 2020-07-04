@@ -238,7 +238,7 @@ class SizingFileSet():
             self.rep_model_file_ctrl.title_parts_ctrl.GetValue(),
             self.frame.arm_panel_ctrl.arm_process_flg_avoidance.GetValue(),
             self.frame.arm_panel_ctrl.arm_process_flg_alignment.GetValue(),
-            (self.set_no in self.frame.morph_panel_ctrl.morph_set_dict and self.frame.morph_panel_ctrl.morph_set_dict[self.set_no].is_set_morph),
+            (self.set_no in self.frame.morph_panel_ctrl.morph_set_dict and self.frame.morph_panel_ctrl.morph_set_dict[self.set_no].is_set_morph()),
             self.output_vmd_file_ctrl.file_ctrl.GetPath(), is_force)
 
         self.output_vmd_file_ctrl.file_ctrl.SetPath(output_vmd_path)

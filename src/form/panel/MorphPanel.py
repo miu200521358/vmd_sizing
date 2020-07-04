@@ -304,7 +304,7 @@ class MorphSet():
 
     # モーフが設定されているか
     def is_set_morph(self):
-        for midx, oc, rc in enumerate(self.org_choices, self.rep_choices):
+        for midx, (oc, rc) in enumerate(zip(self.org_choices, self.rep_choices)):
             if oc.GetSelection() > 0 and rc.GetSelection() > 0:
                 # なんか設定されていたらOK
                 return True

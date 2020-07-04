@@ -1311,15 +1311,19 @@ class StanceService():
             prev_fno = 0
             fnos = data_set.motion.get_bone_fnos("センター", "グルーブ")
             for fno in fnos:
-                bf = data_set.motion.calc_bf(rep_center_bone_name, fno)
+                center_bf = data_set.motion.calc_bf("センター", fno)
+                groove_bf = data_set.motion.calc_bf("グルーブ", fno)
 
-                logger.debug("f: %s, 調整前: %s", bf.fno, bf.position)
-                bf.position += self.calc_center_offset_by_arm(bf, data_set_idx, data_set, org_center_links, org_arm_links, org_leg_links, \
-                                                              rep_center_links, rep_arm_links, rep_leg_links, org_palm_length, rep_palm_length, \
-                                                              org_center_bone_name, rep_center_bone_name, org_upper_length, rep_upper_length)
-                logger.debug("f: %s, 腕オフセット後: %s", bf.fno, bf.position)
+                bf = center_bf if center_bf.position.y() != 0 else groove_bf
 
-                data_set.motion.regist_bf(bf, rep_center_bone_name, fno)
+                if bf.position.y() != 0:
+                    logger.debug("f: %s, 調整前: %s", bf.fno, bf.position)
+                    bf.position += self.calc_center_offset_by_arm(bf, data_set_idx, data_set, org_center_links, org_arm_links, org_leg_links, \
+                                                                  rep_center_links, rep_arm_links, rep_leg_links, org_palm_length, rep_palm_length, \
+                                                                  org_center_bone_name, rep_center_bone_name, org_upper_length, rep_upper_length)
+                    logger.debug("f: %s, 腕オフセット後: %s", bf.fno, bf.position)
+
+                    data_set.motion.regist_bf(bf, bf.name, fno)
 
                 if fno // 500 > prev_fno and fnos[-1] > 0:
                     logger.info("-- %sフレーム目:終了(%s％)【No.%s - センターY補正】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1)
@@ -1355,7 +1359,7 @@ class StanceService():
             # if rep_left_wrist_pos.y() > org_left_wrist_pos.y() * data_set.original_y_ratio:
             #     # 床上の場合、とりあえず半分だけ
             #     org_left_wrist_offset /= 2
-            logger.info("センターY補正（左手首） f: %s, y: %s, org: %s, rep: %s", bf.fno, \
+            logger.debug("センターY補正（左手首） f: %s, y: %s, org: %s, rep: %s", bf.fno, \
                          org_left_wrist_offset, (org_left_wrist_pos.y() * data_set.original_y_ratio), rep_left_wrist_pos.y())
 
         org_right_wrist_offset = 0
@@ -1365,7 +1369,7 @@ class StanceService():
             # if rep_right_wrist_pos.y() > org_right_wrist_pos.y() * data_set.original_y_ratio:
             #     # 床上の場合、とりあえず半分だけ
             #     org_right_wrist_offset /= 2
-            logger.info("センターY補正（右手首） f: %s, y: %s, org: %s, rep: %s", bf.fno, \
+            logger.debug("センターY補正（右手首） f: %s, y: %s, org: %s, rep: %s", bf.fno, \
                          org_right_wrist_offset, (org_right_wrist_pos.y() * data_set.original_y_ratio), rep_right_wrist_pos.y())
         
         org_left_leg_offset = 0
@@ -1375,7 +1379,7 @@ class StanceService():
             # if rep_left_leg_pos.y() > org_left_leg_pos.y() * data_set.original_y_ratio:
             #     # 床上の場合、とりあえず半分だけ
             #     org_left_leg_offset /= 2
-            logger.info("センターY補正（左足） f: %s, y: %s, org: %s, rep: %s", bf.fno, \
+            logger.debug("センターY補正（左足） f: %s, y: %s, org: %s, rep: %s", bf.fno, \
                          org_left_leg_offset, (org_left_leg_pos.y() * data_set.original_y_ratio), rep_left_leg_pos.y())
 
         org_right_leg_offset = 0
@@ -1385,7 +1389,7 @@ class StanceService():
             # if rep_right_leg_pos.y() > org_right_leg_pos.y() * data_set.original_y_ratio:
             #     # 床上の場合、とりあえず半分だけ
             #     org_right_leg_offset /= 2
-            logger.info("センターY補正（右足） f: %s, y: %s, org: %s, rep: %s", bf.fno, \
+            logger.debug("センターY補正（右足） f: %s, y: %s, org: %s, rep: %s", bf.fno, \
                          org_right_leg_offset, (org_right_leg_pos.y() * data_set.original_y_ratio), rep_right_leg_pos.y())
         
         rep_center_arm_offset = MVector3D()
@@ -1394,7 +1398,7 @@ class StanceService():
             # 床に潜るよりは浮いてる方がマシ
             rep_center_arm_offset = MVector3D(0, target_offsets[np.argmin(np.abs(target_offsets[np.nonzero(target_offsets)[0]]))], 0)
 
-        logger.info("センターY補正（結果） f: %s, y: %s", bf.fno, rep_center_arm_offset.y())
+        logger.debug("センターY補正（結果） f: %s, y: %s", bf.fno, rep_center_arm_offset.y())
 
         return rep_center_arm_offset
 
@@ -1416,7 +1420,7 @@ class StanceService():
         right_leg_global_3ds = MServiceUtils.calc_global_pos(model, leg_links["右"], motion, bf.fno)
 
         return left_arm_global_3ds["左手首"], right_arm_global_3ds["右手首"], right_arm_global_3ds["首根元"], \
-                left_leg_global_3ds["左足"], right_leg_global_3ds["右足"], right_leg_global_3ds["下半身"]
+            left_leg_global_3ds["左足"], right_leg_global_3ds["右足"], right_leg_global_3ds["下半身"]
 
     # 足IKによるセンターオフセット値
     def calc_center_offset_by_leg_ik(self, bf: VmdBoneFrame, data_set_idx: int, data_set: MOptionsDataSet, \
