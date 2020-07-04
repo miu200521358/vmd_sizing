@@ -820,13 +820,64 @@ class StanceService():
                     org_leg_ik_links = data_set.org_model.create_link_2_top_one(target_bone_name)
                     rep_leg_ik_links = data_set.rep_model.create_link_2_top_one(target_bone_name)
 
-                    # 初期立ち位置の足IKのグローバル位置と行列
-                    _, rep_initial_leg_ik_matrixs = MServiceUtils.calc_global_pos(data_set.rep_model, rep_leg_ik_links, VmdMotion(), 0, return_matrix=True)
-
+                    # つま先と足IKのあるキーフレ
                     fnos = data_set.motion.get_bone_fnos(target_bone_name)
+
+                    if len(fnos) == 0:
+                        logger.info("%s足ＩＫ補正: 【No.%s】処理対象キーフレがないため、処理を終了します。", direction, (data_set_idx + 1))
+                        return
+
+                    ik_on_fnos = []
+                    d_on_fnos = []
+
+                    is_ik_on = True
+                    for fno in range(fnos[-1] + 1):
+                        is_d_on = False
+                        is_in_ik_on = False
+                        for showik in data_set.motion.showiks:
+                            if showik.fno == fno and (target_bone_name in showik.ik and showik.ik[target_bone_name].onoff == 0) or \
+                                    (target_bone_name in showik.ik and showik.ik[target_bone_name].onoff == 0):
+                                # IKOFFになったら、フラグOFF
+                                is_in_ik_on = True
+                                break
+
+                        # 最後までIK=ONの場合、フラグON
+                        if not is_in_ik_on:
+                            is_ik_on = True
+                        
+                        for d_bone_name in ["{0}足D".format(direction), "{0}ひざD".format(direction)]:
+                            d_bf = data_set.motion.calc_bf(d_bone_name, fno)
+                            if d_bf.rotation != MQuaternion():
+                                # D系ボーンに値が入ってる場合、フラグON
+                                is_d_on = True
+                                break
+                        
+                        if is_ik_on:
+                            # フラグONの場合のみ、キーフレ保持
+                            ik_on_fnos.append(fno)
+
+                        if is_d_on:
+                            # フラグONの場合のみ、キーフレ保持
+                            d_on_fnos.append(fno)
+
                     for fno_idx, fno in enumerate(fnos):
+                        if fno not in ik_on_fnos:
+                            # IK=ONのキーフレではない場合、処理スルー
+                            logger.warning("【No.%s】%sフレーム目:%s IKフラグ=OFFの為、処理スキップします", (data_set_idx + 1), fno, target_bone_name)
+                            continue
+                            
+                        if fno in d_on_fnos:
+                            # D系ボーンに値が入ってるキーフレである場合、処理スルー
+                            logger.warning("【No.%s】%sフレーム目:%s 足DもしくはひざDに値が入っている為、処理スキップします", (data_set_idx + 1), fno, target_bone_name)
+                            continue
+
                         # 足ＩＫのbf
                         ik_bf = data_set.motion.calc_bf(target_bone_name, fno)
+
+                        # 初期立ち位置の足IKのグローバル位置と行列
+                        _, rep_initial_leg_ik_matrixs \
+                            = MServiceUtils.calc_global_pos(data_set.rep_model, rep_leg_ik_links, data_set.motion, fno, \
+                                                            limit_links=rep_leg_ik_links.from_links(rep_leg_ik_links.get(target_bone_name, offset=-1).name), return_matrix=True)
                         
                         # 処理対象ボーンまでの位置とグローバル座標
                         org_ik_root_global_3ds = MServiceUtils.calc_global_pos(data_set.org_model, org_ik_root_links, data_set.org_motion, fno)
@@ -879,7 +930,7 @@ class StanceService():
 
                         # 足IKのローカル座標系
                         rep_leg_ik_matrix = rep_initial_leg_ik_matrixs[target_bone_name]
-                        # IKの親から見た、計算後IKのローカル位置
+                        # IKから見た、計算後IKのローカル位置
                         rep_leg_ik_recalc_local_pos = rep_leg_ik_matrix.inverted() * recalc_rep_global_leg_ik_pos
                         rep_leg_ik_recalc_local_pos.setY(ik_bf.position.y())
 
@@ -961,20 +1012,42 @@ class StanceService():
                     fnos.extend(data_set.motion.get_differ_fnos((data_set_idx + 1), [leg_ik_bone_name, toe_ik_bone_name], limit_degrees=20, limit_length=1.5))
                     fnos = sorted(list(set(fnos)))
 
+                    if len(fnos) == 0:
+                        logger.info("%sつま先ＩＫ補正: 【No.%s】処理対象キーフレがないため、処理を終了します。", direction, (data_set_idx + 1))
+                        return
+
                     ik_on_fnos = []
+                    d_on_fnos = []
 
                     is_ik_on = True
-                    for fno in range(fnos[-1]):
+                    for fno in range(fnos[-1] + 1):
+                        is_d_on = False
+                        is_in_ik_on = False
                         for showik in data_set.motion.showiks:
                             if showik.fno == fno and (leg_ik_bone_name in showik.ik and showik.ik[leg_ik_bone_name].onoff == 0) or \
                                     (toe_ik_bone_name in showik.ik and showik.ik[toe_ik_bone_name].onoff == 0):
                                 # IKOFFになったら、フラグOFF
-                                is_ik_on = False
+                                is_in_ik_on = True
+                                break
+
+                        # 最後までIK=ONの場合、フラグON
+                        if not is_in_ik_on:
+                            is_ik_on = True
+                        
+                        for d_bone_name in ["{0}足D", "{0}ひざD"]:
+                            d_bf = data_set.motion.calc_bf(d_bone_name, fno)
+                            if d_bf.rotation != MQuaternion():
+                                # D系ボーンに値が入ってる場合、フラグON
+                                is_d_on = True
                                 break
                         
                         if is_ik_on:
                             # フラグONの場合のみ、キーフレ保持
                             ik_on_fnos.append(fno)
+
+                        if is_d_on:
+                            # フラグONの場合のみ、キーフレ保持
+                            d_on_fnos.append(fno)
 
                     for fno_idx, fno in enumerate(fnos):
                         # 足ＩＫのキーを追加しておく
@@ -984,6 +1057,12 @@ class StanceService():
                     for fno_idx, fno in enumerate(fnos):
                         if fno not in ik_on_fnos:
                             # IK=ONのキーフレではない場合、処理スルー
+                            logger.warning("【No.%s】%sフレーム目:%s IKフラグ=OFFの為、処理スキップします", (data_set_idx + 1), fno, toe_ik_bone_name)
+                            continue
+                            
+                        if fno in d_on_fnos:
+                            # D系ボーンに値が入ってるキーフレである場合、処理スルー
+                            logger.warning("【No.%s】%sフレーム目:%s 足DもしくはひざDに値が入っている為、処理スキップします", (data_set_idx + 1), fno, toe_ik_bone_name)
                             continue
 
                         # つま先ＩＫのbf
