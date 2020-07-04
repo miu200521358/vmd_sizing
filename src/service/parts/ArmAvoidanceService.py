@@ -144,8 +144,6 @@ class ArmAvoidanceService():
         elbow_bone_name = "{0}ひじ".format(direction)
         wrist_bone_name = "{0}手首".format(direction)
 
-        arm_local_x_axis = data_set.rep_model.get_local_x_axis(arm_bone_name)
-
         target_bone_names = [arm_bone_name, "{0}腕捩".format(direction), elbow_bone_name, "{0}手捩".format(direction), wrist_bone_name]
         avoidance_axis = {}
         prev_block_fno = 0
@@ -245,6 +243,8 @@ class ArmAvoidanceService():
                         for ik_cnt, (ik_links, ik_max_count) in enumerate(zip(avoidance_options.ik_links_list[arm_link.last_name()], \
                                                                               avoidance_options.ik_count_list[arm_link.last_name()])):
                             prev_rep_diff = MVector3D()
+                            # ひじを含んでいるか
+                            is_in_elbow = elbow_bone_name in list(ik_links.all().keys())
                             
                             for now_ik_max_count in range(1, ik_max_count + 1):
                                 logger.debug("IK計算開始(%s): f: %s(%s:%s:%s), axis: %s, now[%s], new[%s]", now_ik_max_count, fno, (data_set_idx + 1), \
@@ -271,7 +271,7 @@ class ArmAvoidanceService():
                                 for link_name in list(ik_links.all().keys())[1:]:
                                     now_bf = data_set.motion.calc_bf(link_name, fno)
                                     data_set.motion.regist_bf(now_bf, link_name, fno)
-
+                                
                                 if np.count_nonzero(np.where(np.array(list(dot_dict.values())) < np.array(list(dot_limit_dict.values())), 1, 0)) == 0:
                                     if (prev_rep_diff == MVector3D() or np.sum(np.abs(rep_diff.data())) < np.sum(np.abs(prev_rep_diff.data()))) and \
                                             np.count_nonzero(np.where(np.abs(rep_diff.data()) > (0.2 if data_set.original_xz_ratio > 0.5 else 0.1), 1, 0)) == 0:
@@ -423,9 +423,6 @@ class ArmAvoidanceService():
                                     # IKリストの中にひじが含まれていない場合、キャンセル
                                     arm_bf = data_set.motion.calc_bf(arm_bone_name, fno)
                                     elbow_bf = data_set.motion.calc_bf(elbow_bone_name, fno)
-                                    # 腕の変化量
-                                    arm_x_qq, arm_y_qq, arm_z_qq, arm_yz_qq \
-                                        = MServiceUtils.separate_local_qq(fno, arm_bone_name, (arm_bf.rotation.inverted() * arm_bf.org_rotation), arm_local_x_axis)
                                     # 腕の変化量YZのみをひじに加算
                                     elbow_adjust_qq = arm_bf.rotation.inverted() * arm_bf.org_rotation * elbow_bf.rotation
 
@@ -638,13 +635,14 @@ class ArmAvoidanceService():
             effector_bone = arm_link.get(effector_bone_name)
 
             arm_bone = arm_link.get("{0}腕".format(direction))
-            arm_bone.dot_limit = 0.8
+            arm_bone.dot_limit = 0.7
+            arm_bone.degree_limit = 57.5916
 
             ik_links = BoneLinks()
             ik_links.append(effector_bone)
             ik_links.append(arm_bone)
             ik_links_list[effector_bone_name].append(ik_links)
-            ik_count_list[effector_bone_name].append(20)
+            ik_count_list[effector_bone_name].append(30)
 
         effector_bone_name_list = []
        
@@ -666,15 +664,17 @@ class ArmAvoidanceService():
 
             elbow_bone = arm_link.get("{0}ひじ".format(direction))
             elbow_bone.dot_limit = 0.7
+            elbow_bone.degree_limit = 57.5916
 
             arm_bone = arm_link.get("{0}腕".format(direction))
-            arm_bone.dot_limit = 0.8
+            arm_bone.dot_limit = 0.7
+            arm_bone.degree_limit = 57.5916
 
             ik_links = BoneLinks()
             ik_links.append(effector_bone)
             ik_links.append(arm_bone)
             ik_links_list[effector_bone_name].append(ik_links)
-            ik_count_list[effector_bone_name].append(20)
+            ik_count_list[effector_bone_name].append(30)
 
             # ik_links = BoneLinks()
             # ik_links.append(effector_bone)
@@ -687,7 +687,7 @@ class ArmAvoidanceService():
             ik_links.append(elbow_bone)
             ik_links.append(arm_bone)
             ik_links_list[effector_bone_name].append(ik_links)
-            ik_count_list[effector_bone_name].append(20)
+            ik_count_list[effector_bone_name].append(30)
 
         # 手首リンク登録
         return ArmAvoidanceOption(arm_links, ik_links_list, ik_count_list, avoidance_links, avoidances, face_length)

@@ -185,6 +185,10 @@ class MainFrame(wx.Frame):
             event.Skip()
             return
 
+        if self.note_ctrl.GetSelection() == self.multi_panel_ctrl.tab_idx:
+            # 複数タブ移動時に保存
+            self.file_panel_ctrl.save()
+
         if self.note_ctrl.GetSelection() == self.morph_panel_ctrl.tab_idx:
             # コンソールクリア
             self.file_panel_ctrl.console_ctrl.Clear()

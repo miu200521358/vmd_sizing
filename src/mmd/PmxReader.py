@@ -366,6 +366,7 @@ class PmxReader():
 
                 if "右足先EX" in pmx.bones or "右足ＩＫ" in pmx.bones:
                     # 右足底実体ボーン
+                    right_sole_vertex = None
                     if "右足先EX" in pmx.bones:
                         right_sole_vertex = Vertex(-1, MVector3D(pmx.bones["右足先EX"].position.x(), 0, pmx.bones["右足先EX"].position.z()), MVector3D(), [], [], Vertex.Bdef1(-1), -1)
                     elif "右足ＩＫ" in pmx.bones:
@@ -380,6 +381,7 @@ class PmxReader():
 
                 if "左足先EX" in pmx.bones or "左足ＩＫ" in pmx.bones:
                     # 左足底実体ボーン
+                    left_sole_vertex = None
                     if "左足先EX" in pmx.bones:
                         left_sole_vertex = Vertex(-1, MVector3D(pmx.bones["左足先EX"].position.x(), 0, pmx.bones["左足先EX"].position.z()), MVector3D(), [], [], Vertex.Bdef1(-1), -1)
                     elif "左足ＩＫ" in pmx.bones:

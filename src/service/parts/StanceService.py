@@ -870,7 +870,7 @@ class StanceService():
                             # D系ボーンに値が入ってるキーフレである場合、処理スルー
                             logger.warning("【No.%s】%sフレーム目:%s 足DもしくはひざDに値が入っている為、処理スキップします", (data_set_idx + 1), fno, target_bone_name)
                             continue
-
+                            
                         # 足ＩＫのbf
                         ik_bf = data_set.motion.calc_bf(target_bone_name, fno)
 
@@ -1395,7 +1395,7 @@ class StanceService():
 
                 bf = center_bf if center_bf.position.y() != 0 else groove_bf
 
-                if bf.position.y() != 0:
+                if bf.position.y() < 0:
                     logger.debug("f: %s, 調整前: %s", bf.fno, bf.position)
                     bf.position += self.calc_center_offset_by_arm(bf, data_set_idx, data_set, org_center_links, org_arm_links, org_leg_links, \
                                                                   rep_center_links, rep_arm_links, rep_leg_links, org_palm_length, rep_palm_length, \

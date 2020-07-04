@@ -831,8 +831,7 @@ class ArmAlignmentService():
                     if len(is_success) > 0:
                         if is_success.count(True) == 0:
                             # 全てのパターンで失敗してる場合、失敗ログ
-                            dot_values = ",".join([str(round(dot, 5)) for dot in list(dot_start_dict.values())])
-                            logger.info("×位置合わせ失敗: f: %s(%s-%s), 近似度: %s", fno, (data_set_idx + 1), target_link.effector_display_bone_name, dot_values)
+                            logger.info("×位置合わせ失敗: f: %s(%s-%s)", fno, (data_set_idx + 1), target_link.effector_display_bone_name)
 
                             # 失敗記録
                             results[(fno, data_set_idx, alignment_idx)] = False
@@ -847,8 +846,7 @@ class ArmAlignmentService():
 
                             if len(is_success) > 1 and is_success.count(False) > 0:
                                 # どこかのパターンで失敗している場合、一部成功ログ
-                                dot_values = ",".join([str(round(dot, 5)) for dot in list(dot_start_dict.values())])
-                                logger.info("△位置合わせ一部成功: f: %s(%s-%s), 近似度: %s", fno, (data_set_idx + 1), target_link.effector_display_bone_name, dot_values)
+                                logger.info("△位置合わせ一部成功: f: %s(%s-%s)", fno, (data_set_idx + 1), target_link.effector_display_bone_name)
                             else:
                                 # 全部成功している場合、成功ログ
                                 logger.info("○位置合わせ成功: f: %s(%s-%s)", fno, (data_set_idx + 1), target_link.effector_display_bone_name)
@@ -964,6 +962,10 @@ class ArmAlignmentService():
                 is_multi = len(set([di for (di, ai) in all_alignment_group["alignment_idxs"][fno]])) > 1 and not is_floor
 
                 for data_set_idx, alignment_idx in all_alignment_group["alignment_idxs"][fno]:
+                    if (fno, data_set_idx, alignment_idx) not in results:
+                        # 位置合わせそのものが成功していない場合、スルー
+                        continue
+
                     # 処理対象データセット
                     data_set = self.options.data_set_list[data_set_idx]
                     # 処理対象
@@ -1023,7 +1025,7 @@ class ArmAlignmentService():
                         now_ik_links = target_link.tip_ik_links
 
                         # IK処理実行
-                        for now_ik_max_count in range(1, 3):
+                        for now_ik_max_count in range(1, 10):
                             logger.debug("先端IK計算開始(%s): f: %s(%s:%s), 現在[%s], 指定[%s]", now_ik_max_count, fno, (data_set_idx + 1), \
                                          list(now_ik_links.all().keys()), rep_global_tip.to_log(), rep_target_global_tip.to_log())
                             
@@ -1129,8 +1131,7 @@ class ArmAlignmentService():
                         if len(is_success) > 0:
                             if is_success.count(True) == 0:
                                 # 全てのパターンで失敗してる場合、失敗ログ
-                                dot_values = ",".join([str(round(dot, 5)) for dot in list(dot_start_dict.values())])
-                                logger.info("×先端位置合わせ失敗: f: %s(%s-%s), 近似度: %s", fno, (data_set_idx + 1), target_link.effector_display_bone_name, dot_values)
+                                logger.info("×先端位置合わせ失敗: f: %s(%s-%s)", fno, (data_set_idx + 1), target_link.effector_display_bone_name)
 
                                 # 最初に戻す
                                 for link_name in list(now_ik_links.all().keys())[1:]:
@@ -1142,8 +1143,7 @@ class ArmAlignmentService():
 
                                 if len(is_success) > 1 and is_success.count(False) > 0:
                                     # どこかのパターンで失敗している場合、一部成功ログ
-                                    dot_values = ",".join([str(round(dot, 5)) for dot in list(dot_start_dict.values())])
-                                    logger.info("△先端位置合わせ一部成功: f: %s(%s-%s), 近似度: %s", fno, (data_set_idx + 1), target_link.effector_display_bone_name, dot_values)
+                                    logger.info("△先端位置合わせ一部成功: f: %s(%s-%s)", fno, (data_set_idx + 1), target_link.effector_display_bone_name)
                                 else:
                                     # 全部成功している場合、成功ログ
                                     logger.info("○先端位置合わせ成功: f: %s(%s-%s)", fno, (data_set_idx + 1), target_link.effector_display_bone_name)
@@ -1181,21 +1181,20 @@ class ArmAlignmentService():
             elbow_bone.dot_near_limit = 0.97
             elbow_bone.dot_far_limit = 0.7
             elbow_bone.dot_single_limit = 0.9
-            elbow_bone.degree_limit = 114.5916
+            elbow_bone.degree_limit = 57.5916
 
             arm_bone = rep_wrist_links.get("{0}腕".format(direction))
             arm_bone.dot_near_limit = 0.97
-            arm_bone.dot_far_limit = 0.8
+            arm_bone.dot_far_limit = 0.7
             arm_bone.dot_single_limit = 0.9
-            arm_bone.degree_limit = 57.2957
+            arm_bone.degree_limit = 57.5916
     
             ik_links = BoneLinks()
             ik_links.append(wrist_bone)
             ik_links.append(elbow_bone)
             ik_links.append(arm_bone)
-            # ik_links.append(shoulder_bone)
             ik_links_list.append(ik_links)
-            ik_count_list.append(20)
+            ik_count_list.append(30)
 
             if tip_bone_name == "{0}手首".format(direction):
                 # 位置合わせが手首の場合、先端調整不要
@@ -1249,7 +1248,7 @@ class ArmAlignmentService():
                 ik_links.append(upper_bone)
 
                 ik_links_list.append(ik_links)
-                ik_count_list.append(20)
+                ik_count_list.append(30)
 
                 # 手首リンク登録(alignmentをマイナスとする)
                 self.target_links[data_set_idx][-alignment_idx] = \
@@ -1320,7 +1319,7 @@ class ArmAlignmentService():
                 ik_links.append(elbow_bone)
                 ik_links.append(arm_bone)
                 ik_links_list.append(ik_links)
-                ik_count_list.append(20)
+                ik_count_list.append(30)
 
                 # # 先端リンクは不要
                 # tip_ik_links = BoneLinks()
