@@ -451,6 +451,10 @@ class ArmAvoidanceService():
             # キーの登録が増えているかもなので、ここで取り直す
             fnos = data_set.motion.get_bone_fnos(*target_bone_names, start_fno=(fno + 1))
 
+        for bone_name in target_bone_names:
+            # 非活性キー削除
+            data_set.motion.remove_unkey_bf(data_set_idx + 1, bone_name)
+
         return True
 
     # 接触回避準備
@@ -536,7 +540,7 @@ class ArmAvoidanceService():
                 to_fno = max([fno for (fno, avoidance_name, bone_name) in avoidance_list.keys()])
 
                 # トータルで近い方の軸に移動させる
-                all_avoidance_axis[from_fno] = {"from_fno": from_fno, "to_fno": to_fno, "axis": ("x" if block_x_distance < block_z_distance else "z")}
+                all_avoidance_axis[from_fno] = {"from_fno": from_fno, "to_fno": to_fno, "axis": ("x" if block_x_distance * 1.5 < block_z_distance else "z")}
                 logger.debug("aidx: %s, d: %s, from: %s, to: %s, axis: %s, xd: %s, zd: %s", aidx, direction, from_fno, to_fno, all_avoidance_axis[from_fno], block_x_distance, block_z_distance)
 
             if fno // 1000 > prev_block_fno and fnos[-1] > 0:
@@ -546,6 +550,8 @@ class ArmAvoidanceService():
         return all_avoidance_axis
 
     def calc_face_length(self, model: PmxModel):
+        face_length = 1
+
         if "頭" in model.bones:
             # 顔の大きさ
             face_length = model.bones["頭頂実体"].position.y() - model.bones["頭"].position.y()

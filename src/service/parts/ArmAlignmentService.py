@@ -70,7 +70,7 @@ class ArmAlignmentService():
             all_alignment_group_list, all_messages = self.prepare_alignment(fnos)
 
             # 位置合わせ実行
-            self.execute_alignment(fnos, all_alignment_group_list, all_messages)
+            self.execute_alignment(fnos, all_alignment_group_list, all_messages, bone_names)
 
             return True
         except MKilledException as ke:
@@ -484,7 +484,7 @@ class ArmAlignmentService():
         return all_alignment_group_list, all_messages
     
     # 位置合わせ実行
-    def execute_alignment(self, fnos: list, all_alignment_group_list: list, all_messages: dict):
+    def execute_alignment(self, fnos: list, all_alignment_group_list: list, all_messages: dict, bone_names: list):
         
         fno = 0
         prev_block_fno = 0
@@ -909,10 +909,10 @@ class ArmAlignmentService():
                                         next_success_fno = next_success_fnos[0]
 
                                     bf = data_set.motion.calc_bf(link_name, fno)
-                                    if prev_success_fno < 0 or next_success_fno < 0 or fno - prev_success_fno >= 2 or next_success_fno - fno >= 2:
+                                    if prev_success_fno < 0 or next_success_fno < 0 or fno - prev_success_fno <= 2 or next_success_fno - fno <= 2:
 
                                         # 前後どちらか取れなかった場合、もしくは離れている場合、初期状態に戻す
-                                        if prev_success_fno > 0 and fno - prev_success_fno <= 1:
+                                        if prev_success_fno > 0 and fno - prev_success_fno <= 2:
                                             # 前の成功キーフレがあり、かつ近いの場合、前のキーフレを適用する
                                             prev_bf = data_set.motion.calc_bf(link_name, prev_success_fno)
 
@@ -923,7 +923,7 @@ class ArmAlignmentService():
 
                                             # 成功と見なす
                                             results[(fno, data_set_idx, alignment_idx)] = True
-                                        elif next_success_fno > 0 and next_success_fno - fno <= 1:
+                                        elif next_success_fno > 0 and next_success_fno - fno <= 2:
                                             # 後の成功キーフレがあり、かつ近いの場合、後のキーフレを適用する
                                             next_bf = data_set.motion.calc_bf(link_name, next_success_fno)
 
@@ -1015,7 +1015,7 @@ class ArmAlignmentService():
 
                         # ローカルのXを元に合わせる
                         rep_local_tip.setX(org_local_tip.x())
-                        # rep_local_tip.setZ(org_local_tip.z())
+                        rep_local_tip.setZ(org_local_tip.z())
 
                         # 目標とする指先の位置
                         rep_target_global_tip = rep_effector_matrix * rep_local_tip
@@ -1024,7 +1024,7 @@ class ArmAlignmentService():
                         now_ik_links = target_link.tip_ik_links
 
                         # IK処理実行
-                        for now_ik_max_count in range(1, 10):
+                        for now_ik_max_count in range(1, 3):
                             logger.debug("先端IK計算開始(%s): f: %s(%s:%s), 現在[%s], 指定[%s]", now_ik_max_count, fno, (data_set_idx + 1), \
                                          list(now_ik_links.all().keys()), rep_global_tip.to_log(), rep_target_global_tip.to_log())
                             
@@ -1212,8 +1212,8 @@ class ArmAlignmentService():
                 org_palm_length = (data_set.org_model.bones["{0}手首".format(direction)].position.distanceToPoint(data_set.org_model.bones[tip_bone_name].position))
                 rep_palm_length = (data_set.rep_model.bones["{0}手首".format(direction)].position.distanceToPoint(data_set.rep_model.bones[tip_bone_name].position))
 
-            logger.info("【No.%s】作成元モデルの%s手のひらの大きさ: %s", (data_set_idx + 1), direction, org_palm_length)
-            logger.info("【No.%s】変換先モデルの%s手のひらの大きさ: %s", (data_set_idx + 1), direction, rep_palm_length)
+            logger.info("【No.%s】作成元モデルの%s手のひらの大きさ: %s", (data_set_idx + 1), direction, round(org_palm_length, 5))
+            logger.info("【No.%s】変換先モデルの%s手のひらの大きさ: %s", (data_set_idx + 1), direction, round(rep_palm_length, 5))
 
             # 手首リンク登録
             self.target_links[data_set_idx][alignment_idx] = \

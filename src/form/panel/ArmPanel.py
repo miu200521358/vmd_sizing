@@ -124,12 +124,12 @@ class ArmPanel(BasePanel):
         self.alignment_distance_wrist_txt.Wrap(-1)
         self.alignment_distance_wrist_sizer.Add(self.alignment_distance_wrist_txt, 0, wx.ALL, 5)
 
-        self.alignment_distance_wrist_label = wx.StaticText(self, wx.ID_ANY, u"（1.7）", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.alignment_distance_wrist_label = wx.StaticText(self, wx.ID_ANY, u"（2.5）", wx.DefaultPosition, wx.DefaultSize, 0)
         self.alignment_distance_wrist_label.SetToolTip(u"現在指定されている手首間の距離です。元モデルの両手首位置がこの範囲内である場合、手首間の位置合わせを行います。")
         self.alignment_distance_wrist_label.Wrap(-1)
         self.alignment_distance_wrist_sizer.Add(self.alignment_distance_wrist_label, 0, wx.ALL, 5)
 
-        self.alignment_distance_wrist_slider = FloatSliderCtrl(self, wx.ID_ANY, 1.7, 0, 10, 0.1, self.alignment_distance_wrist_label, wx.DefaultPosition, wx.DefaultSize, wx.SL_HORIZONTAL)
+        self.alignment_distance_wrist_slider = FloatSliderCtrl(self, wx.ID_ANY, 2.5, 0, 10, 0.1, self.alignment_distance_wrist_label, wx.DefaultPosition, wx.DefaultSize, wx.SL_HORIZONTAL)
         self.alignment_distance_wrist_slider.Bind(wx.EVT_SCROLL_CHANGED, self.on_check_arm_process_alignment)
         self.alignment_distance_wrist_sizer.Add(self.alignment_distance_wrist_slider, 1, wx.ALL | wx.EXPAND, 5)
 
@@ -144,12 +144,12 @@ class ArmPanel(BasePanel):
         self.alignment_distance_finger_txt.Wrap(-1)
         self.alignment_distance_finger_sizer.Add(self.alignment_distance_finger_txt, 0, wx.ALL, 5)
 
-        self.alignment_distance_finger_label = wx.StaticText(self, wx.ID_ANY, u"（1.4）", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.alignment_distance_finger_label = wx.StaticText(self, wx.ID_ANY, u"（1.7）", wx.DefaultPosition, wx.DefaultSize, 0)
         self.alignment_distance_finger_label.SetToolTip(u"現在指定されている指間の距離です。元モデルの両指位置がこの範囲内である場合、指間の位置合わせを行います。")
         self.alignment_distance_finger_label.Wrap(-1)
         self.alignment_distance_finger_sizer.Add(self.alignment_distance_finger_label, 0, wx.ALL, 5)
 
-        self.alignment_distance_finger_slider = FloatSliderCtrl(self, wx.ID_ANY, 1.4, 0, 10, 0.1, self.alignment_distance_finger_label, wx.DefaultPosition, wx.DefaultSize, wx.SL_HORIZONTAL)
+        self.alignment_distance_finger_slider = FloatSliderCtrl(self, wx.ID_ANY, 1.7, 0, 10, 0.1, self.alignment_distance_finger_label, wx.DefaultPosition, wx.DefaultSize, wx.SL_HORIZONTAL)
         self.alignment_distance_finger_slider.Bind(wx.EVT_SCROLL_CHANGED, self.on_check_arm_process_alignment)
         self.alignment_distance_finger_sizer.Add(self.alignment_distance_finger_slider, 1, wx.ALL | wx.EXPAND, 5)
 
@@ -164,12 +164,12 @@ class ArmPanel(BasePanel):
         self.alignment_distance_floor_txt.Wrap(-1)
         self.alignment_distance_floor_sizer.Add(self.alignment_distance_floor_txt, 0, wx.ALL, 5)
 
-        self.alignment_distance_floor_label = wx.StaticText(self, wx.ID_ANY, u"（1.2）", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.alignment_distance_floor_label = wx.StaticText(self, wx.ID_ANY, u"（1.5）", wx.DefaultPosition, wx.DefaultSize, 0)
         self.alignment_distance_floor_label.SetToolTip(u"現在指定されている手首と床との間の距離です。元モデルの両手首と床との距離がこの範囲内である場合、手首と床との位置合わせを行います。")
         self.alignment_distance_floor_label.Wrap(-1)
         self.alignment_distance_floor_sizer.Add(self.alignment_distance_floor_label, 0, wx.ALL, 5)
 
-        self.alignment_distance_floor_slider = FloatSliderCtrl(self, wx.ID_ANY, 1.2, 0, 10, 0.1, self.alignment_distance_floor_label, wx.DefaultPosition, wx.DefaultSize, wx.SL_HORIZONTAL)
+        self.alignment_distance_floor_slider = FloatSliderCtrl(self, wx.ID_ANY, 1.5, 0, 10, 0.1, self.alignment_distance_floor_label, wx.DefaultPosition, wx.DefaultSize, wx.SL_HORIZONTAL)
         self.alignment_distance_floor_slider.Bind(wx.EVT_SCROLL_CHANGED, self.on_check_arm_process_alignment)
         self.alignment_distance_floor_sizer.Add(self.alignment_distance_floor_slider, 1, wx.ALL | wx.EXPAND, 5)
 
@@ -262,10 +262,6 @@ class ArmPanel(BasePanel):
                 # 空から作る場合、複数タブのファイルセット参照
                 self.add_set(set_no, multi_file_set, replace=False)
             
-            # 複数件ある場合、手首間の距離デフォルト値変更
-            self.alignment_distance_wrist_slider.SetValue(2.5)
-            self.alignment_distance_wrist_label.SetLabel("（2.5）")
-
         # 腕系不可モデル名リスト
         disable_arm_model_names = []
 
@@ -333,14 +329,15 @@ class ArmPanel(BasePanel):
     # 処理対象：接触回避ON
     def on_check_arm_process_avoidance(self, event: wx.Event):
         # ラジオボタンかチェックボックスイベントがTrueの場合、切り替え
-        if ((isinstance(event.GetEventObject(), wx.RadioButton) or isinstance(event.GetEventObject(), wx.CheckBox)) and event.GetEventObject().GetValue()) \
-                or (not isinstance(event.GetEventObject(), wx.RadioButton)):
+        if isinstance(event.GetEventObject(), wx.StaticText):
             if self.arm_process_flg_avoidance.GetValue() == 0:
                 self.arm_process_flg_avoidance.SetValue(1)
             else:
                 self.arm_process_flg_avoidance.SetValue(0)
-            # パス再生成
-            self.set_output_vmd_path(event)
+
+        # パス再生成
+        self.set_output_vmd_path(event)
+        
         event.Skip()
 
     # 処理対象：手首位置合わせON

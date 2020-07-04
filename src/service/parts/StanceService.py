@@ -1262,7 +1262,7 @@ class StanceService():
         logger.info("センターY補正　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
 
         # センター調整に必要なボーン群（腕チェック済み）
-        center_target_bones = ["センター", "上半身", "首根元"]
+        center_target_bones = ["センター", "左手首", "右手首", "左足", "右足"]
 
         if set(center_target_bones).issubset(data_set.org_model.bones) and set(center_target_bones).issubset(data_set.rep_model.bones) and "センター" in data_set.motion.bones:
             # 判定用のセンターボーン名（グルーブがある場合、グルーブまでを対象とする）
@@ -1272,10 +1272,33 @@ class StanceService():
             # 元モデルのリンク生成
             org_center_links = data_set.org_model.create_link_2_top_one(org_center_bone_name)
             org_arm_links = data_set.org_model.create_link_2_top_lr("手首")
+            org_leg_links = data_set.org_model.create_link_2_top_lr("足")
 
             # 変換先モデルのリンク生成
             rep_center_links = data_set.rep_model.create_link_2_top_one(rep_center_bone_name)
             rep_arm_links = data_set.rep_model.create_link_2_top_lr("手首")
+            rep_leg_links = data_set.rep_model.create_link_2_top_lr("足")
+
+            # 手のひらの長さ
+            org_right_palm_length = 0
+            if "右人指先実体" in data_set.org_model.bones:
+                org_right_palm_length = data_set.org_model.bones["右手首"].position.distanceToPoint(data_set.org_model.bones["右人指先実体"].position)
+
+            org_left_palm_length = 0
+            if "左人指先実体" in data_set.org_model.bones:
+                org_left_palm_length = data_set.org_model.bones["左手首"].position.distanceToPoint(data_set.org_model.bones["左人指先実体"].position)
+
+            org_palm_length = max(org_right_palm_length, org_left_palm_length)
+
+            rep_right_palm_length = 0
+            if "右人指先実体" in data_set.rep_model.bones:
+                rep_right_palm_length = data_set.rep_model.bones["右手首"].position.distanceToPoint(data_set.rep_model.bones["右人指先実体"].position)
+
+            rep_left_palm_length = 0
+            if "左人指先実体" in data_set.rep_model.bones:
+                rep_left_palm_length = data_set.rep_model.bones["左手首"].position.distanceToPoint(data_set.rep_model.bones["左人指先実体"].position)
+
+            rep_palm_length = max(rep_right_palm_length, rep_left_palm_length)
 
             # 準備（細分化）
             self.prepare_split_stance(data_set_idx, data_set, "センター")
@@ -1286,66 +1309,114 @@ class StanceService():
             rep_upper_length = (data_set.rep_model.bones["首根元"].position.distanceToPoint(data_set.rep_model.bones["上半身"].position))
 
             prev_fno = 0
-            fnos = data_set.motion.get_bone_fnos("センター")
+            fnos = data_set.motion.get_bone_fnos("センター", "グルーブ")
             for fno in fnos:
-                bf = data_set.motion.bones["センター"][fno]
-                if bf.key:
-                    logger.debug("f: %s, 調整前: %s", bf.fno, bf.position)
-                    bf.position += self.calc_center_offset_by_arm(bf, data_set_idx, data_set, org_center_links, org_arm_links, \
-                                                                  rep_center_links, rep_arm_links, org_center_bone_name, rep_center_bone_name, org_upper_length, rep_upper_length)
-                    logger.debug("f: %s, 腕オフセット後: %s", bf.fno, bf.position)
+                bf = data_set.motion.calc_bf(rep_center_bone_name, fno)
+
+                logger.debug("f: %s, 調整前: %s", bf.fno, bf.position)
+                bf.position += self.calc_center_offset_by_arm(bf, data_set_idx, data_set, org_center_links, org_arm_links, org_leg_links, \
+                                                              rep_center_links, rep_arm_links, rep_leg_links, org_palm_length, rep_palm_length, \
+                                                              org_center_bone_name, rep_center_bone_name, org_upper_length, rep_upper_length)
+                logger.debug("f: %s, 腕オフセット後: %s", bf.fno, bf.position)
+
+                data_set.motion.regist_bf(bf, rep_center_bone_name, fno)
 
                 if fno // 500 > prev_fno and fnos[-1] > 0:
                     logger.info("-- %sフレーム目:終了(%s％)【No.%s - センターY補正】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1)
                     prev_fno = fno // 500
-
+                
             logger.info("センターY補正: 終了【No.%s】", (data_set_idx + 1))
         else:
             logger.info("センターY補正: 【No.%s】[%s]のボーン群が、作成元もしくは変換先のいずれかで足りないため、処理をスキップします。", (data_set_idx + 1), ", ".join(center_target_bones))
 
     # 足IKによるセンターオフセット値
     def calc_center_offset_by_arm(self, bf: VmdBoneFrame, data_set_idx: int, data_set: MOptionsDataSet, \
-                                  org_center_links: BoneLinks, org_arm_links: BoneLinks, \
-                                  rep_center_links: BoneLinks, rep_arm_links: BoneLinks, \
+                                  org_center_links: BoneLinks, org_arm_links: BoneLinks, org_leg_links: BoneLinks, \
+                                  rep_center_links: BoneLinks, rep_arm_links: BoneLinks, rep_leg_links: BoneLinks, \
+                                  org_palm_length: float, rep_palm_length: float, \
                                   org_center_bone_name: str, rep_center_bone_name: str, org_upper_length: float, rep_upper_length: float):
 
         # 元モデルのセンターオフセット
-        org_left_wrist_pos, org_right_wrist_pos, org_upper_pos, org_neck_base_pos = \
+        org_left_wrist_pos, org_right_wrist_pos, org_neck_base_pos, org_left_leg_pos, org_right_leg_pos, org_lower_pos = \
             self.calc_center_offset_by_arm_model(bf, data_set_idx, data_set, data_set.org_model, data_set.org_motion, \
-                                                 org_center_links, org_arm_links, org_center_bone_name)
+                                                 org_center_links, org_arm_links, org_leg_links, org_center_bone_name)
         logger.test("f: %s, org_left_wrist_pos: %s, org_right_wrist_pos: %s", bf.fno, org_left_wrist_pos, org_right_wrist_pos)
 
         # 先モデルのセンターオフセット
-        rep_left_wrist_pos, rep_right_wrist_pos, rep_upper_pos, rep_neck_base_pos = \
+        rep_left_wrist_pos, rep_right_wrist_pos, rep_neck_base_pos, rep_left_leg_pos, rep_right_leg_pos, rep_lower_pos = \
             self.calc_center_offset_by_arm_model(bf, data_set_idx, data_set, data_set.rep_model, data_set.motion, \
-                                                 rep_center_links, rep_arm_links, rep_center_bone_name)
+                                                 rep_center_links, rep_arm_links, rep_leg_links, rep_center_bone_name)
         logger.test("f: %s, rep_left_wrist_pos: %s, rep_right_wrist_pos: %s", bf.fno, rep_left_wrist_pos, rep_right_wrist_pos)
         
-        rep_center_arm_offset = MVector3D()
+        org_left_wrist_offset = 0
+        if org_left_wrist_pos.y() < org_palm_length * 1.5:
+            # 左手首が手のひらの大きさ以下の場合、位置合わせ
+            org_left_wrist_offset = org_left_wrist_pos.y() * data_set.original_y_ratio - rep_left_wrist_pos.y()
+            # if rep_left_wrist_pos.y() > org_left_wrist_pos.y() * data_set.original_y_ratio:
+            #     # 床上の場合、とりあえず半分だけ
+            #     org_left_wrist_offset /= 2
+            logger.info("センターY補正（左手首） f: %s, y: %s, org: %s, rep: %s", bf.fno, \
+                         org_left_wrist_offset, (org_left_wrist_pos.y() * data_set.original_y_ratio), rep_left_wrist_pos.y())
 
-        if org_left_wrist_pos.y() < org_upper_length / 2:
-            # 左手首が上半身の半分以下の場合、位置合わせ
-            rep_center_arm_offset.setY(org_left_wrist_pos.y() * data_set.original_y_ratio - rep_left_wrist_pos.y())
-        elif org_right_wrist_pos.y() < org_upper_length / 2:
-            # 右手首が上半身の半分以下の場合、位置合わせ
-            rep_center_arm_offset.setY(org_right_wrist_pos.y() * data_set.original_y_ratio - rep_right_wrist_pos.y())
+        org_right_wrist_offset = 0
+        if org_right_wrist_pos.y() < org_palm_length * 1.5:
+            # 右手首が手のひらの大きさ以下の場合、位置合わせ
+            org_right_wrist_offset = org_right_wrist_pos.y() * data_set.original_y_ratio - rep_right_wrist_pos.y()
+            # if rep_right_wrist_pos.y() > org_right_wrist_pos.y() * data_set.original_y_ratio:
+            #     # 床上の場合、とりあえず半分だけ
+            #     org_right_wrist_offset /= 2
+            logger.info("センターY補正（右手首） f: %s, y: %s, org: %s, rep: %s", bf.fno, \
+                         org_right_wrist_offset, (org_right_wrist_pos.y() * data_set.original_y_ratio), rep_right_wrist_pos.y())
+        
+        org_left_leg_offset = 0
+        if org_left_leg_pos.y() < org_palm_length * 1.5:
+            # 左足が手のひらの大きさ以下の場合、位置合わせ
+            org_left_leg_offset = org_left_leg_pos.y() * data_set.original_y_ratio - rep_left_leg_pos.y()
+            # if rep_left_leg_pos.y() > org_left_leg_pos.y() * data_set.original_y_ratio:
+            #     # 床上の場合、とりあえず半分だけ
+            #     org_left_leg_offset /= 2
+            logger.info("センターY補正（左足） f: %s, y: %s, org: %s, rep: %s", bf.fno, \
+                         org_left_leg_offset, (org_left_leg_pos.y() * data_set.original_y_ratio), rep_left_leg_pos.y())
+
+        org_right_leg_offset = 0
+        if org_right_leg_pos.y() < org_palm_length * 1.5:
+            # 右足が手のひらの大きさ以下の場合、位置合わせ
+            org_right_leg_offset = org_right_leg_pos.y() * data_set.original_y_ratio - rep_right_leg_pos.y()
+            # if rep_right_leg_pos.y() > org_right_leg_pos.y() * data_set.original_y_ratio:
+            #     # 床上の場合、とりあえず半分だけ
+            #     org_right_leg_offset /= 2
+            logger.info("センターY補正（右足） f: %s, y: %s, org: %s, rep: %s", bf.fno, \
+                         org_right_leg_offset, (org_right_leg_pos.y() * data_set.original_y_ratio), rep_right_leg_pos.y())
+        
+        rep_center_arm_offset = MVector3D()
+        target_offsets = np.array([org_left_wrist_offset, org_right_wrist_offset, org_left_leg_offset, org_right_leg_offset])
+        if len(np.nonzero(target_offsets)[0]) > 0:
+            # 床に潜るよりは浮いてる方がマシ
+            rep_center_arm_offset = MVector3D(0, target_offsets[np.argmin(np.abs(target_offsets[np.nonzero(target_offsets)[0]]))], 0)
+
+        logger.info("センターY補正（結果） f: %s, y: %s", bf.fno, rep_center_arm_offset.y())
 
         return rep_center_arm_offset
 
     # モデル別足IKによるセンターオフセット値
     def calc_center_offset_by_arm_model(self, bf: VmdBoneFrame, data_set_idx: int, data_set: MOptionsDataSet, \
                                         model: PmxModel, motion: VmdMotion, \
-                                        center_links: BoneLinks, arm_links: BoneLinks, center_bone_name: str):
+                                        center_links: BoneLinks, arm_links: BoneLinks, leg_links: BoneLinks, center_bone_name: str):
 
         # 左手首までの位置
-        left_arm_global_3ds, front_left_arm_global_3ds, left_arm_direction_qq = \
-            MServiceUtils.calc_front_global_pos(model, arm_links["左"], motion, bf.fno)
+        left_arm_global_3ds = MServiceUtils.calc_global_pos(model, arm_links["左"], motion, bf.fno)
 
         # 右手首までの位置
-        right_arm_global_3ds, front_right_arm_global_3ds, right_arm_direction_qq = \
-            MServiceUtils.calc_front_global_pos(model, arm_links["右"], motion, bf.fno)
+        right_arm_global_3ds = MServiceUtils.calc_global_pos(model, arm_links["右"], motion, bf.fno)
 
-        return left_arm_global_3ds["左手首"], right_arm_global_3ds["右手首"], right_arm_global_3ds["上半身"], right_arm_global_3ds["首根元"]
+        # 左足までの位置
+        left_leg_global_3ds = MServiceUtils.calc_global_pos(model, leg_links["左"], motion, bf.fno)
+
+        # 右足までの位置
+        right_leg_global_3ds = MServiceUtils.calc_global_pos(model, leg_links["右"], motion, bf.fno)
+
+        return left_arm_global_3ds["左手首"], right_arm_global_3ds["右手首"], right_arm_global_3ds["首根元"], \
+                left_leg_global_3ds["左足"], right_leg_global_3ds["右足"], right_leg_global_3ds["下半身"]
 
     # 足IKによるセンターオフセット値
     def calc_center_offset_by_leg_ik(self, bf: VmdBoneFrame, data_set_idx: int, data_set: MOptionsDataSet, \

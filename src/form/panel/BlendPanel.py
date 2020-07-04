@@ -3,6 +3,7 @@
 import wx
 import wx.lib.newevent
 import sys
+import re
 
 from form.panel.BasePanel import BasePanel
 from form.parts.BaseFilePickerCtrl import BaseFilePickerCtrl
@@ -33,7 +34,7 @@ class BlendPanel(BasePanel):
         self.sizer.Add(self.static_line, 0, wx.EXPAND | wx.ALL, 5)
 
         # PMXファイルコントロール
-        self.pmx_file_ctrl = BaseFilePickerCtrl(frame, self, u"PMXファイル", u"PMXファイルを開く", ("pmx"), wx.FLP_DEFAULT_STYLE, \
+        self.pmx_file_ctrl = LoadFilePickerCtrl(frame, self, u"PMXファイル", u"PMXファイルを開く", ("pmx"), wx.FLP_DEFAULT_STYLE, \
                                                 u"モーフをブレンドさせたいPMXのパスを指定してください。\nD&Dでの指定、開くボタンからの指定ができます。\nパスを指定すると下部欄にモーフリストが表示されます。", \
                                                 is_aster=False, is_save=False, set_no=0)
         self.pmx_file_ctrl.file_ctrl.Bind(wx.EVT_FILEPICKER_CHANGED, self.on_change_file)
@@ -97,7 +98,7 @@ class BlendPanel(BasePanel):
         self.morph_value_max_txt.SetToolTip(u"モーフ増減の最大値です。-10から10の間で設定できます。（小数点可）")
         self.value_sizer.Add(self.morph_value_max_txt, 0, wx.EXPAND | wx.ALL, 5)
 
-        self.morph_spin_max = wx.SpinCtrlDouble(self, id=wx.ID_ANY, size=wx.Size(80, -1), min=-10, max=10, initial=1.0, inc=0.1)
+        self.morph_spin_max = wx.SpinCtrlDouble(self, id=wx.ID_ANY, size=wx.Size(80, -1), min=-10, max=10, initial=0.6, inc=0.1)
         self.morph_spin_max.SetToolTip(u"モーフ増減の最大値です。-10から10の間で設定できます。（小数点可）")
         self.morph_spin_max.Bind(wx.EVT_MOUSEWHEEL, lambda event: self.frame.on_wheel_spin_ctrl(event, 0.1))
         self.value_sizer.Add(self.morph_spin_max, 0, wx.ALL, 5)
@@ -149,7 +150,17 @@ class BlendPanel(BasePanel):
         sys.stdout = self.console_ctrl
 
         # ファイルコントロール自身のパス確定処理
-        self.pmx_file_ctrl.on_change_file(event)
+        # 先頭と末尾の改行は除去
+        target_path = self.pmx_file_ctrl.file_ctrl.GetPath().strip()
+        logger.test("target_path strip: %s", target_path)
+
+        # 先頭と末尾のダブルクォーテーションは除去
+        target_path = re.sub(r'^\\+\"(\w)\\', r'\1:\\', target_path)
+        target_path = target_path.strip("\"")
+        logger.test("target_path strip: %s", target_path)
+
+        # 再設定
+        self.pmx_file_ctrl.file_ctrl.SetPath(target_path)
 
         # ファイル読み込み処理
         if self.pmx_file_ctrl.is_valid() and self.pmx_file_ctrl.load(is_check=False):
@@ -272,4 +283,15 @@ class BlendPanel(BasePanel):
         
         return True
 
+
+class LoadFilePickerCtrl(BaseFilePickerCtrl):
+    def __init__(self, frame, parent, title, message, file_type, style, tooltip, file_model_spacer=0, \
+                 title_parts_ctrl=None, file_parts_ctrl=None, title_parts2_ctrl=None, is_change_output=False, is_aster=False, is_save=False, set_no=0, required=True):
+        super().__init__(frame, parent, title, message, file_type, style, tooltip, file_model_spacer=0, title_parts_ctrl=None, file_parts_ctrl=None, title_parts2_ctrl=None, \
+                         is_change_output=False, is_aster=False, is_save=False, set_no=0, required=True)
+
+    def on_change_file(self, event):
+        super().on_change_file(event)
+
+        self.parent.on_change_file(event)
 
