@@ -526,7 +526,6 @@ class ArmAlignmentService():
                         if bone_name not in data_set.motion.bones:
                             data_set.motion.bones[bone_name] = {}
                         data_set.motion.bones[bone_name][fno] = data_set.motion.calc_bf(bone_name, fno)
-
             
             results = {}
             for fidx, fno in enumerate(all_alignment_group["fnos"]):
