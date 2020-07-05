@@ -635,8 +635,8 @@ class ArmAvoidanceService():
             effector_bone = arm_link.get(effector_bone_name)
 
             arm_bone = arm_link.get("{0}腕".format(direction))
-            arm_bone.dot_limit = 0.7
-            arm_bone.degree_limit = 57.5916
+            arm_bone.dot_limit = 0.8
+            arm_bone.degree_limit = 57.2957
 
             ik_links = BoneLinks()
             ik_links.append(effector_bone)
@@ -664,11 +664,11 @@ class ArmAvoidanceService():
 
             elbow_bone = arm_link.get("{0}ひじ".format(direction))
             elbow_bone.dot_limit = 0.7
-            elbow_bone.degree_limit = 57.5916
+            elbow_bone.degree_limit = 57.2957
 
             arm_bone = arm_link.get("{0}腕".format(direction))
-            arm_bone.dot_limit = 0.7
-            arm_bone.degree_limit = 57.5916
+            arm_bone.dot_limit = 0.8
+            arm_bone.degree_limit = 57.2957
 
             ik_links = BoneLinks()
             ik_links.append(effector_bone)

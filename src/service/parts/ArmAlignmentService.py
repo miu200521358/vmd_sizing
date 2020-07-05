@@ -341,7 +341,7 @@ class ArmAlignmentService():
                             for ik_links in from_target_link.ik_links_list:
                                 for link_name in ik_links.all().keys():
                                     bf = from_data_set.motion.calc_bf(link_name, fno)
-                                    logger.test("f: %s(%s:%s), 初回確定 now[%s], org[%s]", fno, (data_set_idx + 1), link_name, bf.rotation.toEulerAngles().to_log(), \
+                                    logger.test("f: %s(%s:%s), 初回確定 now[%s], org[%s]", fno, (from_data_set_idx + 1), link_name, bf.rotation.toEulerAngles().to_log(), \
                                                 bf.org_rotation.toEulerAngles().to_log())
                                     bf.org_rotation = bf.rotation.copy()
                                     from_data_set.motion.regist_bf(bf, link_name, fno)
@@ -349,7 +349,7 @@ class ArmAlignmentService():
                             for ik_links in to_target_link.ik_links_list:
                                 for link_name in ik_links.all().keys():
                                     bf = to_data_set.motion.calc_bf(link_name, fno)
-                                    logger.test("f: %s(%s:%s), 初回確定 now[%s], org[%s]", fno, (data_set_idx + 1), link_name, bf.rotation.toEulerAngles().to_log(), \
+                                    logger.test("f: %s(%s:%s), 初回確定 now[%s], org[%s]", fno, (to_data_set_idx + 1), link_name, bf.rotation.toEulerAngles().to_log(), \
                                                 bf.org_rotation.toEulerAngles().to_log())
                                     bf.org_rotation = bf.rotation.copy()
                                     to_data_set.motion.regist_bf(bf, link_name, fno)
@@ -361,10 +361,10 @@ class ArmAlignmentService():
                                 if fno not in all_messages:
                                     all_messages[fno] = []
 
-                            # ログ用情報保持
-                            all_messages[fno].append("－近接なし: f: {0}({1}-{2}:{3}-{4}), 境界: {5}".format(fno, \
-                                                     (from_data_set_idx + 1), from_target_link.effector_display_bone_name, \
-                                                     (to_data_set_idx + 1), to_target_link.effector_display_bone_name, round(distance_ratio, 5)))
+                                # ログ用情報保持
+                                all_messages[fno].append("－近接なし: f: {0}({1}-{2}:{3}-{4}), 境界: {5}".format(fno, \
+                                                         (from_data_set_idx + 1), from_target_link.effector_display_bone_name, \
+                                                         (to_data_set_idx + 1), to_target_link.effector_display_bone_name, round(distance_ratio, 5)))
 
                 if is_alignment_by_priority:
                     # 前の優先順位で既に位置合わせが発生している場合、終了
@@ -1016,7 +1016,7 @@ class ArmAlignmentService():
 
                         # ローカルのXを元に合わせる
                         rep_local_tip.setX(org_local_tip.x())
-                        rep_local_tip.setZ(org_local_tip.z())
+                        # rep_local_tip.setZ(org_local_tip.z())
 
                         # 目標とする指先の位置
                         rep_target_global_tip = rep_effector_matrix * rep_local_tip
@@ -1181,13 +1181,13 @@ class ArmAlignmentService():
             elbow_bone.dot_near_limit = 0.97
             elbow_bone.dot_far_limit = 0.7
             elbow_bone.dot_single_limit = 0.9
-            elbow_bone.degree_limit = 57.5916
+            elbow_bone.degree_limit = 57.2957
 
             arm_bone = rep_wrist_links.get("{0}腕".format(direction))
             arm_bone.dot_near_limit = 0.97
-            arm_bone.dot_far_limit = 0.7
+            arm_bone.dot_far_limit = 0.8
             arm_bone.dot_single_limit = 0.9
-            arm_bone.degree_limit = 57.5916
+            arm_bone.degree_limit = 57.2957
     
             ik_links = BoneLinks()
             ik_links.append(wrist_bone)
@@ -1306,7 +1306,7 @@ class ArmAlignmentService():
                 elbow_bone.dot_near_limit = 0.97
                 elbow_bone.dot_far_limit = 0.7
                 elbow_bone.dot_single_limit = 0.9
-                elbow_bone.degree_limit = 114.5916
+                elbow_bone.degree_limit = 57.2957
 
                 arm_bone = rep_finger_links.get("{0}腕".format(direction))
                 arm_bone.dot_near_limit = 0.97
@@ -1332,9 +1332,8 @@ class ArmAlignmentService():
                                        org_palm_length, rep_palm_length, data_set.org_model, data_set.rep_model, "{0}腕".format(direction), \
                                        total_finger_name, total_finger_name[:3], total_finger_name, self.options.arm_options.alignment_distance_finger, data_set.xz_ratio, 3)
 
-            # 腕・ひじ・手首・指のキーフレ（なければスルー）
-            bone_names.extend(["{0}腕".format(direction), "{0}腕捩".format(direction), "{0}ひじ".format(direction), "{0}手捩".format(direction), "{0}手首".format(direction), \
-                               "{0}{1}０".format(direction, finger_name), "{0}{1}１".format(direction, finger_name), "{0}{1}２".format(direction, finger_name), "{0}{1}３".format(direction, finger_name)])
+            # 腕・ひじ・手首のキーフレ（なければスルー）
+            bone_names.extend(["{0}腕".format(direction), "{0}腕捩".format(direction), "{0}ひじ".format(direction), "{0}手捩".format(direction), "{0}手首".format(direction)])
 
         return bone_names
 
