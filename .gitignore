@@ -12,12 +12,16 @@ build/
 __pycache__/
 
 vmd/
+.vscode/
 
 VmdSizingSelf.bat
 VmdSizingSelfAll.bat
 replace_model_all.txt
-command.txt
 memo.txt
+profile.bat
+self.bat
+move.bat
+debug.bat
 
 born/*
 !あにまさ式ミク.csv
@@ -25,11 +29,12 @@ born/*
 
 vertex/*
 src/past
+test/data
+log
 
 data
 build
 dist
-command.txt
 *.zip
 *.log
 src/model_all_test.py
@@ -41,3 +46,7 @@ leg_fk.vmd
 leg_fk_bone.csv
 leg_fk_camera.csv
 leg_fk_morph.csv
+src/VmdSizingForm3.py.bak
+main.prof
+executor.py.lprof
+*.thread
