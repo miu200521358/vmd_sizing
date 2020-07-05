@@ -21,7 +21,7 @@ class MorphService():
         for data_set_idx, data_set in enumerate(self.options.data_set_list):
             if data_set.motion.morph_cnt <= 0 or len(data_set.morph_list) == 0:
                 # モーフデータが無い場合、或いは置換データが無い場合、処理スキップ
-                return True
+                continue
 
             logger.info("モーフ置換　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
 
