@@ -23,6 +23,7 @@ self.bat
 move.bat
 debug.bat
 
+配布/
 born/*
 !あにまさ式ミク.csv
 !あにまさ式ミク準標準.csv
