@@ -14,6 +14,7 @@ from form.panel.CsvPanel import CsvPanel
 from form.panel.VmdPanel import VmdPanel
 from form.panel.BezierPanel import BezierPanel
 from form.panel.SmoothPanel import SmoothPanel
+from form.panel.ParentPanel import ParentPanel
 from form.worker.SizingWorkerThread import SizingWorkerThread
 from form.worker.LoadWorkerThread import LoadWorkerThread
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
@@ -118,6 +119,10 @@ class MainFrame(wx.Frame):
         self.bezier_panel_ctrl = BezierPanel(self, self.note_ctrl, 9)
         self.note_ctrl.AddPage(self.bezier_panel_ctrl, u"補間", False)
         
+        # 全親タブ
+        self.parent_panel_ctrl = ParentPanel(self, self.note_ctrl, 9)
+        self.note_ctrl.AddPage(self.parent_panel_ctrl, u"全親", False)
+        
         # ---------------------------------------------
 
         # タブ押下時の処理
@@ -185,6 +190,11 @@ class MainFrame(wx.Frame):
             event.Skip()
             return
 
+        elif self.parent_panel_ctrl.is_fix_tab:
+            self.note_ctrl.ChangeSelection(self.parent_panel_ctrl.tab_idx)
+            event.Skip()
+            return
+            
         if self.note_ctrl.GetSelection() == self.multi_panel_ctrl.tab_idx:
             # 複数タブ移動時に保存
             self.file_panel_ctrl.save()

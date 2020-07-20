@@ -577,7 +577,7 @@ class ArmAvoidanceService():
         avoidance_links = {}
         avoidances = {}
         
-        if "頭接触回避" in self.options.arm_options.avoidance_target_list[data_set_idx]:
+        if data_set_idx in self.options.arm_options.avoidance_target_list and "頭接触回避" in self.options.arm_options.avoidance_target_list[data_set_idx]:
             # 頭接触回避用剛体取得
             head_rigidbody = data_set.rep_model.get_head_rigidbody()
             head_rigidbody.is_small = (face_length <= 3)

@@ -380,4 +380,57 @@ class MSmoothOptions():
         except Exception as e:
             logger.critical("スムージング処理が意図せぬエラーで終了しました。", e, decoration=MLogger.DECORATION_BOX)
 
-    
+
+
+class MParentOptions():
+
+    def __init__(self, version_name, logging_level, max_workers, motion, model, output_path, monitor, is_file, outout_datetime):
+        self.version_name = version_name
+        self.logging_level = logging_level
+        self.motion = motion
+        self.model = model
+        self.output_path = output_path
+        self.monitor = monitor
+        self.is_file = is_file
+        self.outout_datetime = outout_datetime
+        self.max_workers = max_workers
+
+    @classmethod
+    def parse(cls, version_name: str):
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--motion_path', dest='motion_path', help='input vmd', type=str)
+        parser.add_argument('--model_path', dest='model_path', help='model_path', type=str)
+        parser.add_argument("--verbose", type=int, default=20)
+
+        args = parser.parse_args()
+
+        # ログディレクトリ作成
+        os.makedirs("log", exist_ok=True)
+
+        MLogger.initialize(level=args.verbose, is_file=True)
+
+        try:
+            motion = VmdReader(args.motion_path).read_data()
+            model = PmxReader(args.model_path).read_data()
+
+            # 出力ファイルパス
+            output_vmd_path = MFileUtils.get_output_smooth_vmd_path(motion.path, model.path, "", args.interpolation, args.parent_y, True)
+
+            options = MParentOptions(\
+                version_name=version_name, \
+                logging_level=args.verbose, \
+                motion=motion, \
+                model=model, \
+                output_path=output_vmd_path, \
+                monitor=sys.stdout, \
+                is_file=True, \
+                outout_datetime=logger.outout_datetime, \
+                max_workers=1)
+
+            return options
+        except SizingException as se:
+            logger.error("全親移植処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
+        except Exception as e:
+            logger.critical("全親移植処理が意図せぬエラーで終了しました。", e, decoration=MLogger.DECORATION_BOX)
+
+        

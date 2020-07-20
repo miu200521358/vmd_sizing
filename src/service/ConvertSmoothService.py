@@ -217,7 +217,7 @@ class ConvertSmoothService():
                 logger.info("【スムージング1回目】%s - 回転Y 終了", bone_name)
 
                 rz_all_values = MBezierUtils.calc_value_from_catmullrom(bone_name, fnos, rz_values)
-                logger.info("【スムージング1回目】%s - 回転X 終了", bone_name)
+                logger.info("【スムージング1回目】%s - 回転Z 終了", bone_name)
             else:
                 if len(fnos) > 0:
                     rx_all_values = np.zeros(fnos[-1] + 1)
