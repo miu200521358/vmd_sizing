@@ -4,6 +4,7 @@
     // 詳細情報は次を確認してください: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
         {
             "name": "Python: debug_exec",
             "type": "python",
@@ -259,6 +260,19 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal"
-        }
+        },
+        {
+            "name": "Python: debug_exec_supporter_gui",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/../motion_supporter/src/executor.py",
+            "console": "integratedTerminal",
+            "pythonPath": "${command:python.interpreterPath}",
+            "stopOnEntry": false,
+            "args": [
+                "--verbose", "20",
+                // "--out_log",
+            ]
+        },
     ]
 }
