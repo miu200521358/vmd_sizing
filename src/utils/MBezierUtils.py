@@ -36,6 +36,22 @@ MZ_y1_idxs = [6, 21, 51, 36]
 MZ_x2_idxs = [10, 25, 55, 40]
 MZ_y2_idxs = [14, 29, 59, 44]
 
+BZ_TYPE_MX = "MX"
+BZ_TYPE_MY = "MY"
+BZ_TYPE_MZ = "MZ"
+BZ_TYPE_R = "R"
+
+
+def from_bz_type(bz_type: str):
+    if bz_type == BZ_TYPE_MX:
+        return MX_x1_idxs, MX_y1_idxs, MX_x2_idxs, MX_y2_idxs
+    elif bz_type == BZ_TYPE_MY:
+        return MY_x1_idxs, MY_y1_idxs, MY_x2_idxs, MY_y2_idxs
+    elif bz_type == BZ_TYPE_MZ:
+        return MZ_x1_idxs, MZ_y1_idxs, MZ_x2_idxs, MZ_y2_idxs
+    else:
+        return R_x1_idxs, R_y1_idxs, R_x2_idxs, R_y2_idxs
+
 
 # 指定したすべての値をカトマル曲線として計算する
 def calc_value_from_catmullrom(bone_name: str, fnos: int, values: list):
@@ -110,24 +126,23 @@ def calc_catmull_rom_one_point(x, v0, v1, v2, v3):
 
 # 指定したすべての値を通るカトマル曲線からベジェ曲線を計算し、MMD補間曲線範囲内に収められた場合、そのベジェ曲線を返す
 def join_value_2_bezier(fno: int, bone_name: str, values: list, offset=0, diff_limit=0.01):
-    if np.isclose(np.max(np.array(values)), np.min(np.array(values)), atol=1e-3) or len(values) <= 2:
+    if np.isclose(np.max(np.array(values)), np.min(np.array(values)), atol=1e-6) or len(values) <= 2:
         # すべてがだいたい同じ値（最小と最大が同じ値)か次数が1の場合、線形補間
-        return LINEAR_MMD_INTERPOLATION
+        return (LINEAR_MMD_INTERPOLATION, [])
 
     try:
         # Xは次数（フレーム数）分移動
         xs = np.arange(0, len(values))
         # YはXの移動分を許容範囲とする
-        ys = values + xs[-1]
+        ys = values
 
         # カトマル曲線をベジェ曲線に変換する
         bz_x, bz_y = convert_catmullrom_2_bezier(np.concatenate([[None], xs, [None]]), np.concatenate([[None], ys, [None]]))
-        logger.test("bz_x: %s", bz_x)
-        logger.test("bz_y: %s", bz_y)
+        logger.debug("bz_x: %s, bz_y: %s", bz_x, bz_y)
 
         if len(bz_x) == 0:
             # 始点と終点が指定されていて、カトマル曲線が描けなかった場合、線形補間
-            return LINEAR_MMD_INTERPOLATION
+            return (LINEAR_MMD_INTERPOLATION, [])
 
         # 次数
         degree = len(bz_x) - 1
@@ -144,7 +159,7 @@ def join_value_2_bezier(fno: int, bone_name: str, values: list, offset=0, diff_l
         elif degree == 3:
             # 3次の場合、そのままベジェ曲線をMMD用に補間
             joined_curve = full_curve
-        elif degree > 3:
+        else:
             # 3次より多い場合、次数を減らす
 
             reduced_curve_list = []
@@ -200,8 +215,8 @@ def join_value_2_bezier(fno: int, bone_name: str, values: list, offset=0, diff_l
         reduced_ys = intersect_by_x(joined_curve, bezier_x)
         logger.test("f: %s, %s, reduced_ys: %s", fno, bone_name, reduced_ys)
 
-        # 交点の差を取得する
-        diff_ys = np.array(full_ys) - np.array(reduced_ys)
+        # 交点の差を取得する(前後は必ず一致)
+        diff_ys = np.concatenate([[0], np.array(full_ys) - np.array(reduced_ys), [0]])
 
         # 差が大きい箇所をピックアップする
         diff_large = np.where(np.abs(diff_ys) > (diff_limit * (offset + 1)), 1, 0)
@@ -218,21 +233,21 @@ def join_value_2_bezier(fno: int, bone_name: str, values: list, offset=0, diff_l
 
         if np.count_nonzero(diff_large) > 0:
             # 差が大きい箇所がある場合、分割不可
-            return None
+            return (None, np.where(diff_large))
 
         if not is_fit_bezier_mmd(joined_bz, offset):
             # 補間曲線がMMD補間曲線内に収まらない場合、NG
-            return None
+            return (None, [])
         
         # オフセット込みの場合、MMD用補間曲線枠内に収める
         fit_bezier_mmd(joined_bz)
         
         # すべてクリアした場合、補間曲線採用
-        return joined_bz
+        return (joined_bz, [])
     except Exception as e:
         # エラーレベルは落として表に出さない
         logger.debug("ベジェ曲線生成失敗", e)
-        return None
+        return (None, [])
 
 
 def fit_bezier_mmd(bzs):
@@ -342,15 +357,11 @@ def evaluate(x1v: int, y1v: int, x2v: int, y2v: int, start: int, now: int, end: 
     t = 0.5
     s = 0.5
 
+    # 二分法
     # logger.test("x1: %s, x2: %s, y1: %s, y2: %s, x: %s", x1, x2, y1, y2, x)
-
     for i in range(15):
         ft = (3 * (s * s) * t * x1) + (3 * s * (t * t) * x2) + (t * t * t) - x
         # logger.test("i: %s, 4 << i: %s, ft: %s(%s), t: %s, s: %s", i, (4 << i), ft, abs(ft) < 0.00001, t, s)
-
-        # lessさんのご指摘によりコメントアウト
-        # if abs(ft) < 0.00001:
-        #     break
 
         if ft > 0:
             t -= 1 / (4 << i)

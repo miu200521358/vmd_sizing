@@ -160,6 +160,7 @@ class FilePanel(BasePanel):
             self.gauge_ctrl.SetValue(0)
 
             self.timer.Stop()
+            self.Unbind(wx.EVT_TIMER, id=TIMER_ID)
 
             logger.warning("VMDサイジングを中断します。", decoration=MLogger.DECORATION_BOX)
             
@@ -176,6 +177,7 @@ class FilePanel(BasePanel):
             self.save()
 
             self.timer.Stop()
+            self.Unbind(wx.EVT_TIMER, id=TIMER_ID)
 
             # サイジング可否チェックの後に実行
             self.frame.load(event, is_exec=True, target_idx=0)
@@ -183,6 +185,7 @@ class FilePanel(BasePanel):
             event.Skip()
         else:
             self.timer.Stop()
+            self.Unbind(wx.EVT_TIMER, id=TIMER_ID)
             
             logger.error("まだ処理が実行中です。終了してから再度実行してください。", decoration=MLogger.DECORATION_BOX)
             event.Skip(False)

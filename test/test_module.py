@@ -79,3 +79,17 @@ class MMathTest(unittest.TestCase):
 
         rot = initial.inverted() * orientation
         print(rot.toEulerAngles())
+
+    def test_MVector3D_cross(self):
+        leg = MVector3D(-0.8068055, 9.486009, 0.009658001)
+        knee = MVector3D(-0.813194, 5.848712, -0.103172)
+
+        cross = MVector3D.crossProduct(knee, leg)
+        print(cross)
+
+        leg1 = leg - ((leg - knee) * 0.3)
+        print(leg1)
+
+        leg2 = leg - ((leg - knee) * 0.6)
+        print(leg2)
+

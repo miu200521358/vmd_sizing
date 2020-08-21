@@ -24,9 +24,9 @@
                 // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/底辺508式初音ミク_素足モデル せんと(鈍棒P)/miku_v3(素足_袖なし).pmx",
                 
                 // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_2人/ニア_vmd P.I.P/汎用_原曲音源/ニア_いくら汎用_1377-1498.vmd;D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_2人/ニア_vmd P.I.P/汎用_原曲音源/ニア_やっこ汎用_1377-1498.vmd",
-                "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_2人/ニア_vmd P.I.P/汎用_原曲音源/ニア_いくら汎用_0-2000.vmd;D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_2人/ニア_vmd P.I.P/汎用_原曲音源/ニア_やっこ汎用_0-2000.vmd",
-                "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/Tac式ミク配布用/Tac式ミクVer1.3.1/ver1.3.1_ノーマル/Tac式ミクver1.3.1（ノーマル服）.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/Tac式ミク配布用/Tac式ミクVer1.3.1/ver1.3.1_ノーマル/Tac式ミクver1.3.1（ノーマル服）.pmx",
-                "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/025_一期一振/一期一振 ひわこ式 ver.2.0/一期一振(ひわこ式) ver.2.0.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/047_五虎退/五虎退 りっつ式 v1.42/五虎退.pmx",
+                // "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_2人/ニア_vmd P.I.P/汎用_原曲音源/ニア_いくら汎用_0-2000.vmd;D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_2人/ニア_vmd P.I.P/汎用_原曲音源/ニア_やっこ汎用_0-2000.vmd",
+                // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/Tac式ミク配布用/Tac式ミクVer1.3.1/ver1.3.1_ノーマル/Tac式ミクver1.3.1（ノーマル服）.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/Tac式ミク配布用/Tac式ミクVer1.3.1/ver1.3.1_ノーマル/Tac式ミクver1.3.1（ノーマル服）.pmx",
+                // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/025_一期一振/一期一振 ひわこ式 ver.2.0/一期一振(ひわこ式) ver.2.0.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/047_五虎退/五虎退 りっつ式 v1.42/五虎退.pmx",
                 // "--camera_motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_2人/ニア_リップ表情カメラ配布_byノン/汎用_原曲音源用/原曲音源用カメラ_0-1000.vmd",
                 // "--camera_org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/めんぼう式 初音ミク Ver1.11/めんぼう式 初音ミク ver1.11.pmx;D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/めんぼう式 初音ミク Ver1.11/めんぼう式 初音ミク ver1.11.pmx",
                 // "--camera_offset_y", "0;0",
@@ -140,13 +140,17 @@
                 // "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/Tda式デフォ服ミク_ver1.1 金子卵黄/Tda式初音ミク_デフォ服ver.pmx",
                 // "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/刀剣乱舞/107_髭切/髭切mkmk009c 刀剣乱舞/髭切mkmk009c/髭切特3mkmk(Se)009b_準標準.pmx",
 
+                "--motion_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Motion/ダンス_1人/ドラマツルギー motion 配布用 moka/ドラマツルギー_0-500.vmd",
+                "--org_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/Tda式デフォ服ミク_ver1.1 金子卵黄/Tda式初音ミク_デフォ服ver.pmx",
+                "--rep_model_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/_VMDサイジング/捩り分散 ぬこん/testver25/テスト用_A.pmx",
+
                 "--detail_stance_flg", "0;0",           // スタンス追加補正FLG
-                "--twist_flg", "0;0",                   // 捩り分散
+                "--twist_flg", "1;0",                   // 捩り分散
                 "--arm_process_flg_avoidance", "0",     // 剛体接触回避
                 "--avoidance_target_list", "頭接触回避;上半身2",          // 対象剛体名
-                "--arm_process_flg_alignment", "1",     // 手首位置合わせ
+                "--arm_process_flg_alignment", "0",     // 手首位置合わせ
                 "--alignment_finger_flg", "0",          // 指位置合わせ
-                "--alignment_floor_flg", "1",           // 床位置合わせ
+                "--alignment_floor_flg", "0",           // 床位置合わせ
                 "--alignment_distance_wrist", "1.7",    // 手首距離
                 "--alignment_distance_finger", "1.4",   // 指距離
                 "--alignment_distance_floor", "1.2",    // 床距離
@@ -270,8 +274,8 @@
             "pythonPath": "${command:python.interpreterPath}",
             "stopOnEntry": false,
             "args": [
-                "--verbose", "20",
-                // "--out_log",
+                "--verbose", "10",
+                "--out_log", "1",
             ]
         },
     ]

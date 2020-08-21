@@ -8,7 +8,7 @@ from collections import OrderedDict
 from mmd.PmxData import PmxModel, Vertex, Material, Bone, Morph, DisplaySlot, RigidBody, Joint # noqa
 from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
 from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
-from module.MOptions import MOptions, MOptionsDataSet # noqa
+from module.MOptions import MOptionsDataSet # noqa
 from module.MParams import BoneLinks # noqa
 from utils import MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
@@ -78,7 +78,7 @@ def calc_IK(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, targ
 
                 # IK軸制限がある場合、上限下限をチェック
                 if ik_bone.ik_limit_min != MVector3D() and ik_bone.ik_limit_max != MVector3D():
-                    x_qq, y_qq, z_qq, yz_qq = separate_local_qq(fno, bone_name, new_ik_qq, model.get_local_x_axis(ik_bone.name))
+                    x_qq, y_qq, z_qq, yz_qq = separate_local_qq(fno, ik_bone.name, new_ik_qq, model.get_local_x_axis(ik_bone.name))
 
                     logger.test("new_ik_qq: %s, x_qq: %s, y_qq: %s, z_qq: %s", new_ik_qq.toEulerAngles(), x_qq.toEulerAngles(), y_qq.toEulerAngles(), z_qq.toEulerAngles())
                     logger.test("new_ik_qq: %s, x_qq: %s, y_qq: %s, z_qq: %s", new_ik_qq.toDegree(), x_qq.toDegree(), y_qq.toDegree(), z_qq.toDegree())
@@ -172,6 +172,22 @@ def separate_local_qq(fno: int, bone_name: str, qq: MQuaternion, global_x_axis: 
     mat_y3_vec = mat_y3 * MVector3D()
 
     y_qq = MQuaternion.rotationTo(global_x_axis, mat_y3_vec)
+
+    # Xを再度求める -------------
+
+    mat_x4 = MMatrix4x4()
+    mat_x4.setToIdentity()
+    mat_x4.rotate(qq)
+
+    mat_x5 = MMatrix4x4()
+    mat_x5.setToIdentity()
+    mat_x5.rotate(y_qq)
+
+    mat_x6 = MMatrix4x4()
+    mat_x6.setToIdentity()
+    mat_x6.rotate(z_qq)
+
+    x_qq = (mat_x5.inverted() * mat_x4 * mat_x6.inverted()).toQuaternion()
 
     return x_qq, y_qq, z_qq, yz_qq
 

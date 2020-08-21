@@ -288,7 +288,8 @@ class VmdReader():
 
                             # IK名
                             ik_bname, ik_name = self.read_text(20)
-                            ik_info.name = ik_bname
+                            ik_info.bname = ik_bname
+                            ik_info.name = ik_name
                             logger.test("ik_info.name %s", ik_name)
 
                             # モデル表示, 0:OFF, 1:ON

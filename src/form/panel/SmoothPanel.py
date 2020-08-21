@@ -36,14 +36,14 @@ class SmoothPanel(BasePanel):
         # 対象VMDファイルコントロール
         self.smooth_vmd_file_ctrl = HistoryFilePickerCtrl(self.frame, self, u"対象モーションVMD", u"対象モーションVMDファイルを開く", ("vmd"), wx.FLP_DEFAULT_STYLE, \
                                                           u"調整したい対象モーションのVMDパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。", \
-                                                          file_model_spacer=0, title_parts_ctrl=None, title_parts2_ctrl=None, file_histories_key="smooth_vmd", is_change_output=True, \
+                                                          file_model_spacer=46, title_parts_ctrl=None, title_parts2_ctrl=None, file_histories_key="smooth_vmd", is_change_output=True, \
                                                           is_aster=False, is_save=False, set_no=1)
         self.header_sizer.Add(self.smooth_vmd_file_ctrl.sizer, 1, wx.EXPAND, 0)
 
         # 対象PMXファイルコントロール
         self.smooth_model_file_ctrl = HistoryFilePickerCtrl(self.frame, self, u"適用モデルPMX", u"適用モデルPMXファイルを開く", ("pmx"), wx.FLP_DEFAULT_STYLE, \
                                                             u"モーションを適用したいモデルのPMXパスを指定してください。\n人体モデル以外にも適用可能です。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。", \
-                                                            file_model_spacer=0, title_parts_ctrl=None, title_parts2_ctrl=None, file_histories_key="smooth_pmx", \
+                                                            file_model_spacer=52, title_parts_ctrl=None, title_parts2_ctrl=None, file_histories_key="smooth_pmx", \
                                                             is_change_output=True, is_aster=False, is_save=False, set_no=1)
         self.header_sizer.Add(self.smooth_model_file_ctrl.sizer, 1, wx.EXPAND, 0)
 

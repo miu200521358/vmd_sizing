@@ -1100,7 +1100,25 @@ class PmxModel():
             raise SizingException("ボーンリンクの生成に失敗しました。\nモデル「{0}」の「{1}」ボーンで以下を確認してください。\n" \
                                   + "・同じ名前のボーンが複数ないか（ボーンのINDEXがズレるため、サイジングに失敗します）\n" \
                                   + "・親ボーンに自分の名前と同じ名前のボーンが指定されていないか\n※ PMXEditorの「PMXデータの状態検証」から確認できます。".format(self.name, target_bone_name))
+    
+    # 子孫ボーンリスト取得
+    def get_child_bones(self, target_bone: Bone, bone_list=None):
+        if not bone_list:
+            bone_list = []
         
+        child_bone_list = []
+
+        for child_bone in self.bones.values():
+            if child_bone.index != target_bone.index and child_bone.parent_index == target_bone.index:
+                # 処理対象ボーンが親INDEXに入ってる場合、処理対象
+                bone_list.append(child_bone)
+                child_bone_list.append(child_bone)
+
+        for child_bone in child_bone_list:
+            self.get_child_bones(child_bone, bone_list)
+
+        return bone_list
+
     # ボーン関係親子のペア
     PARENT_BORN_PAIR = {
         "SIZING_ROOT_BONE": [""],

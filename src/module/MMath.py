@@ -213,6 +213,9 @@ class MVector2D():
     def setY(self, y):
         self.__data[1] = y
 
+    def to_log(self):
+        return "x: {0}, y: {1}".format(round(self.__data[0], 5), round(self.__data[1], 5))
+
 
 class MVector3D():
 
@@ -831,7 +834,8 @@ class MQuaternion():
     def calcTheata(self, v):
         dot = MQuaternion.dotProduct(self.normalized(), v.normalized())
         theta = math.acos(min(1, max(-1, dot)))
-        return theta
+        sinOfAngle = math.sin(theta)
+        return sinOfAngle
     
     @classmethod
     def dotProduct(cls, v1, v2):
