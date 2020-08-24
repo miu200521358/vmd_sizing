@@ -454,12 +454,12 @@ class StanceService():
 
             # 通常はひじYZ回転をひじボーンの順回転として扱う
             # FIXME 逆肘考慮
-            elbow_result_qq = MQuaternion.fromAxisAndQuaternion(elbow_local_y_axis, elbow_yz_qq)
+            elbow_result_qq = MQuaternion.fromAxisAndAngle(elbow_local_y_axis, elbow_yz_qq.toDegree())
             
             # 腕捩り -------------------------
 
             # 腕Xを腕捩りに適用させる
-            arm_x_twisted_qq = MQuaternion.fromAxisAndQuaternion(arm_twist_local_x_axis, arm_x_qq)
+            arm_x_twisted_qq = MQuaternion.fromAxisAndAngle(arm_twist_local_x_axis, arm_x_qq.toDegree())
 
             # 腕捩りの回転量を取得する
             arm_twist_result_dot, arm_twist_result_qq = self.calc_twist_qq(data_set_idx, fno, arm_twist_bone_name, None, None, None, None, None, \
@@ -472,11 +472,11 @@ class StanceService():
             wrist_result_qq = wrist_bf.rotation
 
             # ひじXを手捻りに
-            wrist_x_twisted_qq = MQuaternion.fromAxisAndQuaternion(wrist_twist_local_x_axis, elbow_x_qq)
+            wrist_x_twisted_qq = MQuaternion.fromAxisAndAngle(wrist_twist_local_x_axis, elbow_x_qq.toDegree())
             logger.test("f: %s, %s: ひじX: %s", fno, wrist_twist_bone_name, wrist_x_twisted_qq)
 
             # 手首Xを手捻りに
-            wrist_x_twisted_qq *= MQuaternion.fromAxisAndQuaternion(wrist_twist_local_x_axis, wrist_x_qq)
+            wrist_x_twisted_qq *= MQuaternion.fromAxisAndAngle(wrist_twist_local_x_axis, wrist_x_qq.toDegree())
             logger.test("f: %s, %s: 手首X: %s", fno, wrist_twist_bone_name, wrist_x_twisted_qq)
 
             # 手捩りの回転量を取得する
