@@ -40,17 +40,18 @@ C:\Development\Anaconda3\envs\vmdsizing_np64\Lib\site-packages\bezier\extra-dll‚
 
 [cypthon”Å]
 
-conda create -n vmdsizing_cython_exe1 python=3.8
+conda create -n vmdsizing_cython python=3.8
 
 pip install cython
 pip install numpy
 pip install wxpython
 pip install numpy-quaternion
 pip install bezier
+
 conda install pyinstaller
 
+C:\Development\Anaconda3\envs\vmdsizing_cython\Lib\site-packages\bezier\extra-dll ‚Ì’†g‚Ìdll‚ğeƒfƒBƒŒƒNƒgƒŠ‚É”z’ui‰ºŠK‘w‚¾‚ÆŒ©‚Â‚©‚ç‚È‚¢‚½‚ßj
 
-python -m cProfile -o main.prof src\executor.py --out_log 1 --verbose 20 --is_saving 0
 
 
 
