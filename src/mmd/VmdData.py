@@ -2,109 +2,15 @@
 #
 import math
 import numpy as np
-import quaternion
 import struct
 import _pickle as cPickle
-import cython
 
+from module.OneEuroFilter import OneEuroFilter
 from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from utils import MBezierUtils # noqa
 from utils.MLogger import MLogger
 
 logger = MLogger(__name__, level=1)
-
-# -*- coding: utf-8 -*-
-#
-import math
-import cython
-
-from utils.MLogger import MLogger # noqa
-
-logger = MLogger(__name__)
-
-
-# OneEuroFilter
-# オリジナル：https://www.cristal.univ-lille.fr/~casiez/1euro/
-# ----------------------------------------------------------------------------
-class LowPassFilter(object):
-
-    def __init__(self, alpha):
-        self.__setAlpha(alpha)
-        self.__y = self.__s = None
-
-    def __setAlpha(self, alpha):
-        alpha = max(0.000001, min(1, float(alpha)))
-        if alpha <= 0 or alpha > 1.0:
-            raise ValueError("alpha (%s) should be in (0.0, 1.0]" % alpha)
-        self.__alpha = alpha
-
-    def __call__(self, value, timestamp=None, alpha=None):
-        if alpha is not None:
-            self.__setAlpha(alpha)
-        if self.__y is None:
-            s = value
-        else:
-            s = self.__alpha * value + (1.0 - self.__alpha) * self.__s
-        self.__y = value
-        self.__s = s
-        return s
-
-    def lastValue(self):
-        return self.__y
-
-    # IK用処理スキップ
-    def skip(self, value):
-        self.__y = value
-        self.__s = value
-
-        return value
-
-
-class OneEuroFilter(object):
-
-    def __init__(self, freq, mincutoff=1.0, beta=0.0, dcutoff=1.0):
-        if freq <= 0:
-            raise ValueError("freq should be >0")
-        if mincutoff <= 0:
-            raise ValueError("mincutoff should be >0")
-        if dcutoff <= 0:
-            raise ValueError("dcutoff should be >0")
-        self.__freq = float(freq)
-        self.__mincutoff = float(mincutoff)
-        self.__beta = float(beta)
-        self.__dcutoff = float(dcutoff)
-        self.__x = LowPassFilter(self.__alpha(self.__mincutoff))
-        self.__dx = LowPassFilter(self.__alpha(self.__dcutoff))
-        self.__lasttime = None
-
-    def __alpha(self, cutoff):
-        te = 1.0 / self.__freq
-        tau = 1.0 / (2 * math.pi * cutoff)
-        return 1.0 / (1.0 + tau / te)
-
-    def __call__(self, x, timestamp=None):
-        # ---- update the sampling frequency based on timestamps
-        if self.__lasttime and timestamp:
-            self.__freq = 1.0 / (timestamp - self.__lasttime)
-        self.__lasttime = timestamp
-        # ---- estimate the current variation per second
-        prev_x = self.__x.lastValue()
-        dx = 0.0 if prev_x is None else (x - prev_x) * self.__freq  # FIXME: 0.0 or value?
-        edx = self.__dx(dx, timestamp, alpha=self.__alpha(self.__dcutoff))
-        # ---- use it to update the cutoff frequency
-        cutoff = self.__mincutoff + self.__beta * math.fabs(edx)
-        # ---- filter the given value
-        return self.__x(x, timestamp, alpha=self.__alpha(cutoff))
-
-    # IK用処理スキップ
-    def skip(self, x, timestamp=None):
-        # ---- update the sampling frequency based on timestamps
-        if self.__lasttime and timestamp and self.__lasttime != timestamp:
-            self.__freq = 1.0 / (timestamp - self.__lasttime)
-        self.__lasttime = timestamp
-        prev_x = self.__x.lastValue()
-        self.__dx.skip(prev_x)
-        self.__x.skip(x)
 
 
 class VmdBoneFrame():
@@ -264,31 +170,11 @@ class VmdShowIkFrame():
                 k.bname = k.name.encode('cp932').decode('shift_jis').encode('shift_jis')[:20].ljust(20, b'\x00')   # 20文字制限
             fout.write(k.bname)
             fout.write(struct.pack('b', k.onoff))
-
+        
 
 # https://blog.goo.ne.jp/torisu_tetosuki/e/bc9f1c4d597341b394bd02b64597499d
 # https://w.atwiki.jp/kumiho_k/pages/15.html
-@cython.cclass
-class VmdMotion:
-
-    path = cython.declare(str, visibility='public')
-    signature = cython.declare(str, visibility='public')
-    model_name = cython.declare(str, visibility='public')
-    last_motion_frame = cython.declare(cython.int, visibility='public')
-    motion_cnt = cython.declare(cython.int, visibility='public')
-    bones = cython.declare(cython.dict, visibility='public')
-    morph_cnt = cython.declare(cython.int, visibility='public')
-    morphs = cython.declare(cython.dict, visibility='public')
-    camera_cnt = cython.declare(cython.int, visibility='public')
-    cameras = cython.declare(cython.dict, visibility='public')
-    light_cnt = cython.declare(cython.int, visibility='public')
-    lights = cython.declare(list, visibility='public')
-    shadow_cnt = cython.declare(cython.int, visibility='public')
-    shadows = cython.declare(list, visibility='public')
-    ik_cnt = cython.declare(cython.int, visibility='public')
-    showiks = cython.declare(list, visibility='public')
-    digest = cython.declare(str, visibility='public')
-
+class VmdMotion():
     def __init__(self):
         self.path = ''
         self.signature = ''
@@ -339,7 +225,7 @@ class VmdMotion:
                         logger.info("-- %sフレーム目:終了(%s％)【No.%s - 全打ち - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
                         prev_sep_fno = fno // 500
     
-    def get_differ_fnos(self, data_set_no: int, bone_name_list: list, limit_degrees: float, limit_length: float):
+    def get_differ_fnos(self, data_set_no: int, bone_name_list: str, limit_degrees: float, limit_length: float):
         limit_radians = math.cos(math.radians(limit_degrees))
         fnos = [0]
         for bone_name in bone_name_list:
@@ -737,7 +623,7 @@ class VmdMotion:
         logger.debug("remove_unnecessary_bf after: %s, %s, all: %s", bone_name, active_fnos, len(fnos))
     
     # 補間曲線分割ありで登録
-    def regist_bf(self, bf: VmdBoneFrame, bone_name: str, fno: cython.int, copy_interpolation=False):
+    def regist_bf(self, bf: VmdBoneFrame, bone_name: str, fno: int, copy_interpolation=False):
         # 登録対象の場合のみ、補間曲線リセットで登録する
         regist_bf = self.calc_bf(bone_name, fno, is_reset_interpolation=True)
         regist_bf.position = bf.position.copy()

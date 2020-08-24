@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 #
+import copy
 import math
-import cython
+import numpy as np
+import quaternion # noqa
 
 from utils.MLogger import MLogger # noqa
 
@@ -11,6 +13,7 @@ logger = MLogger(__name__)
 # OneEuroFilter
 # オリジナル：https://www.cristal.univ-lille.fr/~casiez/1euro/
 # ----------------------------------------------------------------------------
+
 class LowPassFilter(object):
 
     def __init__(self, alpha):
