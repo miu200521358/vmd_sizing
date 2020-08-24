@@ -897,8 +897,34 @@ class MQuaternion():
         self.setScalar(1 if self.scalar() == 0 else self.scalar())
 
     def toMatrix4x4(self):
-        m = MMathC.toMatrix4x4_MQuaternion(self.__data.components)
-        mat = MMatrix4x4(m)
+        mat = MMatrix4x4()
+        m = mat.data()
+
+        # q(w,x,y,z)から(x,y,z,w)に並べ替え.
+        q2 = np.array([self.__data.x, self.__data.y, self.__data.z, self.__data.w], dtype=np.float64)
+
+        m[0, 0] = q2[3] * q2[3] + q2[0] * q2[0] - q2[1] * q2[1] - q2[2] * q2[2]
+        m[0, 1] = 2.0 * q2[0] * q2[1] - 2.0 * q2[3] * q2[2]
+        m[0, 2] = 2.0 * q2[0] * q2[2] + 2.0 * q2[3] * q2[1]
+        m[0, 3] = 0.0
+
+        m[1, 0] = 2.0 * q2[0] * q2[1] + 2.0 * q2[3] * q2[2]
+        m[1, 1] = q2[3] * q2[3] - q2[0] * q2[0] + q2[1] * q2[1] - q2[2] * q2[2]
+        m[1, 2] = 2.0 * q2[1] * q2[2] - 2.0 * q2[3] * q2[0]
+        m[1, 3] = 0.0
+
+        m[2, 0] = 2.0 * q2[0] * q2[2] - 2.0 * q2[3] * q2[1]
+        m[2, 1] = 2.0 * q2[1] * q2[2] + 2.0 * q2[3] * q2[0]
+        m[2, 2] = q2[3] * q2[3] - q2[0] * q2[0] - q2[1] * q2[1] + q2[2] * q2[2]
+        m[2, 3] = 0.0
+
+        m[3, 0] = 0.0
+        m[3, 1] = 0.0
+        m[3, 2] = 0.0
+        m[3, 3] = q2[3] * q2[3] + q2[0] * q2[0] + q2[1] * q2[1] + q2[2] * q2[2]
+
+        m /= m[3, 3]
+        m[3, 3] = 1.0
 
         return mat
     
@@ -913,31 +939,107 @@ class MQuaternion():
 
     # http://www.j3d.org/matrix_faq/matrfaq_latest.html#Q37
     def toEulerAngles(self):
-        v = MVector3D(MMathC.toEulerAngles(self.__data.components))
+        xp = self.__data.x
+        yp = self.__data.y
+        zp = self.__data.z
+        wp = self.__data.w
+
+        xx = xp * xp
+        xy = xp * yp
+        xz = xp * zp
+        xw = xp * wp
+        yy = yp * yp
+        yz = yp * zp
+        yw = yp * wp
+        zz = zp * zp
+        zw = zp * wp
+        lengthSquared = xx + yy + zz + wp * wp
+
+        if not is_almost_null(lengthSquared - 1.0) and not is_almost_null(lengthSquared):
+            xx /= lengthSquared
+            xy /= lengthSquared  # same as (xp / length) * (yp / length)
+            xz /= lengthSquared
+            xw /= lengthSquared
+            yy /= lengthSquared
+            yz /= lengthSquared
+            yw /= lengthSquared
+            zz /= lengthSquared
+            zw /= lengthSquared
+
+        pitch = math.asin(max(-1, min(1, -2.0 * (yz - xw))))
+        
+        if pitch < (math.pi / 2):
+            if pitch > -(math.pi / 2):
+                yaw = math.atan2(2.0 * (xz + yw), 1.0 - 2.0 * (xx + yy))
+                roll = math.atan2(2.0 * (xy + zw), 1.0 - 2.0 * (xx + zz))
+            else:
+                # not a unique solution
+                roll = 0.0
+                yaw = -math.atan2(-2.0 * (xy - zw), 1.0 - 2.0 * (yy + zz))
+        else:
+            # not a unique solution
+            roll = 0.0
+            yaw = math.atan2(-2.0 * (xy - zw), 1.0 - 2.0 * (yy + zz))
+
+        v = MVector3D(math.degrees(pitch), math.degrees(yaw), math.degrees(roll))
 
         return v
     
     # 角度に変換
     def toDegree(self):
-        return MMathC.toDegree(self.__data.components)
+        return math.degrees(2 * math.acos(min(1, max(-1, self.scalar()))))
 
     # 自分ともうひとつの値vとのtheta（変位量）を返す
     def calcTheata(self, v):
-        return MMathC.calcTheata_MQuaternion(self.__data.components, v.__data.components)
+        dot = MQuaternion.dotProduct(self.normalized(), v.normalized())
+        theta = math.acos(min(1, max(-1, dot)))
+        sinOfAngle = math.sin(theta)
+        return sinOfAngle
     
     @classmethod
     def dotProduct(cls, v1, v2):
-        return MMathC.dotProduct_MQuaternion(v1.__data.components, v2.__data.components)
+        dotv = np.sum(v1.__data.components * v2.__data.components)
+        return dotv
     
     @classmethod
     def fromAxisAndAngle(cls, vec3: MVector3D, angle: float):
-        return MQuaternion(MMathC.fromAxisAndAngle(vec3.data(), angle)).normalized()
+        x = vec3.x()
+        y = vec3.y()
+        z = vec3.z()
+        length = math.sqrt(x * x + y * y + z * z)
+
+        if not is_almost_null(length - 1.0) and not is_almost_null(length):
+            x /= length
+            y /= length
+            z /= length
+
+        a = math.radians(angle / 2.0)
+        s = math.sin(a)
+        c = math.cos(a)
+        return MQuaternion(c, x * s, y * s, z * s).normalized()
 
     @classmethod
     def fromAxisAndQuaternion(cls, vec3: MVector3D, qq):
         qq.normalize()
-        return MQuaternion(MMathC.fromAxisAndQuaternion(vec3.data(), qq.__data.components)).normalized()
 
+        x = vec3.x()
+        y = vec3.y()
+        z = vec3.z()
+        length = math.sqrt(x * x + y * y + z * z)
+
+        if not is_almost_null(length - 1.0) and not is_almost_null(length):
+            x /= length
+            y /= length
+            z /= length
+
+        a = math.acos(min(1, max(-1, qq.scalar())))
+        s = math.sin(a)
+        c = math.cos(a)
+
+        # logger.test("scalar: %s, a: %s, c: %s, degree: %s", qq.scalar(), a, c, math.degrees(2 * math.acos(min(1, max(-1, qq.scalar())))))
+
+        return MQuaternion(c, x * s, y * s, z * s).normalized()
+                
     @classmethod
     def fromDirection(cls, direction, up):
         if direction.is_almost_null():
@@ -955,7 +1057,7 @@ class MQuaternion():
     
     @classmethod
     def fromAxes(cls, xAxis, yAxis, zAxis):
-        rot3x3 = np.array([[xAxis.x(), yAxis.x(), zAxis.x()], [xAxis.y(), yAxis.y(), zAxis.y()], [xAxis.z(), yAxis.z(), zAxis.z()]], dtype=np.float64)
+        rot3x3 = np.array([[xAxis.x(), yAxis.x(), zAxis.x()], [xAxis.y(), yAxis.y(), zAxis.y()], [xAxis.z(), yAxis.z(), zAxis.z()]])
         return MQuaternion.fromRotationMatrix(rot3x3)
     
     @classmethod

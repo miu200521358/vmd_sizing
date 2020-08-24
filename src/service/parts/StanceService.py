@@ -14,7 +14,7 @@ from utils import MUtils, MServiceUtils, MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
 from utils.MException import SizingException, MKilledException
 
-logger = MLogger(__name__, level=1)
+logger = MLogger(__name__, level=MLogger.DEBUG)
 
 RADIANS_1 = math.cos(math.radians(1))
 RADIANS_2 = math.cos(math.radians(2))
