@@ -542,6 +542,7 @@ class PmxReader():
                             finger_tail_pos = finger_tail_vertex.position.copy()
                             finger_tail_bone = Bone(to_joint_name, "", finger_tail_pos, -1, 0, 0)
                             finger_tail_bone.index = len(pmx.bones.keys())
+                            finger_tail_bone.parent_index = pmx.bones[end_joint_name].index
                             pmx.bones[finger_tail_bone.name] = finger_tail_bone
                             pmx.bone_indexes[finger_tail_bone.index] = finger_tail_bone.name
 
