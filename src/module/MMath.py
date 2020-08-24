@@ -2,7 +2,8 @@
 #
 import math
 import numpy as np
-import quaternion # noqa
+import quaternion
+import module.MMathC as MMathC
 
 from utils.MLogger import MLogger # noqa
 
@@ -46,23 +47,19 @@ class MVector2D():
             self.__data = np.array([x, y], dtype=np.float64)
 
     def length(self):
-        return float(np.linalg.norm(self.__data, ord=2))
+        return MMathC.length(self.__data)
 
     def lengthSquared(self):
-        return float(np.linalg.norm(self.__data, ord=2)**2)
+        return MMathC.lengthSquared(self.__data)
 
     def normalized(self):
-        l2 = np.linalg.norm(self.__data, ord=2, axis=-1, keepdims=True)
-        l2[l2 == 0] = 1
-        normv = self.__data / l2
-        return MVector2D(normv[0], normv[1])
+        normv = MMathC.normalized(self.__data)
+        return MVector3D(normv[0], normv[1], normv[2])
 
     def normalize(self):
-        l2 = np.linalg.norm(self.__data, ord=2, axis=-1, keepdims=True)
-        l2[l2 == 0] = 1
-        normv = self.__data / l2
-        self.__data = normv
-    
+        self.effective()
+        self.__data = MMathC.normalized(self.__data)
+        
     def effective(self):
         self.__data[np.isnan(self.__data)] = 0
         self.__data[np.isinf(self.__data)] = 0
@@ -94,100 +91,157 @@ class MVector2D():
         return np.all(self.__data >= other.__data)
 
     def __add__(self, other):
-        if isinstance(other, MVector2D):
-            v = self.__data + other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.add_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.add_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.add_int(self.__data, other)
         else:
-            v = self.__data + other
+            v = MMathC.add_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __sub__(self, other):
-        if isinstance(other, MVector2D):
-            v = self.__data - other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.sub_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.sub_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.sub_int(self.__data, other)
         else:
-            v = self.__data - other
+            v = MMathC.sub_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __mul__(self, other):
-        if isinstance(other, MVector2D):
-            v = self.__data * other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.mul_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.mul_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.mul_int(self.__data, other)
         else:
-            v = self.__data * other
+            v = MMathC.mul_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __truediv__(self, other):
-        if isinstance(other, MVector2D):
-            v = self.__data / other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.truediv_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.truediv_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.truediv_int(self.__data, other)
         else:
-            v = self.__data / other
+            v = MMathC.truediv_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __floordiv__(self, other):
-        if isinstance(other, MVector2D):
-            v = self.__data // other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.floordiv_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.floordiv_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.floordiv_int(self.__data, other)
         else:
-            v = self.__data // other
+            v = MMathC.floordiv_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __mod__(self, other):
-        if isinstance(other, MVector2D):
-            v = self.__data % other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.mod_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.mod_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.mod_int(self.__data, other)
         else:
-            v = self.__data % other
+            v = MMathC.mod_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __pow__(self, other):
-        if isinstance(other, MVector2D):
-            v = self.__data ** other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.pow_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.pow_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.pow_int(self.__data, other)
         else:
-            v = self.__data ** other
+            v = MMathC.pow_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __lshift__(self, other):
-        if isinstance(other, MVector2D):
-            v = self.__data << other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.lshift_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.lshift_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.lshift_int(self.__data, other)
         else:
-            v = self.__data << other
+            v = MMathC.lshift_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __rshift__(self, other):
-        if isinstance(other, MVector2D):
-            v = self.__data >> other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.rshift_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.rshift_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.rshift_int(self.__data, other)
         else:
-            v = self.__data >> other
+            v = MMathC.rshift_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __and__(self, other):
-        v = self.__data & other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.and_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.and_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.and_int(self.__data, other)
+        else:
+            v = MMathC.and_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __dataor__(self, other):
-        v = self.__data ^ other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.dataor_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.dataor_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.dataor_int(self.__data, other)
+        else:
+            v = MMathC.dataor_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __or__(self, other):
-        v = self.__data | other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.or_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.or_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.or_int(self.__data, other)
+        else:
+            v = MMathC.or_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
@@ -233,26 +287,21 @@ class MVector3D():
         return MVector3D(self.x(), self.y(), self.z())
 
     def length(self):
-        return np.linalg.norm(self.__data, ord=2)
+        return MMathC.length(self.__data)
 
     def lengthSquared(self):
-        return np.linalg.norm(self.__data, ord=2)**2
+        return MMathC.lengthSquared(self.__data)
 
     def normalized(self):
-        l2 = np.linalg.norm(self.__data, ord=2, axis=-1, keepdims=True)
-        l2[l2 == 0] = 1
-        normv = self.__data / l2
+        normv = MMathC.normalized(self.__data)
         return MVector3D(normv[0], normv[1], normv[2])
 
     def normalize(self):
         self.effective()
-        l2 = np.linalg.norm(self.__data, ord=2, axis=-1, keepdims=True)
-        l2[l2 == 0] = 1
-        normv = self.__data / l2
-        self.__data = normv
+        self.__data = MMathC.normalized(self.__data)
     
     def distanceToPoint(self, v):
-        return MVector3D(self.__data - v.__data).length()
+        return self.__sub__(v).length()
     
     def project(self, modelView, projection, viewport):
         tmp = MVector4D(self.x(), self.y(), self.z(), 1)
@@ -328,12 +377,12 @@ class MVector3D():
                 
     @classmethod
     def crossProduct(cls, v1, v2):
-        crossv = np.cross(v1.__data, v2.__data)
+        crossv = MMathC.cross(v1.__data, v2.__data)
         return MVector3D(crossv[0], crossv[1], crossv[2])
 
     @classmethod
     def dotProduct(cls, v1, v2):
-        dotv = np.dot(v1.__data, v2.__data)
+        dotv = MMathC.dot(v1.__data, v2.__data)
         return dotv
     
     def data(self):
@@ -364,100 +413,157 @@ class MVector3D():
         return np.all(self.__data >= other.__data)
 
     def __add__(self, other):
-        if isinstance(other, MVector3D):
-            v = self.__data + other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.add_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.add_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.add_int(self.__data, other)
         else:
-            v = self.__data + other
+            v = MMathC.add_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __sub__(self, other):
-        if isinstance(other, MVector3D):
-            v = self.__data - other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.sub_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.sub_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.sub_int(self.__data, other)
         else:
-            v = self.__data - other
+            v = MMathC.sub_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __mul__(self, other):
-        if isinstance(other, MVector3D):
-            v = self.__data * other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.mul_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.mul_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.mul_int(self.__data, other)
         else:
-            v = self.__data * other
+            v = MMathC.mul_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __truediv__(self, other):
-        if isinstance(other, MVector3D):
-            v = self.__data / other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.truediv_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.truediv_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.truediv_int(self.__data, other)
         else:
-            v = self.__data / other
+            v = MMathC.truediv_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __floordiv__(self, other):
-        if isinstance(other, MVector3D):
-            v = self.__data // other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.floordiv_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.floordiv_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.floordiv_int(self.__data, other)
         else:
-            v = self.__data // other
+            v = MMathC.floordiv_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __mod__(self, other):
-        if isinstance(other, MVector3D):
-            v = self.__data % other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.mod_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.mod_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.mod_int(self.__data, other)
         else:
-            v = self.__data % other
+            v = MMathC.mod_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __pow__(self, other):
-        if isinstance(other, MVector3D):
-            v = self.__data ** other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.pow_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.pow_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.pow_int(self.__data, other)
         else:
-            v = self.__data ** other
+            v = MMathC.pow_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __lshift__(self, other):
-        if isinstance(other, MVector3D):
-            v = self.__data << other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.lshift_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.lshift_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.lshift_int(self.__data, other)
         else:
-            v = self.__data << other
+            v = MMathC.lshift_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __rshift__(self, other):
-        if isinstance(other, MVector3D):
-            v = self.__data >> other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.rshift_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.rshift_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.rshift_int(self.__data, other)
         else:
-            v = self.__data >> other
+            v = MMathC.rshift_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __and__(self, other):
-        v = self.__data & other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.and_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.and_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.and_int(self.__data, other)
+        else:
+            v = MMathC.and_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __dataor__(self, other):
-        v = self.__data ^ other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.dataor_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.dataor_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.dataor_int(self.__data, other)
+        else:
+            v = MMathC.dataor_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __or__(self, other):
-        v = self.__data | other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.or_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.or_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.or_int(self.__data, other)
+        else:
+            v = MMathC.or_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
@@ -503,23 +609,19 @@ class MVector4D():
             self.__data = np.array([x, y, z, w], dtype=np.float64)
     
     def length(self):
-        return np.linalg.norm(self.__data, ord=2)
+        return MMathC.length(self.__data)
 
     def lengthSquared(self):
-        return np.linalg.norm(self.__data, ord=2)**2
+        return MMathC.lengthSquared(self.__data)
 
     def normalized(self):
-        l2 = np.linalg.norm(self.__data, ord=2, axis=-1, keepdims=True)
-        l2[l2 == 0] = 1
-        normv = self.__data / l2
-        return MVector4D(normv[0], normv[1], normv[2], normv[3])
+        normv = MMathC.normalized(self.__data)
+        return MVector3D(normv[0], normv[1], normv[2])
 
     def normalize(self):
-        l2 = np.linalg.norm(self.__data, ord=2, axis=-1, keepdims=True)
-        l2[l2 == 0] = 1
-        normv = self.__data / l2
-        self.__data = normv
-
+        self.effective()
+        self.__data = MMathC.normalized(self.__data)
+    
     def toVector3D(self):
         return MVector3D(self.__data[0], self.__data[1], self.__data[2])
 
@@ -560,100 +662,157 @@ class MVector4D():
         return np.all(self.__data >= other.__data)
 
     def __add__(self, other):
-        if isinstance(other, MVector4D):
-            v = self.__data + other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.add_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.add_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.add_int(self.__data, other)
         else:
-            v = self.__data + other
+            v = MMathC.add_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __sub__(self, other):
-        if isinstance(other, MVector4D):
-            v = self.__data - other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.sub_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.sub_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.sub_int(self.__data, other)
         else:
-            v = self.__data - other
+            v = MMathC.sub_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __mul__(self, other):
-        if isinstance(other, MVector4D):
-            v = self.__data * other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.mul_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.mul_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.mul_int(self.__data, other)
         else:
-            v = self.__data * other
+            v = MMathC.mul_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __truediv__(self, other):
-        if isinstance(other, MVector4D):
-            v = self.__data / other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.truediv_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.truediv_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.truediv_int(self.__data, other)
         else:
-            v = self.__data / other
+            v = MMathC.truediv_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __floordiv__(self, other):
-        if isinstance(other, MVector4D):
-            v = self.__data // other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.floordiv_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.floordiv_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.floordiv_int(self.__data, other)
         else:
-            v = self.__data // other
+            v = MMathC.floordiv_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __mod__(self, other):
-        if isinstance(other, MVector4D):
-            v = self.__data % other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.mod_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.mod_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.mod_int(self.__data, other)
         else:
-            v = self.__data % other
+            v = MMathC.mod_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __pow__(self, other):
-        if isinstance(other, MVector4D):
-            v = self.__data ** other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.pow_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.pow_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.pow_int(self.__data, other)
         else:
-            v = self.__data ** other
+            v = MMathC.pow_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __lshift__(self, other):
-        if isinstance(other, MVector4D):
-            v = self.__data << other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.lshift_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.lshift_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.lshift_int(self.__data, other)
         else:
-            v = self.__data << other
+            v = MMathC.lshift_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __rshift__(self, other):
-        if isinstance(other, MVector4D):
-            v = self.__data >> other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.rshift_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.rshift_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.rshift_int(self.__data, other)
         else:
-            v = self.__data >> other
+            v = MMathC.rshift_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __and__(self, other):
-        v = self.__data & other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.and_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.and_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.and_int(self.__data, other)
+        else:
+            v = MMathC.and_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __dataor__(self, other):
-        v = self.__data ^ other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.dataor_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.dataor_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.dataor_int(self.__data, other)
+        else:
+            v = MMathC.dataor_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __or__(self, other):
-        v = self.__data | other.__data
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
+            v = MMathC.or_array(self.__data, other.__data)
+        elif isinstance(other, np.ndarray):
+            v = MMathC.or_array(self.__data, other)
+        elif isinstance(other, int):
+            v = MMathC.or_int(self.__data, other)
+        else:
+            v = MMathC.or_float(self.__data, other)
         v2 = self.__class__(v)
         v2.effective()
         return v2
@@ -1075,21 +1234,21 @@ class MQuaternion():
         return np.all(self.__data >= other.__data)
 
     def __add__(self, other):
-        if isinstance(other, MQuaternion):
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
             v = self.__data + other.__data
         else:
             v = self.__data + other
         return self.__class__(v.w, v.x, v.y, v.z)
 
     def __sub__(self, other):
-        if isinstance(other, MQuaternion):
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
             v = self.__data - other.__data
         else:
             v = self.__data - other
         return self.__class__(v.w, v.x, v.y, v.z)
 
     def __mul__(self, other):
-        if isinstance(other, MQuaternion):
+        if isinstance(other, MVector2D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
             v = self.__data * other.__data
             return self.__class__(v)
         elif isinstance(other, MVector3D):
@@ -1100,42 +1259,42 @@ class MQuaternion():
             return self.__class__(v.w, v.x, v.y, v.z)
 
     def __truediv__(self, other):
-        if isinstance(other, MQuaternion):
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
             v = self.__data / other.__data
         else:
             v = self.__data / other
         return self.__class__(v.w, v.x, v.y, v.z)
 
     def __floordiv__(self, other):
-        if isinstance(other, MQuaternion):
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
             v = self.__data // other.__data
         else:
             v = self.__data // other
         return self.__class__(v.w, v.x, v.y, v.z)
 
     def __mod__(self, other):
-        if isinstance(other, MQuaternion):
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
             v = self.__data % other.__data
         else:
             v = self.__data % other
         return self.__class__(v.w, v.x, v.y, v.z)
 
     def __pow__(self, other):
-        if isinstance(other, MQuaternion):
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
             v = self.__data ** other.__data
         else:
             v = self.__data ** other
         return self.__class__(v.w, v.x, v.y, v.z)
 
     def __lshift__(self, other):
-        if isinstance(other, MQuaternion):
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
             v = self.__data << other.__data
         else:
             v = self.__data << other
         return self.__class__(v.w, v.x, v.y, v.z)
 
     def __rshift__(self, other):
-        if isinstance(other, MQuaternion):
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
             v = self.__data >> other.__data
         else:
             v = self.__data >> other
@@ -1188,28 +1347,24 @@ class MMatrix4x4():
     
     # 逆行列
     def inverted(self):
-        v = np.linalg.inv(self.__data)
-        return MMatrix4x4(v)
+        return MMatrix4x4(MMathC.inverted(self.__data))
 
     # 回転行列
     def rotate(self, qq):
         qq_mat = qq.toMatrix4x4()
-        self.__data = self.__data.dot(qq_mat.__data)
+        self.__data = MMathC.dot2(self.__data, qq_mat.__data)
 
     # 平行移動行列
     def translate(self, vec3):
-        vec_mat = np.tile(np.array([vec3.x(), vec3.y(), vec3.z()]), (4, 1))
-        data_mat = self.__data[:, :3] * vec_mat
-        self.__data[:, 3] += np.sum(data_mat, axis=1)
+        self.__data = MMathC.translate_MMatrix4x4(self.__data, vec3.data())
 
     # 縮尺行列
     def scale(self, vec3):
-        vec_mat = np.tile(np.array([vec3.x(), vec3.y(), vec3.z()]), (4, 1))
-        self.__data[:, :3] *= vec_mat
+        self.__data = MMathC.scale_MMatrix4x4(self.__data, vec3.data())
         
     # 単位行列
     def setToIdentity(self):
-        self.__data = np.eye(4)
+        self.__data = MMathC.eye()
     
     def lookAt(self, eye, center, up):
         forward = center - eye
@@ -1319,14 +1474,14 @@ class MMatrix4x4():
         return np.all(self.__data >= other.__data)
 
     def __add__(self, other):
-        if isinstance(other, MMatrix4x4):
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
             v = self.__data + other.__data
         else:
             v = self.__data + other
         return self.__class__(v)
 
     def __sub__(self, other):
-        if isinstance(other, MMatrix4x4):
+        if isinstance(other, MVector2D) or isinstance(other, MVector3D) or isinstance(other, MVector4D) or isinstance(other, MQuaternion) or isinstance(other, MMatrix4x4):
             v = self.__data - other.__data
         else:
             v = self.__data - other
