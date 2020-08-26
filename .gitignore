@@ -54,3 +54,4 @@ main.prof
 executor.py.lprof
 *.thread
 src/MotionSupporter.ico
+*.html

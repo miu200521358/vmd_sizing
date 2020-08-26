@@ -48,6 +48,8 @@ pip install wxpython
 pip install numpy-quaternion
 pip install bezier
 
+pip install pprofile
+
 conda install pyinstaller
 
 C:\Development\Anaconda3\envs\vmdsizing_cython\Lib\site-packages\bezier\extra-dll の中身のdllを親ディレクトリに配置（下階層だと見つからないため）

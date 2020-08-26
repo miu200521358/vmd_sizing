@@ -62,8 +62,11 @@ def calc_value_from_catmullrom(bone_name: str, fnos: int, values: list):
         # set the last x- and y-coord, the others will be set in the loop
         y_intpol[-1] = values[-1]
 
+        prev_list = fnos[:-1]
+        next_list = fnos[1:]
+
         # loop over segments (we have n-1 segments for n points)
-        for fidx, (sfno, efno) in enumerate(zip(fnos[:-1], fnos[1:])):
+        for fidx, (sfno, efno) in enumerate(zip(prev_list, next_list)):
             # loop over segments (we have n-1 segments for n points)
             res = efno - sfno
 
