@@ -40,6 +40,7 @@ dist
 *.log
 *.c
 *.pyd
+*.prof
 src/model_all_test.py
 VmdSizingSelfAll2.bat
 rivision.txt

@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 #
-from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
-from utils.MLogger import MLogger # noqa
+from module.MMath cimport MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 import numpy as np
+cimport numpy as np
+cimport libc.math as cmath
 import bezier
+cimport bezier._curve
+from utils.MLogger import MLogger # noqa
 
 logger = MLogger(__name__, level=1)
 
@@ -54,7 +57,12 @@ def from_bz_type(bz_type: str):
 
 
 # 指定したすべての値をカトマル曲線として計算する
-def calc_value_from_catmullrom(bone_name: str, fnos: int, values: list):
+cdef np.ndarray calc_value_from_catmullrom(str bone_name, list fnos, list values):
+    cdef np.ndarray[np.float_t, ndim=1] y_intpol
+    cdef list prev_list, next_list
+    cdef int fidx, sfno, efno, res
+    cdef float t
+
     try:
         # create arrays for spline points
         y_intpol = np.empty(fnos[-1])
@@ -103,11 +111,11 @@ def calc_value_from_catmullrom(bone_name: str, fnos: int, values: list):
     except Exception as e:
         # エラーレベルは落として表に出さない
         logger.debug("カトマル曲線値生成失敗", e)
-        return []
+        return np.empty(1)
 
 
 # https://github.com/vmichals/python-algos/blob/master/catmull_rom_spline.py
-def calc_catmull_rom_one_point(x, v0, v1, v2, v3):
+cdef float calc_catmull_rom_one_point(float x, float v0, float v1, float v2, float v3):
     """Computes interpolated y-coord for given x-coord using Catmull-Rom.
     Computes an interpolated y-coordinate for the given x-coordinate between
     the support points v1 and v2. The neighboring support points v0 and v3 are
@@ -120,27 +128,40 @@ def calc_catmull_rom_one_point(x, v0, v1, v2, v3):
         v2: 3rd support point
         v3: 4th support point
     """
-    c1 = 1. * v1
-    c2 = -.5 * v0 + .5 * v2
-    c3 = 1. * v0 + -2.5 * v1 + 2. * v2 - 0.5 * v3
-    c4 = -.5 * v0 + 1.5 * v1 + -1.5 * v2 + 0.5 * v3
+    cdef float c1 = 1. * v1
+    cdef float c2 = -.5 * v0 + .5 * v2
+    cdef float c3 = 1. * v0 + -2.5 * v1 + 2. * v2 - 0.5 * v3
+    cdef float c4 = -.5 * v0 + 1.5 * v1 + -1.5 * v2 + 0.5 * v3
     return (((c4 * x + c3) * x + c2) * x + c1)
 
 
 # 指定したすべての値を通るカトマル曲線からベジェ曲線を計算し、MMD補間曲線範囲内に収められた場合、そのベジェ曲線を返す
 def join_value_2_bezier(fno: int, bone_name: str, values: list, offset=0, diff_limit=0.01):
+    return_tuple = c_join_value_2_bezier(fno, bone_name, values, offset, diff_limit)
+    return return_tuple[0], return_tuple[1]
+
+cdef tuple c_join_value_2_bezier(int fno, str bone_name, list values, float offset, float diff_limit):
     if np.isclose(np.max(np.array(values)), np.min(np.array(values)), atol=1e-6) or len(values) <= 2:
         # すべてがだいたい同じ値（最小と最大が同じ値)か次数が1の場合、線形補間
         return (LINEAR_MMD_INTERPOLATION, [])
 
+    cdef np.ndarray[np.float_t, ndim=1] xs, yx, bezier_x, diff_ys, diff_large
+    cdef np.ndarray[np.float_t, ndim=2] nodes
+    cdef list bz_x, bz_y, reduced_curve_list, reduce_bz_x, reduce_bz_y, full_ys, reduced_ys, joined_bz
+    cdef tuple catmullrom_tuple
+    cdef int degree
+
     try:
+
         # Xは次数（フレーム数）分移動
         xs = np.arange(0, len(values))
         # YはXの移動分を許容範囲とする
-        ys = values
+        ys = np.array(values, dtype=np.float)
 
         # カトマル曲線をベジェ曲線に変換する
-        bz_x, bz_y = convert_catmullrom_2_bezier(np.concatenate([[None], xs, [None]]), np.concatenate([[None], ys, [None]]))
+        catmullrom_tuple = convert_catmullrom_2_bezier(np.concatenate([[None], xs, [None]]), np.concatenate([[None], ys, [None]]))
+        bz_x = catmullrom_tuple[0]
+        bz_y = catmullrom_tuple[1]
         logger.debug("bz_x: %s, bz_y: %s", bz_x, bz_y)
 
         if len(bz_x) == 0:
@@ -253,7 +274,7 @@ def join_value_2_bezier(fno: int, bone_name: str, values: list, offset=0, diff_l
         return (None, [])
 
 
-def fit_bezier_mmd(bzs):
+cdef fit_bezier_mmd(MVector2D bzs):
     for bz in bzs:
         bz.effective()
         bz.setX(0 if bz.x() < 0 else INTERPOLATION_MMD_MAX if bz.x() > INTERPOLATION_MMD_MAX else bz.x())
@@ -262,10 +283,13 @@ def fit_bezier_mmd(bzs):
 
 # Catmull-Rom曲線の制御点(通過点)をBezier曲線の制御点に変換する
 # http://defghi1977-onblog.blogspot.com/2014/09/catmull-rombezier.html
-def convert_catmullrom_2_bezier(xs: list, ys: list):
+cdef tuple convert_catmullrom_2_bezier(np.ndarray xs, np.ndarray ys):
 
-    bz_x = []
-    bz_y = []
+    cdef list bz_x = []
+    cdef list bz_y = []
+    cdef int x0, x1, x2, x3
+    cdef float y0, y1, y2, y3, s1, s2
+    cdef MVector2D p0, p1, p2, p3, B, C
 
     for x0, x1, x2, x3, y0, y1, y2, y3 in zip(xs[:-3], xs[1:-2], xs[2:-1], xs[3:], ys[:-3], ys[1:-2], ys[2:-1], ys[3:]):
         p0 = None if not x0 and not y0 else MVector2D(x0, y0)
@@ -313,12 +337,16 @@ def convert_catmullrom_2_bezier(xs: list, ys: list):
     bz_x.append(xs[-2])
     bz_y.append(ys[-2])
 
-    return bz_x, bz_y
+    return (bz_x, bz_y)
 
 
 # 指定された複数のXと交わるそれぞれのYを返す
-def intersect_by_x(curve, xs):
-    ys = []
+cdef list intersect_by_x(curve, np.ndarray xs):
+    cdef float x
+    cdef list ys = []
+    cdef np.ndarray[np.float_t, ndim=1] intersections
+    cdef np.ndarray[np.float_t, ndim=2] s_vals
+
     for x in xs:
         # 交点を求める為のX線上の直線
         line1 = bezier.Curve(np.asfortranarray([[x, x], [-99999, 99999]]), degree=1)
@@ -348,8 +376,15 @@ def intersect_by_x(curve, xs):
 # https://shspage.hatenadiary.org/entry/20140625/1403702735
 # https://bezier.readthedocs.io/en/stable/python/reference/bezier.curve.html#bezier.curve.Curve.evaluate
 def evaluate(x1v: int, y1v: int, x2v: int, y2v: int, start: int, now: int, end: int):
+    return_tuple = c_evaluate(x1v, y1v, x2v, y2v, start, now, end)
+    return return_tuple[0], return_tuple[1], return_tuple[2]
+
+cdef tuple c_evaluate(int x1v, int y1v, int x2v, int y2v, int start, int now, int end):
     if (now - start) == 0 or (end - start) == 0:
-        return 0, 0, 0
+        return (0, 0, 0)
+    
+    cdef float x, x1, x2, y1, y2, t, s, ft, y
+    cdef int i
         
     x = (now - start) / (end - start)
     x1 = x1v / INTERPOLATION_MMD_MAX
@@ -377,14 +412,21 @@ def evaluate(x1v: int, y1v: int, x2v: int, y2v: int, start: int, now: int, end: 
 
     # logger.test("y: %s, t: %s, s: %s", y, t, s)
 
-    return x, y, t
+    return (x, y, t)
 
 
 # 指定されたtになるフレーム番号を取得する
 def evaluate_by_t(x1v: int, y1v: int, x2v: int, y2v: int, start: int, end: int, t: float):
+    return_tuple = c_evaluate_by_t(x1v, y1v, x2v, y2v, start, end, t)
+    return return_tuple[0], return_tuple[1], return_tuple[2]
+
+cdef tuple c_evaluate_by_t(int x1v, int y1v, int x2v, int y2v, int start, int end, float t):
     if (end - start) <= 1:
         # 差が1以内の場合、終了
-        return start, 0, t
+        return (start, 0, t)
+    
+    cdef float x1, x2, y1, y2
+    cdef int fno
 
     x1 = x1v / INTERPOLATION_MMD_MAX
     x2 = x2v / INTERPOLATION_MMD_MAX
@@ -400,7 +442,7 @@ def evaluate_by_t(x1v: int, y1v: int, x2v: int, y2v: int, start: int, end: int, 
     # xに相当するフレーム番号
     fno = int(round_integer(start + ((end - start) * es[0, 0])))
     
-    return fno, es[1, 0], t
+    return (fno, es[1, 0], t)
 
 
 # 3次ベジェ曲線の分割
@@ -409,7 +451,12 @@ def split_bezier_mmd(x1v: int, y1v: int, x2v: int, y2v: int, start: int, now: in
         return 0, 0, 0, False, False, LINEAR_MMD_INTERPOLATION, LINEAR_MMD_INTERPOLATION
 
     # 3次ベジェ曲線を分割する
-    x, y, t, before_bz, after_bz = split_bezier(x1v, y1v, x2v, y2v, start, now, end)
+    return_tuple = split_bezier(x1v, y1v, x2v, y2v, start, now, end)
+    x = return_tuple[0]
+    y = return_tuple[1]
+    t = return_tuple[2]
+    before_bz = return_tuple[3]
+    after_bz = return_tuple[4]
 
     # ベジェ曲線の値がMMD用に合っているかを加味して返す
     return x, y, t, is_fit_bezier_mmd(before_bz), is_fit_bezier_mmd(after_bz), before_bz, after_bz
@@ -431,52 +478,55 @@ def is_fit_bezier_mmd(bz: list, offset=0):
 
 # 3次ベジェ曲線の分割
 # http://geom.web.fc2.com/geometry/bezier/cut-cb.html
-def split_bezier(x1v: int, y1v: int, x2v: int, y2v: int, start: int, now: int, end: int):
+cdef tuple split_bezier(int x1v, int y1v, int x2v, int y2v, int start, int now, int end):
     # 補間曲線の進んだ時間分を求める
-    x, y, t = evaluate(x1v, y1v, x2v, y2v, start, now, end)
+    return_tuple = c_evaluate(x1v, y1v, x2v, y2v, start, now, end)
+    cdef float x = return_tuple[0]
+    cdef float y = return_tuple[1]
+    cdef float t = return_tuple[2]
 
-    A = MVector2D(0.0, 0.0)
-    B = MVector2D(x1v / INTERPOLATION_MMD_MAX, y1v / INTERPOLATION_MMD_MAX)
-    C = MVector2D(x2v / INTERPOLATION_MMD_MAX, y2v / INTERPOLATION_MMD_MAX)
-    D = MVector2D(1.0, 1.0)
+    cdef MVector2D A = MVector2D(0.0, 0.0)
+    cdef MVector2D B = MVector2D(x1v / INTERPOLATION_MMD_MAX, y1v / INTERPOLATION_MMD_MAX)
+    cdef MVector2D C = MVector2D(x2v / INTERPOLATION_MMD_MAX, y2v / INTERPOLATION_MMD_MAX)
+    cdef MVector2D D = MVector2D(1.0, 1.0)
 
-    E = A * (1 - t) + B * t
-    F = B * (1 - t) + C * t
-    G = C * (1 - t) + D * t
-    H = E * (1 - t) + F * t
-    I = F * (1 - t) + G * t # noqa
-    J = H * (1 - t) + I * t
+    cdef MVector2D E = A * (1 - t) + B * t
+    cdef MVector2D F = B * (1 - t) + C * t
+    cdef MVector2D G = C * (1 - t) + D * t
+    cdef MVector2D H = E * (1 - t) + F * t
+    cdef MVector2D I = F * (1 - t) + G * t # noqa
+    cdef MVector2D J = H * (1 - t) + I * t
 
     # 新たな4つのベジェ曲線の制御点は、A側がAEHJ、C側がJIGDとなる。
 
     # スケーリング
-    beforeBz = scale_bezier(A, E, H, J)
-    afterBz = scale_bezier(J, I, G, D)
+    cdef list beforeBz = scale_bezier(A, E, H, J)
+    cdef list afterBz = scale_bezier(J, I, G, D)
 
-    return x, y, t, beforeBz, afterBz
+    return (x, y, t, beforeBz, afterBz)
 
 
 # 分割したベジェのスケーリング
-def scale_bezier(p1: MVector2D, p2: MVector2D, p3: MVector2D, p4: MVector2D):
-    diff = p4 - p1
+cdef list scale_bezier(MVector2D p1, MVector2D p2, MVector2D p3, MVector2D p4):
+    cdef MVector2D diff = p4 - p1
 
     # nan対策
-    s1 = scale_bezier_point(p1, p1, diff)
-    s2 = scale_bezier_point(p2, p1, diff)
-    s3 = scale_bezier_point(p3, p1, diff)
-    s4 = scale_bezier_point(p4, p1, diff)
+    cdef MVector2D s1 = scale_bezier_point(p1, p1, diff)
+    cdef MVector2D s2 = scale_bezier_point(p2, p1, diff)
+    cdef MVector2D s3 = scale_bezier_point(p3, p1, diff)
+    cdef MVector2D s4 = scale_bezier_point(p4, p1, diff)
 
-    bs1 = round_bezier_mmd(s1)
-    bs2 = round_bezier_mmd(s2)
-    bs3 = round_bezier_mmd(s3)
-    bs4 = round_bezier_mmd(s4)
+    cdef MVector2D bs1 = round_bezier_mmd(s1)
+    cdef MVector2D bs2 = round_bezier_mmd(s2)
+    cdef MVector2D bs3 = round_bezier_mmd(s3)
+    cdef MVector2D bs4 = round_bezier_mmd(s4)
 
     return [bs1, bs2, bs3, bs4]
 
 
 # nan対策を加味したベジェ曲線の点算出
-def scale_bezier_point(pn: MVector2D, p1: MVector2D, diff: MVector2D):
-    s = (pn - p1) / diff
+cdef MVector2D scale_bezier_point(MVector2D pn, MVector2D p1, MVector2D diff):
+    cdef MVector2D s = (pn - p1) / diff
 
     # logger.test("diff: %s", diff)
     # logger.test("(pn-p1): %s", (pn-p1))
@@ -489,8 +539,8 @@ def scale_bezier_point(pn: MVector2D, p1: MVector2D, diff: MVector2D):
 
 
 # ベジェ曲線をMMD用の数値に丸める
-def round_bezier_mmd(target: MVector2D):
-    t2 = MVector2D()
+cdef MVector2D round_bezier_mmd(MVector2D target):
+    cdef MVector2D t2 = MVector2D()
 
     # XとYをそれぞれ整数(0-127)に丸める
     t2.setX(round_integer(target.x() * INTERPOLATION_MMD_MAX))
@@ -499,9 +549,9 @@ def round_bezier_mmd(target: MVector2D):
     return t2
 
 
-def round_integer(t: float):
+cdef int round_integer(float t):
     # 一旦整数部にまで持ち上げる
-    t2 = t * 1000000
+    cdef float t2 = t * 1000000
     
     # pythonは偶数丸めなので、整数部で丸めた後、元に戻す
     return round(round(t2, -6) / 1000000)

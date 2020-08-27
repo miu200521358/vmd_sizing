@@ -5,6 +5,8 @@ import logging
 import traceback
 import threading
 
+import cython
+
 from utils.MException import MKilledException
 
 
@@ -181,7 +183,7 @@ class MLogger():
                     self.logger.handle(log_record)
                 else:
                     # サイジングスレッドは、printとloggerで分けて出力
-                    print(output_msg)
+                    print_message(output_msg)
                     self.logger.handle(log_record)
             except Exception as e:
                 raise e
@@ -241,3 +243,8 @@ class MLogger():
         cls.total_level = level
         cls.is_file = is_file
         cls.outout_datetime = "{0:%Y%m%d_%H%M%S}".format(datetime.now())
+
+
+@cython.ccall
+def print_message(msg: str):
+    print(msg)

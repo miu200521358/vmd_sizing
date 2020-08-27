@@ -2,20 +2,97 @@
 #
 import _pickle as cPickle
 from abc import ABCMeta, abstractmethod
-from collections import OrderedDict
 import math
 import numpy as np
+cimport cython
 
-from module.MParams import BoneLinks
-from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
+from libcpp cimport  list, str, int, float, dict
+from module.MMath cimport MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
+from module.MParams cimport BoneLinks
+
 from utils.MException import SizingException # noqa
 from utils.MLogger import MLogger # noqa
 
 logger = MLogger(__name__, level=MLogger.DEBUG)
 
 
+cdef class Deform:
+    def __init__(self, index0):
+        self.index0 = index0
+
+class Bdef1(Deform):
+    def __init__(self, index0):
+        self.index0 = index0
+    
+    def get_idx_list(self):
+        return [self.index0]
+        
+    def __str__(self):
+        return "<Bdef1 {0}>".format(self.index0)
+
+class Bdef2(Deform):
+    def __init__(self, index0, index1, weight0):
+        self.index0 = index0
+        self.index1 = index1
+        self.weight0 = weight0
+        
+    def get_idx_list(self):
+        return [self.index0, self.index1]
+        
+    def __str__(self):
+        return "<Bdef2 {0}, {1}, {2}>".format(self.index0, self.index1, self.weight0)
+
+class Bdef4(Deform):
+    def __init__(self, index0, index1, index2, index3, weight0, weight1, weight2, weight3):
+        self.index0 = index0
+        self.index1 = index1
+        self.index2 = index2
+        self.index3 = index3
+        self.weight0 = weight0
+        self.weight1 = weight1
+        self.weight2 = weight2
+        self.weight3 = weight3
+        
+    def get_idx_list(self):
+        return [self.index0, self.index1, self.index2, self.index3]
+
+    def __str__(self):
+        return "<Bdef4 {0}:{1}, {2}:{3}, {4}:{5}, {6}:{7}>".format(self.index0, self.index1, self.index2, self.index3, self.weight0, self.weight1, self.weight2, self.weight3)
+            
+class Sdef(Deform):
+    def __init__(self, index0, index1, weight0, sdef_c, sdef_r0, sdef_r1):
+        self.index0 = index0
+        self.index1 = index1
+        self.weight0 = weight0
+        self.sdef_c = sdef_c
+        self.sdef_r0 = sdef_r0
+        self.sdef_r1 = sdef_r1
+        
+    def get_idx_list(self):
+        return [self.index0, self.index1]
+
+    def __str__(self):
+        return "<Sdef {0}, {1}, {2}, {3} {4} {5}>".format(self.index0, self.index1, self.weight0, self.sdef_c, self.sdef_r0, self.sdef_r1)
+    
+class Qdef(Deform):
+    def __init__(self, index0, index1, weight0, sdef_c, sdef_r0, sdef_r1):
+        self.index0 = index0
+        self.index1 = index1
+        self.weight0 = weight0
+        self.sdef_c = sdef_c
+        self.sdef_r0 = sdef_r0
+        self.sdef_r1 = sdef_r1
+        
+    def get_idx_list(self):
+        return [self.index0, self.index1]
+
+    def __str__(self):
+        return "<Sdef {0}, {1}, {2}, {3} {4} {5}>".format(self.index0, self.index1, self.weight0, self.sdef_c, self.sdef_r0, self.sdef_r1)
+
+
 # 頂点構造 ----------------------------
-class Vertex():
+cdef class Vertex:
+
     def __init__(self, index, position, normal, uv, extended_uvs, deform, edge_factor):
         self.index = index
         self.position = position
@@ -30,16 +107,16 @@ class Vertex():
                self.index, self.position, self.normal, self.uv, len(self.extended_uvs), self.deform, self.edge_factor)
 
     def is_deform_index(self, target_idx):
-        if type(self.deform) is PmxModel.Bdef1:
+        if type(self.deform) is Bdef1:
             return self.deform.index0 == target_idx
-        elif type(self.deform) is PmxModel.Bdef2:
+        elif type(self.deform) is Bdef2:
             return self.deform.index0 == target_idx or self.deform.index1 == target_idx
-        elif type(self.deform) is PmxModel.Bdef4:
+        elif type(self.deform) is Bdef4:
             return self.deform.index0 == target_idx or self.deform.index1 == target_idx \
                 or self.deform.index2 == target_idx or self.deform.index3 == target_idx
-        elif type(self.deform) is PmxModel.Sdef:
+        elif type(self.deform) is Sdef:
             return self.deform.index0 == target_idx or self.deform.index1 == target_idx
-        elif type(self.deform) is PmxModel.Qdef:
+        elif type(self.deform) is Qdef:
             return self.deform.index0 == target_idx or self.deform.index1 == target_idx
 
         return False
@@ -80,79 +157,11 @@ class Vertex():
                 return self.deform.index0
 
         return self.deform.index0
-            
-    class Bdef1():
-        def __init__(self, index0):
-            self.index0 = index0
-        
-        def get_idx_list(self):
-            return [self.index0]
-            
-        def __str__(self):
-            return "<Bdef1 {0}>".format(self.index0)
-
-    class Bdef2():
-        def __init__(self, index0, index1, weight0):
-            self.index0 = index0
-            self.index1 = index1
-            self.weight0 = weight0
-            
-        def get_idx_list(self):
-            return [self.index0, self.index1]
-            
-        def __str__(self):
-            return "<Bdef2 {0}, {1}, {2}>".format(self.index0, self.index1, self.weight0)
-
-    class Bdef4():
-        def __init__(self, index0, index1, index2, index3, weight0, weight1, weight2, weight3):
-            self.index0 = index0
-            self.index1 = index1
-            self.index2 = index2
-            self.index3 = index3
-            self.weight0 = weight0
-            self.weight1 = weight1
-            self.weight2 = weight2
-            self.weight3 = weight3
-            
-        def get_idx_list(self):
-            return [self.index0, self.index1, self.index2, self.index3]
-
-        def __str__(self):
-            return "<Bdef4 {0}:{1}, {2}:{3}, {4}:{5}, {6}:{7}>".format(self.index0, self.index1, self.index2, self.index3, self.weight0, self.weight1, self.weight2, self.weight3)
-                
-    class Sdef():
-        def __init__(self, index0, index1, weight0, sdef_c, sdef_r0, sdef_r1):
-            self.index0 = index0
-            self.index1 = index1
-            self.weight0 = weight0
-            self.sdef_c = sdef_c
-            self.sdef_r0 = sdef_r0
-            self.sdef_r1 = sdef_r1
-            
-        def get_idx_list(self):
-            return [self.index0, self.index1]
-
-        def __str__(self):
-            return "<Sdef {0}, {1}, {2}, {3} {4} {5}>".format(self.index0, self.index1, self.weight0, self.sdef_c, self.sdef_r0, self.sdef_r1)
-        
-    class Qdef():
-        def __init__(self, index0, index1, weight0, sdef_c, sdef_r0, sdef_r1):
-            self.index0 = index0
-            self.index1 = index1
-            self.weight0 = weight0
-            self.sdef_c = sdef_c
-            self.sdef_r0 = sdef_r0
-            self.sdef_r1 = sdef_r1
-            
-        def get_idx_list(self):
-            return [self.index0, self.index1]
-
-        def __str__(self):
-            return "<Sdef {0}, {1}, {2}, {3} {4} {5}>".format(self.index0, self.index1, self.weight0, self.sdef_c, self.sdef_r0, self.sdef_r1)
+    
 
 
 # 材質構造-----------------------
-class Material():
+class Material:
     def __init__(self, name, english_name, diffuse_color, alpha, specular_factor, specular_color, ambient_color, flag, edge_color, edge_size, texture_index,
                  sphere_texture_index, sphere_mode, toon_sharing_flag, toon_texture_index=0, comment="", vertex_count=0):
         self.name = name
@@ -183,9 +192,29 @@ class Material():
                    self.sphere_texture_index, self.sphere_mode, self.toon_sharing_flag,
                    self.toon_texture_index, self.comment, self.vertex_count)
 
+cdef class Ik:
+    def __init__(self, target_index, loop, limit_radian, link=None):
+        self.target_index = target_index
+        self.loop = loop
+        self.limit_radian = limit_radian
+        self.link = link or []
 
+    def __str__(self):
+        return "<Ik target_index:{0}, loop:{1}, limit_radian:{2}, link:{3}".format(self.target_index, self.loop, self.limit_radian, self.link)
+        
+class IkLink:
+
+    def __init__(self, bone_index, limit_angle, limit_min=None, limit_max=None):
+        self.bone_index = bone_index
+        self.limit_angle = limit_angle
+        self.limit_min = limit_min or MVector3D()
+        self.limit_max = limit_max or MVector3D()
+
+    def __str__(self):
+        return "<IkLink bone_index:{0}, limit_angle:{1}, limit_min:{2}, limit_max:{3}".format(self.bone_index, self.limit_angle, self.limit_min, self.limit_max)
+        
 # ボーン構造-----------------------
-class Bone():
+cdef class Bone:
     def __init__(self, name, english_name, position, parent_index, layer, flag, tail_position=None, tail_index=-1, effect_index=-1, effect_factor=0.0, fixed_axis=None,
                  local_x_vector=None, local_z_vector=None, external_key=-1, ik=None):
         self.name = name
@@ -207,8 +236,6 @@ class Bone():
         # 表示枠チェック時にONにするので、デフォルトはFalse
         self.display = False
 
-        # 親ボーンからの長さ(計算して求める）
-        self.len = 0
         # 親ボーンからの長さ3D版(計算して求める）
         self.len_3d = MVector3D()
         # オフセット(ローカル)
@@ -301,30 +328,9 @@ class Bone():
                    self.fixed_axis, self.local_x_vector, self.local_z_vector,
                    self.external_key, self.ik, self.index)
 
-    class Ik():
-        def __init__(self, target_index, loop, limit_radian, link=None):
-            self.target_index = target_index
-            self.loop = loop
-            self.limit_radian = limit_radian
-            self.link = link or []
-
-        def __str__(self):
-            return "<Ik target_index:{0}, loop:{1}, limit_radian:{2}, link:{3}".format(self.target_index, self.loop, self.limit_radian, self.link)
-            
-    class IkLink():
-
-        def __init__(self, bone_index, limit_angle, limit_min=None, limit_max=None):
-            self.bone_index = bone_index
-            self.limit_angle = limit_angle
-            self.limit_min = limit_min or MVector3D()
-            self.limit_max = limit_max or MVector3D()
-
-        def __str__(self):
-            return "<IkLink bone_index:{0}, limit_angle:{1}, limit_min:{2}, limit_max:{3}".format(self.bone_index, self.limit_angle, self.limit_min, self.limit_max)
-            
 
 # モーフ構造-----------------------
-class Morph():
+class Morph:
     def __init__(self, name, english_name, panel, morph_type, offsets=None):
         self.index = 0
         self.name = name
@@ -353,28 +359,28 @@ class Morph():
         else:
             return "？"
             
-    class GroupMorphData():
+    class GroupMorphData:
         def __init__(self, morph_index, value):
             self.morph_index = morph_index
             self.value = value
 
-    class VertexMorphOffset():
+    class VertexMorphOffset:
         def __init__(self, vertex_index, position_offset):
             self.vertex_index = vertex_index
             self.position_offset = position_offset
 
-    class BoneMorphData():
+    class BoneMorphData:
         def __init__(self, bone_index, position, rotation):
             self.bone_index = bone_index
             self.position = position
             self.rotation = rotation
 
-    class UVMorphData():
+    class UVMorphData:
         def __init__(self, vertex_index, uv):
             self.vertex_index = vertex_index
             self.uv = uv
 
-    class MaterialMorphData():
+    class MaterialMorphData:
         def __init__(self, material_index, calc_mode, diffuse, specular, specular_factor, ambient, edge_color, edge_size, texture_factor, sphere_texture_factor, toon_texture_factor):
             self.material_index = material_index
             self.calc_mode = calc_mode
@@ -390,7 +396,7 @@ class Morph():
 
 
 # 表示枠構造-----------------------
-class DisplaySlot():
+class DisplaySlot:
     def __init__(self, name, english_name, special_flag, references=None):
         self.name = name
         self.english_name = english_name
@@ -402,7 +408,7 @@ class DisplaySlot():
 
 
 # 剛体構造-----------------------
-class RigidBody():
+class RigidBody:
     def __init__(self, name, english_name, bone_index, collision_group, no_collision_group, shape_type, shape_size, shape_position, shape_rotation, mass, linear_damping, \
                  angular_damping, restitution, friction, mode):
         self.name = name
@@ -834,7 +840,7 @@ class RigidBody():
             # 3方向の間に点が含まれていたら衝突あり
             return collision, near_collision, x_distance, z_distance, rep_x_collision_vec, rep_z_collision_vec
 
-    class RigidBodyParam():
+    class RigidBodyParam:
         def __init__(self, mass, linear_damping, angular_damping, restitution, friction):
             self.mass = mass
             self.linear_damping = linear_damping
@@ -848,7 +854,7 @@ class RigidBody():
             
 
 # ジョイント構造-----------------------
-class Joint():
+class Joint:
     def __init__(self, name, english_name, joint_type, rigidbody_index_a, rigidbody_index_b, position, rotation, \
                  translation_limit_min, translation_limit_max, rotation_limit_min, rotation_limit_max, spring_constant_translation, spring_constant_rotation):
         self.name = name
@@ -874,7 +880,7 @@ class Joint():
                    self.spring_constant_translation, self.spring_constant_rotation)
 
 
-class PmxModel():
+cdef class PmxModel:
     def __init__(self):
         self.path = ''
         self.name = ''
@@ -896,7 +902,7 @@ class PmxModel():
         # ボーンINDEXデータ（キー：ボーンINDEX、値：ボーン名）
         self.bone_indexes = {}
         # モーフデータ(順番保持)
-        self.morphs = OrderedDict()
+        self.morphs = {}
         # 表示枠データ
         self.display_slots = {}
         # 剛体データ

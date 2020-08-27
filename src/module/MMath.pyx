@@ -2,30 +2,16 @@
 #
 import math
 import numpy as np
+import quaternion # noqa
 cimport numpy as np
 cimport libc.math as cmath
-import quaternion # noqa
 
 from utils.MLogger import MLogger # noqa
 
 logger = MLogger(__name__)
 
-DTYPE_INT = np.int
-ctypedef np.int_t DTYPE_INT_t
 
-DTYPE_INT8 = np.int8
-ctypedef np.int8_t DTYPE_INT8_t
-
-DTYPE_FLOAT = np.float64
-ctypedef np.float64_t DTYPE_FLOAT_t
-
-
-cdef class MRect():
-
-    cdef DTYPE_FLOAT_t __x
-    cdef DTYPE_FLOAT_t __y
-    cdef DTYPE_FLOAT_t __width
-    cdef DTYPE_FLOAT_t __height
+cdef class MRect:
 
     def __init__(self, x=0, y=0, width=0, height=0):
         self.__x = x
@@ -49,9 +35,7 @@ cdef class MRect():
         return "MRect({0}, {1}, {2}, {3})".format(self.__x, self.__y, self.__width, self.__height)
 
 
-cdef class MVector2D():
-
-    cdef DTYPE_FLOAT_t[:] __data
+cdef class MVector2D:
 
     def __init__(self, x=0.0, y=0.0):
         if isinstance(x, MVector2D):
@@ -90,7 +74,7 @@ cdef class MVector2D():
         return self
             
     cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] data(self):
-        return np.asarray(self.__data, dtype=np.float64)
+        return self.__data
 
     def __str__(self):
         return "MVector2D({0}, {1})".format(self.x(), self.y())
@@ -329,9 +313,7 @@ def rebuild_MVector2D(x, y, z):
     return MVector2D(x, y, z)
 
 
-cdef class MVector3D():
-
-    cdef DTYPE_FLOAT_t[:] __data
+cdef class MVector3D:
 
     def __init__(self, x=0.0, y=0.0, z=0.0):
         if isinstance(x, MVector3D):
@@ -461,9 +443,9 @@ cdef class MVector3D():
         return np.dot(v1.__data, v2.__data)
     
     cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] data(self):
-        return np.asarray(self.__data, dtype=np.float64)
+        return self.__data
     
-    cpdef to_log(self):
+    def to_log(self):
         return "x: {0}, y: {1} z: {2}".format(round(self.x(), 5), round(self.y(), 5), round(self.z(), 5))
 
     def __str__(self):
@@ -705,9 +687,7 @@ cdef class MVector3D():
 def rebuild_MVector3D(x, y, z):
     return MVector3D(x, y, z)
 
-cdef class MVector4D():
-
-    cdef DTYPE_FLOAT_t[:] __data
+cdef class MVector4D:
 
     def __init__(self, x=0, y=0, z=0, w=0):
         if isinstance(x, MVector4D):
@@ -765,7 +745,7 @@ cdef class MVector4D():
         return np.dot(v1.__data, v2.__data)
     
     cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] data(self):
-        return np.asarray(self.__data, dtype=np.float64)
+        return self.__data
 
     def __str__(self):
         return "MVector4D({0}, {1}, {2}, {3})".format(self.x(), self.y(), self.z(), self.w())
@@ -1018,9 +998,7 @@ def rebuild_MVector4D(x, y, z, w):
     return MVector4D(x, y, z, w)
 
 
-cdef class MQuaternion():
-
-    cdef DTYPE_FLOAT_t[:] __data
+cdef class MQuaternion:
 
     def __init__(self, w=1, x=0, y=0, z=0):
         if isinstance(w, MQuaternion):
@@ -1554,9 +1532,7 @@ def rebuild_MQuaternion(scalar, x, y, z):
     return MQuaternion(scalar, x, y, z)
 
 
-cdef class MMatrix4x4():
-
-    cdef DTYPE_FLOAT_t[:, :] __data
+cdef class MMatrix4x4:
 
     def __init__(self, m11=1, m12=0, m13=0, m14=0, m21=0, m22=1, m23=0, m24=0, m31=0, m32=0, m33=1, m34=0, m41=0, m42=0, m43=0, m44=1):
         if isinstance(m11, MMatrix4x4):
@@ -1580,7 +1556,7 @@ cdef class MMatrix4x4():
                           self.__data[3, 0], self.__data[3, 1], self.__data[3, 2], self.__data[3, 3])
 
     cpdef np.ndarray[DTYPE_FLOAT_t, ndim=2] data(self):
-        return np.asarray(self.__data, dtype=np.float64)
+        return self.__data
     
     # 逆行列
     cpdef MMatrix4x4 inverted(self):

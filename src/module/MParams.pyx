@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 #
-from collections import OrderedDict
+cimport cython
 
 
-class BoneLinks():
+cdef class BoneLinks:
+
     def __init__(self):
-        self.__links = OrderedDict()
+        self.__links = {}
     
     def get(self, bone_name: str, offset=0):
         if bone_name not in self.__links:

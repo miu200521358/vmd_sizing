@@ -1,15 +1,20 @@
 # -*- coding: utf-8 -*-
 #
-import copy
 import numpy as np # noqa
 import math # noqa
-from collections import OrderedDict
+import numpy as np
+cimport numpy as np
+cimport libc.math as cmath
+from libcpp cimport  list, str, dict, float, int
 
-from mmd.PmxData import PmxModel, Vertex, Material, Bone, Morph, DisplaySlot, RigidBody, Joint # noqa
-from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
-from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
+from mmd.PmxData cimport PmxModel, Bone
+from mmd.VmdData cimport VmdMotion, VmdBoneFrame
+from module.MParams cimport BoneLinks # noqa
+from module.MMath cimport MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
+
+from mmd.PmxData import Vertex, Material, Morph, DisplaySlot, RigidBody, Joint # noqa
+from mmd.VmdData import VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
 from module.MOptions import MOptionsDataSet # noqa
-from module.MParams import BoneLinks # noqa
 from utils import MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
 
@@ -20,17 +25,47 @@ logger = MLogger(__name__, level=1)
 # target_pos: IKリンクの目的位置
 # ik_links: IKリンク
 def calc_IK(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, target_pos: MVector3D, ik_links: BoneLinks, max_count=10):
-    for bone_name in list(ik_links.all().keys())[1:]:
+    c_calc_IK(model, links, motion, fno, target_pos, ik_links, max_count)
+
+cdef c_calc_IK(PmxModel model, BoneLinks links, VmdMotion motion, int fno, MVector3D target_pos, BoneLinks ik_links, int max_count):
+    cdef list bone_name_list = list(ik_links.all().keys())[1:]
+    cdef str bone_name
+    cdef VmdBoneFrame bf
+
+    for bone_name in bone_name_list:
         # bfをモーションに登録
         bf = motion.calc_bf(bone_name, fno)
         motion.regist_bf(bf, bone_name, fno)
     
+    cdef MVector3D local_effector_pos
+    cdef MVector3D local_target_pos
+
     local_effector_pos = MVector3D()
     local_target_pos = MVector3D()
 
+    cdef int cnt
+    cdef int ik_idx
+    cdef str joint_name
+    cdef Bone ik_bone
+    cdef dict global_3ds_dic
+    cdef dict total_mats
+    cdef MVector3D global_effector_pos
+    cdef MMatrix4x4 joint_mat
+    cdef MMatrix4x4 inv_coord
+    cdef MVector3D basis2_effector
+    cdef MVector3D basis2_target
+    cdef float rotation_dot
+    cdef float rotation_radian
+    cdef MVector3D rotation_axis
+    cdef float rotation_degree
+    cdef MQuaternion correct_qq
+    cdef MQuaternion new_ik_qq
+    cdef MQuaternion x_qq, y_qq, z_qq, yz_qq
+    cdef float euler_x, euler_y, euler_z
+
     for cnt in range(max_count):
         # 規定回数ループ
-        for ik_idx, joint_name in enumerate(list(ik_links.all().keys())[1:]):
+        for ik_idx, joint_name in enumerate(bone_name_list):
             # 処理対象IKボーン
             ik_bone = ik_links.get(joint_name)
 
@@ -59,7 +94,7 @@ def calc_IK(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, targ
             # 回転角
             rotation_dot = MVector3D.dotProduct(basis2_effector, basis2_target)
             # 回転角度
-            rotation_radian = math.acos(max(-1, min(1, rotation_dot)))
+            rotation_radian = cmath.acos(max(-1, min(1, rotation_dot)))
 
             if abs(rotation_radian) > 0.0001:
                 # 一定角度以上の場合
@@ -102,118 +137,139 @@ def calc_IK(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, targ
 
 # クォータニオンをローカル軸の回転量に分離
 def separate_local_qq(fno: int, bone_name: str, qq: MQuaternion, global_x_axis: MVector3D):
+    return_tuple = c_separate_local_qq(fno, bone_name, qq, global_x_axis)
+    return return_tuple[0], return_tuple[1], return_tuple[2], return_tuple[3]
+
+cdef tuple c_separate_local_qq(int fno, str bone_name, MQuaternion qq, MVector3D global_x_axis):
     # ローカル座標系（ボーンベクトルが（1，0，0）になる空間）の向き
-    local_axis = MVector3D(1, 0, 0)
+    cdef MVector3D local_axis = MVector3D(1, 0, 0)
     
     # グローバル座標系（Ａスタンス）からローカル座標系（ボーンベクトルが（1，0，0）になる空間）への変換
-    global2local_qq = MQuaternion.rotationTo(global_x_axis, local_axis)
-    local2global_qq = MQuaternion.rotationTo(local_axis, global_x_axis)
+    cdef MQuaternion global2local_qq = MQuaternion.rotationTo(global_x_axis, local_axis)
+    cdef MQuaternion local2global_qq = MQuaternion.rotationTo(local_axis, global_x_axis)
 
     # X成分を抽出する ------------
 
-    mat_x1 = MMatrix4x4()
+    cdef MMatrix4x4 mat_x1 = MMatrix4x4()
     mat_x1.setToIdentity()              # 初期化
     mat_x1.rotate(qq)                   # 入力qq
     mat_x1.translate(global_x_axis)     # グローバル軸方向に伸ばす
-    mat_x1_vec = mat_x1 * MVector3D()
+    cdef MVector3D mat_x1_vec = mat_x1 * MVector3D()
 
     # YZの回転量（自身のねじれを無視する）
-    yz_qq = MQuaternion.rotationTo(global_x_axis, mat_x1_vec)
+    cdef MQuaternion yz_qq = MQuaternion.rotationTo(global_x_axis, mat_x1_vec)
 
     # 除去されたX成分を求める
-    mat_x2 = MMatrix4x4()
+    cdef MMatrix4x4 mat_x2 = MMatrix4x4()
     mat_x2.setToIdentity()              # 初期化
     mat_x2.rotate(qq)                   # 元々の回転量
 
-    mat_x3 = MMatrix4x4()
+    cdef MMatrix4x4 mat_x3 = MMatrix4x4()
     mat_x3.setToIdentity()              # 初期化
     mat_x3.rotate(yz_qq)                # YZの回転量
 
-    x_qq = (mat_x2 * mat_x3.inverted()).toQuaternion()
+    cdef MQuaternion x_qq = (mat_x2 * mat_x3.inverted()).toQuaternion()
 
     # YZ回転からZ成分を抽出する --------------
 
-    mat_z1 = MMatrix4x4()
+    cdef MMatrix4x4 mat_z1 = MMatrix4x4()
     mat_z1.setToIdentity()              # 初期化
     mat_z1.rotate(yz_qq)                # YZの回転量
     mat_z1.rotate(global2local_qq)      # グローバル軸の回転量からローカルの回転量に変換
     mat_z1.translate(local_axis)        # ローカル軸方向に伸ばす
     
-    mat_z1_vec = mat_z1 * MVector3D()
+    cdef MVector3D mat_z1_vec = mat_z1 * MVector3D()
     mat_z1_vec.setZ(0)                  # Z方向の移動量を潰す
 
     # ローカル軸からZを潰した移動への回転量
-    local_z_qq = MQuaternion.rotationTo(local_axis, mat_z1_vec)
+    cdef MQuaternion local_z_qq = MQuaternion.rotationTo(local_axis, mat_z1_vec)
 
     # ボーンローカル座標系の回転をグローバル座標系の回転に戻す
-    mat_z2 = MMatrix4x4()
+    cdef MMatrix4x4 mat_z2 = MMatrix4x4()
     mat_z2.setToIdentity()              # 初期化
     mat_z2.rotate(local_z_qq)           # ローカル軸上のZ回転
     mat_z2.rotate(local2global_qq)      # ローカル軸上からグローバル軸上に変換
 
-    z_qq = mat_z2.toQuaternion()
+    cdef MQuaternion z_qq = mat_z2.toQuaternion()
 
     # YZ回転からY成分だけ取り出す -----------
     
-    mat_y1 = MMatrix4x4()
+    cdef MMatrix4x4 mat_y1 = MMatrix4x4()
     mat_y1.setToIdentity()              # 初期化
     mat_y1.rotate(yz_qq)                # グローバルYZの回転量
 
-    mat_y2 = MMatrix4x4()
+    cdef MMatrix4x4 mat_y2 = MMatrix4x4()
     mat_y2.setToIdentity()              # 初期化
     mat_y2.rotate(z_qq)                 # グローバルZの回転量
-    mat_y2_qq = (mat_y1 * mat_y2.inverted()).toQuaternion()
+    cdef MQuaternion mat_y2_qq = (mat_y1 * mat_y2.inverted()).toQuaternion()
 
     # X成分の捻れが混入したので、XY回転からYZ回転を取り出すことでXキャンセルをかける。
-    mat_y3 = MMatrix4x4()
+    cdef MMatrix4x4 mat_y3 = MMatrix4x4()
     mat_y3.setToIdentity()
     mat_y3.rotate(mat_y2_qq)
     mat_y3.translate(global_x_axis)
-    mat_y3_vec = mat_y3 * MVector3D()
+    cdef MVector3D mat_y3_vec = mat_y3 * MVector3D()
 
-    y_qq = MQuaternion.rotationTo(global_x_axis, mat_y3_vec)
+    cdef MQuaternion y_qq = MQuaternion.rotationTo(global_x_axis, mat_y3_vec)
 
     # Xを再度求める -------------
 
-    mat_x4 = MMatrix4x4()
+    cdef MMatrix4x4 mat_x4 = MMatrix4x4()
     mat_x4.setToIdentity()
     mat_x4.rotate(qq)
 
-    mat_x5 = MMatrix4x4()
+    cdef MMatrix4x4  mat_x5 = MMatrix4x4()
     mat_x5.setToIdentity()
     mat_x5.rotate(y_qq)
 
-    mat_x6 = MMatrix4x4()
+    cdef MMatrix4x4 mat_x6 = MMatrix4x4()
     mat_x6.setToIdentity()
     mat_x6.rotate(z_qq)
 
     x_qq = (mat_x5.inverted() * mat_x4 * mat_x6.inverted()).toQuaternion()
 
-    return x_qq, y_qq, z_qq, yz_qq
-
+    return (x_qq, y_qq, z_qq, yz_qq)
 
 # 正面向きの情報を含むグローバル位置
 def calc_front_global_pos(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, limit_links=None, direction_limit_links=None):
+    return_tuple = c_calc_front_global_pos(model, links, motion, fno, limit_links, direction_limit_links)
+    return return_tuple[0], return_tuple[1], return_tuple[2]
 
+cdef tuple c_calc_front_global_pos(PmxModel model, BoneLinks links, VmdMotion motion, int fno, BoneLinks limit_links, BoneLinks direction_limit_links):
     # グローバル位置
-    global_3ds = org_center_global_3ds = calc_global_pos(model, links, motion, fno, limit_links)
+    cdef dict global_3ds, org_center_global_3ds, total_mats
+    
+    (global_3ds, total_mats) = c_calc_global_pos(model, links, motion, fno, limit_links, False, False)
+    org_center_global_3ds = global_3ds
 
     # 指定ボーンまでの向いている回転量（回転のみの制限がかかっている場合、それを優先）
-    direction_qq = calc_direction_qq(model, links, motion, fno, (limit_links if not direction_limit_links else direction_limit_links))
+    cdef MQuaternion direction_qq = c_calc_direction_qq(model, links, motion, fno, (limit_links if not direction_limit_links else direction_limit_links))
 
     # 正面向きのグローバル位置
-    front_global_3ds = calc_global_pos_by_direction(direction_qq.inverted(), org_center_global_3ds)
+    cdef dict front_global_3ds = calc_global_pos_by_direction(direction_qq.inverted(), org_center_global_3ds)
 
-    return global_3ds, front_global_3ds, direction_qq
+    return (global_3ds, front_global_3ds, direction_qq)
 
 
 # グローバル位置算出
 def calc_global_pos(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, limit_links=None, return_matrix=False, is_local_x=False):
-    trans_vs = calc_relative_position(model, links, motion, fno, limit_links)
-    add_qs = calc_relative_rotation(model, links, motion, fno, limit_links)
+    return_tuple = c_calc_global_pos(model, links, motion, fno, limit_links, return_matrix, is_local_x)
+    if not return_matrix:
+        return return_tuple[0]
+    else:
+        # 行列も返す場合
+        return return_tuple[0], return_tuple[1]
+
+cdef tuple c_calc_global_pos(PmxModel model, BoneLinks links, VmdMotion motion, int fno, BoneLinks limit_links, bint return_matrix, bint is_local_x):
+    cdef list trans_vs = c_calc_relative_position(model, links, motion, fno, limit_links)
+    cdef list add_qs = c_calc_relative_rotation(model, links, motion, fno, limit_links)
 
     # 行列
-    matrixs = [MMatrix4x4() for i in range(links.size())]
+    cdef list matrixs = [MMatrix4x4() for i in range(links.size())]
+    cdef int n
+    cdef str lname
+    cdef MVector3D v
+    cdef MQuaternion q
 
     for n, (lname, v, q) in enumerate(zip(links.all().keys(), trans_vs, add_qs)):
         # 行列を生成
@@ -225,8 +281,15 @@ def calc_global_pos(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: i
         # 回転
         matrixs[n].rotate(q)
 
+    cdef dict total_mats
+    cdef dict global_3ds_dic
+
     total_mats = {}
-    global_3ds_dic = OrderedDict()
+    global_3ds_dic = {}
+
+    cdef MMatrix4x4 local_x_matrix
+    cdef MVector3D local_axis
+    cdef MQuaternion local_axis_qq
 
     for n, (lname, v) in enumerate(zip(links.all().keys(), trans_vs)):
         if n == 0:
@@ -270,16 +333,15 @@ def calc_global_pos(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: i
 
             total_mats[lname] *= local_x_matrix
 
-    if return_matrix:
-        # 行列も返す場合
-        return global_3ds_dic, total_mats
-
-    return global_3ds_dic
+    return (global_3ds_dic, total_mats)
 
 
 # 指定された方向に向いた場合の位置情報を返す
-def calc_global_pos_by_direction(direction_qq: MQuaternion, target_pos_3ds_dic: OrderedDict):
-    direction_pos_dic = OrderedDict()
+cpdef dict calc_global_pos_by_direction(MQuaternion direction_qq, dict target_pos_3ds_dic):
+    cdef dict direction_pos_dic = {}
+    cdef str bone_name
+    cdef MVector3D target_pos
+    cdef MMatrix4x4 mat
 
     for bone_name, target_pos in target_pos_3ds_dic.items():
         # # その地点の回転後の位置
@@ -302,7 +364,14 @@ def calc_global_pos_by_direction(direction_qq: MQuaternion, target_pos_3ds_dic: 
 
 # 各ボーンの相対位置情報
 def calc_relative_position(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, limit_links=None):
-    trans_vs = []
+    return c_calc_relative_position(model, links, motion, fno, limit_links)
+
+cdef list c_calc_relative_position(PmxModel model, BoneLinks links, VmdMotion motion, int fno, BoneLinks limit_links):
+    cdef list trans_vs = []
+    cdef int link_idx
+    cdef str link_bone_name
+    cdef Bone link_bone
+    cdef VmdBoneFrame fill_bf
 
     for link_idx, link_bone_name in enumerate(links.all()):
         link_bone = links.get(link_bone_name)
@@ -328,7 +397,15 @@ def calc_relative_position(model: PmxModel, links: BoneLinks, motion: VmdMotion,
 
 # 各ボーンの相対回転情報
 def calc_relative_rotation(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, limit_links=None):
-    add_qs = []
+    return c_calc_relative_rotation(model, links, motion, fno, limit_links)
+
+cdef list c_calc_relative_rotation(PmxModel model, BoneLinks links, VmdMotion motion, int fno, BoneLinks limit_links):
+    cdef list add_qs = []
+    cdef int link_idx
+    cdef str link_bone_name
+    cdef Bone link_bone
+    cdef VmdBoneFrame fill_bf
+    cdef MQuaternion rot
 
     for link_idx, link_bone_name in enumerate(links.all()):
         link_bone = links.get(link_bone_name)
@@ -350,12 +427,12 @@ def calc_relative_rotation(model: PmxModel, links: BoneLinks, motion: VmdMotion,
 
 
 # 指定ボーンの実際の回転情報
-def deform_rotation(model: PmxModel, motion: VmdMotion, bf: VmdBoneFrame):
+cpdef MQuaternion deform_rotation(PmxModel model, VmdMotion motion, VmdBoneFrame bf):
     if bf.name not in model.bones:
         return MQuaternion()
 
-    bone = model.bones[bf.name]
-    rot = bf.rotation.normalized().copy()
+    cdef Bone bone = model.bones[bf.name]
+    cdef MQuaternion rot = bf.rotation.normalized().copy()
 
     if bone.fixed_axis != MVector3D():
         # 回転角度を求める
@@ -380,6 +457,11 @@ def deform_rotation(model: PmxModel, motion: VmdMotion, bf: VmdBoneFrame):
         # 軸固定の場合、回転を制限する
         rot = MQuaternion.fromAxisAndAngle(bone.fixed_axis, rot.toDegree())
     
+    cdef Bone effect_parent_bone
+    cdef Bone effect_bone
+    cdef int cnt
+    cdef VmdBoneFrame effect_bf
+
     if bone.getExternalRotationFlag() and bone.effect_index in model.bone_indexes:
         
         effect_parent_bone = bone
@@ -412,9 +494,12 @@ def deform_rotation(model: PmxModel, motion: VmdMotion, bf: VmdBoneFrame):
 
 # 指定されたボーンまでの回転量
 def calc_direction_qq(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, limit_links=None):
-    add_qs = calc_relative_rotation(model, links, motion, fno, limit_links)
+    return c_calc_direction_qq(model, links, motion, fno, limit_links)
 
-    total_qq = MQuaternion()
+cdef MQuaternion c_calc_direction_qq(PmxModel model, BoneLinks links, VmdMotion motion, int fno, BoneLinks limit_links):
+    cdef list add_qs = c_calc_relative_rotation(model, links, motion, fno, limit_links)
+
+    cdef MQuaternion total_qq = MQuaternion()
     for qq in add_qs:
         total_qq *= qq
 
@@ -445,55 +530,4 @@ def calc_leg_ik_ratio(data_set: MOptionsDataSet):
     logger.warning("「左足」「左ひざ」「左足首」「センター」のいずれかのボーンが不足しているため、足の長さの比率が測れませんでした。", decoration=MLogger.DECORATION_IN_BOX)
 
     return 1, 1
-
-
-# リンクを元モデルの縮尺に合わせた位置にフィットさせる
-def fit_links(org_model: PmxModel, rep_model: PmxModel, rep_links: BoneLinks):
-    # そのまま弄るとモデルのリンクも変わってしまうので、コピー
-    fit_rep_links = copy.deepcopy(rep_links)
-
-    # 上半身2の調整
-    if fit_rep_links.get("上半身2"):
-        if org_model.bones["上半身2"] and rep_model.bones["上半身2"] and org_model.bones["上半身"] and rep_model.bones["上半身"] \
-           and org_model.bones["左腕"] and rep_model.bones["左腕"]:
-
-            org_upper2_pos = org_model.bones["上半身2"].position
-            org_upper_pos = org_model.bones["上半身"].position
-            org_left_arm_pos = org_model.bones["左腕"].position
-
-            rep_upper2_pos = rep_model.bones["上半身2"].position
-            rep_upper_pos = rep_model.bones["上半身"].position
-            rep_left_arm_pos = rep_model.bones["左腕"].position
-
-            org_upper_diff = MVector3D(0, org_left_arm_pos.y(), 0) - org_upper_pos
-            org_upper_diff.setZ(1)
-            org_upper_diff.abs()
-
-            org_upper2_diff = org_upper2_pos - org_upper_pos
-            org_upper2_diff.abs()
-
-            rep_upper_diff = MVector3D(0, rep_left_arm_pos.y(), 0) - rep_upper_pos
-            rep_upper_diff.setZ(1)
-            rep_upper_diff.abs()
-
-            rep_upper2_diff = rep_upper2_pos - rep_upper_pos
-            rep_upper2_diff.abs()
-
-            logger.test("org_upper_diff: %s ", org_upper_diff)
-            logger.test("org_upper2_diff: %s ", org_upper2_diff)
-            logger.test("rep_upper_diff: %s ", rep_upper_diff)
-            logger.test("rep_upper2_diff: %s ", rep_upper2_diff)
-
-            upper2_diff_ratio = (org_upper2_diff / org_upper_diff) / (rep_upper2_diff / rep_upper_diff)
-            logger.test("upper2_diff_ratio: %s ", upper2_diff_ratio)
-
-            # 補正値
-            rep_upper2_correction = (rep_upper2_diff * upper2_diff_ratio) - rep_upper2_diff
-            rep_upper2_correction.effective()
-            logger.info("rep_upper2_correction: %s ", rep_upper2_correction)
-
-            fit_rep_links.get("上半身2").position += rep_upper2_correction
-
-    return fit_rep_links
-
 

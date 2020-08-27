@@ -2,9 +2,8 @@
 #
 import struct
 import hashlib
-from collections import OrderedDict
 
-from mmd.PmxData import PmxModel, Vertex, Material, Bone, Morph, DisplaySlot, RigidBody, Joint
+from mmd.PmxData import PmxModel, Bdef1, Bdef2, Bdef4, Sdef, Qdef, Vertex, Material, Ik, IkLink, Bone, Morph, DisplaySlot, RigidBody, Joint
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from utils.MException import MParseException # noqa
 from utils.MLogger import MLogger # noqa
@@ -298,7 +297,7 @@ class PmxReader():
                         bone.external_key = self.read_int(4)
 
                     if bone.getIkFlag():
-                        bone.ik = Bone.Ik(
+                        bone.ik = Ik(
                             target_index=self.read_bone_index_size(),
                             loop=self.read_int(4),
                             limit_radian=self.read_float()
@@ -307,7 +306,7 @@ class PmxReader():
                         # IKリンク取得
                         for _ in range(self.read_int(4)):
 
-                            link = Bone.IkLink(
+                            link = IkLink(
                                 self.read_bone_index_size(),
                                 self.read_int(1)
                             )
@@ -368,7 +367,7 @@ class PmxReader():
                     # 右足底実体ボーン
                     right_sole_vertex = None
                     if "右足先EX" in pmx.bones:
-                        right_sole_vertex = Vertex(-1, MVector3D(pmx.bones["右足先EX"].position.x(), 0, pmx.bones["右足先EX"].position.z()), MVector3D(), [], [], Vertex.Bdef1(-1), -1)
+                        right_sole_vertex = Vertex(-1, MVector3D(pmx.bones["右足先EX"].position.x(), 0, pmx.bones["右足先EX"].position.z()), MVector3D(), [], [], Bdef1(-1), -1)
                     elif "右足ＩＫ" in pmx.bones:
                         right_sole_vertex = pmx.get_sole_vertex("右")
                     
@@ -383,7 +382,7 @@ class PmxReader():
                     # 左足底実体ボーン
                     left_sole_vertex = None
                     if "左足先EX" in pmx.bones:
-                        left_sole_vertex = Vertex(-1, MVector3D(pmx.bones["左足先EX"].position.x(), 0, pmx.bones["左足先EX"].position.z()), MVector3D(), [], [], Vertex.Bdef1(-1), -1)
+                        left_sole_vertex = Vertex(-1, MVector3D(pmx.bones["左足先EX"].position.x(), 0, pmx.bones["左足先EX"].position.z()), MVector3D(), [], [], Bdef1(-1), -1)
                     elif "左足ＩＫ" in pmx.bones:
                         left_sole_vertex = pmx.get_sole_vertex("左")
                     
@@ -396,7 +395,7 @@ class PmxReader():
 
                 if "右足ＩＫ" in pmx.bones:
                     # 右足ＩＫ底実体ボーン
-                    right_ik_sole_vertex = Vertex(-1, MVector3D(pmx.bones["右足ＩＫ"].position.x(), 0, pmx.bones["右足ＩＫ"].position.z()), MVector3D(), [], [], Vertex.Bdef1(-1), -1)
+                    right_ik_sole_vertex = Vertex(-1, MVector3D(pmx.bones["右足ＩＫ"].position.x(), 0, pmx.bones["右足ＩＫ"].position.z()), MVector3D(), [], [], Bdef1(-1), -1)
                     pmx.right_ik_sole_vertex = right_ik_sole_vertex
                     right_ik_sole_bone = Bone("右足ＩＫ底実体", "right ik ik_sole entity", right_ik_sole_vertex.position.copy(), -1, 0, 0)
                     right_ik_sole_bone.index = len(pmx.bones.keys())
@@ -405,7 +404,7 @@ class PmxReader():
 
                 if "左足ＩＫ" in pmx.bones:
                     # 左足ＩＫ底実体ボーン
-                    left_ik_sole_vertex = Vertex(-1, MVector3D(pmx.bones["左足ＩＫ"].position.x(), 0, pmx.bones["左足ＩＫ"].position.z()), MVector3D(), [], [], Vertex.Bdef1(-1), -1)
+                    left_ik_sole_vertex = Vertex(-1, MVector3D(pmx.bones["左足ＩＫ"].position.x(), 0, pmx.bones["左足ＩＫ"].position.z()), MVector3D(), [], [], Bdef1(-1), -1)
                     pmx.left_ik_sole_vertex = left_ik_sole_vertex
                     left_ik_sole_bone = Bone("左足ＩＫ底実体", "left ik ik_sole entity", left_ik_sole_vertex.position.copy(), -1, 0, 0)
                     left_ik_sole_bone.index = len(pmx.bones.keys())
@@ -414,7 +413,7 @@ class PmxReader():
 
                 if "右足IK親" in pmx.bones:
                     # 右足IK親底実体ボーン
-                    right_ik_sole_vertex = Vertex(-1, MVector3D(pmx.bones["右足IK親"].position.x(), 0, pmx.bones["右足IK親"].position.z()), MVector3D(), [], [], Vertex.Bdef1(-1), -1)
+                    right_ik_sole_vertex = Vertex(-1, MVector3D(pmx.bones["右足IK親"].position.x(), 0, pmx.bones["右足IK親"].position.z()), MVector3D(), [], [], Bdef1(-1), -1)
                     pmx.right_ik_sole_vertex = right_ik_sole_vertex
                     right_ik_sole_bone = Bone("右足IK親底実体", "right ik ik_sole entity", right_ik_sole_vertex.position.copy(), -1, 0, 0)
                     right_ik_sole_bone.index = len(pmx.bones.keys())
@@ -423,7 +422,7 @@ class PmxReader():
 
                 if "左足IK親" in pmx.bones:
                     # 左足IK親底実体ボーン
-                    left_ik_sole_vertex = Vertex(-1, MVector3D(pmx.bones["左足IK親"].position.x(), 0, pmx.bones["左足IK親"].position.z()), MVector3D(), [], [], Vertex.Bdef1(-1), -1)
+                    left_ik_sole_vertex = Vertex(-1, MVector3D(pmx.bones["左足IK親"].position.x(), 0, pmx.bones["左足IK親"].position.z()), MVector3D(), [], [], Bdef1(-1), -1)
                     pmx.left_ik_sole_vertex = left_ik_sole_vertex
                     left_ik_sole_bone = Bone("左足IK親底実体", "left ik ik_sole entity", left_ik_sole_vertex.position.copy(), -1, 0, 0)
                     left_ik_sole_bone.index = len(pmx.bones.keys())
@@ -432,7 +431,7 @@ class PmxReader():
 
                 # 首根元ボーン
                 if "左肩" in pmx.bones and "右肩" in pmx.bones:
-                    neck_base_vertex = Vertex(-1, (pmx.bones["左肩"].position + pmx.bones["右肩"].position) / 2, MVector3D(), [], [], Vertex.Bdef1(-1), -1)
+                    neck_base_vertex = Vertex(-1, (pmx.bones["左肩"].position + pmx.bones["右肩"].position) / 2, MVector3D(), [], [], Bdef1(-1), -1)
                     neck_base_vertex.position.setX(0)
                     neck_base_bone = Bone("首根元", "base of neck", neck_base_vertex.position.copy(), -1, 0, 0)
 
@@ -450,7 +449,7 @@ class PmxReader():
 
                 # 首根元2ボーン
                 if "左腕" in pmx.bones and "右腕" in pmx.bones:
-                    neck_base2_vertex = Vertex(-1, (pmx.bones["左腕"].position + pmx.bones["右腕"].position) / 2, MVector3D(), [], [], Vertex.Bdef1(-1), -1)
+                    neck_base2_vertex = Vertex(-1, (pmx.bones["左腕"].position + pmx.bones["右腕"].position) / 2, MVector3D(), [], [], Bdef1(-1), -1)
                     neck_base2_vertex.position.setX(0)
                     neck_base2_bone = Bone("首根元2", "base of neck", neck_base2_vertex.position.copy(), -1, 0, 0)
 
@@ -548,7 +547,7 @@ class PmxReader():
 
                 # 足中間ボーン
                 if "左足" in pmx.bones and "右足" in pmx.bones:
-                    leg_center_vertex = Vertex(-1, (pmx.bones["左足"].position + pmx.bones["右足"].position) / 2, MVector3D(), [], [], Vertex.Bdef1(-1), -1)
+                    leg_center_vertex = Vertex(-1, (pmx.bones["左足"].position + pmx.bones["右足"].position) / 2, MVector3D(), [], [], Bdef1(-1), -1)
                     leg_center_vertex.position.setX(0)
                     leg_center_bone = Bone("足中間", "base of neck", leg_center_vertex.position.copy(), -1, 0, 0)
 
@@ -568,7 +567,7 @@ class PmxReader():
                 self.calc_bone_length(pmx.bones, pmx.bone_indexes)
 
                 # 操作パネル (PMD:カテゴリ) 1:眉(左下) 2:目(左上) 3:口(右上) 4:その他(右下)
-                morphs_by_panel = OrderedDict()
+                morphs_by_panel = {}
                 morphs_by_panel[2] = []  # 目
                 morphs_by_panel[1] = []  # 眉
                 morphs_by_panel[3] = []  # 口
@@ -774,7 +773,7 @@ class PmxReader():
                     if l.bone_index in bone_indexes and "ひざ" in bones[bone_indexes[l.bone_index]].name:
                         # 存在するボーンで、大きい方を採用
                         knee_pos = bones[bone_indexes[l.bone_index]].position
-                v.len = knee_pos.length()
+                v.len_1d = knee_pos.length()
 
             elif k in ["左つま先ＩＫ", "右つま先ＩＫ"] and v.getIkFlag():
                 # IKの場合、リンクボーンの離れている方を採用する
@@ -786,11 +785,11 @@ class PmxReader():
                         farer_pos = bones[bone_indexes[l.bone_index]].position
                         logger.test("farer: %s", bones[bone_indexes[l.bone_index]].position)
                 # 最も大きな値（離れている）のを採用
-                v.len = farer_pos.length()
+                v.len_1d = farer_pos.length()
 
             elif k in ["グルーブ", "センター", "腰"]:
                 # 親がグルーブの場合、センターとの連動は行わない
-                v.len = v.position.length()
+                v.len_1d = v.position.length()
                 if k == "センター":
                     v.len_3d = MVector3D(1, v.position.length(), 1)
                 else:
@@ -800,19 +799,19 @@ class PmxReader():
                 if v.parent_index is not None and v.parent_index in bone_indexes and not bone_indexes[v.parent_index] in ["腰", "グルーブ", "センター", "左足ＩＫ", "右足ＩＫ", "左つま先ＩＫ", "右つま先ＩＫ", "右足ＩＫ親", "左足ＩＫ親"]:
                     # 親ボーンを採用
                     pos = v.position - bones[bone_indexes[v.parent_index]].position
-                    if v.len > 0:
+                    if v.len_1d > 0:
                         # 既にある場合、平均値を求めて設定する
-                        bones[bone_indexes[v.parent_index]].len = (v.len + pos.length()) / 2
+                        bones[bone_indexes[v.parent_index]].len_1d = (v.len_1d + pos.length()) / 2
                         bones[bone_indexes[v.parent_index]].len_3d = (v.len_3d + pos) / 2
                     else:
                         # 0の場合はそのまま追加
-                        bones[bone_indexes[v.parent_index]].len = pos.length()
+                        bones[bone_indexes[v.parent_index]].len_1d = pos.length()
                         bones[bone_indexes[v.parent_index]].len_3d = pos
 
                     logger.test("bone: %s, len_3d: %s", bone_indexes[v.parent_index], bones[bone_indexes[v.parent_index]].len_3d)
                 else:
                     # 自分が最親の場合、そのまま長さ
-                    v.len = v.position.length()
+                    v.len_1d = v.position.length()
                     v.len_3d = v.position
 
                     logger.test("bone: %s, len_3d: %s", v.name, v.len_3d)
@@ -883,17 +882,17 @@ class PmxReader():
 
         if deform_type == 0:
             # BDEF1
-            return Vertex.Bdef1(self.read_bone_index_size())
+            return Bdef1(self.read_bone_index_size())
         elif deform_type == 1:
             # BDEF2
-            return Vertex.Bdef2(
+            return Bdef2(
                 self.read_bone_index_size(),
                 self.read_bone_index_size(),
                 self.read_float()
             )
         elif deform_type == 2:
             # BDEF4
-            return Vertex.Bdef4(
+            return Bdef4(
                 self.read_bone_index_size(),
                 self.read_bone_index_size(),
                 self.read_bone_index_size(),
@@ -905,7 +904,7 @@ class PmxReader():
             )
         elif deform_type == 3:
             # SDEF
-            return Vertex.Sdef(
+            return Sdef(
                 self.read_bone_index_size(),
                 self.read_bone_index_size(),
                 self.read_float(),
@@ -915,7 +914,7 @@ class PmxReader():
             )
         elif deform_type == 4:
             # QDEF
-            return Vertex.Qdef(
+            return Qdef(
                 self.read_bone_index_size(),
                 self.read_bone_index_size(),
                 self.read_float(),

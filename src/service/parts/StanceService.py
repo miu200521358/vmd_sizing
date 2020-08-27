@@ -1690,6 +1690,7 @@ class StanceService():
 
             # 肩幅比率
             org_arm_diff = (org_arm_links["左"].get("左腕").position - org_arm_links["右"].get("右腕").position)
+            org_arm_diff.one()
             rep_arm_diff = (rep_arm_links["左"].get("左腕").position - rep_arm_links["右"].get("右腕").position)
             arm_diff_ratio = rep_arm_diff / org_arm_diff
             arm_diff_ratio.one()    # 比率なので、0は1に変換する
@@ -1698,7 +1699,6 @@ class StanceService():
             org_to_diff = (org_head_links.get("頭").position - org_head_links.get("上半身").position)
             org_to_diff.one()
             rep_to_diff = (rep_head_links.get("頭").position - rep_head_links.get("上半身").position)
-            rep_to_diff.one()
             to_diff_ratio = rep_to_diff / org_to_diff
             
             logger.test("arm_diff_ratio: %s", arm_diff_ratio)
@@ -1791,7 +1791,6 @@ class StanceService():
                 org_to_diff = (org_head_links.get("頭").position - org_head_links.get("上半身2").position)
                 org_to_diff.one()
                 rep_to_diff = (rep_head_links.get("頭").position - rep_head_links.get("上半身2").position)
-                rep_to_diff.one()
                 to_diff_ratio = rep_to_diff / org_to_diff
                 
                 logger.test("arm_diff_ratio: %s", arm_diff_ratio)
@@ -1897,15 +1896,15 @@ class StanceService():
 
             # 肩幅比率
             org_leg_diff = (org_leg_links["左"].get("左足").position - org_leg_links["右"].get("右足").position)
+            org_leg_diff.one()
             rep_leg_diff = (rep_leg_links["左"].get("左足").position - rep_leg_links["右"].get("右足").position)
             leg_diff_ratio = rep_leg_diff / org_leg_diff
             leg_diff_ratio.non_zero()    # 比率なので、0は1に変換する
 
             # TOの長さ比率
             org_to_diff = (org_leg_center_links.get("足中間").position - org_leg_center_links.get("下半身").position)
-            org_to_diff.non_zero()
+            org_to_diff.one()
             rep_to_diff = (rep_leg_center_links.get("足中間").position - rep_leg_center_links.get("下半身").position)
-            rep_to_diff.non_zero()
             to_diff_ratio = rep_to_diff / org_to_diff
             
             logger.test("leg_diff_ratio: %s", leg_diff_ratio)
@@ -2125,6 +2124,7 @@ class StanceService():
                 logger.info("【No.%s】%s - 向きの近似度: %s", (data_set_idx + 1), shoulder_name, round(dot, 5))
 
                 org_shoulder_diff = (data_set.org_model.bones[arm_name].position - data_set.org_model.bones[shoulder_name].position)
+                org_shoulder_diff.one()
                 rep_shoulder_diff = (data_set.rep_model.bones[arm_name].position - data_set.rep_model.bones[shoulder_name].position)
                 shoulder_diff_ratio = rep_shoulder_diff / org_shoulder_diff
 
@@ -2173,6 +2173,7 @@ class StanceService():
 
         # 肩幅比率
         org_arm_diff = (org_arm_links["左"].get("左腕").position - org_arm_links["右"].get("右腕").position)
+        org_arm_diff.one()
         rep_arm_diff = (rep_arm_links["左"].get("左腕").position - rep_arm_links["右"].get("右腕").position)
         arm_diff_ratio = rep_arm_diff / org_arm_diff
         arm_diff_ratio.non_zero()
@@ -2328,6 +2329,7 @@ class StanceService():
 
         # 肩幅比率
         org_arm_diff = (org_arm_links["左"].get("左腕").position - org_arm_links["右"].get("右腕").position)
+        org_arm_diff.one()
         rep_arm_diff = (rep_arm_links["左"].get("左腕").position - rep_arm_links["右"].get("右腕").position)
         arm_diff_ratio = rep_arm_diff / org_arm_diff
         arm_diff_ratio.one()    # 比率なので、0は1に変換する
@@ -2336,7 +2338,6 @@ class StanceService():
         org_to_diff = (org_arm_links[shoulder_name[0]].get(arm_name).position - org_arm_links[shoulder_name[0]].get("首根元").position)
         org_to_diff.one()
         rep_to_diff = (rep_arm_links[shoulder_name[0]].get(arm_name).position - rep_arm_links[shoulder_name[0]].get("首根元").position)
-        rep_to_diff.one()
         to_diff_ratio = rep_to_diff / org_to_diff
         
         logger.test("arm_diff_ratio: %s", arm_diff_ratio)

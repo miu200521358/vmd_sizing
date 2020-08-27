@@ -54,10 +54,11 @@ conda install pyinstaller
 
 C:\Development\Anaconda3\envs\vmdsizing_cython\Lib\site-packages\bezier\extra-dll の中身のdllを親ディレクトリに配置（下階層だと見つからないため）
 
+lessさんとこで捩り分散あり
+40分47秒
 
 
-
-
+pip install pycallgraph
 
 
 
