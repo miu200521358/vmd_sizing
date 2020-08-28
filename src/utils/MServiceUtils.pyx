@@ -434,29 +434,8 @@ cpdef MQuaternion deform_rotation(PmxModel model, VmdMotion motion, VmdBoneFrame
     cdef Bone bone = model.bones[bf.name]
     cdef MQuaternion rot = bf.rotation.normalized().copy()
 
-    if bone.fixed_axis != MVector3D():
-        # 回転角度を求める
-        if rot != MQuaternion():
-            # 回転補正
-            if "右" in bone.name and rot.x() > 0 and bone.fixed_axis.x() <= 0:
-                rot.setX(rot.x() * -1)
-                rot.setScalar(rot.scalar() * -1)
-            elif "左" in bone.name and rot.x() < 0 and bone.fixed_axis.x() >= 0:
-                rot.setX(rot.x() * -1)
-                rot.setScalar(rot.scalar() * -1)
-            # 回転補正（コロン式ミクさん等軸反転パターン）
-            elif "右" in bone.name and rot.x() < 0 and bone.fixed_axis.x() > 0:
-                rot.setX(rot.x() * -1)
-                rot.setScalar(rot.scalar() * -1)
-            elif "左" in bone.name and rot.x() > 0 and bone.fixed_axis.x() < 0:
-                rot.setX(rot.x() * -1)
-                rot.setScalar(rot.scalar() * -1)
-            
-            rot.normalize()
-        
-        # 軸固定の場合、回転を制限する
-        rot = MQuaternion.fromAxisAndAngle(bone.fixed_axis, rot.toDegree())
-    
+    rot = deform_fix_rotation(bf.name, bone.fixed_axis, rot)
+
     cdef Bone effect_parent_bone
     cdef Bone effect_bone
     cdef int cnt
@@ -488,6 +467,34 @@ cpdef MQuaternion deform_rotation(PmxModel model, VmdMotion motion, VmdBoneFrame
                 break
 
             cnt += 1
+
+    return rot
+
+
+# 軸制限回転を求め直す
+cpdef MQuaternion deform_fix_rotation(str bone_name, MVector3D fixed_axis, MQuaternion rot):
+    if fixed_axis != MVector3D():
+        # 回転角度を求める
+        if rot != MQuaternion():
+            # 回転補正
+            if "右" in bone_name and rot.x() > 0 and fixed_axis.x() <= 0:
+                rot.setX(rot.x() * -1)
+                rot.setScalar(rot.scalar() * -1)
+            elif "左" in bone_name and rot.x() < 0 and fixed_axis.x() >= 0:
+                rot.setX(rot.x() * -1)
+                rot.setScalar(rot.scalar() * -1)
+            # 回転補正（コロン式ミクさん等軸反転パターン）
+            elif "右" in bone_name and rot.x() < 0 and fixed_axis.x() > 0:
+                rot.setX(rot.x() * -1)
+                rot.setScalar(rot.scalar() * -1)
+            elif "左" in bone_name and rot.x() > 0 and fixed_axis.x() < 0:
+                rot.setX(rot.x() * -1)
+                rot.setScalar(rot.scalar() * -1)
+            
+            rot.normalize()
+        
+        # 軸固定の場合、回転を制限する
+        rot = MQuaternion.fromAxisAndAngle(fixed_axis, rot.toDegree())
 
     return rot
 

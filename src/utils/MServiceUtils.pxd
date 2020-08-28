@@ -29,7 +29,10 @@ cdef list c_calc_relative_rotation(PmxModel model, BoneLinks links, VmdMotion mo
 
 cpdef MQuaternion deform_rotation(PmxModel model, VmdMotion motion, VmdBoneFrame bf)
 
+cpdef MQuaternion deform_fix_rotation(str bone_name, MVector3D fixed_axis, MQuaternion rot)
+
 cdef MQuaternion c_calc_direction_qq(PmxModel model, BoneLinks links, VmdMotion motion, int fno, BoneLinks limit_links)
+
 
 
 
