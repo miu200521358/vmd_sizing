@@ -5,6 +5,9 @@ import logging
 import os
 from pathlib import Path
 
+import pyximport
+pyximport.install()
+
 from mmd.PmxData import PmxModel
 from mmd.VmdWriter import VmdWriter
 from module.MOptions import MOptions, MOptionsDataSet

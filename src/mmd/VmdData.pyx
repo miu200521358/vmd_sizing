@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 #
+# cython: profile=True
+# cython: linetrace=True
+# cython: binding=True
+# distutils: define_macros=CYTHON_TRACE_NOGIL=1
 import math
 import numpy as np
 cimport numpy as np
