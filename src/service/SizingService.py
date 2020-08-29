@@ -128,8 +128,8 @@ class SizingService():
 
                     logger.info("【No.%s】 出力終了: %s", (data_set_idx + 1), os.path.basename(data_set.output_vmd_path), decoration=MLogger.DECORATION_BOX, title="サイジング成功")
 
-                except FileNotFoundError as fe:
-                    logger.error("【No.%s】出力VMDファイルが正常に作成されなかったようです。\nパスを確認してください。%s\n\n%s", (data_set_idx + 1), data_set.output_vmd_path, fe.message, decoration=MLogger.DECORATION_BOX)
+                except FileNotFoundError:
+                    logger.error("【No.%s】出力VMDファイルが正常に作成されなかったようです。\nパスを確認してください。%s", (data_set_idx + 1), data_set.output_vmd_path, decoration=MLogger.DECORATION_BOX)
             
             if self.options.camera_motion:
                 try:
@@ -142,8 +142,8 @@ class SizingService():
                     Path(data_set.output_vmd_path).resolve(True)
 
                     logger.info("カメラ出力終了: %s", os.path.basename(data_set.output_vmd_path), decoration=MLogger.DECORATION_BOX, title="サイジング成功")
-                except FileNotFoundError as fe:
-                    logger.error("カメラ出力VMDファイルが正常に作成されなかったようです。\nパスを確認してください。%s\n\n%s", self.options.camera_output_vmd_path, fe.message, decoration=MLogger.DECORATION_BOX)
+                except FileNotFoundError:
+                    logger.error("カメラ出力VMDファイルが正常に作成されなかったようです。\nパスを確認してください。%s", self.options.camera_output_vmd_path, decoration=MLogger.DECORATION_BOX)
 
             return True
         except MKilledException:
