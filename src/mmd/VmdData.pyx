@@ -646,8 +646,24 @@ cdef class VmdMotion:
                             logger.debug("☆%s: fno: %s, キー:キーフレ削除: %s", bone_name, fno, f)
                             del self.bones[bone_name][f]
                     
-                    fno += 1
-                    key_cnt = 1
+                    if bf.read:
+                        # 読み込みキーの場合、それは削除しないで次へ行く
+                        start_fno = fno
+                        fno = start_fno
+
+                        # 配列初期化
+                        rot_values = []
+                        mx_values = []
+                        my_values = []
+                        mz_values = []
+                        rot_np_values = np.ndarray([], dtype=np.float64)
+                        mx_np_values = np.ndarray([], dtype=np.float64)
+                        my_np_values = np.ndarray([], dtype=np.float64)
+                        mz_np_values = np.ndarray([], dtype=np.float64)
+                        key_cnt = 0
+                    else:
+                        fno += 1
+                        key_cnt = 1
 
                     # 変曲点処理は不要
                     continue
@@ -655,6 +671,24 @@ cdef class VmdMotion:
                     # 結合できなかった場合、変曲点チェックに移る
                     logger.debug("★%s: fno: %s, キー:補間曲線失敗: rot_inflection: %s, mx_inflection: %s, my_inflection: %s, mz_inflection: %s", \
                                  bone_name, fno, rot_inflection, mx_inflection, my_inflection, mz_inflection)
+
+                    if bf.read:
+                        # 読み込みキーの場合、それは削除しないで次へ行く
+                        start_fno = fno
+                        fno = start_fno
+
+                        # 配列初期化
+                        rot_values = []
+                        mx_values = []
+                        my_values = []
+                        mz_values = []
+                        rot_np_values = np.ndarray([], dtype=np.float64)
+                        mx_np_values = np.ndarray([], dtype=np.float64)
+                        my_np_values = np.ndarray([], dtype=np.float64)
+                        mz_np_values = np.ndarray([], dtype=np.float64)
+                        key_cnt = 0
+
+                        continue
             else:
                 logger.debug("☆%s: 中間有効キーなしスルー: %s, start_fno: %s", bone_name, fno, start_fno)
                 fno += 1
