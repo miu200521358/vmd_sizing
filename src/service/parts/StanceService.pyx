@@ -1227,6 +1227,11 @@ cdef class StanceService():
         # センター調整に必要なボーン群
         center_target_bones = ["センター", "上半身", "下半身", "左足ＩＫ", "右足ＩＫ", "左足", "右足"]
 
+        cdef BoneLinks org_center_links, org_upper_links, org_lower_links
+        cdef dict org_leg_ik_links, org_leg_links
+        cdef BoneLinks rep_center_links, rep_upper_links, rep_lower_links
+        cdef dict rep_leg_ik_links, rep_leg_links
+
         if set(center_target_bones).issubset(data_set.org_model.bones) and set(center_target_bones).issubset(data_set.rep_model.bones) and "センター" in data_set.motion.bones:
             # 判定用のセンターボーン名（グルーブがある場合、グルーブまでを対象とする）
             org_center_bone_name = "グルーブ" if "グルーブ" in data_set.org_model.bones else "センター"
@@ -1353,8 +1358,8 @@ cdef class StanceService():
 
     # 足IKによるセンターオフセット値
     def calc_center_offset_by_arm(self, bf: VmdBoneFrame, data_set_idx: int, data_set: MOptionsDataSet, \
-                                  org_center_links: BoneLinks, org_arm_links: BoneLinks, org_leg_links: BoneLinks, \
-                                  rep_center_links: BoneLinks, rep_arm_links: BoneLinks, rep_leg_links: BoneLinks, \
+                                  org_center_links: BoneLinks, org_arm_links: dict, org_leg_links: dict, \
+                                  rep_center_links: BoneLinks, rep_arm_links: dict, rep_leg_links: dict, \
                                   org_palm_length: float, rep_palm_length: float, \
                                   org_center_bone_name: str, rep_center_bone_name: str, org_upper_length: float, rep_upper_length: float):
 
@@ -1423,7 +1428,7 @@ cdef class StanceService():
     # モデル別足IKによるセンターオフセット値
     def calc_center_offset_by_arm_model(self, bf: VmdBoneFrame, data_set_idx: int, data_set: MOptionsDataSet, \
                                         model: PmxModel, motion: VmdMotion, \
-                                        center_links: BoneLinks, arm_links: BoneLinks, leg_links: BoneLinks, center_bone_name: str):
+                                        center_links: BoneLinks, arm_links: dict, leg_links: dict, center_bone_name: str):
 
         # 左手首までの位置
         left_arm_global_3ds = MServiceUtils.calc_global_pos(model, arm_links["左"], motion, bf.fno)
@@ -1442,8 +1447,8 @@ cdef class StanceService():
 
     # 足IKによるセンターオフセット値
     def calc_center_offset_by_leg_ik(self, bf: VmdBoneFrame, data_set_idx: int, data_set: MOptionsDataSet, \
-                                     org_center_links: BoneLinks, org_leg_ik_links: BoneLinks, \
-                                     rep_center_links: BoneLinks, rep_leg_ik_links: BoneLinks, \
+                                     org_center_links: BoneLinks, org_leg_ik_links: dict, \
+                                     rep_center_links: BoneLinks, rep_leg_ik_links: dict, \
                                      org_center_bone_name: str, rep_center_bone_name: str):
 
         # 元モデルのセンターオフセット
@@ -1470,7 +1475,7 @@ cdef class StanceService():
     # モデル別足IKによるセンターオフセット値
     def calc_center_offset_by_leg_ik_model(self, bf: VmdBoneFrame, data_set_idx: int, data_set: MOptionsDataSet, \
                                            model: PmxModel, motion: VmdMotion, \
-                                           center_links: BoneLinks, leg_ik_links: BoneLinks, center_bone_name: str):
+                                           center_links: BoneLinks, leg_ik_links: dict, center_bone_name: str):
 
         # センターまでの位置
         center_global_3ds, front_center_global_3ds, center_direction_qq = \
@@ -1497,8 +1502,8 @@ cdef class StanceService():
 
     # 体幹によるセンターオフセット値
     def calc_center_offset_by_trunk(self, bf: VmdBoneFrame, data_set_idx: int, data_set: MOptionsDataSet, \
-                                    org_center_links: BoneLinks, org_upper_links: BoneLinks, org_lower_links: BoneLinks, org_leg_links: BoneLinks, \
-                                    rep_center_links: BoneLinks, rep_upper_links: BoneLinks, rep_lower_links: BoneLinks, rep_leg_links: BoneLinks, \
+                                    org_center_links: BoneLinks, org_upper_links: BoneLinks, org_lower_links: BoneLinks, org_leg_links: dict, \
+                                    rep_center_links: BoneLinks, rep_upper_links: BoneLinks, rep_lower_links: BoneLinks, rep_leg_links: dict, \
                                     org_center_bone_name: str, rep_center_bone_name: str):
         
         # 元モデルのセンター差分
@@ -1910,8 +1915,8 @@ cdef class StanceService():
 
     # 体幹スタンス補正
     def calc_rotation_stance_trunk(self, bf: VmdBoneFrame, data_set_idx: int, data_set: MOptionsDataSet, \
-                                   org_from_links: BoneLinks, org_to_links: BoneLinks, org_arm_links: BoneLinks, \
-                                   rep_from_links: BoneLinks, rep_to_links: BoneLinks, rep_arm_links: BoneLinks, \
+                                   org_from_links: BoneLinks, org_to_links: BoneLinks, org_arm_links: dict, \
+                                   rep_from_links: BoneLinks, rep_to_links: BoneLinks, rep_arm_links: dict, \
                                    from_bone_name: str, to_bone_name: str, rep_parent_bone_name: str, ratio: MVector3D, \
                                    rep_initial_slope_qq: MQuaternion, cancel_qq: MQuaternion, dot_limit: float, up_name: str):
         logger.test("f: %s -----------------------------", bf.fno)
