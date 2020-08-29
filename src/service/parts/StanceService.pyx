@@ -14,8 +14,8 @@ from mmd.VmdData cimport VmdMotion, VmdBoneFrame
 from module.MParams cimport BoneLinks # noqa
 from module.MMath cimport MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from module.MOptions cimport MOptions, MOptionsDataSet # noqa
-from utils import MServiceUtils
-from utils cimport MServiceUtils
+from utils import MServiceUtils, MBezierUtils
+from utils cimport MServiceUtils, MBezierUtils
 
 from mmd.PmxData import Vertex, Material, Morph, DisplaySlot, RigidBody, Joint # noqa
 from mmd.VmdData import VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
@@ -210,9 +210,19 @@ cdef class StanceService():
                 #     self.regist_twist_bf(data_set_idx, bone_name, fnos)
 
                 futures = []
-                with ThreadPoolExecutor(thread_name_prefix="twist_smooth{0}".format(data_set_idx), max_workers=self.options.max_workers) as executor:
-                    for bone_name in [arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name]:
-                        futures.append(executor.submit(self.regist_twist_bf, self, data_set_idx, bone_name, fnos))
+                with ThreadPoolExecutor(thread_name_prefix="twist_regist{0}".format(data_set_idx), max_workers=self.options.max_workers) as executor:
+                    for bone_name in [arm_bone_name, elbow_bone_name, wrist_bone_name]:
+                        futures.append(executor.submit(self.regist_twist_bf, self, data_set_idx, bone_name, fnos, None))
+
+                concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
+                for f in futures:
+                    if not f.result():
+                        return False
+
+                futures = []
+                with ThreadPoolExecutor(thread_name_prefix="twist_regist{0}".format(data_set_idx), max_workers=self.options.max_workers) as executor:
+                    futures.append(executor.submit(self.regist_twist_bf, self, data_set_idx, arm_twist_bone_name, fnos, arm_bone_name))
+                    futures.append(executor.submit(self.regist_twist_bf, self, data_set_idx, wrist_twist_bone_name, fnos, wrist_bone_name))
 
                 concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
                 for f in futures:
@@ -315,17 +325,38 @@ cdef class StanceService():
             logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
             raise e
 
-    cdef bint regist_twist_bf(self, int data_set_idx, str bone_name, list fnos):
+    cdef bint regist_twist_bf(self, int data_set_idx, str bone_name, list fnos, str parent_bone_name):
         cdef MOptionsDataSet data_set
+        cdef prev_sep_fno, fno
+        cdef VmdBoneFrame bf, parent_bf
+        cdef list target_fnos
+        cdef bint is_target_copy = (parent_bone_name is not None)
 
         try:
             logger.copy(self.options)
             data_set = self.options.data_set_list[data_set_idx]
+
+            # 捩りボーンが元々あるか(ない場合は、親ボーンの補間曲線をコピー。捩りじゃない場合はスルー)
+            if is_target_copy:
+                target_fnos = data_set.motion.get_bone_fnos(bone_name)
+                for fno in target_fnos:
+                    bf = data_set.motion.calc_bf(bone_name, fno)
+                    if bf.rotation.toDegree() > 3:
+                        is_target_copy = False
+                        break
             
             prev_sep_fno = 0
             for fno in fnos:
                 bf = data_set.motion.calc_bf(bone_name, fno)
-                data_set.motion.regist_bf(bf, bone_name, fno)
+
+                if is_target_copy:
+                    # 親ボーンの補間曲線をコピーする場合
+                    parent_bf = data_set.motion.calc_bf(parent_bone_name, fno).copy()
+                    data_set.motion.copy_interpolation(parent_bf, bf, MBezierUtils.BZ_TYPE_R)
+
+                    data_set.motion.regist_bf(bf, bone_name, fno, copy_interpolation=True)
+                else:
+                    data_set.motion.regist_bf(bf, bone_name, fno)
 
                 if fno // 500 > prev_sep_fno and fnos[-1] > 0:
                     logger.info("-- %sフレーム目:終了(%s％)【No.%s - キーフレ追加 - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1, bone_name)
@@ -513,9 +544,10 @@ cdef class StanceService():
 
         cdef MOptionsDataSet data_set
         cdef MVector3D local_x_axis, original_vec, separated_vec, original_parent_vec, twisted_vec, original_local_vec, twisted_local_vec, child_x1_axis, child_x2_axis
+        cdef MVector3D original_x_vec, original_y_vec, twisted_x_vec, twisted_y_vec
         cdef MQuaternion child_global2local_qq, local_qq, total_qq, result_twist_qq, twist_global_qq
         cdef MMatrix4x4 original_mat, twisted_mat, local2global_mat
-        cdef float twist_degree, max_dot, max_degree, twisted_dot, append_degree, sign_dot, sign_degree, twisted_degree, child_degree
+        cdef float twist_degree, max_dot, max_degree, twisted_dot, append_degree, sign_dot, sign_degree, twisted_degree, child_degree, twisted_x_dot, twisted_y_dot
         cdef int n, twisted_sign, sign, sign_n
 
         child_degree = child_qq.toDegree()
@@ -573,16 +605,12 @@ cdef class StanceService():
 
         if grand_parent_x_axis:
             # 人差し指側から見た小指方向のローカル位置
-            original_parent_vec = original_mat * child_x1_axis
-            original_vec = original_mat * child_x2_axis
+            original_x_vec = original_mat * child_x1_axis
+            original_y_vec = original_mat * child_x2_axis
         else:
             # ひじから見たひじ手首方向のローカル位置
-            original_vec = original_mat * child_x_axis
-
-        original_mat = MMatrix4x4()
-        original_mat.setToIdentity()
-        original_mat.translate(original_parent_vec)
-        original_local_vec = original_mat.inverted() * original_vec
+            original_x_vec = original_mat * child_x_axis
+            original_y_vec = original_mat * child_y_axis
 
         max_dot = 0
         max_degree = 0
@@ -621,23 +649,20 @@ cdef class StanceService():
 
                 if grand_parent_x_axis:
                     # 人差し指側から見た小指方向のローカル位置
-                    twisted_parent_vec = twisted_mat * child_x1_axis
-                    twisted_vec = twisted_mat * child_x2_axis
-
-                    twisted_mat = MMatrix4x4()
-                    twisted_mat.setToIdentity()
-                    twisted_mat.translate(twisted_parent_vec)
-
-                    twisted_local_vec = twisted_mat.inverted() * twisted_vec
+                    twisted_x_vec = twisted_mat * child_x1_axis
+                    twisted_y_vec = twisted_mat * child_x2_axis
                 else:
                     # 捩り分散後のオリジナルひじからみたローカル位置
-                    twisted_vec = twisted_mat * child_x_axis
-                    twisted_local_vec = original_mat.inverted() * twisted_vec
+                    twisted_x_vec = twisted_mat * child_x_axis
+                    twisted_y_vec = twisted_mat * child_y_axis
 
                 # 捩り分散後との差
-                twisted_dot = MVector3D.dotProduct(original_local_vec.normalized(), twisted_local_vec.normalized())
-                logger.debug("*** n: %s(%s), %s, fno: %s, twisted_dot: %s, sign_dot: %s, test_degree: %s, sign_degree: %s, append_degree: %s, twist_degree: %s", \
-                            n, sign, bone_name, fno, twisted_dot, sign_dot, test_degree, sign_degree, append_degree, twist_degree)
+                twisted_x_dot = MVector3D.dotProduct(original_x_vec.normalized(), twisted_x_vec.normalized())
+                twisted_y_dot = MVector3D.dotProduct(original_y_vec.normalized(), twisted_y_vec.normalized())
+                twisted_dot = min(twisted_x_dot, twisted_y_dot)
+
+                logger.debug("*** n: %s(%s), %s, fno: %s, twisted_dot: %s, twisted_x_dot: %s, twisted_y_dot: %s, sign_dot: %s, test_degree: %s, sign_degree: %s, append_degree: %s, twist_degree: %s", \
+                            n, sign, bone_name, fno, twisted_dot, twisted_x_dot, twisted_y_dot, sign_dot, test_degree, sign_degree, append_degree, twist_degree)
 
                 if twisted_dot > sign_dot:
                     sign_dot = twisted_dot
@@ -671,17 +696,12 @@ cdef class StanceService():
                     append_degree += 1
                 sign_n += 1
 
-            if max_dot > RADIANS_2 and (sign_n > 10 and RADIANS_8):
-                # 充分に近い場合、終了（腕捩りはひじの角度がなければほどほどでOK。ループが10回以上回っててそこそこ近付いてたらこれもOK）
+            if max_dot > RADIANS_2 or (sign_dot == max_dot and sign_n > 10):
+                # 充分に近い場合、終了(無限ループに入ってたらこれも終了)
                 break
             
             logger.debug("** n: %s, %s, fno: %s, sign_dot: %s, max_dot: %s, twist_degree: %s, sign_degree: %s, append_degree: %s", \
                         n, bone_name, fno, sign_dot, max_dot, twist_degree, sign_degree, append_degree)
-
-        # ループ終了したら確定
-        if not grand_parent_x_axis and child_degree < 15:
-            # 腕捩りでひじの回転量が小さい場合、フリップ防止
-            twist_degree = twist_degree % 45
 
         result_twist_qq = MQuaternion.fromAxisAndAngle(twist_x_axis, twist_degree % 360)
         result_twist_qq = MServiceUtils.deform_fix_rotation(bone_name, twist_x_axis, result_twist_qq)
@@ -689,8 +709,7 @@ cdef class StanceService():
         logger.debug("確定 fno: %s, bone_name: %s, max_dot: %s, twist_degree: %s, result_twist_qq[%s]", \
                       fno, bone_name, max_dot, twist_degree, result_twist_qq.toEulerAngles4MMD().to_log())
 
-        if max_dot > RADIANS_8 or (not grand_parent_x_axis and child_degree < 15 and max_dot > RADIANS_12) or (grand_parent_x_axis and max_dot > RADIANS_12):
-            # ひじ角度が小さい場合はそれほど厳密に合わせなくてもOK
+        if max_dot > RADIANS_8:
             return (max_dot, result_twist_qq)
 
         # 最後まで近似が取れなかった場合最も近いの
@@ -959,6 +978,11 @@ cdef class StanceService():
                         and toe_ik_bone_name in data_set.motion.bones and data_set.motion.is_active_bones(toe_ik_bone_name):
                     # ボーンとモーションが揃ってある場合のみ補正
 
+                    if len(data_set.motion.get_bone_fnos(toe_ik_bone_name)) <= 1:
+                        # 0Fキーはあっても無視
+                        logger.info("%sつま先ＩＫ補正: 【No.%s】処理対象キーフレがないため、処理を終了します。", direction, (data_set_idx + 1))
+                        return True
+
                     logger.info("%s補正【No.%s】", toe_ik_bone_name, (data_set_idx + 1))
 
                     org_toe_ik_links = data_set.org_model.create_link_2_top_one(toe_ik_bone_name)
@@ -970,7 +994,7 @@ cdef class StanceService():
                     fnos.extend(data_set.motion.get_differ_fnos((data_set_idx + 1), [leg_ik_bone_name, toe_ik_bone_name], limit_degrees=20, limit_length=1.5))
                     fnos = sorted(list(set(fnos)))
 
-                    if len(fnos) == 0:
+                    if len(fnos) <= 1:
                         logger.info("%sつま先ＩＫ補正: 【No.%s】処理対象キーフレがないため、処理を終了します。", direction, (data_set_idx + 1))
                         return True
 

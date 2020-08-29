@@ -56,6 +56,27 @@ def from_bz_type(bz_type: str):
         return R_x1_idxs, R_y1_idxs, R_x2_idxs, R_y2_idxs
 
 
+# https://github.com/vmichals/python-algos/blob/master/catmull_rom_spline.py
+cdef float calc_catmull_rom_one_point(float x, float v0, float v1, float v2, float v3):
+    """Computes interpolated y-coord for given x-coord using Catmull-Rom.
+    Computes an interpolated y-coordinate for the given x-coordinate between
+    the support points v1 and v2. The neighboring support points v0 and v3 are
+    used by Catmull-Rom to ensure a smooth transition between the spline
+    segments.
+    Args:
+        x: the x-coord, for which the y-coord is needed
+        v0: 1st support point
+        v1: 2nd support point
+        v2: 3rd support point
+        v3: 4th support point
+    """
+    cdef float c1 = 1. * v1
+    cdef float c2 = -.5 * v0 + .5 * v2
+    cdef float c3 = 1. * v0 + -2.5 * v1 + 2. * v2 - 0.5 * v3
+    cdef float c4 = -.5 * v0 + 1.5 * v1 + -1.5 * v2 + 0.5 * v3
+    return (((c4 * x + c3) * x + c2) * x + c1)
+
+
 # 指定したすべての値をカトマル曲線として計算する
 cdef np.ndarray calc_value_from_catmullrom(str bone_name, list fnos, list values):
     cdef np.ndarray[np.float_t, ndim=1] y_intpol
@@ -114,27 +135,6 @@ cdef np.ndarray calc_value_from_catmullrom(str bone_name, list fnos, list values
         return np.empty(1)
 
 
-# https://github.com/vmichals/python-algos/blob/master/catmull_rom_spline.py
-cdef float calc_catmull_rom_one_point(float x, float v0, float v1, float v2, float v3):
-    """Computes interpolated y-coord for given x-coord using Catmull-Rom.
-    Computes an interpolated y-coordinate for the given x-coordinate between
-    the support points v1 and v2. The neighboring support points v0 and v3 are
-    used by Catmull-Rom to ensure a smooth transition between the spline
-    segments.
-    Args:
-        x: the x-coord, for which the y-coord is needed
-        v0: 1st support point
-        v1: 2nd support point
-        v2: 3rd support point
-        v3: 4th support point
-    """
-    cdef float c1 = 1. * v1
-    cdef float c2 = -.5 * v0 + .5 * v2
-    cdef float c3 = 1. * v0 + -2.5 * v1 + 2. * v2 - 0.5 * v3
-    cdef float c4 = -.5 * v0 + 1.5 * v1 + -1.5 * v2 + 0.5 * v3
-    return (((c4 * x + c3) * x + c2) * x + c1)
-
-
 # 指定したすべての値を通るカトマル曲線からベジェ曲線を計算し、MMD補間曲線範囲内に収められた場合、そのベジェ曲線を返す
 def join_value_2_bezier(fno: int, bone_name: str, values: list, offset=0, diff_limit=0.01):
     return_tuple = c_join_value_2_bezier(fno, bone_name, values, offset, diff_limit)
@@ -145,7 +145,7 @@ cdef tuple c_join_value_2_bezier(int fno, str bone_name, list values, float offs
         # すべてがだいたい同じ値（最小と最大が同じ値)か次数が1の場合、線形補間
         return (LINEAR_MMD_INTERPOLATION, [])
 
-    cdef np.ndarray[np.float_t, ndim=1] xs, yx, bezier_x, diff_ys, diff_large
+    cdef np.ndarray[np.long_t, ndim=1] xs, yx, bezier_x, diff_ys, diff_large
     cdef np.ndarray[np.float_t, ndim=2] nodes
     cdef list bz_x, bz_y, reduced_curve_list, reduce_bz_x, reduce_bz_y, full_ys, reduced_ys, joined_bz
     cdef tuple catmullrom_tuple
@@ -274,12 +274,13 @@ cdef tuple c_join_value_2_bezier(int fno, str bone_name, list values, float offs
         return (None, [])
 
 
-cdef fit_bezier_mmd(MVector2D bzs):
+cdef bint fit_bezier_mmd(MVector2D bzs):
     for bz in bzs:
         bz.effective()
         bz.setX(0 if bz.x() < 0 else INTERPOLATION_MMD_MAX if bz.x() > INTERPOLATION_MMD_MAX else bz.x())
         bz.setY(0 if bz.y() < 0 else INTERPOLATION_MMD_MAX if bz.y() > INTERPOLATION_MMD_MAX else bz.y())
 
+    return True
 
 # Catmull-Rom曲線の制御点(通過点)をBezier曲線の制御点に変換する
 # http://defghi1977-onblog.blogspot.com/2014/09/catmull-rombezier.html

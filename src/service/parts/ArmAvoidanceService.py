@@ -19,7 +19,7 @@ logger = MLogger(__name__, level=1)
 # 接触回避用オプション
 class ArmAvoidanceOption():
 
-    def __init__(self, arm_links: BoneLinks, ik_links_list: list, ik_count_list: list, avoidance_links: dict, avoidances: dict, face_length: float):
+    def __init__(self, arm_links: BoneLinks, ik_links_list: dict, ik_count_list: dict, avoidance_links: dict, avoidances: dict, face_length: float):
         super().__init__()
 
         self.arm_links = arm_links

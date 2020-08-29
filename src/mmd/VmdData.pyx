@@ -14,6 +14,7 @@ import _pickle as cPickle
 
 from module.MMath cimport MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from utils import MBezierUtils # noqa
+from utils cimport MBezierUtils # noqa
 from utils.MLogger import MLogger
 
 logger = MLogger(__name__, level=1)
@@ -546,23 +547,24 @@ cdef class VmdMotion:
     # 変曲点を求める
     # https://teratail.com/questions/162391
     cdef c_remove_unnecessary_bf(self, int data_set_no, str bone_name, bint is_rot, bint is_mov, \
-                                 float offset, float rot_diff_limit, float mov_diff_limit, int start_fno, int end_fno, bint is_show_log, bint is_force):
+                                 float offset, float rot_diff_limit, float mov_diff_limit, int r_start_fno, int r_end_fno, bint is_show_log, bint is_force):
         cdef int prev_sep_fno = 0
         cdef list fnos
 
         # キーフレを取得する
-        if start_fno < 0 and end_fno < 0:
+        if r_start_fno < 0 and r_end_fno < 0:
             # 範囲指定がない場合、全範囲
             fnos = self.get_bone_fnos(bone_name)
         else:
             # 範囲指定がある場合はその範囲内だけ
-            fnos = self.get_bone_fnos(bone_name, start_fno=start_fno, end_fno=end_fno)
+            fnos = self.get_bone_fnos(bone_name, start_fno=r_start_fno, end_fno=r_end_fno)
         logger.debug("remove_unnecessary_bf prev: %s, %s", bone_name, len(fnos))
         
         if len(fnos) <= 1:
             return
 
         cdef int fno = 1
+        cdef int start_fno = 0
         cdef list rot_values = []
         cdef list mx_values = []
         cdef list my_values = []
@@ -858,12 +860,12 @@ cdef class VmdMotion:
                 if f in self.bones[bone_name]:
                     del self.bones[bone_name][f]
         
-        if start_fno < 0 and end_fno < 0:
+        if r_start_fno < 0 and r_end_fno < 0:
             # 範囲指定がない場合、全範囲
             active_fnos = self.get_bone_fnos(bone_name)
         else:
             # 範囲指定がある場合はその範囲内だけ
-            active_fnos = self.get_bone_fnos(bone_name, start_fno=start_fno, end_fno=end_fno)
+            active_fnos = self.get_bone_fnos(bone_name, start_fno=r_start_fno, end_fno=r_end_fno)
 
         logger.debug("remove_unnecessary_bf after: %s, %s, all: %s", bone_name, active_fnos, len(fnos))
     
@@ -1123,17 +1125,19 @@ cdef class VmdMotion:
     # 補間曲線のコピー
     cpdef copy_interpolation(self, VmdBoneFrame org_bf, VmdBoneFrame rep_bf, str bz_type):
         cdef list bz_x1_idxs, bz_y1_idxs, bz_x2_idxs, bz_y2_idxs
+        cdef list org_interpolation = cPickle.loads(cPickle.dumps(org_bf.interpolation, -1))
+
         bz_x1_idxs, bz_y1_idxs, bz_x2_idxs, bz_y2_idxs = MBezierUtils.from_bz_type(bz_type)
 
         rep_bf.interpolation[bz_x1_idxs[0]] = rep_bf.interpolation[bz_x1_idxs[1]] = rep_bf.interpolation[bz_x1_idxs[2]] = rep_bf.interpolation[bz_x1_idxs[3]] \
-            = org_bf.interpolation[bz_x1_idxs[3]]
+            = org_interpolation[bz_x1_idxs[3]]
         rep_bf.interpolation[bz_y1_idxs[0]] = rep_bf.interpolation[bz_y1_idxs[1]] = rep_bf.interpolation[bz_y1_idxs[2]] = rep_bf.interpolation[bz_y1_idxs[3]] \
-            = org_bf.interpolation[bz_y1_idxs[3]]
+            = org_interpolation[bz_y1_idxs[3]]
 
         rep_bf.interpolation[bz_x2_idxs[0]] = rep_bf.interpolation[bz_x2_idxs[2]] = rep_bf.interpolation[bz_x2_idxs[2]] = rep_bf.interpolation[bz_x2_idxs[3]] \
-            = org_bf.interpolation[bz_x2_idxs[3]]
+            = org_interpolation[bz_x2_idxs[3]]
         rep_bf.interpolation[bz_y2_idxs[0]] = rep_bf.interpolation[bz_y2_idxs[2]] = rep_bf.interpolation[bz_y2_idxs[2]] = rep_bf.interpolation[bz_y2_idxs[3]] \
-            = org_bf.interpolation[bz_y2_idxs[3]]
+            = org_interpolation[bz_y2_idxs[3]]
 
     # 補間曲線の再設定部品
     cpdef reset_interpolation_parts(self, str target_bone_name, VmdBoneFrame bf, list bzs, list x1_idxs, list y1_idxs, list x2_idxs, list y2_idxs):
