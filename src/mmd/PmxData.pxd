@@ -72,6 +72,24 @@ cdef class Bone:
     cdef public int BONEFLAG_IS_AFTER_PHYSICS_DEFORM
     cdef public int BONEFLAG_IS_EXTERNAL_PARENT_DEFORM
 
+cdef class OBB:
+    cdef public int fno
+    cdef public MVector3D shape_size
+    cdef public MVector3D shape_position
+    cdef public MQuaternion shape_rotation
+    cdef public MQuaternion shape_rotation_qq
+    cdef public MVector3D bone_pos
+    cdef public int h_sign
+    cdef public int v_sign
+    cdef public bint is_aliginment
+    cdef public bint is_arm_upper
+    cdef public bint is_small
+    cdef public bint is_arm_left
+    cdef public MMatrix4x4 matrix
+    cdef public MMatrix4x4 rotated_matrix
+    cdef public MVector3D origin
+    cdef public dict origin_xyz
+    cdef public dict shape_size_xyz
 
 cdef class PmxModel:
     cdef public str path
