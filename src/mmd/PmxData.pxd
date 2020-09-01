@@ -76,7 +76,7 @@ cdef class OBB:
     cdef public int fno
     cdef public MVector3D shape_size
     cdef public MVector3D shape_position
-    cdef public MQuaternion shape_rotation
+    cdef public MVector3D shape_rotation
     cdef public MQuaternion shape_rotation_qq
     cdef public MVector3D bone_pos
     cdef public int h_sign
