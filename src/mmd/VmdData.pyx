@@ -392,13 +392,13 @@ cdef class VmdMotion:
                         # 前回キーとして保持
                         before_bf = bf.copy()
                 
-                if fno // 500 > prev_sep_fno and bone_fnos[-1] > 0:
+                if fno // 2000 > prev_sep_fno and bone_fnos[-1] > 0:
                     if data_set_no > 0:
                         logger.info("-- %sフレーム目:終了(%s％)【No.%s - キーフレ追加準備 - %s】", fno, round((fno / bone_fnos[-1]) * 100, 3), data_set_no, bone_name)
-                        prev_sep_fno = fno // 500
+                        prev_sep_fno = fno // 2000
                     else:
                         logger.info("-- %sフレーム目:終了(%s％)【キーフレ追加準備 - %s】", fno, round((fno / bone_fnos[-1]) * 100, 3), bone_name)
-                        prev_sep_fno = fno // 500
+                        prev_sep_fno = fno // 2000
 
         # 重複を除いて再計算
         return sorted(list(set(fnos)))
@@ -451,9 +451,9 @@ cdef class VmdMotion:
 
                         now_bf.rotation = MQuaternion.slerp(prev_bf.rotation, next_bf.rotation, ((now_bf.fno - prev_bf.fno) / (next_bf.fno - prev_bf.fno)))
                 
-                if is_show_log and data_set_no > 0 and fno // 500 > prev_sep_fno and fnos[-1] > 0:
+                if is_show_log and data_set_no > 0 and fno // 2000 > prev_sep_fno and fnos[-1] > 0:
                     logger.info("-- %sフレーム目:終了(%s％)【No.%s - 円滑化 - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
-                    prev_sep_fno = fno // 500
+                    prev_sep_fno = fno // 2000
 
     def smooth_filter_bf(self, data_set_no: int, bone_name: str, is_rot: bint, is_mov: bint, loop=1, \
                          config={"freq": 30, "mincutoff": 0.3, "beta": 0.01, "dcutoff": 0.25}, start_fno=-1, end_fno=-1, is_show_log=True):
@@ -524,9 +524,9 @@ cdef class VmdMotion:
                     new_qq = MQuaternion.fromEulerAngles(rx, ry, rz)
                     now_bf.rotation = new_qq
 
-                if is_show_log and data_set_no > 0 and fno // 1000 > prev_sep_fno and fnos[-1] > 0:
+                if is_show_log and data_set_no > 0 and fno // 2000 > prev_sep_fno and fnos[-1] > 0:
                     logger.info("-- %sフレーム目:終了(%s％)【No.%s - フィルタリング - %s(%s)】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, bone_name, (n + 1))
-                    prev_sep_fno = fno // 1000
+                    prev_sep_fno = fno // 2000
 
     # 無効なキーを物理削除する
     def remove_unkey_bf(self, data_set_no: int, bone_name: str):

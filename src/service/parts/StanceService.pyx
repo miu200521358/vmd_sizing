@@ -205,12 +205,9 @@ cdef class StanceService():
 
                 # 内積差分に基づきキー追加
                 logger.info("%s捩り分散準備開始【No.%s】", direction, (data_set_idx + 1))
-                fnos = data_set.motion.get_differ_fnos((data_set_idx + 1), [arm_bone_name, arm_twist_bone_name, wrist_twist_bone_name, wrist_bone_name], \
-                                                       limit_degrees=30, limit_length=0)
+                fnos = data_set.motion.get_differ_fnos((data_set_idx + 1), [arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name], \
+                                                       limit_degrees=20, limit_length=0)
                 
-                # for bone_name in [arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name]:
-                #     self.regist_twist_bf(data_set_idx, bone_name, fnos)
-
                 futures = []
                 with ThreadPoolExecutor(thread_name_prefix="twist_regist{0}".format(data_set_idx), max_workers=self.options.max_workers) as executor:
                     for bone_name in [arm_bone_name, elbow_bone_name, wrist_bone_name, arm_twist_bone_name, wrist_twist_bone_name]:
@@ -363,9 +360,9 @@ cdef class StanceService():
                 bf = data_set.motion.calc_bf(bone_name, fno)
                 data_set.motion.regist_bf(bf, bone_name, fno)
 
-                if fno // 1000 > prev_sep_fno and fnos[-1] > 0:
+                if fno // 2000 > prev_sep_fno and fnos[-1] > 0:
                     logger.info("-- %sフレーム目:終了(%s％)【No.%s - キーフレ追加 - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1, bone_name)
-                    prev_sep_fno = fno // 1000
+                    prev_sep_fno = fno // 2000
 
             if is_target_copy:
                 prev_sep_fno = 0
@@ -378,9 +375,9 @@ cdef class StanceService():
                         data_set.motion.copy_interpolation(parent_bf, bf, MBezierUtils.BZ_TYPE_R)
                         data_set.motion.regist_bf(bf, bone_name, fno, copy_interpolation=True)
 
-                    if fno // 1000 > prev_sep_fno and fnos[-1] > 0:
+                    if fno // 2000 > prev_sep_fno and fnos[-1] > 0:
                         logger.info("-- %sフレーム目:終了(%s％)【No.%s - 補間曲線設定 - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1, bone_name)
-                        prev_sep_fno = fno // 1000
+                        prev_sep_fno = fno // 2000
 
             return True
         except MKilledException as ke:
@@ -483,9 +480,13 @@ cdef class StanceService():
             # 腕YZを腕に
             arm_result_qq = arm_yz_qq
 
-            # 通常はひじYZ回転をひじボーンの順回転として扱う(逆肘考慮)
+            # 通常はひじYZ回転をひじボーンの順回転として扱う
             logger.debug("f: %s, %s: ひじ: yz: %s(%s), y: %s, z: %s", fno, elbow_bone_name, elbow_yz_qq.toDegree(), elbow_yz_qq, elbow_y_qq, elbow_z_qq)
-            elbow_result_qq = MQuaternion.fromAxisAndAngle(elbow_local_y_axis, elbow_yz_qq.toDegree() * np.sign(elbow_y_qq.y()) * np.sign(elbow_local_x_axis.x()))
+            if 0.1 < elbow_yz_qq.toDegree() < 10:
+                logger.debug("逆ひじ f: %s, %s: ひじ: yz: %s(%s), y: %s, z: %s", fno, elbow_bone_name, elbow_yz_qq.toDegree(), elbow_yz_qq, elbow_y_qq, elbow_z_qq)
+                elbow_result_qq = MQuaternion.fromAxisAndAngle(elbow_local_y_axis, elbow_yz_qq.toDegree() * np.sign(elbow_y_qq.y()) * np.sign(elbow_local_x_axis.x()))
+            else:
+                elbow_result_qq = MQuaternion.fromAxisAndQuaternion(elbow_local_y_axis, elbow_yz_qq)
             
             # 腕捩り -------------------------
 
@@ -562,11 +563,18 @@ cdef class StanceService():
                              MVector3D twist_x_axis, MQuaternion original_twist_qq, MQuaternion twist_qq, \
                              MVector3D child_x_axis, MVector3D child_y_axis, MQuaternion original_child_qq, MQuaternion child_qq):
 
+        cdef int n, m
         cdef float append_degree, test_degree, twist_result_degree, twist_rotate_degree, twist_result_dot, twist_rotate_dot, twist_test_dot, twisted_x_dot, twisted_y_dot
         cdef MVector3D original_local_x_vec, original_local_y_vec, original_org_vec, original_x_vec, original_y_vec, twisted_cross_vec, twisted_local_x_vec, twisted_local_y_vec
         cdef MVector3D twisted_test_local_x_vec, twisted_test_local_y_vec, twisted_test_x_vec, twisted_test_y_vec, twisted_x_vec, twisted_y_vec
         cdef MQuaternion twist_result_qq, twist_rotate_qq, twist_test_qq, twist_append_qq
+        cdef MQuaternion original_grand_parent_twist_qq2, grand_parent_twist_qq2, original_twist_qq2
         cdef MMatrix4x4 twisted_mat, twisted_test_mat
+
+        if grand_parent_x_axis:
+            original_grand_parent_twist_qq2 = MServiceUtils.deform_fix_rotation(bone_name, grand_parent_x_axis, original_grand_parent_twist_qq)
+            grand_parent_twist_qq2 = MServiceUtils.deform_fix_rotation(bone_name, grand_parent_x_axis, grand_parent_twist_qq)
+        original_twist_qq2 = MServiceUtils.deform_fix_rotation(bone_name, twist_x_axis, original_twist_qq)
         
         twisted_mat = MMatrix4x4()                          # 捩り分散後の回転量に基づく移動量
         twisted_mat.setToIdentity()                         # 初期化
@@ -574,7 +582,7 @@ cdef class StanceService():
         # 手捩りの場合、腕まで見る
         if grand_parent_x_axis:
             twisted_mat.rotate(grand_parent_qq)             # 腕の回転量
-            twisted_mat.rotate(grand_parent_twist_qq)       # 腕捩りの回転量
+            twisted_mat.rotate(grand_parent_twist_qq2)      # 腕捩りの回転量
             twisted_mat.translate(grand_parent_x_axis)      # 腕のX軸方向
         
         twisted_mat.rotate(parent_qq)                       # 腕・ひじの回転量
@@ -598,11 +606,11 @@ cdef class StanceService():
         # 手捩りの場合、腕まで見る
         if grand_parent_x_axis:
             original_mat.rotate(original_grand_parent_qq)           # 元々の腕の回転量
-            original_mat.rotate(original_grand_parent_twist_qq)     # 元々の腕捩りの回転量
+            original_mat.rotate(original_grand_parent_twist_qq2)    # 元々の腕捩りの回転量
             original_mat.translate(grand_parent_x_axis)             # 腕のX軸方向
 
         original_mat.rotate(original_parent_qq)                     # 元々の腕の回転量
-        original_mat.rotate(original_twist_qq)                      # 元々の腕捩りの回転量
+        original_mat.rotate(original_twist_qq2)                     # 元々の腕捩りの回転量
         original_mat.translate(parent_x_axis)                       # 腕のX軸方向
         original_mat.rotate(original_child_qq)                      # 元々のひじの回転量        
 
@@ -623,19 +631,27 @@ cdef class StanceService():
         twist_result_dot = -9999
         append_degree = 0
         n = 0
+        m = 0
         
         logger.debug("f: %s, %s, twist_result_degree: %s, twist_rotate_qq: %s", fno, bone_name, twist_result_degree, twist_rotate_qq)
         
-        while n < 20:
+        while m < 20 and n < 200:
             for sign in [1, -1]:
-                if n == 0:
+                if m == 0:
                     # 計算後の捩り回転量(初回は捩り自身の向きを調整)
                     test_degree = twist_result_degree * sign
                 else:
                     # 計算後の捩り回転量+調整角度
                     test_degree = twist_result_degree + (append_degree * sign)
 
+                if abs(test_degree) + 1 >= 180:
+                    logger.debug("180フリップ防止 f: %s, bone_name: %s, child_qq: %s, test_degree: %s", \
+                                fno, bone_name, child_qq.toDegree(), test_degree)
+                    # 捩り成分の為、フリップ180度でクリア
+                    test_degree = test_degree % (180 * np.sign(test_degree))
+
                 twist_test_qq = MQuaternion.fromAxisAndAngle(twist_x_axis, test_degree)
+                twist_test_qq = MServiceUtils.deform_fix_rotation(bone_name, twist_x_axis, twist_test_qq)
 
                 twisted_test_mat = MMatrix4x4()                          # 捩り分散後の回転量に基づく移動量
                 twisted_test_mat.setToIdentity()                         # 初期化
@@ -643,7 +659,7 @@ cdef class StanceService():
                 # 手捩りの場合、腕まで見る
                 if grand_parent_x_axis:
                     twisted_test_mat.rotate(grand_parent_qq)             # 腕の回転量
-                    twisted_test_mat.rotate(grand_parent_twist_qq)       # 腕捩りの回転量
+                    twisted_test_mat.rotate(grand_parent_twist_qq2)      # 腕捩りの回転量
                     twisted_test_mat.translate(grand_parent_x_axis)      # 腕のX軸方向
                 
                 twisted_test_mat.rotate(parent_qq)                       # 腕・ひじの回転量
@@ -666,29 +682,43 @@ cdef class StanceService():
                 if twist_test_dot > twist_result_dot:
                     twist_result_dot = twist_test_dot
                     twist_result_degree = test_degree
-                    # twist_append_qq = MQuaternion.rotationTo(twisted_test_local_x_vec.normalized(), original_local_x_vec.normalized())
-                    append_degree = math.degrees(math.acos(max(-1, min(1, twist_test_dot))))
+
+                    # if grand_parent_x_axis:
+                    #     twist_append_qq = MQuaternion.rotationTo(twisted_test_local_y_vec.normalized(), original_local_y_vec.normalized())
+                    # else:
+                    #     twist_append_qq = MQuaternion.rotationTo(twisted_test_local_x_vec.normalized(), original_local_x_vec.normalized())
+
+                    # append_degree = twist_append_qq.toDegree()
+                    append_degree = math.degrees(math.acos(max(-1, min(1, twist_test_dot)))) * 2
                     logger.debug("○ twist_result_dot > twist_test_dot twist_append_qq: %s(%s)", append_degree, twist_test_dot)
                     # ループをクリア
-                    n = 0
-                    if n > 0:
-                        # 2回目以降は次不要
-                        break
+                    m = 0
                 else:
-                    append_degree /= 2
+                    if m > 0:
+                        append_degree /= 2
                     logger.debug("× twist_result_dot < twist_test_dot twist_append_qq: %s(%s)", append_degree, twist_test_dot)
                 
-            if twist_result_dot > RADIANS_2:
+            if twist_result_dot > RADIANS_1:
                 # 充分に近い場合、終了
                 break
             
+            m += 1
             n += 1
 
-        twist_result_qq = MQuaternion.fromAxisAndAngle(twist_x_axis, twist_result_degree)        
-        logger.debug("確定 f: %s, bone_name: %s, twist_result_dot: %s, twist_result_degree: %s, twist_result_qq[%s]", \
-                      fno, bone_name, twist_result_dot, twist_result_degree, twist_result_qq.toEulerAngles4MMD().to_log())
+        if not grand_parent_x_axis and child_qq.toDegree() <= 22.5 and abs(twist_result_degree) + 1 >= 45:
+            logger.debug("腕フリップ防止 f: %s, bone_name: %s, child_qq: %s, twist_result_degree: %s", \
+                        fno, bone_name, child_qq.toDegree(), twist_result_degree)
+            # 腕捩りでひじの回転量が小さい場合、フリップ防止
+            twist_result_degree = (twist_result_degree + (1 * np.sign(twist_result_degree))) % (45 * np.sign(twist_result_degree))
 
-        if twist_result_dot > RADIANS_5:
+        # ループ終了したら確定
+        twist_result_qq = MQuaternion.fromAxisAndAngle(twist_x_axis, twist_result_degree)
+        twist_result_qq = MServiceUtils.deform_fix_rotation(bone_name, twist_x_axis, twist_result_qq)
+        logger.debug("確定 f: %s, bone_name: %s, twist_result_dot: %s, twist_result_degree: %s, twist_result_qq[%s], child_qq: %s", \
+                      fno, bone_name, twist_result_dot, twist_result_degree, twist_result_qq.toEulerAngles4MMD().to_log(), child_qq.toDegree())
+
+        if twist_result_dot > RADIANS_8:
+            # FIXME > 0.9
             return (twist_result_dot, twist_result_qq)
 
         # 最後まで近似が取れなかった場合最も近いの
