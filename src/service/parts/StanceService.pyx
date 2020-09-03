@@ -205,7 +205,7 @@ cdef class StanceService():
 
                 # 内積差分に基づきキー追加
                 logger.info("%s捩り分散準備開始【No.%s】", direction, (data_set_idx + 1))
-                fnos = data_set.motion.get_differ_fnos((data_set_idx + 1), [arm_bone_name, arm_twist_bone_name, wrist_twist_bone_name, wrist_bone_name], \
+                fnos = data_set.motion.get_differ_fnos((data_set_idx + 1), [arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name], \
                                                        limit_degrees=30, limit_length=0)
                 
                 futures = []
@@ -556,7 +556,7 @@ cdef class StanceService():
             logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
             raise e
         
-    # 腕捩り合わせ
+    # 捩り合わせ
     cdef tuple calc_twist_qq(self, int data_set_idx, int fno, str bone_name, MVector3D grand_parent_x_axis, MQuaternion original_grand_parent_qq, \
                              MQuaternion grand_parent_qq, MVector3D grand_parent_twist_x_axis, MQuaternion original_grand_parent_twist_qq, MQuaternion grand_parent_twist_qq, \
                              MVector3D parent_x_axis, MQuaternion original_parent_qq, MQuaternion parent_qq, \
@@ -565,7 +565,7 @@ cdef class StanceService():
         logger.debug("f: %s, %s, twist_qq: %s[%s]", fno, bone_name, twist_qq.toDegree(), twist_qq)
 
         cdef int n, m, s
-        cdef float append_degree, test_degree, twist_result_degree, twist_rotate_degree
+        cdef float append_degree, test_degree, twist_result_degree, twist_rotate_degree, twist_append_x_degree, twist_append_y_degree
         cdef float twist_rotate_dot, twist_test_dot, twisted_x_dot, twisted_y_dot, degree, twist_result_dot, twist_test_x_dot, twist_test_y_dot
         cdef list degree_list
         cdef MVector3D original_local_x_vec, original_local_y_vec, original_org_vec, original_x_vec, original_y_vec, no_twisted_local_x_vec, no_twisted_local_y_vec
@@ -640,15 +640,22 @@ cdef class StanceService():
         twist_result_dot = 0
         twist_test_x_dot = 0
         twist_test_y_dot = 0
+        twist_append_x_degree = 0
+        twist_append_y_degree = 0
         append_degree = 0
         n = 0
         m = -1
         degree_list = [twist_rotate_x_qq.toDegree(), -twist_rotate_x_qq.toDegree(), twist_rotate_y_qq.toDegree(), -twist_rotate_y_qq.toDegree()]
 
-        while m < 20 and n < 1:
+        while m < 10 and n < 100:
             for s, degree in enumerate(degree_list):
                 # 計算後の捩り回転量+調整角度(初回は捩り自身の向きを調整)
                 test_degree = twist_result_degree + degree
+
+                # if not grand_parent_x_axis and child_qq.toDegree() <= 45 and abs(test_degree) >= 22.5:
+                #     # フリップ防止
+                #     test_degree = test_degree - (-45 * np.sign(test_degree))
+
                 twist_test_qq = MQuaternion.fromAxisAndAngle(twist_x_axis, test_degree)
 
                 twisted_test_mat = MMatrix4x4()                          # 捩り分散後の回転量に基づく移動量
@@ -676,7 +683,8 @@ cdef class StanceService():
 
                 twist_test_x_dot = MVector3D.dotProduct(twisted_test_local_x_vec, original_local_x_vec)
                 twist_test_y_dot = MVector3D.dotProduct(twisted_test_local_y_vec, original_local_y_vec)
-                twist_test_dot = np.mean([twist_test_x_dot, twist_test_y_dot])
+                # twist_test_dot = np.mean([twist_test_x_dot, twist_test_y_dot])
+                twist_test_dot = np.mean([twist_test_x_dot, twist_test_y_dot]) if grand_parent_x_axis or child_qq.toDegree() <= 15 else twist_test_x_dot
                 logger.debug("*** n: %s, m: %s, d: %s, %s, f: %s, twist_test_dot: %s, twist_test_x_dot: %s, twist_test_y_dot: %s, test_degree: %s, degree: %s, x_vec: %s, y_vec: %s", \
                              n, m, degree, bone_name, fno, twist_test_dot, twist_test_x_dot, twist_test_y_dot, test_degree, degree, twisted_test_local_x_vec.to_log(), twisted_test_local_x_vec.to_log())
 
@@ -684,22 +692,22 @@ cdef class StanceService():
                     twist_result_dot = twist_test_dot
                     twist_result_degree = test_degree
 
+                    # twist_append_x_degree = math.degrees(math.acos(max(-1, min(1, twist_test_x_dot))) * 2)
+                    # twist_append_y_degree = math.degrees(math.acos(max(-1, min(1, twist_test_y_dot))) * 2)
                     # append_degree = math.degrees(math.acos(max(-1, min(1, twist_test_dot))))
                     twist_append_x_qq = MQuaternion.rotationTo(twisted_test_local_x_vec, original_local_x_vec)
                     twist_append_y_qq = MQuaternion.rotationTo(twisted_test_local_y_vec, original_local_y_vec)
+                    twist_append_x_degree = twist_append_x_qq.toDegree()
+                    twist_append_y_degree = twist_append_y_qq.toDegree()
                     logger.debug("○ twist_result_dot > twist_test_dot xdot: %s, ydot: %s, x: %s, y: %s", \
-                                 twist_test_x_dot, twist_test_y_dot, twist_append_x_qq.toDegree(), twist_append_y_qq.toDegree())
+                                 twist_test_x_dot, twist_test_y_dot, twist_append_x_degree, twist_append_y_degree)
 
                     if m >= 0:
                         m = 0
-                        degree_list = [twist_append_x_qq.toDegree(), -twist_append_x_qq.toDegree(), twist_append_y_qq.toDegree(), -twist_append_y_qq.toDegree()]
+                        degree_list = [twist_append_x_degree, -twist_append_x_degree, twist_append_y_degree, -twist_append_y_degree]
                         break
                 else:
-                    if m >= 0 and s == len(degree_list) - 1:
-                        degree_list = [twist_append_x_qq.toDegree() * 0.8, -twist_append_x_qq.toDegree() * 0.8, twist_append_y_qq.toDegree() * 0.8, -twist_append_y_qq.toDegree() * 0.8]
-                        
-                    logger.debug("× twist_result_dot < twist_test_dot xdot: %s, ydot: %s, x: %s, y: %s", \
-                                 twist_test_x_dot, twist_test_y_dot, twist_append_x_qq.toDegree(), twist_append_y_qq.toDegree())
+                    logger.debug("× twist_result_dot < twist_test_dot test: %s, dot: %s, xdot: %s, ydot: %s", twist_result_dot, twist_test_dot, twist_test_x_dot, twist_test_y_dot)
             
             if twist_result_dot > RADIANS_1:
                 # 充分に近い場合、終了
@@ -707,7 +715,10 @@ cdef class StanceService():
             
             if m < 0:
                 # 初回は最も近付いた回転量ベースでリスト再生成
-                degree_list = [twist_append_x_qq.toDegree(), -twist_append_x_qq.toDegree(), twist_append_y_qq.toDegree(), -twist_append_y_qq.toDegree()]
+                degree_list = [twist_append_x_degree, -twist_append_x_degree, twist_append_y_degree, -twist_append_y_degree]
+            elif m > 0:
+                # 2回目以降でダメだった場合は、量を減らして再チェック
+                degree_list = [d * 0.8 for d in degree_list]
 
             m += 1
             n += 1
@@ -720,10 +731,10 @@ cdef class StanceService():
 
         # ループ終了したら確定
         twist_result_qq = MQuaternion.fromAxisAndAngle(twist_x_axis, twist_result_degree)
-        logger.info("確定 f: %s, bone_name: %s, twist_result_dot: %s, twist_result_degree: %s, twist_result_qq[%s], child_qq: %s", \
+        logger.debug("確定 f: %s, bone_name: %s, twist_result_dot: %s, twist_result_degree: %s, twist_result_qq[%s], child_qq: %s", \
                      fno, bone_name, twist_result_dot, twist_result_degree, twist_result_qq.toEulerAngles4MMD().to_log(), child_qq.toDegree())
 
-        if twist_result_dot > RADIANS_8:
+        if twist_result_dot > 0.95:
             return (twist_result_dot, twist_result_qq)
 
         # 最後まで近似が取れなかった場合最も近いの

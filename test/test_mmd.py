@@ -92,6 +92,122 @@ class PmxDataTest(unittest.TestCase):
 
         links = pmx_data.create_link_2_top_one("右手首")
         self.assertEqual(len(links.all()), 4)
+    
+    def test_rigidbody01(self):
+        model = PmxReader("D:/MMD/MikuMikuDance_v926x64/UserFile/Model/_VMDサイジング/テスト用和洋 less/0831/sample/wa_2834_20200831.pmx", is_check=False).read_data()
+        output = "名前\t回転_x[deg]\t回転_y[deg]\t回転_z[deg]\n"
+
+        for r in model.rigidbodies:
+            if ("fs3" in r or "fs4" in r or "fs5" in r or "fs6" in r or "fs7" in r or "fs8" in r):
+                rigidbody = model.rigidbodies[r]
+                print(rigidbody.bone_index)
+                bone = model.bones[model.bone_indexes[rigidbody.bone_index]]
+                rigidbody.bone_name = bone.name
+                print(bone.name)
+
+                avodance_link = model.create_link_2_top_one(model.bone_indexes[rigidbody.bone_index], is_defined=False)
+
+                # 剛体の現在位置をチェック
+                _, rep_avbone_global_mats = MServiceUtils.calc_global_pos(model, avodance_link, VmdMotion(), 0, return_matrix=True)
+
+                obb = rigidbody.get_obb(0, avodance_link.get(avodance_link.last_name()).position, rep_avbone_global_mats, False, False)
+                print(obb.rotated_matrix)
+                m = obb.rotated_matrix.copy()
+                if "_6" in r or "_9" in r:
+                    m.rotate(MQuaternion.fromEulerAngles(0, 0, 0))
+                elif "_7" in r:
+                    m.rotate(MQuaternion.fromEulerAngles(0, 0, -5))
+                elif "_10" in r:
+                    m.rotate(MQuaternion.fromEulerAngles(0, 0, 15))
+                elif "_11" in r or "_12" in r:
+                    m.rotate(MQuaternion.fromEulerAngles(0, 0, 10))
+                elif "_16" in r:
+                    m.rotate(MQuaternion.fromEulerAngles(0, 0, 10))
+                elif "_13" in r:
+                    m.rotate(MQuaternion.fromEulerAngles(0, 0, 20))
+                elif "_17" in r:
+                    m.rotate(MQuaternion.fromEulerAngles(0, 0, -10))
+                elif "_3" in r:
+                    m.rotate(MQuaternion.fromEulerAngles(0, 0, -10))
+                else:
+                    m.rotate(MQuaternion.fromEulerAngles(0, 0, -15 * np.sign(bone.position.x())))
+                print(m.toQuaternion().toEulerAngles().to_log())
+                euler = m.toQuaternion().toEulerAngles()
+
+                output += "{0}\t{1}\t{2}\t{3}\n".format(rigidbody.name, euler.x(), euler.y(), euler.z())
+
+        print("------------")
+        print(output)
+
+    def test_rigidbody02(self):
+        model = PmxReader("D:/MMD/MikuMikuDance_v926x64/UserFile/Model/_VMDサイジング/テスト用和洋 less/0831/sample/wa_2834_20200831.pmx", is_check=False).read_data()
+        output = "名前\t回転_x[deg]\t回転_y[deg]\t回転_z[deg]\n"
+
+        for r in model.rigidbodies:
+            if ("fs3" in r or "fs4" in r or "fs5" in r or "fs6" in r or "fs7" in r or "fs8" in r):
+                rigidbody = model.rigidbodies[r]
+                print(rigidbody.bone_index)
+                bone = model.bones[model.bone_indexes[rigidbody.bone_index]]
+                rigidbody.bone_name = bone.name
+                print(bone.name)
+
+                avodance_link = model.create_link_2_top_one(model.bone_indexes[rigidbody.bone_index], is_defined=False)
+
+                # 剛体の現在位置をチェック
+                _, rep_avbone_global_mats = MServiceUtils.calc_global_pos(model, avodance_link, VmdMotion(), 0, return_matrix=True)
+
+                obb = rigidbody.get_obb(0, avodance_link.get(avodance_link.last_name()).position, rep_avbone_global_mats, False, False)
+                m = obb.rotated_matrix.copy()
+
+                upper_qq = MQuaternion()
+                lower_qq = MQuaternion()
+                left_qq = MQuaternion()
+                right_qq = MQuaternion()
+                for joint_index, (joint_name, joint) in enumerate(model.joints.items()):
+                    if joint.rigidbody_index_a == rigidbody.index:
+                        # 剛体に紐付いたジョイント
+                        for rigb_name, rigb in model.rigidbodies.items():
+                            if rigb.index == joint.rigidbody_index_b:
+                                print("%s, %s, %s" % (joint_index, rigidbody.name, rigb_name))
+                                # 接続剛体B
+                                riga_origin = m * MVector3D()
+                                slope = (rigb.shape_position - riga_origin).normalized()
+                                if "↑" in joint_name:
+                                    slope_up = MVector3D(-1, 0, 0)
+                                    slope_cross = MVector3D.crossProduct(slope, slope_up).normalized()
+                                    upper_qq = MQuaternion.fromDirection(slope, slope_cross)
+                                
+                                # riga_vec = m * MVector3D(0, 0, -1)
+                                # if "↑" in joint_name:
+                                #     upper_qq = MQuaternion.rotationTo((riga_vec - riga_origin).normalized(), )
+                                # if "→" in joint_name:
+                                #     right_qq = MQuaternion.rotationTo(MVector3D(1, 0, 0), rigb_local_vec.normalized())
+                                # if "←" in joint_name:
+                                #     left_qq = MQuaternion.rotationTo(MVector3D(1, 0, 0), rigb_local_vec.normalized())
+                                # if "↑" in joint_name:
+                                #     upper_qq = MQuaternion.rotationTo(MVector3D(1, 0, 0), rigb_local_vec.normalized())
+                
+                matrix = MMatrix4x4()
+                matrix.setToIdentity()
+                matrix.rotate(upper_qq)
+                # if lower_qq != MQuaternion():
+                #     matrix.rotate(lower_qq)
+                # else:
+                #     matrix.rotate(upper_qq)
+                # if left_qq != MQuaternion():
+                #     matrix.rotate(left_qq)
+                # else:
+                #     matrix.rotate(right_qq)
+                qq = matrix.toQuaternion()
+                print(qq.toEulerAngles().to_log())
+                euler = qq.toEulerAngles()
+
+                output += "{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\n".format(rigidbody.name, euler.x(), euler.y(), euler.z(), \
+                                                                            lower_qq.toEulerAngles().to_log(), upper_qq.toEulerAngles().to_log(), \
+                                                                            left_qq.toEulerAngles().to_log(), right_qq.toEulerAngles().to_log())
+
+        print("------------")
+        print(output)
 
 
 class VmdDataTest(unittest.TestCase):
