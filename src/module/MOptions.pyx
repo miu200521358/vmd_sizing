@@ -6,9 +6,9 @@ import argparse
 
 from libcpp cimport  list, str, dict, float, int
 
+from module.MParams cimport BoneLinks # noqa
 from mmd.PmxData cimport PmxModel, Bone
 from mmd.VmdData cimport VmdMotion, VmdBoneFrame
-from module.MParams cimport BoneLinks # noqa
 from module.MMath cimport MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 
 from mmd.PmxReader import PmxReader

@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 #
+# cython: profile=True
+# cython: linetrace=True
+# cython: binding=True
+# distutils: define_macros=CYTHON_TRACE_NOGIL=1
 import numpy as np # noqa
 import math # noqa
 import numpy as np
@@ -260,7 +264,7 @@ def calc_global_pos(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: i
         # 行列も返す場合
         return return_tuple[0], return_tuple[1]
 
-cdef tuple c_calc_global_pos(PmxModel model, BoneLinks links, VmdMotion motion, int fno, BoneLinks limit_links, bint return_matrix, bint is_local_x):
+cpdef tuple c_calc_global_pos(PmxModel model, BoneLinks links, VmdMotion motion, int fno, BoneLinks limit_links, bint return_matrix, bint is_local_x):
     cdef list trans_vs = c_calc_relative_position(model, links, motion, fno, limit_links)
     cdef list add_qs = c_calc_relative_rotation(model, links, motion, fno, limit_links)
 
@@ -303,13 +307,13 @@ cdef tuple c_calc_global_pos(PmxModel model, BoneLinks links, VmdMotion motion, 
                 total_mats[lname] = matrixs[0].copy()
             else:
                 # 自分より前の行列結果を掛け算する
-                total_mats[lname] *= matrixs[m].copy()
+                total_mats[lname] *= matrixs[m]
         
         # 自分は、位置だけ掛ける
         global_3ds_dic[lname] = total_mats[lname] * v
         
         # 最後の行列をかけ算する
-        total_mats[lname] *= matrixs[n].copy()
+        total_mats[lname] *= matrixs[n]
         
         # ローカル軸の向きを調整する
         if n > 0 and is_local_x:

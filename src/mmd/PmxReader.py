@@ -3,16 +3,21 @@
 import struct
 import hashlib
 
-from mmd.PmxData import PmxModel, Bdef1, Bdef2, Bdef4, Sdef, Qdef, Vertex, Material, Ik, IkLink, Bone, Morph, DisplaySlot, RigidBody, Joint
-from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
-from utils.MException import MParseException # noqa
+import pyximport
+pyximport.install()
+
+from mmd.PmxData import PmxModel, Bone, OBB, RigidBody
+from mmd.VmdData import VmdMotion, VmdBoneFrame
+from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
+
+from mmd.PmxData import Vertex, Material, Morph, DisplaySlot, RigidBody, Joint, Ik, IkLink, Bdef1, Bdef2, Bdef4, Sdef, Qdef # noqa
 from utils.MLogger import MLogger # noqa
-from utils.MException import SizingException, MKilledException
+from utils.MException import SizingException, MKilledException, MParseException
 
 logger = MLogger(__name__, level=1)
 
 
-class PmxReader():
+class PmxReader:
     def __init__(self, file_path, is_check=True):
         self.file_path = file_path
         self.is_check = is_check

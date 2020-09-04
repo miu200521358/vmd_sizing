@@ -97,12 +97,18 @@ cdef class ArmAvoidanceService():
     cpdef bint execute_avoidance_pool(self, int data_set_idx, str direction):
         try:
             # 接触回避準備
-            pfun = profile(self.prepare_avoidance_dataset)
-            all_avoidance_axis = pfun(data_set_idx, direction)
+            all_avoidance_axis = self.prepare_avoidance_dataset(data_set_idx, direction)
 
             # 接触回避処理
-            pfun = profile(self.execute_avoidance)
-            pfun(data_set_idx, direction, all_avoidance_axis)
+            self.execute_avoidance(data_set_idx, direction, all_avoidance_axis)
+
+            # # 接触回避準備
+            # pfun = profile(self.prepare_avoidance_dataset)
+            # all_avoidance_axis = pfun(data_set_idx, direction)
+
+            # # 接触回避処理
+            # pfun = profile(self.execute_avoidance)
+            # pfun(data_set_idx, direction, all_avoidance_axis)
 
             # # 各ボーンのbfを円滑化
             # futures = []
@@ -208,8 +214,8 @@ cdef class ArmAvoidanceService():
 
             for ((avoidance_name, avodance_link), avoidance) in zip(avoidance_options.avoidance_links.items(), avoidance_options.avoidances.values()):
                 # 剛体の現在位置をチェック
-                rep_avbone_global_3ds, rep_avbone_global_mats = \
-                    MServiceUtils.calc_global_pos(data_set.rep_model, avodance_link, data_set.motion, fno, return_matrix=True)
+                (rep_avbone_global_3ds, rep_avbone_global_mats) = \
+                    MServiceUtils.calc_global_pos(data_set.rep_model, avodance_link, data_set.motion, fno, return_matrix=True, is_local_x=False, limit_links=None)
                 
                 obb = avoidance.get_obb(fno, avodance_link.get(avodance_link.last_name()).position, rep_avbone_global_mats, self.options.arm_options.alignment, direction == "左")
 
@@ -229,7 +235,8 @@ cdef class ArmAvoidanceService():
             
                 for arm_link in avoidance_options.arm_links:
                     # 先モデルのそれぞれのグローバル位置
-                    rep_global_3ds = MServiceUtils.calc_global_pos(data_set.rep_model, arm_link, data_set.motion, fno)
+                    (rep_global_3ds, _) = \
+                        MServiceUtils.c_calc_global_pos(data_set.rep_model, arm_link, data_set.motion, fno, return_matrix=False, is_local_x=False, limit_links=None)
                     # [logger.test("f: %s, k: %s, v: %s", fno, k, v) for k, v in rep_global_3ds.items()]
 
                     # 衝突情報を取る
@@ -294,10 +301,11 @@ cdef class ArmAvoidanceService():
                                              list(ik_links.all().keys()), avoidance_name, axis, rep_global_3ds[arm_link.last_name()].to_log(), rep_collision_vec.to_log())
                                 
                                 # 修正角度がない場合、IK計算実行
-                                MServiceUtils.calc_IK(data_set.rep_model, arm_link, data_set.motion, fno, rep_collision_vec, ik_links, max_count=1)
+                                MServiceUtils.c_calc_IK(data_set.rep_model, arm_link, data_set.motion, fno, rep_collision_vec, ik_links, max_count=1)
 
                                 # 現在のエフェクタ位置
-                                now_rep_global_3ds = MServiceUtils.calc_global_pos(data_set.rep_model, arm_link, data_set.motion, fno)
+                                (now_rep_global_3ds, _) = \
+                                    MServiceUtils.c_calc_global_pos(data_set.rep_model, arm_link, data_set.motion, fno, return_matrix=False, is_local_x=False, limit_links=None)
                                 now_rep_effector_pos = now_rep_global_3ds[arm_link.last_name()]
 
                                 # 現在のエフェクタ位置との差分(エフェクタ位置が指定されている場合のみ)
@@ -537,15 +545,16 @@ cdef class ArmAvoidanceService():
 
             for ((avoidance_name, avodance_link), avoidance) in zip(avoidance_options.avoidance_links.items(), avoidance_options.avoidances.values()):
                 # 剛体の現在位置をチェック
-                rep_avbone_global_3ds, rep_avbone_global_mats = \
-                    MServiceUtils.calc_global_pos(data_set.rep_model, avodance_link, data_set.motion, fno, return_matrix=True)
+                (rep_avbone_global_3ds, rep_avbone_global_mats) = \
+                    MServiceUtils.c_calc_global_pos(data_set.rep_model, avodance_link, data_set.motion, fno, return_matrix=True, is_local_x=False, limit_links=None)
 
                 obb = avoidance.get_obb(fno, avodance_link.get(avodance_link.last_name()).position, rep_avbone_global_mats, self.options.arm_options.alignment, direction == "左")
             
                 for arm_link in avoidance_options.arm_links:
                     # 先モデルのそれぞれのグローバル位置
-                    rep_global_3ds, rep_matrixs = MServiceUtils.calc_global_pos(data_set.rep_model, arm_link, data_set.motion, fno, return_matrix=True)
-                    [logger.debug("f: %s, k: %s, v: %s", fno, k, v) for k, v in rep_global_3ds.items()]
+                    (rep_global_3ds, rep_matrixs) = \
+                        MServiceUtils.c_calc_global_pos(data_set.rep_model, arm_link, data_set.motion, fno, return_matrix=True, is_local_x=False, limit_links=None)
+                    # [logger.debug("f: %s, k: %s, v: %s", fno, k, v) for k, v in rep_global_3ds.items()]
 
                     # 衝突情報を取る
                     (collision, near_collision, x_distance, z_distance, rep_x_collision_vec, rep_z_collision_vec) \

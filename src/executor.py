@@ -10,12 +10,27 @@ import numpy as np
 import traceback
 import multiprocessing
 
+import pyximport
+pyximport.install()
+
 from form.MainFrame import MainFrame
 from module.MOptions import MOptions
 from utils.MLogger import MLogger
 from utils import MFileUtils
 from service.SizingService import SizingService
 from utils.MException import SizingException
+
+from module.MParams import BoneLinks
+from mmd.PmxData import PmxModel
+from mmd.VmdWriter import VmdWriter
+from module.MOptions import MOptions, MOptionsDataSet
+from service.parts.MoveService import MoveService
+from service.parts.StanceService import StanceService
+from service.parts.ArmAlignmentService import ArmAlignmentService
+from service.parts.ArmAvoidanceService import ArmAvoidanceService
+from service.parts.MorphService import MorphService
+from service.parts.CameraService import CameraService
+from utils.MException import SizingException, MKilledException
 
 VERSION_NAME = "5.01_β14"
 

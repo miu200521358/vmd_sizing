@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 #
 import _pickle as cPickle
-from abc import ABCMeta, abstractmethod
 import math
 import numpy as np
-cimport cython
 
 from libcpp cimport  list, str, int, float, dict
 from module.MMath cimport MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
@@ -1325,8 +1323,8 @@ cdef class PmxModel:
             # Zはちょっと前に
             center.setZ(center.z() - (radius * 0.05))
 
-            head_rigidbody = RigidBody("頭接触回避", None, self.bones["頭"].index, None, None, 0, \
-                                       MVector3D(radius, radius, radius), center, MVector3D(), None, None, None, None, None, 0)
+            head_rigidbody = RigidBody("頭接触回避", None, self.bones["頭"].index, 0, 0, 0, \
+                                       MVector3D(radius, radius, radius), center, MVector3D(), 0, 0, 0, 0, 0, 0)
             head_rigidbody.bone_name = "頭"
             head_rigidbody.is_arm_upper = True
 

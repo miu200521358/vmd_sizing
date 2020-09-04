@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 #
-cimport cython
 
 
 cdef class BoneLinks:

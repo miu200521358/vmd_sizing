@@ -3,7 +3,6 @@
 from libcpp cimport  list, str, int, float, dict
 
 from module.MMath cimport MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
-from module.MParams cimport BoneLinks
 
 
 cdef class Deform:
