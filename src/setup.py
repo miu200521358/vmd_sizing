@@ -9,6 +9,6 @@ directive_defaults['linetrace'] = True
 directive_defaults['binding'] = True
 
 setup(name="*", cmdclass={"build_ext": build_ext}, ext_modules=cythonize(setup_ext.ext, annotate=True, \
-      compiler_directives={'language_level': "3", 'profile': True, 'linetrace': True}))
+      compiler_directives={'language_level': "3", 'profile': True, 'linetrace': True, 'binding': True}))
 
 

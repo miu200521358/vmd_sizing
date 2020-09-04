@@ -14,7 +14,8 @@ ext = [Extension("module.MMath", sources=["module/MMath.pyx"], include_dirs=['.'
        Extension("mmd.VmdData", sources=["mmd/VmdData.pyx"], include_dirs=['.', bezier_path, get_include()]), \
        Extension("mmd.VmdReader", sources=["mmd/VmdReader.py"], include_dirs=['.', bezier_path, get_include()]), \
        Extension("service.parts.StanceService", sources=["service/parts/StanceService.pyx"], include_dirs=['.', bezier_path, get_include()]), \
-       Extension("service.parts.ArmAvoidanceService", sources=["service/parts/ArmAvoidanceService.pyx"], include_dirs=['.', bezier_path, get_include()]), \
+       Extension("service.parts.ArmAvoidanceService", sources=["service/parts/ArmAvoidanceService.pyx"], include_dirs=['.', bezier_path, get_include()], define_macros=[('CYTHON_TRACE', '1')]), \
+       Extension("service.SizingService", sources=["service/SizingService.py"], include_dirs=['.', bezier_path, get_include()], define_macros=[('CYTHON_TRACE', '1')]), \
        ]
 
 

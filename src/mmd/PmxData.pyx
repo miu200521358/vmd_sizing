@@ -408,7 +408,7 @@ class DisplaySlot:
 
 
 # 剛体構造-----------------------
-class RigidBody:
+cdef class RigidBody:
     def __init__(self, name, english_name, bone_index, collision_group, no_collision_group, shape_type, shape_size, shape_position, shape_rotation, mass, linear_damping, \
                  angular_damping, restitution, friction, mode):
         self.name = name
@@ -420,7 +420,7 @@ class RigidBody:
         self.shape_size = shape_size
         self.shape_position = shape_position
         self.shape_rotation = shape_rotation
-        self.param = RigidBody.RigidBodyParam(mass, linear_damping, angular_damping, restitution, friction)
+        self.param = RigidBodyParam(mass, linear_damping, angular_damping, restitution, friction)
         self.mode = mode
         self.index = -1
         self.bone_name = ""
@@ -461,17 +461,17 @@ class RigidBody:
             return Capsule(fno, self.shape_size, self.shape_position, self.shape_rotation, self.bone_name, bone_pos, bone_matrix, is_aliginment, \
                                      is_arm_left, self.is_arm_upper, self.is_small, True)
 
-    class RigidBodyParam:
-        def __init__(self, mass, linear_damping, angular_damping, restitution, friction):
-            self.mass = mass
-            self.linear_damping = linear_damping
-            self.angular_damping = angular_damping
-            self.restitution = restitution
-            self.friction = friction
+cdef class RigidBodyParam:
+    def __init__(self, mass, linear_damping, angular_damping, restitution, friction):
+        self.mass = mass
+        self.linear_damping = linear_damping
+        self.angular_damping = angular_damping
+        self.restitution = restitution
+        self.friction = friction
 
-        def __str__(self):
-            return "<RigidBodyParam mass:{0}, linear_damping:{1}, angular_damping:{2}, restitution:{3}, friction: {4}".format(
-                self.mass, self.linear_damping, self.angular_damping, self.restitution, self.friction)
+    def __str__(self):
+        return "<RigidBodyParam mass:{0}, linear_damping:{1}, angular_damping:{2}, restitution:{3}, friction: {4}".format(
+            self.mass, self.linear_damping, self.angular_damping, self.restitution, self.friction)
             
 # OBB（有向境界ボックス：Oriented Bounding Box）
 cdef class OBB:
@@ -507,16 +507,21 @@ cdef class OBB:
         self.shape_size_xyz = {"x": self.shape_size.x(), "y": self.shape_size.y(), "z": self.shape_size.z()}
 
     # OBBとの衝突判定
-    def get_collistion(self, point: MVector3D, root_global_pos: MVector3D, max_length: float):
+    cdef tuple get_collistion(self, MVector3D point, MVector3D root_global_pos, float max_length):
         pass
     
 # 球剛体
-class Sphere(OBB):
+cdef class Sphere(OBB):
     def __init__(self, *args):
         super().__init__(*args)
 
     # 衝突しているか
-    def get_collistion(self, point: MVector3D, root_global_pos: MVector3D, max_length: float):
+    cdef tuple get_collistion(self, MVector3D point, MVector3D root_global_pos, float max_length):
+        cdef MMatrix4x4 arm_matrix
+        cdef bint collision, near_collision
+        cdef float d, sin_x_theta, sin_y_theta, sin_z_theta, x, x_theta, y, y_theta, z, z_theta, x_distance, z_distance, new_y
+        cdef MVector3D local_point, new_x_local, new_z_local, rep_x_collision_vec, rep_z_collision_vec, x_arm_local, z_arm_local
+
         # 原点との距離が半径未満なら衝突
         d = point.distanceToPoint(self.origin)
         collision = 0 < d < self.shape_size.x() * 0.98
@@ -583,16 +588,22 @@ class Sphere(OBB):
                             new_x_local.to_log(), new_z_local.to_log(), rep_x_collision_vec, rep_z_collision_vec)
 
         # 3方向の間に点が含まれていたら衝突あり
-        return collision, near_collision, x_distance, z_distance, rep_x_collision_vec, rep_z_collision_vec
+        return (collision, near_collision, x_distance, z_distance, rep_x_collision_vec, rep_z_collision_vec)
 
 # 箱剛体
-class Box(OBB):
+cdef class Box(OBB):
     def __init__(self, *args):
         super().__init__(*args)
 
     # 衝突しているか（内外判定）
     # https://stackoverflow.com/questions/21037241/how-to-determine-a-point-is-inside-or-outside-a-cube
-    def get_collistion(self, point: MVector3D, root_global_pos: MVector3D, max_length: float):
+    cdef tuple get_collistion(self, MVector3D point, MVector3D root_global_pos, float max_length):
+        cdef MMatrix4x4 arm_matrix
+        cdef bint collision, near_collision, res1, res2, res3
+        cdef float d, sin_x_theta, sin_y_theta, sin_z_theta, x_theta, y, y_theta, z_theta, new_y, size1, size2, size3, x, z, x_diff, z_diff, x_distance, z_distance
+        cdef MVector3D b1,  b2, b4, d1, d2, d3, dir1, dir2, dir3, dir_vec, local_point, new_x_local, new_z_local, rep_x_collision_vec, rep_z_collision_vec, t1
+        cdef MVector3D x_arm_local, x_base, z_arm_local, z_base
+
         # 立方体の中にある場合、衝突
 
         # ---------
@@ -724,16 +735,23 @@ class Box(OBB):
             logger.debug("f: %s, xd: %s, zd: %s, l: %s, xl: %s, zl: %s, xr: %s, zr: %s", \
                             self.fno, x_distance, z_distance, local_point.to_log(), new_x_local.to_log(), new_z_local.to_log(), rep_x_collision_vec, rep_z_collision_vec)
 
-        return collision, near_collision, x_distance, z_distance, rep_x_collision_vec, rep_z_collision_vec
+        return (collision, near_collision, x_distance, z_distance, rep_x_collision_vec, rep_z_collision_vec)
 
 # カプセル剛体
-class Capsule(OBB):
+cdef class Capsule(OBB):
     def __init__(self, *args):
         super().__init__(*args)
 
     # 衝突しているか
     # http://marupeke296.com/COL_3D_No27_CapsuleCapsule.html
-    def get_collistion(self, point: MVector3D, root_global_pos: MVector3D, max_length: float):
+    cdef tuple get_collistion(self, MVector3D point, MVector3D root_global_pos, float max_length):
+        cdef MMatrix4x4 arm_matrix
+        cdef bint collision, near_collision
+        cdef float d, sin_x_theta, sin_y_theta, sin_z_theta, x, x_theta, y, y_theta, z, z_theta, x_distance, z_distance, new_y
+        cdef MVector3D local_point, new_x_local, new_z_local, rep_x_collision_vec, rep_z_collision_vec, x_arm_local, z_arm_local
+        cdef MVector3D b1, t1, h, v
+        cdef float ba, bb, bc, ta, tb, tc, lensq, t
+
         # 下辺
         b1 = self.rotated_matrix * MVector3D(0, -self.shape_size.y(), 0)
         # 上辺
@@ -849,7 +867,7 @@ class Capsule(OBB):
                             new_x_local.to_log(), new_z_local.to_log(), rep_x_collision_vec, rep_z_collision_vec)
 
         # 3方向の間に点が含まれていたら衝突あり
-        return collision, near_collision, x_distance, z_distance, rep_x_collision_vec, rep_z_collision_vec
+        return (collision, near_collision, x_distance, z_distance, rep_x_collision_vec, rep_z_collision_vec)
 
 
 # ジョイント構造-----------------------
@@ -871,7 +889,7 @@ class Joint:
         self.spring_constant_rotation = spring_constant_rotation
 
     def __str__(self):
-        return "<RigidBody name:{0}, english_name:{1}, joint_type:{2}, rigidbody_index_a:{3}, rigidbody_index_b:{4}, " \
+        return "<Joint name:{0}, english_name:{1}, joint_type:{2}, rigidbody_index_a:{3}, rigidbody_index_b:{4}, " \
                "position: {5}, rotation: {6}, translation_limit_min: {7}, translation_limit_max: {8}, " \
                "spring_constant_translation: {9}, spring_constant_rotation: {10}".format(
                    self.name, self.english_name, self.joint_type, self.rigidbody_index_a, self.rigidbody_index_b,

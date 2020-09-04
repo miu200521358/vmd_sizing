@@ -72,6 +72,36 @@ cdef class Bone:
     cdef public int BONEFLAG_IS_AFTER_PHYSICS_DEFORM
     cdef public int BONEFLAG_IS_EXTERNAL_PARENT_DEFORM
 
+
+cdef class RigidBody:
+    cdef public str name
+    cdef public str english_name
+    cdef public int bone_index
+    cdef public int collision_group
+    cdef public int no_collision_group
+    cdef public int shape_type
+    cdef public MVector3D shape_size
+    cdef public MVector3D shape_position
+    cdef public MVector3D shape_rotation
+    cdef public object param
+    cdef public int mode
+    cdef public int index
+    cdef public str bone_name
+    cdef public bint is_arm_upper
+    cdef public bint is_small
+    cdef public int SHAPE_SPHERE
+    cdef public int SHAPE_BOX
+    cdef public int SHAPE_CAPSULE
+
+
+cdef class RigidBodyParam:
+    cdef public float mass
+    cdef public float linear_damping
+    cdef public float angular_damping
+    cdef public float restitution
+    cdef public float friction
+
+
 cdef class OBB:
     cdef public int fno
     cdef public MVector3D shape_size
@@ -90,6 +120,8 @@ cdef class OBB:
     cdef public MVector3D origin
     cdef public dict origin_xyz
     cdef public dict shape_size_xyz
+
+    cdef tuple get_collistion(self, MVector3D point, MVector3D root_global_pos, float max_length)
 
 cdef class PmxModel:
     cdef public str path
