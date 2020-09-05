@@ -692,13 +692,13 @@ cdef class StanceService():
                     twist_result_dot = twist_test_dot
                     twist_result_degree = test_degree
 
-                    # twist_append_x_degree = math.degrees(math.acos(max(-1, min(1, twist_test_x_dot))) * 2)
-                    # twist_append_y_degree = math.degrees(math.acos(max(-1, min(1, twist_test_y_dot))) * 2)
+                    twist_append_x_degree = math.degrees(math.acos(max(-1, min(1, twist_test_x_dot))) * 2)
+                    twist_append_y_degree = math.degrees(math.acos(max(-1, min(1, twist_test_y_dot))) * 2)
                     # append_degree = math.degrees(math.acos(max(-1, min(1, twist_test_dot))))
-                    twist_append_x_qq = MQuaternion.rotationTo(twisted_test_local_x_vec, original_local_x_vec)
-                    twist_append_y_qq = MQuaternion.rotationTo(twisted_test_local_y_vec, original_local_y_vec)
-                    twist_append_x_degree = twist_append_x_qq.toDegree()
-                    twist_append_y_degree = twist_append_y_qq.toDegree()
+                    # twist_append_x_qq = MQuaternion.rotationTo(twisted_test_local_x_vec, original_local_x_vec)
+                    # twist_append_y_qq = MQuaternion.rotationTo(twisted_test_local_y_vec, original_local_y_vec)
+                    # twist_append_x_degree = twist_append_x_qq.toDegree()
+                    # twist_append_y_degree = twist_append_y_qq.toDegree()
                     logger.debug("○ twist_result_dot > twist_test_dot xdot: %s, ydot: %s, x: %s, y: %s", \
                                  twist_test_x_dot, twist_test_y_dot, twist_append_x_degree, twist_append_y_degree)
 

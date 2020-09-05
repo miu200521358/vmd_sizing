@@ -38,7 +38,7 @@ cdef c_calc_IK(PmxModel model, BoneLinks links, VmdMotion motion, int fno, MVect
 
     for bone_name in bone_name_list:
         # bfをモーションに登録
-        bf = motion.calc_bf(bone_name, fno)
+        bf = motion.c_calc_bf(bone_name, fno, is_key=False, is_read=False, is_reset_interpolation=False)
         motion.regist_bf(bf, bone_name, fno)
     
     cdef MVector3D local_effector_pos
@@ -112,7 +112,7 @@ cdef c_calc_IK(PmxModel model, BoneLinks links, VmdMotion motion, int fno, MVect
                 correct_qq = MQuaternion.fromAxisAndAngle(rotation_axis, min(rotation_degree, ik_bone.degree_limit))
 
                 # ジョイントに補正をかける
-                bf = motion.calc_bf(joint_name, fno)
+                bf = motion.c_calc_bf(joint_name, fno, is_key=False, is_read=False, is_reset_interpolation=False)
                 new_ik_qq = correct_qq * bf.rotation
 
                 # IK軸制限がある場合、上限下限をチェック
@@ -265,8 +265,10 @@ def calc_global_pos(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: i
         return return_tuple[0], return_tuple[1]
 
 cpdef tuple c_calc_global_pos(PmxModel model, BoneLinks links, VmdMotion motion, int fno, BoneLinks limit_links, bint return_matrix, bint is_local_x):
-    cdef list trans_vs = c_calc_relative_position(model, links, motion, fno, limit_links)
-    cdef list add_qs = c_calc_relative_rotation(model, links, motion, fno, limit_links)
+    tfun = profile(c_calc_relative_position)
+    cdef list trans_vs = tfun(model, links, motion, fno, limit_links)
+    afun = profile(c_calc_relative_rotation)
+    cdef list add_qs = afun(model, links, motion, fno, limit_links)
 
     # 行列
     cdef list matrixs = [MMatrix4x4() for i in range(links.size())]
@@ -370,7 +372,7 @@ cpdef dict calc_global_pos_by_direction(MQuaternion direction_qq, dict target_po
 def calc_relative_position(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, limit_links=None):
     return c_calc_relative_position(model, links, motion, fno, limit_links)
 
-cdef list c_calc_relative_position(PmxModel model, BoneLinks links, VmdMotion motion, int fno, BoneLinks limit_links):
+cpdef list c_calc_relative_position(PmxModel model, BoneLinks links, VmdMotion motion, int fno, BoneLinks limit_links):
     cdef list trans_vs = []
     cdef int link_idx
     cdef str link_bone_name
@@ -382,7 +384,7 @@ cdef list c_calc_relative_position(PmxModel model, BoneLinks links, VmdMotion mo
 
         if not limit_links or (limit_links and limit_links.get(link_bone_name)):
             # 上限リンクがある倍、ボーンが存在している場合のみ、モーション内のキー情報を取得
-            fill_bf = motion.calc_bf(link_bone.name, fno)
+            fill_bf = motion.calc_bf(link_bone.name, fno, is_key=False, is_read=False, is_reset_interpolation=False)
         else:
             # 上限リンクでボーンがない場合、ボーンは初期値
             fill_bf = VmdBoneFrame(fno=fno)
@@ -403,7 +405,7 @@ cdef list c_calc_relative_position(PmxModel model, BoneLinks links, VmdMotion mo
 def calc_relative_rotation(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, limit_links=None):
     return c_calc_relative_rotation(model, links, motion, fno, limit_links)
 
-cdef list c_calc_relative_rotation(PmxModel model, BoneLinks links, VmdMotion motion, int fno, BoneLinks limit_links):
+cpdef list c_calc_relative_rotation(PmxModel model, BoneLinks links, VmdMotion motion, int fno, BoneLinks limit_links):
     cdef list add_qs = []
     cdef int link_idx
     cdef str link_bone_name
@@ -416,7 +418,7 @@ cdef list c_calc_relative_rotation(PmxModel model, BoneLinks links, VmdMotion mo
 
         if not limit_links or (limit_links and limit_links.get(link_bone_name)):
             # 上限リンクがある場合、ボーンが存在している場合のみ、モーション内のキー情報を取得
-            fill_bf = motion.calc_bf(link_bone.name, fno)
+            fill_bf = motion.calc_bf(link_bone.name, fno, is_key=False, is_read=False, is_reset_interpolation=False)
         else:
             # 上限リンクでボーンがない場合、ボーンは初期値
             fill_bf = VmdBoneFrame(fno=fno)
@@ -453,7 +455,7 @@ cpdef MQuaternion deform_rotation(PmxModel model, VmdMotion motion, VmdBoneFrame
 
         while cnt < 100:
             # 付与親が取得できたら、該当する付与親の回転を取得する
-            effect_bf = motion.calc_bf(effect_bone.name, bf.fno)
+            effect_bf = motion.c_calc_bf(effect_bone.name, bf.fno, is_key=False, is_read=False, is_reset_interpolation=False)
 
             # 自身の回転量に付与親の回転量を付与率を加味して付与する
             if effect_parent_bone.effect_factor < 0:

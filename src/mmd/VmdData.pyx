@@ -899,9 +899,10 @@ cdef class VmdMotion:
     # https://www55.atwiki.jp/kumiho_k/pages/15.html
     # https://harigane.at.webry.info/201103/article_1.html
     def calc_bf(self, bone_name: str, fno: int, is_key=False, is_read=False, is_reset_interpolation=False):
-        return self.c_calc_bf(bone_name, fno, is_key, is_read, is_reset_interpolation)
+        cfun = profile(self.c_calc_bf)
+        return cfun(bone_name, fno, is_key, is_read, is_reset_interpolation)
 
-    cdef VmdBoneFrame c_calc_bf(self, str bone_name, int fno, bint is_key, bint is_read, bint is_reset_interpolation):
+    cpdef VmdBoneFrame c_calc_bf(self, str bone_name, int fno, bint is_key, bint is_read, bint is_reset_interpolation):
         cdef VmdBoneFrame fill_bf = VmdBoneFrame(fno)
 
         if bone_name not in self.bones:
@@ -954,8 +955,10 @@ cdef class VmdMotion:
         fill_bf.bname = prev_bf.bname
 
         # 補間曲線を元に間を埋める
-        fill_bf.rotation = self.calc_bf_rot(prev_bf, fill_bf, next_bf)
-        fill_bf.position = self.calc_bf_pos(prev_bf, fill_bf, next_bf)
+        rfunc = profile(self.calc_bf_rot)
+        fill_bf.rotation = rfunc(prev_bf, fill_bf, next_bf)
+        pfunc = profile(self.calc_bf_pos)
+        fill_bf.position = pfunc(prev_bf, fill_bf, next_bf)
 
         if is_reset_interpolation:
             # 補間曲線再設定の場合、範囲外でも構わないので補間曲線を設定する

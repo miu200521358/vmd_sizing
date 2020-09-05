@@ -3,6 +3,9 @@
 import _pickle as cPickle
 import math
 import numpy as np
+cimport numpy as np
+cimport libc.math as math
+cimport cython
 
 from libcpp cimport  list, str, int, float, dict
 from module.MMath cimport MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
@@ -1010,6 +1013,7 @@ cdef class PmxModel:
                     to_pos = from_pos + default_pos
 
         from_qq = MQuaternion()
+        diff_pos = MVector3D()
         if from_pos != MVector3D() and to_pos != MVector3D():
             logger.test("from_pos: %s", from_pos)
             logger.test("to_pos: %s", to_pos)

@@ -1,3 +1,4 @@
+@echo off
 cls
 
 cd /d %~dp0

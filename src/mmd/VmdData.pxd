@@ -76,7 +76,7 @@ cdef class VmdMotion:
 
     cdef c_regist_bf(self, VmdBoneFrame bf, str bone_name, int fno, bint copy_interpolation)
 
-    cdef VmdBoneFrame c_calc_bf(self, str bone_name, int fno, bint is_key, bint is_read, bint is_reset_interpolation)
+    cpdef VmdBoneFrame c_calc_bf(self, str bone_name, int fno, bint is_key, bint is_read, bint is_reset_interpolation)
 
     cpdef MQuaternion calc_bf_rot(self, VmdBoneFrame prev_bf, VmdBoneFrame fill_bf, VmdBoneFrame next_bf)
 

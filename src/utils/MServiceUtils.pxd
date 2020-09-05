@@ -23,9 +23,9 @@ cpdef tuple c_calc_global_pos(PmxModel model, BoneLinks links, VmdMotion motion,
 
 cpdef dict calc_global_pos_by_direction(MQuaternion direction_qq, dict target_pos_3ds_dic)
 
-cdef list c_calc_relative_position(PmxModel model, BoneLinks links, VmdMotion motion, int fno, BoneLinks limit_links)
+cpdef list c_calc_relative_position(PmxModel model, BoneLinks links, VmdMotion motion, int fno, BoneLinks limit_links)
 
-cdef list c_calc_relative_rotation(PmxModel model, BoneLinks links, VmdMotion motion, int fno, BoneLinks limit_links)
+cpdef list c_calc_relative_rotation(PmxModel model, BoneLinks links, VmdMotion motion, int fno, BoneLinks limit_links)
 
 cpdef MQuaternion deform_rotation(PmxModel model, VmdMotion motion, VmdBoneFrame bf)
 

@@ -96,19 +96,19 @@ cdef class ArmAvoidanceService():
     # 接触回避
     cpdef bint execute_avoidance_pool(self, int data_set_idx, str direction):
         try:
-            # 接触回避準備
-            all_avoidance_axis = self.prepare_avoidance_dataset(data_set_idx, direction)
-
-            # 接触回避処理
-            self.execute_avoidance(data_set_idx, direction, all_avoidance_axis)
-
             # # 接触回避準備
-            # pfun = profile(self.prepare_avoidance_dataset)
-            # all_avoidance_axis = pfun(data_set_idx, direction)
+            # all_avoidance_axis = self.prepare_avoidance_dataset(data_set_idx, direction)
 
             # # 接触回避処理
-            # pfun = profile(self.execute_avoidance)
-            # pfun(data_set_idx, direction, all_avoidance_axis)
+            # self.execute_avoidance(data_set_idx, direction, all_avoidance_axis)
+
+            # 接触回避準備
+            pfun = profile(self.prepare_avoidance_dataset)
+            all_avoidance_axis = pfun(data_set_idx, direction)
+
+            # 接触回避処理
+            pfun = profile(self.execute_avoidance)
+            pfun(data_set_idx, direction, all_avoidance_axis)
 
             # # 各ボーンのbfを円滑化
             # futures = []
@@ -213,11 +213,13 @@ cdef class ArmAvoidanceService():
                 avoidance_axis = all_avoidance_axis[fno]
 
             for ((avoidance_name, avodance_link), avoidance) in zip(avoidance_options.avoidance_links.items(), avoidance_options.avoidances.values()):
+                cfun = profile(MServiceUtils.calc_global_pos)
                 # 剛体の現在位置をチェック
                 (rep_avbone_global_3ds, rep_avbone_global_mats) = \
-                    MServiceUtils.calc_global_pos(data_set.rep_model, avodance_link, data_set.motion, fno, return_matrix=True, is_local_x=False, limit_links=None)
+                    cfun(data_set.rep_model, avodance_link, data_set.motion, fno, return_matrix=True, is_local_x=False, limit_links=None)
                 
-                obb = avoidance.get_obb(fno, avodance_link.get(avodance_link.last_name()).position, rep_avbone_global_mats, self.options.arm_options.alignment, direction == "左")
+                ofun = profile(avoidance.get_obb)
+                obb = ofun(fno, avodance_link.get(avodance_link.last_name()).position, rep_avbone_global_mats, self.options.arm_options.alignment, direction == "左")
 
                 # # 剛体の原点 ---------------
                 # debug_bone_name = "原点"
