@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 #
-# cython: profile=True
-# cython: linetrace=True
-# cython: binding=True
-# distutils: define_macros=CYTHON_TRACE_NOGIL=1
+# ccython: profile=True
+# ccython: linetrace=True
+# ccython: binding=True
+# cdistutils: define_macros=CYTHON_TRACE_NOGIL=1
 import numpy as np # noqa
 import math # noqa
 import numpy as np
@@ -74,7 +74,7 @@ cdef c_calc_IK(PmxModel model, BoneLinks links, VmdMotion motion, int fno, MVect
             ik_bone = ik_links.get(joint_name)
 
             # 現在のボーングローバル位置と行列を取得
-            global_3ds_dic, total_mats = calc_global_pos(model, links, motion, fno, return_matrix=True)
+            global_3ds_dic, total_mats = c_calc_global_pos(model, links, motion, fno, limit_links=None, return_matrix=True, is_local_x=False)
 
             # エフェクタ（末端）
             global_effector_pos = global_3ds_dic[ik_links.first_name()]
@@ -257,6 +257,8 @@ cdef tuple c_calc_front_global_pos(PmxModel model, BoneLinks links, VmdMotion mo
 
 # グローバル位置算出
 def calc_global_pos(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, limit_links=None, return_matrix=False, is_local_x=False):
+    # cfun = profile(c_calc_global_pos)
+    # return_tuple = cfun(model, links, motion, fno, limit_links, return_matrix, is_local_x)
     return_tuple = c_calc_global_pos(model, links, motion, fno, limit_links, return_matrix, is_local_x)
     if not return_matrix:
         return return_tuple[0]
@@ -265,10 +267,10 @@ def calc_global_pos(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: i
         return return_tuple[0], return_tuple[1]
 
 cpdef tuple c_calc_global_pos(PmxModel model, BoneLinks links, VmdMotion motion, int fno, BoneLinks limit_links, bint return_matrix, bint is_local_x):
-    tfun = profile(c_calc_relative_position)
-    cdef list trans_vs = tfun(model, links, motion, fno, limit_links)
-    afun = profile(c_calc_relative_rotation)
-    cdef list add_qs = afun(model, links, motion, fno, limit_links)
+    # pfun = profile(c_calc_relative_position)
+    # cdef list trans_vs = pfun(model, links, motion, fno, limit_links)
+    cdef list trans_vs = c_calc_relative_position(model, links, motion, fno, limit_links)
+    cdef list add_qs = c_calc_relative_rotation(model, links, motion, fno, limit_links)
 
     # 行列
     cdef list matrixs = [MMatrix4x4() for i in range(links.size())]
@@ -418,7 +420,7 @@ cpdef list c_calc_relative_rotation(PmxModel model, BoneLinks links, VmdMotion m
 
         if not limit_links or (limit_links and limit_links.get(link_bone_name)):
             # 上限リンクがある場合、ボーンが存在している場合のみ、モーション内のキー情報を取得
-            fill_bf = motion.calc_bf(link_bone.name, fno, is_key=False, is_read=False, is_reset_interpolation=False)
+            fill_bf = motion.c_calc_bf(link_bone.name, fno, is_key=False, is_read=False, is_reset_interpolation=False)
         else:
             # 上限リンクでボーンがない場合、ボーンは初期値
             fill_bf = VmdBoneFrame(fno=fno)

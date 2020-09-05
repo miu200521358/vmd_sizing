@@ -119,9 +119,9 @@ cdef class MVector3D:
 
     cpdef MVector3D effective(self)
 
-    cpdef MVector3D c_crossProduct(self, MVector3D v1, MVector3D v2)
+    cdef MVector3D c_crossProduct(self, MVector3D v1, MVector3D v2)
 
-    cpdef DTYPE_FLOAT_t c_dotProduct(self, MVector3D v1, MVector3D v2)
+    cdef DTYPE_FLOAT_t c_dotProduct(self, MVector3D v1, MVector3D v2)
     
     cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] data(self)
     
@@ -192,7 +192,7 @@ cdef class MVector4D:
                    
     cpdef MVector4D effective(self)
 
-    cpdef DTYPE_FLOAT_t c_dotProduct(self, MVector4D v1, MVector4D v2)
+    cdef DTYPE_FLOAT_t c_dotProduct(self, MVector4D v1, MVector4D v2)
     
     cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] data(self)
 
@@ -267,25 +267,25 @@ cdef class MQuaternion:
 
     cpdef DTYPE_FLOAT_t calcTheata(self, MQuaternion v)
 
-    cpdef DTYPE_FLOAT_t c_dotProduct(self, MQuaternion v1, MQuaternion v2)
+    cdef DTYPE_FLOAT_t c_dotProduct(self, MQuaternion v1, MQuaternion v2)
 
-    cpdef MQuaternion c_fromAxisAndAngle(self, MVector3D vec3, DTYPE_FLOAT_t angle)
+    cdef MQuaternion c_fromAxisAndAngle(self, MVector3D vec3, DTYPE_FLOAT_t angle)
 
-    cpdef MQuaternion c_fromAxisAndQuaternion(self, MVector3D vec3, MQuaternion qq)
+    cdef MQuaternion c_fromAxisAndQuaternion(self, MVector3D vec3, MQuaternion qq)
 
-    cpdef MQuaternion c_fromDirection(self, MVector3D direction, MVector3D up)
+    cdef MQuaternion c_fromDirection(self, MVector3D direction, MVector3D up)
 
-    cpdef MQuaternion c_fromAxes(self, MVector3D xAxis, MVector3D yAxis, MVector3D zAxis)
+    cdef MQuaternion c_fromAxes(self, MVector3D xAxis, MVector3D yAxis, MVector3D zAxis)
     
-    cpdef MQuaternion c_fromRotationMatrix(self, np.ndarray[DTYPE_FLOAT_t, ndim=2] rot3x3)
+    cdef MQuaternion c_fromRotationMatrix(self, np.ndarray[DTYPE_FLOAT_t, ndim=2] rot3x3)
 
-    cpdef MQuaternion c_rotationTo(self, MVector3D fromv, MVector3D tov)
+    cdef MQuaternion c_rotationTo(self, MVector3D fromv, MVector3D tov)
         
-    cpdef MQuaternion c_fromEulerAngles(self, DTYPE_FLOAT_t pitch, DTYPE_FLOAT_t yaw, DTYPE_FLOAT_t roll)
+    cdef MQuaternion c_fromEulerAngles(self, DTYPE_FLOAT_t pitch, DTYPE_FLOAT_t yaw, DTYPE_FLOAT_t roll)
     
-    cpdef MQuaternion c_nlerp(self, MQuaternion q1, MQuaternion q2, DTYPE_FLOAT_t t)
+    cdef MQuaternion c_nlerp(self, MQuaternion q1, MQuaternion q2, DTYPE_FLOAT_t t)
     
-    cpdef MQuaternion c_slerp(self, MQuaternion q1, MQuaternion q2, DTYPE_FLOAT_t t)
+    cdef MQuaternion c_slerp(self, MQuaternion q1, MQuaternion q2, DTYPE_FLOAT_t t)
 
     cpdef DTYPE_FLOAT_t x(self)
 

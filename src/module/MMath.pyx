@@ -2,11 +2,11 @@
 #
 # cython: boundscheck=False
 # cython: wraparound=False
-# 
-# cython: profile=True
-# cython: linetrace=True
-# cython: binding=True
-# distutils: define_macros=CYTHON_TRACE_NOGIL=1
+#
+# ccython: profile=True
+# ccython: linetrace=True
+# ccython: binding=True
+# cdistutils: define_macros=CYTHON_TRACE_NOGIL=1
 import math
 import numpy as np
 import quaternion # noqa
@@ -46,7 +46,9 @@ cdef class MRect:
 cdef class MVector2D:
 
     def __init__(self, x=0.0, y=0.0):
-        if isinstance(x, MVector2D):
+        if isinstance(x, float):
+            self.__data = np.array([x, y], dtype=np.float64)
+        elif isinstance(x, MVector2D):
             # クラスの場合
             self.__data = np.array([x.x(), x.y()], dtype=np.float64)
         elif isinstance(x, np.ndarray):
@@ -324,7 +326,9 @@ def rebuild_MVector2D(x, y, z):
 cdef class MVector3D:
 
     def __init__(self, x=0.0, y=0.0, z=0.0):
-        if isinstance(x, MVector3D):
+        if isinstance(x, float):
+            self.__data = np.array([x, y, z], dtype=np.float64)
+        elif isinstance(x, MVector3D):
             # クラスの場合
             self.__data = np.array([x.x(), x.y(), x.z()], dtype=np.float64)
         elif isinstance(x, np.ndarray):
@@ -438,7 +442,7 @@ cdef class MVector3D:
         cdef MVector3D v = MVector3D()
         return v.c_crossProduct(v1, v2) 
 
-    cpdef MVector3D c_crossProduct(self, MVector3D v1, MVector3D v2):
+    cdef MVector3D c_crossProduct(self, MVector3D v1, MVector3D v2):
         cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] crossv = np.cross(v1.__data, v2.__data)
         return MVector3D(crossv[0], crossv[1], crossv[2])
 
@@ -447,7 +451,7 @@ cdef class MVector3D:
         cdef MVector3D v = MVector3D()
         return v.c_dotProduct(v1, v2) 
 
-    cpdef DTYPE_FLOAT_t c_dotProduct(self, MVector3D v1, MVector3D v2):
+    cdef DTYPE_FLOAT_t c_dotProduct(self, MVector3D v1, MVector3D v2):
         return np.dot(v1.__data, v2.__data)
     
     cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] data(self):
@@ -466,10 +470,14 @@ cdef class MVector3D:
         return np.all(np.less_equal(self.data(), other.data()))
 
     def __eq__(self, other):
-        return np.all(np.equal(self.data(), other.data()))
+        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d1 = self.data()
+        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d2 = other.data()
+        return d1[0] == d2[0] and d1[1] == d2[1] and d1[2] == d2[2]
 
     def __ne__(self, other):
-        return np.any(np.not_equal(self.data(), other.data()))
+        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d1 = self.data()
+        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d2 = other.data()
+        return d1[0] != d2[0] or d1[1] != d2[1] or d1[2] != d2[2]
 
     def __gt__(self, other):
         return np.all(np.greater(self.data(), other.data()))
@@ -697,8 +705,10 @@ def rebuild_MVector3D(x, y, z):
 
 cdef class MVector4D:
 
-    def __init__(self, x=0, y=0, z=0, w=0):
-        if isinstance(x, MVector4D):
+    def __init__(self, x=0.0, y=0.0, z=0.0, w=0.0):
+        if isinstance(x, float):
+            self.__data = np.array([x, y, z, w], dtype=np.float64)
+        elif isinstance(x, MVector4D):
             # クラスの場合
             self.__data = np.array([x.x(), x.y(), x.z(), x.w()], dtype=np.float64)
         elif isinstance(x, np.ndarray):
@@ -749,7 +759,7 @@ cdef class MVector4D:
         cdef MVector4D v = MVector4D()
         return v.c_dotProduct(v1, v2) 
 
-    cpdef DTYPE_FLOAT_t c_dotProduct(self, MVector4D v1, MVector4D v2):
+    cdef DTYPE_FLOAT_t c_dotProduct(self, MVector4D v1, MVector4D v2):
         return np.dot(v1.__data, v2.__data)
     
     cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] data(self):
@@ -763,6 +773,16 @@ cdef class MVector4D:
 
     def __le__(self, other):
         return self.data().less_equal(other.data())
+
+    def __eq__(self, other):
+        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d1 = self.data()
+        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d2 = other.data()
+        return d1[0] == d2[0] and d1[1] == d2[1] and d1[2] == d2[2] and d1[3] == d2[3]
+
+    def __ne__(self, other):
+        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d1 = self.data()
+        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d2 = other.data()
+        return d1[0] != d2[0] or d1[1] != d2[1] or d1[2] != d2[2] or d1[3] != d2[3]
 
     def __eq__(self, other):
         return self.data().equal(other.data())
@@ -1009,8 +1029,10 @@ def rebuild_MVector4D(x, y, z, w):
 
 cdef class MQuaternion:
 
-    def __init__(self, w=1, x=0, y=0, z=0):
-        if isinstance(w, MQuaternion):
+    def __init__(self, w=1.0, x=0.0, y=0.0, z=0.0):
+        if isinstance(w, float):
+            self.__data = np.array([w, x, y, z], dtype=np.float64)
+        elif isinstance(w, MQuaternion):
             # クラスの場合
             self.__data = w.__data
         elif isinstance(w, np.quaternion):
@@ -1159,15 +1181,16 @@ cdef class MQuaternion:
         cdef MQuaternion v = MQuaternion()
         return v.c_dotProduct(v1, v2) 
     
-    cpdef DTYPE_FLOAT_t c_dotProduct(self, MQuaternion v1, MQuaternion v2):
-        return np.sum(v1.data().components * v2.data().components)
+    cdef DTYPE_FLOAT_t c_dotProduct(self, MQuaternion v1, MQuaternion v2):
+        return np.dot(v1.data().components, v2.data().components)
+        # return np.sum(v1.data().components * v2.data().components)
     
     @classmethod
     def fromAxisAndAngle(cls, vec3, angle):
         cdef MQuaternion v = MQuaternion()
         return v.c_fromAxisAndAngle(vec3, angle) 
     
-    cpdef MQuaternion c_fromAxisAndAngle(self, MVector3D vec3, DTYPE_FLOAT_t angle):
+    cdef MQuaternion c_fromAxisAndAngle(self, MVector3D vec3, DTYPE_FLOAT_t angle):
         cdef DTYPE_FLOAT_t x = vec3.x()
         cdef DTYPE_FLOAT_t y = vec3.y()
         cdef DTYPE_FLOAT_t z = vec3.z()
@@ -1188,7 +1211,7 @@ cdef class MQuaternion:
         cdef MQuaternion v = MQuaternion()
         return v.c_fromAxisAndQuaternion(vec3, qq) 
     
-    cpdef MQuaternion c_fromAxisAndQuaternion(self, MVector3D vec3, MQuaternion qq):
+    cdef MQuaternion c_fromAxisAndQuaternion(self, MVector3D vec3, MQuaternion qq):
         qq.normalize()
 
         cdef DTYPE_FLOAT_t x = vec3.x()
@@ -1214,7 +1237,7 @@ cdef class MQuaternion:
         cdef MQuaternion v = MQuaternion()
         return v.c_fromDirection(direction, up) 
     
-    cpdef MQuaternion c_fromDirection(self, MVector3D direction, MVector3D up):
+    cdef MQuaternion c_fromDirection(self, MVector3D direction, MVector3D up):
         if direction.is_almost_null():
             return MQuaternion()
 
@@ -1233,7 +1256,7 @@ cdef class MQuaternion:
         cdef MQuaternion v = MQuaternion()
         return v.c_fromAxes(xAxis, yAxis, zAxis) 
     
-    cpdef MQuaternion c_fromAxes(self, MVector3D xAxis, MVector3D yAxis, MVector3D zAxis):
+    cdef MQuaternion c_fromAxes(self, MVector3D xAxis, MVector3D yAxis, MVector3D zAxis):
         cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] rot3x3 = np.array([[xAxis.x(), yAxis.x(), zAxis.x()], [xAxis.y(), yAxis.y(), zAxis.y()], [xAxis.z(), yAxis.z(), zAxis.z()]])
         return MQuaternion.fromRotationMatrix(rot3x3)
     
@@ -1242,7 +1265,7 @@ cdef class MQuaternion:
         cdef MQuaternion v = MQuaternion()
         return v.c_fromRotationMatrix(rot3x3) 
     
-    cpdef MQuaternion c_fromRotationMatrix(self, np.ndarray[DTYPE_FLOAT_t, ndim=2] rot3x3):
+    cdef MQuaternion c_fromRotationMatrix(self, np.ndarray[DTYPE_FLOAT_t, ndim=2] rot3x3):
         cdef DTYPE_FLOAT_t scalar = 0
         cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] axis = np.zeros(3)
 
@@ -1283,7 +1306,7 @@ cdef class MQuaternion:
         cdef MQuaternion v = MQuaternion()
         return v.c_rotationTo(fromv, tov) 
     
-    cpdef MQuaternion c_rotationTo(self, MVector3D fromv, MVector3D tov):
+    cdef MQuaternion c_rotationTo(self, MVector3D fromv, MVector3D tov):
         cdef MVector3D v0 = fromv.normalized()
         cdef MVector3D v1 = tov.normalized()
         cdef DTYPE_FLOAT_t d = v0.c_dotProduct(v0, v1) + 1.0
@@ -1307,7 +1330,7 @@ cdef class MQuaternion:
         cdef MQuaternion v = MQuaternion()
         return v.c_fromEulerAngles(pitch, yaw, roll) 
     
-    cpdef MQuaternion c_fromEulerAngles(self, DTYPE_FLOAT_t pitch, DTYPE_FLOAT_t yaw, DTYPE_FLOAT_t roll):
+    cdef MQuaternion c_fromEulerAngles(self, DTYPE_FLOAT_t pitch, DTYPE_FLOAT_t yaw, DTYPE_FLOAT_t roll):
         pitch = math.radians(pitch)
         yaw = math.radians(yaw)
         roll = math.radians(roll)
@@ -1336,7 +1359,7 @@ cdef class MQuaternion:
         cdef MQuaternion v = MQuaternion()
         return v.c_nlerp(q1, q2, t) 
     
-    cpdef MQuaternion c_nlerp(self, MQuaternion q1, MQuaternion q2, DTYPE_FLOAT_t t):
+    cdef MQuaternion c_nlerp(self, MQuaternion q1, MQuaternion q2, DTYPE_FLOAT_t t):
         # Handle the easy cases first.
         if t <= 0.0:
             return q1
@@ -1356,10 +1379,11 @@ cdef class MQuaternion:
     @classmethod
     def slerp(cls, q1, q2, t):
         cdef MQuaternion v = MQuaternion()
-        sfunc = profile(v.c_slerp)
-        return sfunc(q1, q2, t) 
+        return v.c_slerp(q1, q2, t) 
+        # cfun = profile(v.c_slerp)
+        # return cfun(q1, q2, t) 
 
-    cpdef MQuaternion c_slerp(self, MQuaternion q1, MQuaternion q2, DTYPE_FLOAT_t t):
+    cdef MQuaternion c_slerp(self, MQuaternion q1, MQuaternion q2, DTYPE_FLOAT_t t):
         # Handle the easy cases first.
         if t <= 0.0:
             return q1
@@ -1369,6 +1393,8 @@ cdef class MQuaternion:
         # Determine the angle between the two quaternions.
         cdef MQuaternion q2b = MQuaternion(q2.scalar(), q2.x(), q2.y(), q2.z())
         cdef DTYPE_FLOAT_t dot = q2b.c_dotProduct(q1, q2)
+        # dfunc = profile(q2b.c_dotProduct)
+        # cdef DTYPE_FLOAT_t dot = dfunc(q1, q2)
         
         if dot < 0.0:
             q2b = -q2b
@@ -1544,8 +1570,10 @@ def rebuild_MQuaternion(scalar, x, y, z):
 
 cdef class MMatrix4x4:
 
-    def __init__(self, m11=1, m12=0, m13=0, m14=0, m21=0, m22=1, m23=0, m24=0, m31=0, m32=0, m33=1, m34=0, m41=0, m42=0, m43=0, m44=1):
-        if isinstance(m11, MMatrix4x4):
+    def __init__(self, m11=1.0, m12=0, m13=0, m14=0, m21=0, m22=1, m23=0, m24=0, m31=0, m32=0, m33=1, m34=0, m41=0, m42=0, m43=0, m44=1):
+        if isinstance(m11, float):
+            self.__data = np.array([[m11, m12, m13, m14], [m21, m22, m23, m24], [m31, m32, m33, m34], [m41, m42, m43, m44]], dtype=np.float64)
+        elif isinstance(m11, MMatrix4x4):
             # 行列クラスの場合
             self.__data = np.array([[m11.__data[0, 0], m11.__data[0, 1], m11.__data[0, 2], m11.__data[0, 3]], \
                                     [m11.__data[1, 0], m11.__data[1, 1], m11.__data[1, 2], m11.__data[1, 3]], \
