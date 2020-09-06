@@ -148,7 +148,7 @@ class MLogger():
             extra_args["module_name"] = self.module_name
 
             # ログレコード生成
-            if args and isinstance(args[0], Exception):
+            if args and isinstance(args[0], Exception) or (args and len(args) > 1 and isinstance(args[0], Exception)):
                 log_record = self.logger.makeRecord('name', target_level, "(unknown file)", 0, "{0}\n\n{1}".format(msg, traceback.format_exc()), None, None, self.module_name)
             else:
                 log_record = self.logger.makeRecord('name', target_level, "(unknown file)", 0, msg, args, None, self.module_name)
