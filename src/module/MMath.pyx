@@ -671,31 +671,22 @@ cdef class MVector3D:
         return self.__class__(+self.x(), +self.y(), +self.z())
 
     cpdef DTYPE_FLOAT_t x(self):
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d = self.data()
-        return d[0]
+        return self.__data[0]
 
     cpdef DTYPE_FLOAT_t y(self):
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d = self.data()
-        return d[1]
+        return self.__data[1]
 
     cpdef DTYPE_FLOAT_t z(self):
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d = self.data()
-        return d[2]
+        return self.__data[2]
     
     cpdef setX(self, DTYPE_FLOAT_t x):
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d = self.data()
-        d[0] = x
-        self.__data = d
+        self.__data[0] = x
 
     cpdef setY(self, DTYPE_FLOAT_t y):
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d = self.data()
-        d[1] = y
-        self.__data = d
+        self.__data[1] = y
 
     cpdef setZ(self, DTYPE_FLOAT_t z):
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d = self.data()
-        d[2] = z
-        self.__data = d
+        self.__data[2] = z
 
     def __reduce__(self):
         return (rebuild_MVector3D, (self.x(), self.y(), self.z()))
@@ -985,40 +976,28 @@ cdef class MVector4D:
     #     return self.__class__(~self.__data[0], ~self.__data[1], ~self.__data[2], ~self.__data[3])
     
     cpdef DTYPE_FLOAT_t x(self):
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d = self.data()
-        return d[0]
+        return self.__data[0]
 
     cpdef DTYPE_FLOAT_t y(self):
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d = self.data()
-        return d[1]
+        return self.__data[1]
 
     cpdef DTYPE_FLOAT_t z(self):
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d = self.data()
-        return d[2]
+        return self.__data[2]
 
     cpdef DTYPE_FLOAT_t w(self):
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d = self.data()
-        return d[3]
+        return self.__data[3]
     
     cpdef setX(self, DTYPE_FLOAT_t x):
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d = self.data()
-        d[0] = x
-        self.__data = d
+        self.__data[0] = x
 
     cpdef setY(self, DTYPE_FLOAT_t y):
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d = self.data()
-        d[1] = y
-        self.__data = d
+        self.__data[1] = y
 
     cpdef setZ(self, DTYPE_FLOAT_t z):
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d = self.data()
-        d[2] = z
-        self.__data = d
+        self.__data[2] = z
 
     cpdef setW(self, DTYPE_FLOAT_t w):
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d = self.data()
-        d[3] = w
-        self.__data = d
+        self.__data[3] = w
 
     def __reduce__(self):
         return (rebuild_MVector4D, (self.x(), self.y(), self.z(), self.w()))
@@ -1542,24 +1521,16 @@ cdef class MQuaternion:
         return self.data().w
     
     cpdef setX(self, DTYPE_FLOAT_t x):
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d = self.data().components
-        d[1] = x
-        self.__data = d
+        self.__data[1] = x
 
     cpdef setY(self, DTYPE_FLOAT_t y):
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d = self.data().components
-        d[2] = y
-        self.__data = d
+        self.__data[2] = y
 
     cpdef setZ(self, DTYPE_FLOAT_t z):
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d = self.data().components
-        d[3] = z
-        self.__data = d
+        self.__data[3] = z
 
     cpdef setScalar(self, DTYPE_FLOAT_t scalar):
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d = self.data().components
-        d[0] = scalar
-        self.__data = d
+        self.__data[0] = scalar
 
     def __reduce__(self):
         return (rebuild_MQuaternion, (self.scalar(), self.x(), self.y(), self.z()))
@@ -1604,20 +1575,25 @@ cdef class MMatrix4x4:
     # 回転行列
     cpdef rotate(self, MQuaternion qq):
         cdef MMatrix4x4 qq_mat = qq.toMatrix4x4()
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] m = self.data().dot(qq_mat.data())
-        self.__data = m
+        self.__data = self.data().dot(qq_mat.data())
 
     # 平行移動行列
     cpdef translate(self, MVector3D vec3):
         cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] d = self.data()
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] vec_mat = np.tile(np.array([vec3.x(), vec3.y(), vec3.z()]), (4, 1))
+        cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] vec_mat = np.array([[vec3.x(), vec3.y(), vec3.z()], 
+                                                                   [vec3.x(), vec3.y(), vec3.z()], 
+                                                                   [vec3.x(), vec3.y(), vec3.z()], 
+                                                                   [vec3.x(), vec3.y(), vec3.z()]], dtype=np.float64)
         cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] data_mat = d[:, :3] * vec_mat
         d[:, 3] += np.sum(data_mat, axis=1)
         self.__data = d
 
     # 縮尺行列
     cpdef scale(self, MVector3D vec3):
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] vec_mat = np.tile(np.array([vec3.x(), vec3.y(), vec3.z()]), (4, 1))
+        cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] vec_mat = np.array([[vec3.x(), vec3.y(), vec3.z()], 
+                                                                   [vec3.x(), vec3.y(), vec3.z()], 
+                                                                   [vec3.x(), vec3.y(), vec3.z()], 
+                                                                   [vec3.x(), vec3.y(), vec3.z()]], dtype=np.float64)
         cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] d = self.data()
         d[:, :3] *= vec_mat
         self.__data = d
@@ -1799,7 +1775,10 @@ cdef class MMatrix4x4:
         return self.__class__(v)
 
     cpdef MVector3D mul_MVector3D(self, MVector3D other):
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] vec_mat = np.tile(np.array([other.x(), other.y(), other.z()]), (4, 1))
+        cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] vec_mat = np.array([[other.x(), other.y(), other.z()], 
+                                                                   [other.x(), other.y(), other.z()], 
+                                                                   [other.x(), other.y(), other.z()], 
+                                                                   [other.x(), other.y(), other.z()]], dtype=np.float64)
         cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] d = self.data()
         cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] data_sum = np.sum(vec_mat * d[:, :3], axis=1) + d[:, 3]
 
@@ -1816,7 +1795,10 @@ cdef class MMatrix4x4:
             return MVector3D(x / w, y / w, z / w)
 
     cpdef MVector4D mul_MVector4D(self, MVector4D other):
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] vec_mat = np.tile(np.array([other.x(), other.y(), other.z(), other.w()]), (4, 1))
+        cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] vec_mat = np.array([[other.x(), other.y(), other.z(), other.w()], 
+                                                                   [other.x(), other.y(), other.z(), other.w()], 
+                                                                   [other.x(), other.y(), other.z(), other.w()], 
+                                                                   [other.x(), other.y(), other.z(), other.w()]], dtype=np.float64)
         cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] d = self.data()
         cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] data_sum = np.sum(vec_mat * d, axis=1)
 
@@ -1837,40 +1819,30 @@ cdef class MMatrix4x4:
         return self.iadd_MMatrix4x4(other)
     
     cpdef MMatrix4x4 iadd_MMatrix4x4(self, MMatrix4x4 other):
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] d1 = self.data()
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] d2 = other.data()
-
-        self.__data = d1 + d2.T
+        self.__data = self.data() + other.data().T
         return self
 
     def __isub__(self, other):
         return self.isub_MMatrix4x4(other)
     
     cpdef MMatrix4x4 isub_MMatrix4x4(self, MMatrix4x4 other):
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] d1 = self.data()
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] d2 = other.data()
-
-        self.__data = d1 - d2.T
+        self.__data = self.data() - other.data().T
         return self
 
     def __imul__(self, other):
+        # cfun = profile(self.imul_MMatrix4x4)
+        # return cfun(other)
         return self.imul_MMatrix4x4(other)
     
     cpdef MMatrix4x4 imul_MMatrix4x4(self, MMatrix4x4 other):
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] d1 = self.data()
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] d2 = other.data()
-
-        self.__data = np.dot(d1, d2)
+        self.__data = np.dot(self.data(), other.data())
         return self
 
     def __itruediv__(self, other):
         return self.itruediv_MMatrix4x4(other)
     
     cpdef MMatrix4x4 itruediv_MMatrix4x4(self, MMatrix4x4 other):
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] d1 = self.data()
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] d2 = other.data()
-
-        self.__data = d1 / d2.T
+        self.__data = self.data() / other.data().T
         return self
 
 cpdef is_almost_null(v):

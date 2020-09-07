@@ -278,16 +278,19 @@ cpdef tuple c_calc_global_pos(PmxModel model, BoneLinks links, VmdMotion motion,
     cdef str lname
     cdef MVector3D v
     cdef MQuaternion q
+    cdef MMatrix4x4 mm
 
     for n, (lname, v, q) in enumerate(zip(links.all().keys(), trans_vs, add_qs)):
         # 行列を生成
-        matrixs[n] = MMatrix4x4()
+        mm = MMatrix4x4()
         # 初期化
-        matrixs[n].setToIdentity()
+        mm.setToIdentity()
         # 移動
-        matrixs[n].translate(v)
+        mm.translate(v)
         # 回転
-        matrixs[n].rotate(q)
+        mm.rotate(q)
+        # 設定
+        matrixs[n] = mm
 
     cdef dict total_mats
     cdef dict global_3ds_dic
@@ -301,23 +304,23 @@ cpdef tuple c_calc_global_pos(PmxModel model, BoneLinks links, VmdMotion motion,
 
     for n, (lname, v) in enumerate(zip(links.all().keys(), trans_vs)):
         if n == 0:
-            total_mats[lname] = MMatrix4x4()
-            total_mats[lname].setToIdentity()
+            mm = MMatrix4x4()
+            mm.setToIdentity()
 
         for m in range(n):
             # 最後のひとつ手前までループ
             if m == 0:
                 # 0番目の位置を初期値とする
-                total_mats[lname] = matrixs[0].copy()
+                mm = matrixs[0].copy()
             else:
                 # 自分より前の行列結果を掛け算する
-                total_mats[lname] *= matrixs[m]
+                mm *= matrixs[m]
         
         # 自分は、位置だけ掛ける
-        global_3ds_dic[lname] = total_mats[lname] * v
+        global_3ds_dic[lname] = mm.mul_MVector3D(v)
         
         # 最後の行列をかけ算する
-        total_mats[lname] *= matrixs[n]
+        total_mats[lname] = mm.imul_MMatrix4x4(matrixs[n])
         
         # ローカル軸の向きを調整する
         if n > 0 and is_local_x:

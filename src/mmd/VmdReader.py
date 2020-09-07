@@ -88,8 +88,6 @@ class VmdReader:
                     # 位置X,Y,Z
                     frame.position = self.read_Vector3D()
                     logger.test("frame.position %s", frame.position)
-                    # オリジナルを保持
-                    frame.org_position = frame.position.copy()
 
                     # 回転X,Y,Z,scalar
                     frame.rotation = self.read_Quaternion()

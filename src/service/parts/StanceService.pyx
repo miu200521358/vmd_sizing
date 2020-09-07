@@ -257,18 +257,18 @@ cdef class StanceService():
                     if not f.result():
                         return False
 
-                # logger.info("%s捩り分散後処理 - 円滑化【No.%s】", arm_bone_name, (data_set_idx + 1))
+                logger.info("%s捩り分散後処理 - 円滑化【No.%s】", arm_bone_name, (data_set_idx + 1))
 
-                # # 捩りボーンのbfの跳ねてるのチェック
-                # futures = []
-                # with ThreadPoolExecutor(thread_name_prefix="smooth_twist{0}".format(data_set_idx), max_workers=self.options.max_workers) as executor:
-                #     for bone_name in [arm_twist_bone_name, wrist_twist_bone_name]:
-                #         futures.append(executor.submit(self.smooth_twist, self, data_set_idx, bone_name))
+                # 捩りボーンのbfの跳ねてるのチェック
+                futures = []
+                with ThreadPoolExecutor(thread_name_prefix="smooth_twist{0}".format(data_set_idx), max_workers=self.options.max_workers) as executor:
+                    for bone_name in [arm_twist_bone_name, wrist_twist_bone_name]:
+                        futures.append(executor.submit(self.smooth_twist, self, data_set_idx, bone_name))
 
-                # concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
-                # for f in futures:
-                #     if not f.result():
-                #         return False
+                concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
+                for f in futures:
+                    if not f.result():
+                        return False
 
                 # logger.info("%s捩り分散後処理 - フィルタリング【No.%s】", arm_bone_name, (data_set_idx + 1))
 
