@@ -19,13 +19,13 @@ cdef c_calc_IK(PmxModel model, BoneLinks links, VmdMotion motion, int fno, MVect
 
 cdef tuple c_separate_local_qq(int fno, str bone_name, MQuaternion qq, MVector3D global_x_axis)
 
-cpdef tuple c_calc_global_pos(PmxModel model, BoneLinks links, VmdMotion motion, int fno, BoneLinks limit_links, bint return_matrix, bint is_local_x)
+cdef tuple c_calc_global_pos(PmxModel model, BoneLinks links, VmdMotion motion, int fno, BoneLinks limit_links, bint return_matrix, bint is_local_x)
 
 cpdef dict calc_global_pos_by_direction(MQuaternion direction_qq, dict target_pos_3ds_dic)
 
-cpdef list c_calc_relative_position(PmxModel model, BoneLinks links, VmdMotion motion, int fno, BoneLinks limit_links)
+cdef list c_calc_relative_position(PmxModel model, BoneLinks links, VmdMotion motion, int fno, BoneLinks limit_links)
 
-cpdef list c_calc_relative_rotation(PmxModel model, BoneLinks links, VmdMotion motion, int fno, BoneLinks limit_links)
+cdef list c_calc_relative_rotation(PmxModel model, BoneLinks links, VmdMotion motion, int fno, BoneLinks limit_links)
 
 cpdef MQuaternion deform_rotation(PmxModel model, VmdMotion motion, VmdBoneFrame bf)
 

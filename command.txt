@@ -47,7 +47,6 @@ pip install numpy
 pip install wxpython
 pip install numpy-quaternion
 pip install bezier
-
 pip install pprofile
 
 conda install pyinstaller
@@ -57,11 +56,33 @@ C:\Development\Anaconda3\envs\vmdsizing_cython\Lib\site-packages\bezier\extra-dl
 lessさんとこで捩り分散あり
 40分47秒
 
+--------------------------
 
-pip install pycallgraph
+[cypthon + numba版]
 
+pip install cython
+pip install numpy
+pip install wxpython
+pip install numpy-quaternion
+pip install bezier
+conda install numba
 
+conda create -n vmdsizing_numba python=3.8
 
+pip install pprofile
+
+conda create -n vmdsizing_numba_exe python=3.8
+
+conda install pyinstaller
+
+C:\Development\Anaconda3\envs\vmdsizing_cython\Lib\site-packages\bezier\extra-dll の中身のdllを親ディレクトリに配置（下階層だと見つからないため）
+
+"C:\Development\Anaconda3\Lib\site-packages\win32\pythoncom38.dll"
+"C:\Development\Anaconda3\Lib\site-packages\win32\pywintypes38.dll"
+
+to
+
+C:\Development\Anaconda3\Lib\site-packages\win32\lib
 
 
 

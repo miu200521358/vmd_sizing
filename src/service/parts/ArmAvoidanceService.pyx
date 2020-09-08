@@ -200,7 +200,7 @@ cdef class ArmAvoidanceService():
 
         # 一度全部キーを追加する（キー自体は無効化のまま）
         for fno in fnos:
-            for bone_name in target_bone_names:
+            for bone_name in [arm_bone_name, elbow_bone_name]:
                 if bone_name not in data_set.motion.bones:
                     data_set.motion.bones[bone_name] = {}
                 data_set.motion.bones[bone_name][fno] = data_set.motion.calc_bf(bone_name, fno)

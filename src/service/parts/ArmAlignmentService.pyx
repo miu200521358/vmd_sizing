@@ -150,7 +150,7 @@ cdef class ArmAlignmentService():
 
                     # 元モデルのそれぞれのグローバル位置
                     org_global_3ds, org_global_matrixs = \
-                        MServiceUtils.calc_global_pos(data_set.org_model, target_link.org_links, data_set.org_motion, fno, return_matrix=True, is_local_x=True)
+                        MServiceUtils.c_calc_global_pos(data_set.org_model, target_link.org_links, data_set.org_motion, fno, return_matrix=True, is_local_x=True, limit_links=None)
                    
                     all_org_global_effector_vec[fno][(data_set_idx, alignment_idx)] = org_global_3ds[target_link.effector_bone_name]
 
@@ -552,7 +552,7 @@ cdef class ArmAlignmentService():
 
                     # 先モデルのそれぞれのグローバル位置
                     rep_global_3ds, rep_global_matrixs = \
-                        MServiceUtils.calc_global_pos(data_set.rep_model, target_link.rep_links, data_set.motion, fno, return_matrix=True, is_local_x=True)
+                        MServiceUtils.c_calc_global_pos(data_set.rep_model, target_link.rep_links, data_set.motion, fno, return_matrix=True, is_local_x=True, limit_links=None)
 
                     # キーフレ単位のエフェクタ位置情報
                     if fno not in all_alignment_group["rep_fno_global_effector"]:
@@ -727,7 +727,7 @@ cdef class ArmAlignmentService():
                                 is_avoidance_x = is_avoidance_x or (bf.avoidance == "x")
                     
                     if is_avoidance_x:
-                        logger.info("－X方向回避済みのため、位置合わせスキップ: f: %s(%s-%s)", fno, (data_set_idx + 1), target_link.effector_display_bone_name)
+                        logger.info("--X方向回避済みのため、位置合わせスキップ: f: %s(%s-%s)", fno, (data_set_idx + 1), target_link.effector_display_bone_name)
 
                     # IK処理実行
                     for ik_cnt, (ik_links, ik_max_count) in enumerate(zip(target_link.ik_links_list, target_link.ik_count_list)):
@@ -741,10 +741,10 @@ cdef class ArmAlignmentService():
                                          list(now_ik_links.all().keys()), rep_effector_vec.to_log(), rep_global_effector.to_log())
                             
                             # IK計算実行
-                            MServiceUtils.calc_IK(data_set.rep_model, target_link.rep_links, data_set.motion, fno, rep_global_effector, now_ik_links, max_count=1)
+                            MServiceUtils.c_calc_IK(data_set.rep_model, target_link.rep_links, data_set.motion, fno, rep_global_effector, now_ik_links, max_count=1)
 
                             # 現在のエフェクタ位置
-                            aligned_rep_global_3ds = MServiceUtils.calc_global_pos(data_set.rep_model, target_link.rep_links, data_set.motion, fno)
+                            (aligned_rep_global_3ds, _) = MServiceUtils.c_calc_global_pos(data_set.rep_model, target_link.rep_links, data_set.motion, fno, return_matrix=False, is_local_x=False, limit_links=None)
                             aligned_rep_effector_vec = aligned_rep_global_3ds[target_link.effector_bone_name]
 
                             # 現在のエフェクタ位置との差分(エフェクタ位置が指定されている場合のみ)
@@ -1038,7 +1038,7 @@ cdef class ArmAlignmentService():
 
                         # 先モデルのそれぞれのグローバル位置最新データ
                         rep_global_3ds, rep_global_matrixs = \
-                            MServiceUtils.calc_global_pos(data_set.rep_model, target_link.rep_links, data_set.motion, fno, return_matrix=True, is_local_x=True)
+                            MServiceUtils.c_calc_global_pos(data_set.rep_model, target_link.rep_links, data_set.motion, fno, return_matrix=True, is_local_x=True, limit_links=None)
 
                         # 指先のローカル位置
                         org_local_tip = MVector3D(all_alignment_group["org_local_tip"][(fno, data_set_idx, alignment_idx)])
@@ -1077,10 +1077,10 @@ cdef class ArmAlignmentService():
                                          list(now_ik_links.all().keys()), rep_global_tip.to_log(), rep_target_global_tip.to_log())
                             
                             # IK計算実行
-                            MServiceUtils.calc_IK(data_set.rep_model, target_link.rep_links, data_set.motion, fno, rep_target_global_tip, now_ik_links, max_count=1)
+                            MServiceUtils.c_calc_IK(data_set.rep_model, target_link.rep_links, data_set.motion, fno, rep_target_global_tip, now_ik_links, max_count=1)
 
                             # 現在のエフェクタ位置
-                            aligned_rep_global_3ds = MServiceUtils.calc_global_pos(data_set.rep_model, target_link.rep_links, data_set.motion, fno)
+                            aligned_rep_global_3ds, _ = MServiceUtils.c_calc_global_pos(data_set.rep_model, target_link.rep_links, data_set.motion, fno, return_matrix=False, is_local_x=False, limit_links=None)
                             aligned_rep_effector_vec = aligned_rep_global_3ds[target_link.tip_bone_name]
 
                             # 現在のエフェクタ位置との差分(エフェクタ位置が指定されている場合のみ)

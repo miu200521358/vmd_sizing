@@ -266,7 +266,7 @@ def calc_global_pos(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: i
         # 行列も返す場合
         return return_tuple[0], return_tuple[1]
 
-cpdef tuple c_calc_global_pos(PmxModel model, BoneLinks links, VmdMotion motion, int fno, BoneLinks limit_links, bint return_matrix, bint is_local_x):
+cdef tuple c_calc_global_pos(PmxModel model, BoneLinks links, VmdMotion motion, int fno, BoneLinks limit_links, bint return_matrix, bint is_local_x):
     # pfun = profile(c_calc_relative_position)
     # cdef list trans_vs = pfun(model, links, motion, fno, limit_links)
     cdef list trans_vs = c_calc_relative_position(model, links, motion, fno, limit_links)
@@ -377,7 +377,7 @@ cpdef dict calc_global_pos_by_direction(MQuaternion direction_qq, dict target_po
 def calc_relative_position(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, limit_links=None):
     return c_calc_relative_position(model, links, motion, fno, limit_links)
 
-cpdef list c_calc_relative_position(PmxModel model, BoneLinks links, VmdMotion motion, int fno, BoneLinks limit_links):
+cdef list c_calc_relative_position(PmxModel model, BoneLinks links, VmdMotion motion, int fno, BoneLinks limit_links):
     cdef list trans_vs = []
     cdef int link_idx
     cdef str link_bone_name
@@ -389,7 +389,7 @@ cpdef list c_calc_relative_position(PmxModel model, BoneLinks links, VmdMotion m
 
         if not limit_links or (limit_links and limit_links.get(link_bone_name)):
             # 上限リンクがある倍、ボーンが存在している場合のみ、モーション内のキー情報を取得
-            fill_bf = motion.calc_bf(link_bone.name, fno, is_key=False, is_read=False, is_reset_interpolation=False)
+            fill_bf = motion.c_calc_bf(link_bone.name, fno, is_key=False, is_read=False, is_reset_interpolation=False)
         else:
             # 上限リンクでボーンがない場合、ボーンは初期値
             fill_bf = VmdBoneFrame(fno=fno)
@@ -410,7 +410,7 @@ cpdef list c_calc_relative_position(PmxModel model, BoneLinks links, VmdMotion m
 def calc_relative_rotation(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, limit_links=None):
     return c_calc_relative_rotation(model, links, motion, fno, limit_links)
 
-cpdef list c_calc_relative_rotation(PmxModel model, BoneLinks links, VmdMotion motion, int fno, BoneLinks limit_links):
+cdef list c_calc_relative_rotation(PmxModel model, BoneLinks links, VmdMotion motion, int fno, BoneLinks limit_links):
     cdef list add_qs = []
     cdef int link_idx
     cdef str link_bone_name
