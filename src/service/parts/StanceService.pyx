@@ -528,19 +528,20 @@ cdef class StanceService():
             logger.debug("f: %s, %s: 手捩り: dot: %s, degree: %s, %s", fno, wrist_twist_bone_name, wrist_twist_result_dot, wrist_twist_result_qq.toDegree(), wrist_twist_result_qq)
 
             # 腕の角度を再取得
-            (arm_result_dot, arm_result_qq) = self.calc_arm_qq(data_set_idx, fno, arm_bone_name, arm_local_x_axis, arm_bf.rotation, arm_result_qq, \
-                                                               arm_twist_local_x_axis, arm_twist_bf.rotation, arm_twist_result_qq, \
-                                                               elbow_local_x_axis, elbow_bf.rotation, elbow_result_qq, \
-                                                               wrist_twist_local_x_axis, wrist_twist_bf.rotation, wrist_twist_result_qq, \
-                                                               wrist_local_x_axis, wrist_local_y_axis, wrist_bf.rotation, wrist_result_qq)
-            logger.debug("f: %s, %s: arm_result_qq: %s(%s)", fno, arm_bone_name, arm_result_qq.toDegree(), arm_result_qq)
+            if wrist_result_dot > 0.95 and wrist_twist_result_dot > 0.95:
+                (arm_result_dot, arm_result_qq) = self.calc_arm_qq(data_set_idx, fno, arm_bone_name, arm_local_x_axis, arm_bf.rotation, arm_result_qq, \
+                                                                arm_twist_local_x_axis, arm_twist_bf.rotation, arm_twist_result_qq, \
+                                                                elbow_local_x_axis, elbow_bf.rotation, elbow_result_qq, \
+                                                                wrist_twist_local_x_axis, wrist_twist_bf.rotation, wrist_twist_result_qq, \
+                                                                wrist_local_x_axis, wrist_local_y_axis, wrist_bf.rotation, wrist_result_qq)
+                logger.debug("f: %s, %s: arm_result_qq: %s(%s)", fno, arm_bone_name, arm_result_qq.toDegree(), arm_result_qq)
 
-            # 腕捩りの回転量を取得する
-            (arm_twist_result_dot, arm_twist_result_qq) = self.calc_twist_qq(data_set_idx, fno, arm_twist_bone_name, None, None, None, None, None, None, \
-                                                                             arm_local_x_axis, arm_bf.rotation, arm_result_qq, \
-                                                                             arm_twist_local_x_axis, arm_twist_bf.rotation, arm_twist_result_qq, \
-                                                                             elbow_local_x_axis, elbow_local_y_axis, elbow_bf.rotation, elbow_result_qq)
-            logger.debug("f: %s, %s: 腕捩り: dot: %s, degree: %s, %s", fno, arm_twist_bone_name, arm_twist_result_dot, arm_twist_result_qq.toDegree(), arm_twist_result_qq.toEulerAngles4MMD().to_log())
+                # 腕捩りの回転量を取得する
+                (arm_twist_result_dot, arm_twist_result_qq) = self.calc_twist_qq(data_set_idx, fno, arm_twist_bone_name, None, None, None, None, None, None, \
+                                                                                arm_local_x_axis, arm_bf.rotation, arm_result_qq, \
+                                                                                arm_twist_local_x_axis, arm_twist_bf.rotation, arm_twist_result_qq, \
+                                                                                elbow_local_x_axis, elbow_local_y_axis, elbow_bf.rotation, elbow_result_qq)
+                logger.debug("f: %s, %s: 腕捩り: dot: %s, degree: %s, %s", fno, arm_twist_bone_name, arm_twist_result_dot, arm_twist_result_qq.toDegree(), arm_twist_result_qq.toEulerAngles4MMD().to_log())
 
             # 全て登録
             arm_bf.rotation = arm_result_qq
@@ -656,7 +657,7 @@ cdef class StanceService():
         twist_append_x_qq = MQuaternion()
         twist_append_y_qq = MQuaternion()
         twist_result_degree = 0
-        twist_result_dot = 0
+        twist_result_dot = -999
         twist_test_x_dot = 0
         twist_test_y_dot = 0
         twist_append_x_degree = 0
@@ -824,7 +825,7 @@ cdef class StanceService():
         wrist_append_x_qq = MQuaternion()
         wrist_append_y_qq = MQuaternion()
         wrist_result_qq = child_qq
-        wrist_result_dot = 0
+        wrist_result_dot = -999
         wrist_test_x_dot = 0
         wrist_test_y_dot = 0
         wrist_append_x_degree = 0
@@ -832,7 +833,7 @@ cdef class StanceService():
         append_degree = 0
         n = 0
         m = -1
-        qq_list = [wrist_rotate_x_qq, wrist_rotate_y_qq]
+        qq_list = [wrist_rotate_x_qq, wrist_rotate_y_qq, wrist_rotate_x_qq.inverted(), wrist_rotate_y_qq.inverted()]
         logger.debug("f: %s, %s, wrist_rotate_x_qq: %s, wrist_rotate_y_qq: %s", fno, bone_name, wrist_rotate_x_qq.toEulerAngles4MMD().to_log(), wrist_rotate_y_qq.toEulerAngles4MMD().to_log())
 
         while m < 5 and n < 100:
@@ -875,7 +876,7 @@ cdef class StanceService():
 
                     if m >= 0:
                         m = 0
-                        qq_list = [wrist_append_x_qq, wrist_append_y_qq]
+                        qq_list = [wrist_append_x_qq, wrist_append_y_qq, wrist_append_x_qq.inverted(), wrist_append_y_qq.inverted()]
                         break
                 else:
                     logger.debug("× wrist_result_dot < wrist_test_dot result: %s, dot: %s, xdot: %s", wrist_result_dot, wrist_test_dot, wrist_test_x_dot)
@@ -886,10 +887,10 @@ cdef class StanceService():
             
             if m < 0:
                 # 初回は最も近付いた回転量ベースでリスト再生成
-                qq_list = [wrist_append_x_qq, wrist_append_y_qq]
+                qq_list = [wrist_append_x_qq, wrist_append_y_qq, wrist_append_x_qq.inverted(), wrist_append_y_qq.inverted()]
             elif m > 0:
                 # 2回目以降でダメだった場合は、量を減らして再チェック
-                qq_list = [MQuaternion.slerp(MQuaternion(), q, 0.5) for q in qq_list]
+                qq_list = [MQuaternion.slerp(wrist_result_qq, q, 0.5) for q in qq_list]
 
             m += 1
             n += 1
@@ -970,7 +971,7 @@ cdef class StanceService():
         arm_append_x_qq = MQuaternion()
         arm_append_y_qq = MQuaternion()
         arm_result_qq = grand_parent_qq
-        arm_result_dot = 0
+        arm_result_dot = -999
         arm_test_x_dot = 0
         arm_test_y_dot = 0
         arm_append_x_degree = 0
@@ -978,7 +979,7 @@ cdef class StanceService():
         append_degree = 0
         n = 0
         m = -1
-        qq_list = [arm_rotate_x_qq, arm_rotate_y_qq]
+        qq_list = [arm_rotate_x_qq, arm_rotate_y_qq, arm_rotate_x_qq.inverted(), arm_rotate_y_qq.inverted()]
 
         while m < 5 and n < 100:
             for s, qq in enumerate(qq_list):
@@ -1019,7 +1020,7 @@ cdef class StanceService():
 
                     if m >= 0:
                         m = 0
-                        qq_list = [arm_append_x_qq, arm_append_y_qq]
+                        qq_list = [arm_append_x_qq, arm_append_y_qq, arm_append_x_qq.inverted(), arm_append_y_qq.inverted()]
                         break
                 else:
                     logger.debug("× arm_result_dot < arm_test_dot result: %s, dot: %s, xdot: %s", arm_result_dot, arm_test_dot, arm_test_x_dot)
@@ -1030,10 +1031,10 @@ cdef class StanceService():
             
             if m < 0:
                 # 初回は最も近付いた回転量ベースでリスト再生成
-                qq_list = [arm_append_x_qq, arm_append_y_qq]
+                qq_list = [arm_append_x_qq, arm_append_y_qq, arm_append_x_qq.inverted(), arm_append_y_qq.inverted()]
             elif m > 0:
                 # 2回目以降でダメだった場合は、量を減らして再チェック
-                qq_list = [MQuaternion.slerp(MQuaternion(), q, 0.5) for q in qq_list]
+                qq_list = [MQuaternion.slerp(arm_result_qq, q, 0.5) for q in qq_list]
 
             m += 1
             n += 1
