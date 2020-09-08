@@ -1,27 +1,43 @@
 # -*- coding: utf-8 -*-
 #
-import math
+# cython: profile=True
+# cython: linetrace=True
+# cython: binding=True
+# distutils: define_macros=CYTHON_TRACE_NOGIL=1
 import numpy as np
+cimport numpy as np
+import math
+cimport libc.math as math
+from libcpp cimport  list, str
 import itertools
 
-from mmd.PmxData import PmxModel, Bone # noqa
-from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
-from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
-from module.MOptions import MOptions, MOptionsDataSet # noqa
-from module.MParams import BoneLinks # noqa
-from utils import MUtils, MServiceUtils, MBezierUtils # noqa
+import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
+
+from mmd.PmxData cimport PmxModel, Bone
+from mmd.VmdData cimport VmdMotion, VmdBoneFrame
+from module.MParams cimport BoneLinks # noqa
+from module.MMath cimport MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
+from module.MOptions cimport MOptions, MOptionsDataSet # noqa
+from utils import MServiceUtils, MBezierUtils
+from utils cimport MServiceUtils, MBezierUtils
+
+from mmd.PmxData import Vertex, Material, Morph, DisplaySlot, RigidBody, Joint # noqa
+from mmd.VmdData import VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
 from utils.MLogger import MLogger # noqa
 from utils.MException import SizingException, MKilledException
 
 logger = MLogger(__name__, level=1)
 
 # 床処理用INDEX
-FLOOR_IDX = -1
-# 近接コピー用ラジアン角度
-LIMIT_COPY_RADIANS = math.cos(math.radians(5))
+cdef int FLOOR_IDX = -1
 
 
-class ArmAlignmentService():
+cdef class ArmAlignmentService():
+    cdef public object options
+    cdef public list target_data_set_idxs
+    cdef public dict target_links
+
     def __init__(self, options: MOptions):
         self.options = options
 
@@ -84,7 +100,24 @@ class ArmAlignmentService():
             raise e
 
     # 位置合わせ準備
-    def prepare_alignment(self, fnos: list):
+    cdef prepare_alignment(self, list fnos):           
+        cdef int from_data_set_idx, to_data_set_idx, alignment_idx, data_set_idx, fidx, from_alignment_idx
+        cdef int group_idx, to_alignment_idx, fno, priority, prev_block_fno
+        cdef float base_distance, distance, distance_ratio, org_palm_mean
+        cdef dict alignment_options, all_alignment_group, all_distances, all_is_alignment, all_messages, all_org_global_effector_matrixs, all_org_global_effector_vec
+        cdef dict all_org_global_neck_vec, all_org_global_tip_vec, all_org_global_trunk_matrixs, all_org_global_upper_vec, distances, org_global_3ds, org_global_matrixs
+        cdef dict all_alignment_idx
+        cdef list alignment_pairs, all_alignment_group_list, org_effector_pairs, target_pairs
+        cdef str link_name
+        cdef bint is_alignment, is_floor, is_sit, prev_from_alignment, prev_to_alignment
+        cdef VmdBoneFrame bf
+        cdef MOptionsDataSet data_set, from_data_set, to_data_set
+        cdef ArmAlignmentOption from_target_link, target_link, to_target_link
+        cdef BoneLinks ik_links
+        cdef MMatrix4x4 org_effector_matrix, org_origin_matrix, org_trunk_matrix
+        cdef MVector3D org_fno_mean_vec, org_from_global_effector_vec, org_global_effector, org_global_tip, org_local_tip, org_mean_vec, org_to_global_effector_vec
+        cdef MVector3D org_trunk_local_fno_effector, org_trunk_local_fno_origin
+
         all_org_global_effector_vec = {}
         all_org_global_trunk_matrixs = {}
         all_org_global_neck_vec = {}
@@ -93,7 +126,6 @@ class ArmAlignmentService():
         all_org_global_effector_matrixs = {}
 
         prev_block_fno = 0
-
         target_pairs = []
         for data_set_idx, alignment_options in self.target_links.items():
             for alignment_idx, target_link in alignment_options.items():
@@ -484,8 +516,23 @@ class ArmAlignmentService():
         return all_alignment_group_list, all_messages
     
     # 位置合わせ実行
-    def execute_alignment(self, fnos: list, all_alignment_group_list: list, all_messages: dict, bone_names: list):
-        
+    cdef execute_alignment(self, list fnos, list all_alignment_group_list, dict all_messages, list bone_names):
+        cdef int data_set_idx, alignment_idx, fidx, fno, ik_cnt, next_success_fno, now_ik_max_count, prev_block_fno, prev_fno, prev_success_fno
+        cdef str bone_name, link_name
+        cdef list group_data_set_idxs, next_fnos, next_success_fnos, overwrited, prev_success_fnos, is_success
+        cdef dict aligned_rep_global_3ds, all_alignment_group
+        cdef dict dot_far_limit_dict, dot_near_dict, dot_near_limit_dict, dot_start_dict, org_bfs, rep_global_3ds, rep_global_matrixs, results, start_org_bfs
+        cdef bint is_avoidance_x, is_floor, is_multi
+        cdef VmdBoneFrame bf, ik_bf, next_bf, prev_bf
+        cdef MQuaternion correct_qq
+        cdef MOptionsDataSet data_set
+        cdef BoneLinks ik_links, now_ik_links
+        cdef Bone link_bone
+        cdef MVector3D org_fno_global_effector, org_local_effector, org_local_tip, prev_rep_diff, rep_diff, rep_effector_vec, rep_fno_mean_vec, rep_global_effector, aligned_rep_effector_vec
+        cdef MVector3D rep_global_tip, rep_local_effector, rep_local_origin, rep_local_tip, rep_target_global_tip, rep_trunk_local_fno_effector, rep_trunk_local_fno_origin
+        cdef MMatrix4x4 org_origin_matrix, rep_effector_matrix, rep_origin_matrix, rep_trunk_matrix
+        cdef ArmAlignmentOption target_link
+
         fno = 0
         prev_block_fno = 0
         for all_alignment_group in all_alignment_group_list:
@@ -559,8 +606,8 @@ class ArmAlignmentService():
                     # 首根先（体幹の最終的な向き）までの行列
                     rep_trunk_matrix = all_alignment_group["rep_fno_trunk_matrix"][fno][(data_set_idx, alignment_idx)].copy()
 
-                    # エフェクタのグローバル位置
-                    rep_global_effector = all_alignment_group["rep_fno_global_effector"]
+                    # # エフェクタのグローバル位置
+                    # rep_global_effector = all_alignment_group["rep_fno_global_effector"]
 
                     # 体幹から見たキーフレ中央値のローカル位置
                     rep_trunk_local_fno_origin = rep_trunk_matrix.inverted() * rep_fno_mean_vec
@@ -1371,7 +1418,22 @@ class ArmAlignmentService():
 
 
 # 位置合わせ用オプション
-class ArmAlignmentOption():
+cdef class ArmAlignmentOption():
+    cdef public BoneLinks org_links
+    cdef public BoneLinks rep_links
+    cdef public list ik_links_list
+    cdef public list ik_count_list
+    cdef public BoneLinks tip_ik_links
+    cdef public float org_palm_length
+    cdef public float rep_palm_length
+    cdef public str start_bone_name
+    cdef public str effector_bone_name
+    cdef public str effector_display_bone_name
+    cdef public float distance
+    cdef public str tip_bone_name
+    cdef public int priority
+    cdef public float ratio
+    cdef public float multi_ratio
 
     def __init__(self, org_links: BoneLinks, rep_links: BoneLinks, ik_links_list: list, ik_count_list: list, tip_ik_links: BoneLinks, \
                  org_palm_length: float, rep_palm_length: float, org_model: PmxModel, rep_model: PmxModel, start_bone_name: str, \
