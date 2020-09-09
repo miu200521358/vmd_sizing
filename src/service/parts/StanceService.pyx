@@ -501,8 +501,8 @@ cdef class StanceService():
             logger.debug("f: %s, %s: 腕捩り: dot: %s, degree: %s, %s", fno, arm_twist_bone_name, arm_twist_result_dot, arm_twist_result_qq.toDegree(), arm_twist_result_qq)
 
             # 手首Xを手捻りに
-            wrist_twist_degree = wrist_x_qq.toDegree() *  np.sign(MVector3D.dotProduct(wrist_local_x_axis, wrist_x_qq.vector()))
-            # wrist_twist_degree = (wrist_x_qq.toDegree() + elbow_x_qq.toDegree()) * np.sign(wrist_x_qq.x()) * np.sign(wrist_local_x_axis.x())
+            wrist_twist_degree = wrist_twist_bf.rotation.toDegree() * np.sign(MVector3D.dotProduct(wrist_twist_local_x_axis, wrist_twist_bf.rotation.vector()))
+            wrist_twist_degree += wrist_x_qq.toDegree() * np.sign(MVector3D.dotProduct(wrist_local_x_axis, wrist_x_qq.vector()))
             wrist_twist_result_qq = MQuaternion.fromAxisAndAngle(wrist_twist_local_x_axis, wrist_twist_degree)
             logger.debug("f: %s, %s: wrist_twist_result_qq: %s(%s)", fno, wrist_twist_bone_name, wrist_twist_degree, wrist_twist_result_qq)
 

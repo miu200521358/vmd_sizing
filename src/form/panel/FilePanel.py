@@ -88,6 +88,8 @@ class FilePanel(BasePanel):
 
     # 実行前チェック
     def on_check(self, event: wx.Event):
+        self.timer.Stop()
+        self.Unbind(wx.EVT_TIMER, id=TIMER_ID)
         # 出力先をファイルパネルのコンソールに変更
         sys.stdout = self.console_ctrl
 
@@ -106,8 +108,6 @@ class FilePanel(BasePanel):
             # プログレス非表示
             self.gauge_ctrl.SetValue(0)
 
-            self.timer.Stop()
-
             logger.warning("読み込み処理を中断します。", decoration=MLogger.DECORATION_BOX)
             
             event.Skip(False)
@@ -122,15 +122,11 @@ class FilePanel(BasePanel):
             # 履歴保持
             self.save()
 
-            self.timer.Stop()
-
             # 一旦読み込み(そのままチェック)
             self.frame.load(event, target_idx=0)
             
             event.Skip()
         else:
-            self.timer.Stop()
-
             logger.error("まだ処理が実行中です。終了してから再度実行してください。", decoration=MLogger.DECORATION_BOX)
             event.Skip(False)
 
@@ -141,6 +137,10 @@ class FilePanel(BasePanel):
 
     # サイジング実行
     def on_exec(self, event: wx.Event):
+        if self.timer:
+            self.timer.Stop()
+            self.Unbind(wx.EVT_TIMER, id=TIMER_ID)
+            
         # 出力先をファイルパネルのコンソールに変更
         sys.stdout = self.console_ctrl
 
@@ -159,9 +159,6 @@ class FilePanel(BasePanel):
             # プログレス非表示
             self.gauge_ctrl.SetValue(0)
 
-            self.timer.Stop()
-            self.Unbind(wx.EVT_TIMER, id=TIMER_ID)
-
             logger.warning("VMDサイジングを中断します。", decoration=MLogger.DECORATION_BOX)
             
             event.Skip(False)
@@ -176,17 +173,11 @@ class FilePanel(BasePanel):
             # 履歴保持
             self.save()
 
-            self.timer.Stop()
-            self.Unbind(wx.EVT_TIMER, id=TIMER_ID)
-
             # サイジング可否チェックの後に実行
             self.frame.load(event, is_exec=True, target_idx=0)
             
             event.Skip()
         else:
-            self.timer.Stop()
-            self.Unbind(wx.EVT_TIMER, id=TIMER_ID)
-            
             logger.error("まだ処理が実行中です。終了してから再度実行してください。", decoration=MLogger.DECORATION_BOX)
             event.Skip(False)
 

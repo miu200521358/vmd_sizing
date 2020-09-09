@@ -145,23 +145,22 @@ cdef tuple c_join_value_2_bezier(int fno, str bone_name, list values, float offs
         # すべてがだいたい同じ値（最小と最大が同じ値)か次数が1の場合、線形補間
         return (LINEAR_MMD_INTERPOLATION, [])
 
-    cdef np.ndarray[np.long_t, ndim=1] xs, yx, bezier_x, diff_ys, diff_large
+    cdef np.ndarray[np.double_t, ndim=1] xs, yx
+    cdef np.ndarray[np.float_t, ndim=1] bz_x, bz_y, reduce_bz_x, reduce_bz_y, bezier_x, diff_ys, full_ys, reduced_ys, diff_large
     cdef np.ndarray[np.float_t, ndim=2] nodes
-    cdef list bz_x, bz_y, reduced_curve_list, reduce_bz_x, reduce_bz_y, full_ys, reduced_ys, joined_bz
+    cdef list reduced_curve_list, joined_bz
     cdef tuple catmullrom_tuple
     cdef int degree
 
     try:
 
         # Xは次数（フレーム数）分移動
-        xs = np.arange(0, len(values))
+        xs = np.arange(0, len(values), dtype=np.float)
         # YはXの移動分を許容範囲とする
         ys = np.array(values, dtype=np.float)
 
         # カトマル曲線をベジェ曲線に変換する
-        catmullrom_tuple = convert_catmullrom_2_bezier(np.concatenate([[None], xs, [None]]), np.concatenate([[None], ys, [None]]))
-        bz_x = catmullrom_tuple[0]
-        bz_y = catmullrom_tuple[1]
+        (bz_x, bz_y) = convert_catmullrom_2_bezier(np.concatenate([[None], xs, [None]]), np.concatenate([[None], ys, [None]]))
         logger.debug("bz_x: %s, bz_y: %s", bz_x, bz_y)
 
         if len(bz_x) == 0:
@@ -210,8 +209,8 @@ cdef tuple c_join_value_2_bezier(int fno, str bone_name, list values, float offs
                     # リストに追加
                     reduced_curve_list.append(reduced_curve)
 
-                bz_x = []
-                bz_y = []
+                bz_x = np.empty(0)
+                bz_y = np.empty(0)
 
                 for reduced_curve in reduced_curve_list:
                     bz_x = np.append(bz_x, reduced_curve.nodes[0])
@@ -229,7 +228,7 @@ cdef tuple c_join_value_2_bezier(int fno, str bone_name, list values, float offs
         logger.test("joined_curve: %s", joined_curve.nodes)
 
         # 全体のキーフレ
-        bezier_x = np.arange(0, len(values))[1:-1]
+        bezier_x = np.arange(0, len(values), dtype=np.float)[1:-1]
 
         # 元の2つのベジェ曲線との交点を取得する
         full_ys = intersect_by_x(full_curve, bezier_x)
@@ -243,7 +242,7 @@ cdef tuple c_join_value_2_bezier(int fno, str bone_name, list values, float offs
         diff_ys = np.concatenate([[0], np.array(full_ys) - np.array(reduced_ys), [0]])
 
         # 差が大きい箇所をピックアップする
-        diff_large = np.where(np.abs(diff_ys) > (diff_limit * (offset + 1)), 1, 0)
+        diff_large = np.where(np.abs(diff_ys) > (diff_limit * (offset + 1)), 1, 0).astype(np.float)
         
         # 差が一定未満である場合、ベジェ曲線をMMD補間曲線に合わせる
         nodes = joined_curve.nodes
@@ -274,7 +273,7 @@ cdef tuple c_join_value_2_bezier(int fno, str bone_name, list values, float offs
         return (None, [])
 
 
-cdef bint fit_bezier_mmd(MVector2D bzs):
+cdef bint fit_bezier_mmd(list bzs):
     for bz in bzs:
         bz.effective()
         bz.setX(0 if bz.x() < 0 else INTERPOLATION_MMD_MAX if bz.x() > INTERPOLATION_MMD_MAX else bz.x())
@@ -282,14 +281,13 @@ cdef bint fit_bezier_mmd(MVector2D bzs):
 
     return True
 
+
 # Catmull-Rom曲線の制御点(通過点)をBezier曲線の制御点に変換する
 # http://defghi1977-onblog.blogspot.com/2014/09/catmull-rombezier.html
 cdef tuple convert_catmullrom_2_bezier(np.ndarray xs, np.ndarray ys):
 
     cdef list bz_x = []
     cdef list bz_y = []
-    cdef int x0, x1, x2, x3
-    cdef float y0, y1, y2, y3, s1, s2
     cdef MVector2D p0, p1, p2, p3, B, C
 
     for x0, x1, x2, x3, y0, y1, y2, y3 in zip(xs[:-3], xs[1:-2], xs[2:-1], xs[3:], ys[:-3], ys[1:-2], ys[2:-1], ys[3:]):
@@ -338,15 +336,15 @@ cdef tuple convert_catmullrom_2_bezier(np.ndarray xs, np.ndarray ys):
     bz_x.append(xs[-2])
     bz_y.append(ys[-2])
 
-    return (bz_x, bz_y)
+    return (np.array(bz_x, dtype=np.float64), np.array(bz_y, dtype=np.float64))
 
 
 # 指定された複数のXと交わるそれぞれのYを返す
-cdef list intersect_by_x(curve, np.ndarray xs):
+cdef np.ndarray intersect_by_x(curve, np.ndarray xs):
     cdef float x
     cdef list ys = []
-    cdef np.ndarray[np.float_t, ndim=1] intersections
-    cdef np.ndarray[np.float_t, ndim=2] s_vals
+    cdef np.ndarray[np.float_t, ndim=1] s_vals
+    cdef np.ndarray[np.float_t, ndim=2] intersections
 
     for x in xs:
         # 交点を求める為のX線上の直線
@@ -368,7 +366,7 @@ cdef list intersect_by_x(curve, np.ndarray xs):
         else:
             ys.append(0)
     
-    return ys
+    return np.array(ys, dtype=np.float)
 
 
 # 補間曲線を求める

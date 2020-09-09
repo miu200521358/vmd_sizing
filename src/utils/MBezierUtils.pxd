@@ -8,7 +8,7 @@ cdef float calc_catmull_rom_one_point(float x, float v0, float v1, float v2, flo
 
 cdef np.ndarray calc_value_from_catmullrom(str bone_name, list fnos, list values)
 
-cdef bint fit_bezier_mmd(MVector2D bzs)
+cdef bint fit_bezier_mmd(list bzs)
 
 cdef tuple c_join_value_2_bezier(int fno, str bone_name, list values, float offset, float diff_limit)
 
