@@ -375,22 +375,22 @@ cdef class VmdMotion:
                     # 読み込みキーではない場合、処理対象にするかチェック
 
                     # 読み込みキーとの差
-                    dot = MQuaternion.dotProduct(before_bf.rotation, bf.rotation)
-                    if dot < limit_radians and limit_degrees > 0:
+                    diff = MQuaternion.dotProduct(before_bf.rotation, bf.rotation)
+                    if diff < limit_radians and limit_degrees > 0:
                         # 前と今回の内積の差が指定度数より離れている場合、追加
-                        logger.test("★ 追加 set: %s, %s, f: %s, dot: %s", data_set_no, bone_name, fno, dot)
+                        logger.test("★ 追加 set: %s, %s, f: %s, diff: %s", data_set_no, bone_name, fno, diff)
                         fnos.append(fno)
                         # 前回キーとして保持
                         before_bf = bf.copy()
-
-                    # 読み込みキーとの差
-                    diff = before_bf.position.distanceToPoint(bf.position)
-                    if diff > limit_length and limit_length > 0:
-                        # 前と今回の移動量の差が指定値より離れている場合、追加
-                        logger.test("★ 追加 set: %s, %s, f: %s, dot: %s", data_set_no, bone_name, fno, dot)
-                        fnos.append(fno)
-                        # 前回キーとして保持
-                        before_bf = bf.copy()
+                    elif limit_length > 0:
+                        # 読み込みキーとの差
+                        diff = before_bf.position.distanceToPoint(bf.position)
+                        if diff > limit_length:
+                            # 前と今回の移動量の差が指定値より離れている場合、追加
+                            logger.test("★ 追加 set: %s, %s, f: %s, diff: %s", data_set_no, bone_name, fno, diff)
+                            fnos.append(fno)
+                            # 前回キーとして保持
+                            before_bf = bf.copy()
                 
                 if fno // 2000 > prev_sep_fno and bone_fnos[-1] > 0:
                     if data_set_no > 0:
@@ -617,13 +617,13 @@ cdef class VmdMotion:
             if key_cnt > 1:
                 # 他の有効キーをふくむ場合、単調増加としてキーを結合してみる
                 (joined_rot_bzs, rot_inflection) = MBezierUtils.join_value_2_bezier(fno, bone_name, rot_values, \
-                                                                                    offset=offset, diff_limit=rot_diff_limit) if is_rot else ([], [])
+                                                                                    offset=offset, diff_limit=rot_diff_limit) if is_rot else (True, [])
                 (joined_mx_bzs, mx_inflection) = MBezierUtils.join_value_2_bezier(fno, bone_name, mx_values, \
-                                                                                  offset=offset, diff_limit=mov_diff_limit) if is_mov else ([], [])
+                                                                                  offset=offset, diff_limit=mov_diff_limit) if is_mov else (True, [])
                 (joined_my_bzs, my_inflection) = MBezierUtils.join_value_2_bezier(fno, bone_name, my_values, \
-                                                                                  offset=offset, diff_limit=mov_diff_limit) if is_mov else ([], [])
+                                                                                  offset=offset, diff_limit=mov_diff_limit) if is_mov else (True, [])
                 (joined_mz_bzs, mz_inflection) = MBezierUtils.join_value_2_bezier(fno, bone_name, mz_values, \
-                                                                                  offset=offset, diff_limit=mov_diff_limit) if is_mov else ([], [])
+                                                                                  offset=offset, diff_limit=mov_diff_limit) if is_mov else (True, [])
 
                 if joined_rot_bzs and joined_mx_bzs and joined_my_bzs and joined_mz_bzs:
                     next_bf = self.c_calc_bf(bone_name, fno, is_key=False, is_read=False, is_reset_interpolation=False)

@@ -101,13 +101,13 @@ cdef class StanceService():
                     if result and "肩補正" in data_set.selected_stance_details:
                         # 肩補正
                         result = result and self.adjust_shoulder_stance(data_set_idx, data_set)
+                
+                # 腕スタンス補正
+                result = result and self.adjust_arm_stance(data_set_idx, data_set)
 
                 if result and data_set.twist_flg:
                     # 捩り分散あり
                     result = result and self.spread_twist(data_set_idx, data_set)
-                
-                # 腕スタンス補正
-                result = result and self.adjust_arm_stance(data_set_idx, data_set)
 
                 if data_set.detail_stance_flg:
                     # センターY補正
