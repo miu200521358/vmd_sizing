@@ -1151,9 +1151,9 @@ cdef class MQuaternion:
     # 自分ともうひとつの値vとのtheta（変位量）を返す
     cpdef DTYPE_FLOAT_t calcTheata(self, MQuaternion v):
         cdef DTYPE_FLOAT_t dot = v.c_dotProduct(self.normalized(), v.normalized())
-        cdef DTYPE_FLOAT_t theta = math.acos(min(1, max(-1, dot)))
-        cdef DTYPE_FLOAT_t sinOfAngle = math.sin(theta)
-        return sinOfAngle
+        # cdef DTYPE_FLOAT_t theta = math.acos(min(1, max(-1, dot)))
+        # cdef DTYPE_FLOAT_t sinOfAngle = math.sin(theta)
+        return dot
 
     @classmethod
     def dotProduct(cls, v1, v2):

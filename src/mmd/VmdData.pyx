@@ -598,8 +598,11 @@ cdef class VmdMotion:
 
         while fno <= fnos[-1]:
             bf = self.c_calc_bf(bone_name, fno, is_key=False, is_read=False, is_reset_interpolation=False)
+            logger.debug("*%s: fno: %s, bf(%s):rot:%s", bone_name, fno, bf.fno, bf.rotation.toEulerAngles4MMD().to_log())
 
             prev_bf = self.c_calc_bf(bone_name, start_fno, is_key=False, is_read=False, is_reset_interpolation=False)
+            logger.debug("*%s: fno: %s, prev_bf(%s):rot:%s", bone_name, fno, prev_bf.fno, prev_bf.rotation.toEulerAngles4MMD().to_log())
+
             # 変化量を保持
             rot_values.append(bf.rotation.calcTheata(prev_bf.rotation))
             mx_values.append(bf.position.x() - prev_bf.position.x())
@@ -639,8 +642,9 @@ cdef class VmdMotion:
                         self.reset_interpolation_parts(bone_name, next_bf, joined_mx_bzs, MBezierUtils.MX_x1_idxs, MBezierUtils.MX_y1_idxs, MBezierUtils.MX_x2_idxs, MBezierUtils.MX_y2_idxs)
                         self.reset_interpolation_parts(bone_name, next_bf, joined_my_bzs, MBezierUtils.MY_x1_idxs, MBezierUtils.MY_y1_idxs, MBezierUtils.MY_x2_idxs, MBezierUtils.MY_y2_idxs)
                         self.reset_interpolation_parts(bone_name, next_bf, joined_mz_bzs, MBezierUtils.MZ_x1_idxs, MBezierUtils.MZ_y1_idxs, MBezierUtils.MZ_x2_idxs, MBezierUtils.MZ_y2_idxs)
-
+                    
                     self.c_regist_bf(next_bf, bone_name, fno, copy_interpolation=True)
+                    logger.debug("**%s: fno: %s, next_bf(%s):rot:%s", bone_name, fno, next_bf.fno, next_bf.rotation.toEulerAngles4MMD().to_log())
 
                     for f in range(start_fno + 1, fno):
                         # 結合できた場合、区間内を削除
@@ -788,6 +792,7 @@ cdef class VmdMotion:
                                 self.reset_interpolation_parts(bone_name, next_bf, joined_mz_bzs, MBezierUtils.MZ_x1_idxs, MBezierUtils.MZ_y1_idxs, MBezierUtils.MZ_x2_idxs, MBezierUtils.MZ_y2_idxs)
 
                             self.c_regist_bf(next_bf, bone_name, inflection_fno, copy_interpolation=True)
+                            logger.debug("**%s: fno: %s, next_bf(%s):rot:%s", bone_name, fno, next_bf.fno, next_bf.rotation.toEulerAngles4MMD().to_log())
 
                             for f in range(start_fno + 1, inflection_fno):
                                 # 結合できた場合、区間内を削除
