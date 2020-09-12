@@ -742,11 +742,6 @@ cdef class StanceService():
                 while m < 3 and n < 30:
                     for arm_twist_test_degree in degree_list:
                         arm_twist_degree = arm_twist_result_degree + arm_twist_test_degree if m > 0 else arm_twist_test_degree
-
-                        if elbow_result_qq.toDegree() < 10:
-                            # ひじの角度が小さい場合、捩れも小さい
-                            arm_twist_degree /= 90
-
                         arm_twist_test_qq = MQuaternion.fromAxisAndAngle(arm_twist_local_x_axis, arm_twist_degree)
 
                         # 分散後
