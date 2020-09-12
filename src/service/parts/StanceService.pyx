@@ -505,83 +505,6 @@ cdef class StanceService():
             logger.debug("f: %s, %s: %s, wrist_twist_result_qq: %s(%s)", fno, wrist_bone_name, wrist_twist_result_dot, wrist_twist_result_qq.toDegree(), wrist_twist_result_qq)
             logger.debug("f: %s, %s: %s, wrist_result_qq: %s(%s)", fno, wrist_bone_name, wrist_result_dot, wrist_result_qq.toDegree(), wrist_result_qq)
             
-            # # 腕捩り -------------------------
-
-            # # 腕YZを腕に
-            # arm_result_qq = arm_yz_qq
-
-            # # 腕Xを腕捩りに適用させる
-            # arm_x_twisted_degree = arm_x_qq.toDegree() * np.sign(MVector3D.dotProduct(arm_twist_local_x_axis, arm_x_qq.vector()))
-            # arm_x_twisted_qq = MQuaternion.fromAxisAndAngle(arm_twist_local_x_axis, arm_x_twisted_degree)
-
-            # # ひじZに回っている場合、ローカルY軸のチェックを変える
-            # if elbow_y_qq.toDegree() < elbow_z_qq.toDegree() and elbow_z_qq.toDegree() > 5:
-            #     is_elbow_z = True
-            #     logger.debug("Zひじ f: %s, %s: y: %s, z: %s", fno, elbow_bone_name, elbow_y_qq.toDegree(), elbow_z_qq.toDegree())
-
-            # # 腕捩りの回転量を取得する
-            # (arm_twist_result_dot, arm_twist_result_qq) = self.calc_twist_qq(data_set_idx, fno, arm_twist_bone_name, None, None, None, None, None, None, \
-            #                                                                  arm_local_x_axis, arm_bf.rotation, arm_result_qq, \
-            #                                                                  arm_twist_local_x_axis, arm_twist_bf.rotation, arm_x_twisted_qq, \
-            #                                                                  elbow_local_x_axis, elbow_local_y_axis, elbow_bf.rotation, elbow_result_qq, is_elbow_z, True)
-            # logger.debug("f: %s, %s: 腕捩り: dot: %s, degree: %s, %s", fno, arm_twist_bone_name, arm_twist_result_dot, arm_twist_result_qq.toDegree(), arm_twist_result_qq)
-
-            # logger.debug("f: %s, %s: 手首X: %s(%s)", fno, wrist_twist_bone_name, wrist_x_qq.toDegree(), wrist_x_qq)
-            # logger.debug("f: %s, %s: 手首Y: %s(%s)", fno, wrist_twist_bone_name, wrist_y_qq.toDegree(), wrist_y_qq)
-            # logger.debug("f: %s, %s: 手首Z: %s(%s)", fno, wrist_twist_bone_name, wrist_z_qq.toDegree(), wrist_z_qq)
-            # logger.debug("f: %s, %s: 手首YZ: %s(%s)", fno, wrist_twist_bone_name, wrist_yz_qq.toDegree(), wrist_yz_qq)
-
-            # # 手首の角度
-            # (wrist_result_dot, wrist_result_qq) = self.calc_wrist_qq(data_set_idx, fno, wrist_bone_name, arm_local_x_axis, arm_bf.rotation, arm_result_qq, \
-            #                                                         arm_twist_local_x_axis, arm_twist_bf.rotation, arm_twist_result_qq, \
-            #                                                         elbow_local_x_axis, elbow_bf.rotation, elbow_result_qq, \
-            #                                                         wrist_twist_local_x_axis, wrist_twist_bf.rotation, wrist_twist_result_qq, \
-            #                                                         wrist_local_x_axis, wrist_local_y_axis, wrist_bf.rotation, wrist_yz_qq, False)
-            # logger.debug("f: %s, %s: wrist_result_qq: %s(%s)", fno, wrist_bone_name, wrist_result_qq.toDegree(), wrist_result_qq)
-
-            # # 手捩りの回転量を取得する
-            # (wrist_twist_result_dot, wrist_twist_result_qq) = self.calc_twist_qq(data_set_idx, fno, wrist_twist_bone_name, arm_local_x_axis, arm_bf.rotation, arm_result_qq, \
-            #                                                                      arm_twist_local_x_axis, arm_twist_bf.rotation, arm_twist_result_qq, \
-            #                                                                      elbow_local_x_axis, elbow_bf.rotation, elbow_result_qq, \
-            #                                                                      wrist_twist_local_x_axis, wrist_twist_bf.rotation, wrist_twist_result_qq, \
-            #                                                                      wrist_local_x_axis, wrist_local_y_axis, wrist_bf.rotation, wrist_result_qq, False, False)
-            # logger.debug("f: %s, %s: 手捩り: dot: %s, degree: %s, %s", fno, wrist_twist_bone_name, wrist_twist_result_dot, wrist_twist_result_qq.toDegree(), wrist_twist_result_qq)
-
-            # if wrist_twist_result_dot < RADIANS_8:
-            #     # 手捩りの角度の精度が甘い場合、再計算
-
-            #     # 手首の角度
-            #     (wrist_result_dot, wrist_result_qq) = self.calc_wrist_qq(data_set_idx, fno, wrist_bone_name, arm_local_x_axis, arm_bf.rotation, arm_result_qq, \
-            #                                                             arm_twist_local_x_axis, arm_twist_bf.rotation, arm_twist_result_qq, \
-            #                                                             elbow_local_x_axis, elbow_bf.rotation, elbow_result_qq, \
-            #                                                             wrist_twist_local_x_axis, wrist_twist_bf.rotation, wrist_twist_result_qq, \
-            #                                                             wrist_local_x_axis, wrist_local_y_axis, wrist_bf.rotation, wrist_yz_qq, True)
-            #     logger.debug("f: %s, %s: wrist_result_qq: %s(%s)", fno, wrist_bone_name, wrist_result_qq.toDegree(), wrist_result_qq)
-
-            #     # 手捩りの回転量を取得する
-            #     (wrist_twist_result_dot, wrist_twist_result_qq) = self.calc_twist_qq(data_set_idx, fno, wrist_twist_bone_name, arm_local_x_axis, arm_bf.rotation, arm_result_qq, \
-            #                                                                         arm_twist_local_x_axis, arm_twist_bf.rotation, arm_twist_result_qq, \
-            #                                                                         elbow_local_x_axis, elbow_bf.rotation, elbow_result_qq, \
-            #                                                                         wrist_twist_local_x_axis, wrist_twist_bf.rotation, wrist_twist_result_qq, \
-            #                                                                         wrist_local_x_axis, wrist_local_y_axis, wrist_bf.rotation, wrist_result_qq, False, True)
-            #     logger.debug("f: %s, %s: 手捩り: dot: %s, degree: %s, %s", fno, wrist_twist_bone_name, wrist_twist_result_dot, wrist_twist_result_qq.toDegree(), wrist_twist_result_qq)
-
-            # # 腕の角度を再取得
-            # if wrist_result_dot > 0.95 and wrist_twist_result_dot > 0.95:
-            #     (arm_result_dot, arm_result_qq) = self.calc_arm_qq(data_set_idx, fno, arm_bone_name, arm_local_x_axis, arm_bf.rotation, arm_result_qq, \
-            #                                                     arm_twist_local_x_axis, arm_twist_bf.rotation, arm_twist_result_qq, \
-            #                                                     elbow_local_x_axis, elbow_bf.rotation, elbow_result_qq, \
-            #                                                     wrist_twist_local_x_axis, wrist_twist_bf.rotation, wrist_twist_result_qq, \
-            #                                                     wrist_local_x_axis, wrist_local_y_axis, wrist_bf.rotation, wrist_result_qq)
-            #     logger.debug("f: %s, %s: arm_result_qq: %s(%s)", fno, arm_bone_name, arm_result_qq.toDegree(), arm_result_qq)
-
-            #     # 腕捩りの回転量を取得する
-            #     (arm_twist_result_dot, arm_twist_result_qq) = self.calc_twist_qq(data_set_idx, fno, arm_twist_bone_name, None, None, None, None, None, None, \
-            #                                                                     arm_local_x_axis, arm_bf.rotation, arm_result_qq, \
-            #                                                                     arm_twist_local_x_axis, arm_twist_bf.rotation, arm_twist_result_qq, \
-            #                                                                     elbow_local_x_axis, elbow_local_y_axis, elbow_bf.rotation, elbow_result_qq, is_elbow_z, True)
-            #     logger.debug("f: %s, %s: 腕捩り: dot: %s, degree: %s, %s", fno, arm_twist_bone_name, arm_twist_result_dot, arm_twist_result_qq.toDegree(), arm_twist_result_qq.toEulerAngles4MMD().to_log())
-
             # 全て登録
             arm_bf.rotation = arm_result_qq
             arm_bf.key = True
@@ -627,7 +550,7 @@ cdef class StanceService():
                                        MQuaternion elbow_qq, MQuaternion elbow_y_qq, MQuaternion elbow_z_qq):
 
         cdef int n, m, i
-        cdef float elbow_result_degree, arm_twist_test_degree, twist_test_x_dot, twist_test_y_dot, twist_test_dot, arm_twist_degree, elbow_result_dot, arm_twist_result_dot
+        cdef float elbow_result_degree, arm_twist_test_degree, twist_test_x_dot, twist_test_y_dot, twist_test_dot, arm_twist_degree, elbow_result_dot, arm_twist_result_dot, x_weight
         cdef MVector3D original_arm_x_vec, original_local_arm_x_vec, separate_arm_x_vec, separate_local_arm_x_vec
         cdef MVector3D original_elbow_x_vec, original_local_elbow_x_vec, separate_elbow_x_vec, separate_local_elbow_x_vec
         cdef MVector3D original_elbow_y_vec, original_local_elbow_y_vec, separate_elbow_y_vec, separate_local_elbow_y_vec, now_elbow_local_y_axis
@@ -784,6 +707,8 @@ cdef class StanceService():
 
         i = 0
         while (arm_twist_result_dot < RADIANS_2 or elbow_result_dot < 0.5) and i < 5:
+            # NewValue = (((OldValue - OldMin) * (NewMax - NewMin)) / (OldMax - OldMin)) + NewMin
+            x_weight = max(0.5, min(1, (((elbow_result_qq.toDegree() - 0) * (1 - 0.5)) / (45 - 0)) + 0.5))
 
             # 腕捩り ------------------
             if arm_twist_result_dot < RADIANS_2:
@@ -810,6 +735,7 @@ cdef class StanceService():
 
                 degree_list = [arm_twist_result_degree + twist_x_qq.toDegree(), arm_twist_result_degree - twist_x_qq.toDegree(), \
                                arm_twist_result_degree + twist_y_qq.toDegree(), arm_twist_result_degree - twist_y_qq.toDegree()]
+                logger.debug("f: %s, %s, degree_list: %s, x_weight: %s, elbow: %s", fno, arm_twist_bone_name, degree_list, x_weight, elbow_result_qq.toDegree())
 
                 m = 0
                 n = 0
@@ -843,8 +769,7 @@ cdef class StanceService():
                         # オリジナルと分散後の差
                         twist_test_x_dot = MVector3D.dotProduct(test_local_arm_twist_x_vec.normalized(), original_local_arm_twist_x_vec.normalized())
                         twist_test_y_dot = MVector3D.dotProduct(test_local_arm_twist_y_vec.normalized(), original_local_arm_twist_y_vec.normalized())
-                        # twist_test_dot = twist_test_x_dot
-                        twist_test_dot = np.mean([twist_test_x_dot, twist_test_y_dot]) if elbow_result_qq.toDegree() < 10 else twist_test_x_dot
+                        twist_test_dot = np.average([twist_test_x_dot, twist_test_y_dot], weights=[x_weight, 1 - x_weight])
                         
                         if twist_test_dot > arm_twist_result_dot:
                             # より近くなった場合、角度採用
