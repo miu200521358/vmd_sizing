@@ -48,6 +48,7 @@ pip install wxpython
 pip install numpy-quaternion
 pip install bezier
 pip install pprofile
+pip install pypiwin32
 
 conda install pyinstaller
 
