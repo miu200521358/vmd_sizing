@@ -167,7 +167,7 @@ cdef class StanceService():
         cdef str arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name, bone_name
         cdef MVector3D local_z_axis, arm_local_x_axis, arm_twist_local_x_axis, elbow_local_x_axis, elbow_local_y_axis, arm_local_z2y_axis, arm_local_y_axis
         cdef MVector3D wrist_twist_local_x_axis, wrist_local_x_axis, wrist_local_y_axis
-        cdef list twist_target_bones, fnos, log_target_idxs
+        cdef list twist_target_bones, fnos, log_target_idxs, new_fnos, append_fnos
         cdef int prev_sep_fno, fno_idx, fno, prev_fno, next_fno
         cdef MOptionsDataSet data_set
         cdef MQuaternion arm_z2y_qq
@@ -278,36 +278,62 @@ cdef class StanceService():
                     if not f.result():
                         return False
                 
-                logger.info("%s捩り分散後処理 - 分散中間チェック【No.%s】", arm_bone_name, (data_set_idx + 1))
+                logger.info("%s捩り分散後処理 - 分散中間チェック①【No.%s】", arm_bone_name, (data_set_idx + 1))
 
                 futures = []
+                append_fnos = []
                 with ThreadPoolExecutor(thread_name_prefix="twist_exec{0}".format(data_set_idx), max_workers=min(5, self.options.max_workers)) as executor:
                     # 分散後にフリップ起こしてないかチェック
                     for fno_idx, (prev_fno, next_fno) in enumerate(zip(fnos[:-1], fnos[1:])):
                         fno = int(prev_fno + ((next_fno - prev_fno) / 2))
-                        futures.append(executor.submit(self.check_twist_pool, self, data_set_idx, prev_twist_motion, fno_idx, fno, fnos[-1], \
-                                                       arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name, \
-                                                       arm_local_x_axis, arm_local_y_axis, arm_twist_local_x_axis, arm_twist_local_y_axis, elbow_local_x_axis, elbow_local_y_axis, \
-                                                       wrist_twist_local_x_axis, wrist_twist_local_y_axis, wrist_local_x_axis, wrist_local_y_axis, \
-                                                       elbow_z2y_qq, elbow_local_z2y_axis, elbow_stance_degree, log_target_idxs))
+                        if fno not in fnos:
+                            futures.append(executor.submit(self.check_twist_pool, self, data_set_idx, prev_twist_motion, fno_idx, fno, fnos[-1], \
+                                                           arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name, \
+                                                           arm_local_x_axis, arm_local_y_axis, arm_twist_local_x_axis, arm_twist_local_y_axis, elbow_local_x_axis, elbow_local_y_axis, \
+                                                           wrist_twist_local_x_axis, wrist_twist_local_y_axis, wrist_local_x_axis, wrist_local_y_axis, \
+                                                           elbow_z2y_qq, elbow_local_z2y_axis, elbow_stance_degree, log_target_idxs))
+                            append_fnos.append(fno)
                 concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
                 for f in futures:
                     if not f.result():
                         return False
 
-                # logger.info("%s捩り分散後処理 - 円滑化【No.%s】", arm_bone_name, (data_set_idx + 1))
+                # 腕系ボーンのfnos再取得
+                new_fnos = data_set.motion.get_bone_fnos(arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name)
+                
+                logger.info("%s捩り分散後処理 - 分散中間チェック②【No.%s】", arm_bone_name, (data_set_idx + 1))
 
-                # # 捩りボーンのbfの跳ねてるのチェック
-                # futures = []
-                # with ThreadPoolExecutor(thread_name_prefix="smooth_twist{0}".format(data_set_idx), max_workers=self.options.max_workers) as executor:
-                #     for bone_name in [arm_twist_bone_name, wrist_twist_bone_name]:
-                #         futures.append(executor.submit(self.smooth_twist, self, data_set_idx, bone_name))
+                futures = []
+                with ThreadPoolExecutor(thread_name_prefix="twist_exec{0}".format(data_set_idx), max_workers=min(5, self.options.max_workers)) as executor:
+                    # 分散後にフリップ起こしてないかチェック
+                    for fno_idx, (prev_fno, next_fno) in enumerate(zip(new_fnos[:-1], new_fnos[1:])):
+                        fno = int(prev_fno + ((next_fno - prev_fno) / 2))
+                        if prev_fno not in fnos and prev_fno in new_fnos and next_fno not in fnos and next_fno in new_fnos and fno not in new_fnos:
+                            # 最初のfnoリストに含まれず、チェック後のfnoリストに含まれており、かつ新fnoがまだ追加されていない場合のみチェック
+                            futures.append(executor.submit(self.check_twist_pool, self, data_set_idx, prev_twist_motion, fno_idx, fno, fnos[-1], \
+                                                           arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name, \
+                                                           arm_local_x_axis, arm_local_y_axis, arm_twist_local_x_axis, arm_twist_local_y_axis, elbow_local_x_axis, elbow_local_y_axis, \
+                                                           wrist_twist_local_x_axis, wrist_twist_local_y_axis, wrist_local_x_axis, wrist_local_y_axis, \
+                                                           elbow_z2y_qq, elbow_local_z2y_axis, elbow_stance_degree, log_target_idxs))
+                concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
-                # concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
-                # for f in futures:
-                #     if not f.result():
-                #         return False
+                for f in futures:
+                    if not f.result():
+                        return False
+
+                logger.info("%s捩り分散後処理 - 円滑化【No.%s】", arm_bone_name, (data_set_idx + 1))
+
+                # 捩りボーンのbfの跳ねてるのチェック
+                futures = []
+                with ThreadPoolExecutor(thread_name_prefix="smooth_twist{0}".format(data_set_idx), max_workers=self.options.max_workers) as executor:
+                    for bone_name in [arm_twist_bone_name, wrist_twist_bone_name]:
+                        futures.append(executor.submit(self.smooth_twist, self, data_set_idx, bone_name))
+
+                concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
+                for f in futures:
+                    if not f.result():
+                        return False
 
                 # logger.info("%s捩り分散後処理 - フィルタリング【No.%s】", arm_bone_name, (data_set_idx + 1))
 
@@ -788,7 +814,7 @@ cdef class StanceService():
         
         # ひじYZ
         twist_x_qq = MQuaternion.rotationTo(separate_local_elbow_x_vec, original_local_elbow_x_vec)
-        if twist_x_qq.toDegree() > 20:
+        if twist_x_qq.toDegree() > 10:
             elbow_degree_list = [twist_x_qq.toDegree()]
             elbow_result_dot = -999
         else:
@@ -1001,14 +1027,20 @@ cdef class StanceService():
                 twist_x_qq = MQuaternion.rotationTo(separate_local_elbow_x_vec, original_local_arm_twist_x_vec)
                 twist_y_qq = MQuaternion.rotationTo(separate_local_elbow_y_vec, original_local_arm_twist_y_vec)
                 
-                qq_list = [twist_x_qq]
+                degree_list = [twist_x_qq.toDegree(), -twist_x_qq.toDegree()]
                 logger.debug("f: %s, %s, degree_list: %s, x_weight: %s, elbow: %s", fno, elbow_bone_name, degree_list, x_weight, elbow_result_qq.toDegree())
 
                 m = 0
                 n = 0
                 while m < 3 and n < 50:
-                    for test_qq in qq_list:
-                        elbow_test_qq = elbow_result_qq * test_qq
+                    for test_degree in degree_list:
+                        elbow_test_degree = elbow_result_degree + test_degree
+
+                        if elbow_test_degree < -10:
+                            logger.debug("逆ひじ対象外 f: %s, %s, n: %s(%s), elbow_test_degree: %s", fno, elbow_bone_name, n, m, elbow_test_degree)
+                            continue
+
+                        elbow_test_qq = MQuaternion.fromAxisAndAngle(elbow_local_y_axis, elbow_test_degree)
 
                         # 分散後
                         test_elbow_mat = MMatrix4x4()
@@ -1034,11 +1066,11 @@ cdef class StanceService():
                         
                         if twist_test_dot > elbow_result_dot:
                             # より近くなった場合、角度採用
-                            logger.debug("〇 f: %s, %s, n: %s(%s), twist_test_dot: %s, twist_test_x_dot: %s, twist_test_y_dot: %s, elbow_test_qq: %s, elbow_result_qq: %s, test_qq: %s", \
-                                        fno, elbow_bone_name, n, m, twist_test_dot, twist_test_x_dot, twist_test_y_dot, elbow_test_qq.toDegree(), elbow_result_qq.toDegree(), test_qq.toDegree())
+                            logger.debug("〇 f: %s, %s, n: %s(%s), twist_test_dot: %s, twist_test_x_dot: %s, twist_test_y_dot: %s, elbow_test_degree: %s, elbow_result_qq: %s, test_degree: %s", \
+                                        fno, elbow_bone_name, n, m, twist_test_dot, twist_test_x_dot, twist_test_y_dot, elbow_test_degree, elbow_result_qq.toDegree(), test_degree)
                             
                             elbow_result_dot = twist_test_dot
-                            elbow_result_qq = elbow_test_qq
+                            elbow_result_degree = elbow_test_degree
 
                             twist_x_qq = MQuaternion.rotationTo(test_local_elbow_x_vec, original_local_elbow_x_vec)
                             twist_y_qq = MQuaternion.rotationTo(test_local_elbow_y_vec, original_local_elbow_y_vec)
@@ -1046,26 +1078,27 @@ cdef class StanceService():
                             if m > 0:
                                 # 1回目以降の場合、角度を取り直して再チェック
                                 m = 0
-                                qq_list = [twist_x_qq]
+                                degree_list = [twist_x_qq.toDegree(), -twist_x_qq.toDegree()]
                                 break
                         else:
                             # 近付かなかったら不採用
-                            logger.debug("× f: %s, %s, n: %s(%s), twist_test_dot: %s, twist_test_x_dot: %s, twist_test_y_dot: %s, elbow_test_qq: %s, elbow_result_qq: %s, test_qq: %s", \
-                                         fno, elbow_bone_name, n, m, twist_test_dot, twist_test_x_dot, twist_test_y_dot, elbow_test_qq.toDegree(), elbow_result_qq.toDegree(), test_qq.toDegree())
+                            logger.debug("× f: %s, %s, n: %s(%s), twist_test_dot: %s, twist_test_x_dot: %s, twist_test_y_dot: %s, elbow_test_degree: %s, elbow_result_qq: %s, test_degree: %s", \
+                                         fno, elbow_bone_name, n, m, twist_test_dot, twist_test_x_dot, twist_test_y_dot, elbow_test_degree, elbow_result_qq.toDegree(), test_degree)
                     
                     if elbow_result_dot > RADIANS_1:
                         break
 
                     if m == 0:
                         # 初回は最も近付いた回転量ベースでリスト再生成
-                        qq_list = [twist_x_qq]
+                        degree_list = [twist_x_qq.toDegree(), -twist_x_qq.toDegree()]
                     elif m > 0:
                         # 3回目以降でダメだった場合は、量を減らして再チェック
-                        qq_list = [MQuaternion.slerp(MQuaternion(), q, 0.5) for q in qq_list]
+                        degree_list = [d * 0.5 for d in degree_list]
 
                     m += 1
                     n += 1
                 
+                elbow_result_qq = MQuaternion.fromAxisAndAngle(elbow_local_y_axis, elbow_result_degree)
                 logger.debug("確定(%s) f: %s, %s, elbow_result_dot: %s, elbow_result_qq: %s", i, fno, elbow_bone_name, elbow_result_dot, elbow_result_qq.toDegree())
 
             if prev_arm_twist_result_dot == arm_twist_result_dot and prev_elbow_result_dot == elbow_result_dot:
@@ -1154,20 +1187,20 @@ cdef class StanceService():
 
         m = 0
         n = 0
-        while m < 5 and n < 100:
+        while m < 3 and n < 100:
             for test_qq in qq_list:
                 test_x_qq, _, _, test_yz_qq = MServiceUtils.separate_local_qq(fno, wrist_twist_bone_name, test_qq, wrist_local_x_axis)
-                wrist_test_qq = wrist_result_qq * test_yz_qq if m > 0 else test_yz_qq
 
                 logger.debug("* f: %s, %s, n: %s(%s), test_x_qq: %s(%s), test_yz_qq: %s(%s)", \
                             fno, wrist_twist_bone_name, n, m, test_x_qq.toDegree(), test_x_qq, test_yz_qq.toDegree(), test_yz_qq)
                 
-                twist_degree_list = [test_qq.toDegree(), -test_qq.toDegree(), test_x_qq.toDegree(), -test_x_qq.toDegree()]
+                twist_degree_list = [test_yz_qq.toDegree(), -test_yz_qq.toDegree(), test_x_qq.toDegree(), -test_x_qq.toDegree()]
 
                 # Xを前後に回す
                 for test_degree in twist_degree_list:
                     wrist_twist_test_degree = wrist_twist_result_degree + test_degree
                     wrist_twist_test_qq = MQuaternion.fromAxisAndAngle(wrist_twist_local_x_axis, wrist_twist_test_degree)
+                    wrist_test_qq = wrist_result_qq * test_yz_qq if m > 0 else test_yz_qq
 
                     # 分散テスト
                     test_wrist_twist_mat = MMatrix4x4()
