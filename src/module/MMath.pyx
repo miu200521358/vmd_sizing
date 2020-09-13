@@ -13,6 +13,7 @@ import quaternion # noqa
 cimport numpy as np
 cimport libc.math as math
 cimport cython
+from math import sin, cos, acos, atan2, asin, pi, sqrt, degrees, radians
 
 from utils.MLogger import MLogger # noqa
 
@@ -1125,34 +1126,34 @@ cdef class MQuaternion:
             zz /= lengthSquared
             zw /= lengthSquared
 
-        cdef DTYPE_FLOAT_t pitch = math.asin(max(-1, min(1, -2.0 * (yz - xw))))
+        cdef DTYPE_FLOAT_t pitch = asin(max(-1, min(1, -2.0 * (yz - xw))))
         cdef DTYPE_FLOAT_t yaw = 0
         cdef DTYPE_FLOAT_t roll = 0
         
-        if pitch < (math.pi / 2):
-            if pitch > -(math.pi / 2):
-                yaw = math.atan2(2.0 * (xz + yw), 1.0 - 2.0 * (xx + yy))
-                roll = math.atan2(2.0 * (xy + zw), 1.0 - 2.0 * (xx + zz))
+        if pitch < (pi / 2):
+            if pitch > -(pi / 2):
+                yaw = atan2(2.0 * (xz + yw), 1.0 - 2.0 * (xx + yy))
+                roll = atan2(2.0 * (xy + zw), 1.0 - 2.0 * (xx + zz))
             else:
                 # not a unique solution
                 roll = 0.0
-                yaw = -math.atan2(-2.0 * (xy - zw), 1.0 - 2.0 * (yy + zz))
+                yaw = -atan2(-2.0 * (xy - zw), 1.0 - 2.0 * (yy + zz))
         else:
             # not a unique solution
             roll = 0.0
-            yaw = math.atan2(-2.0 * (xy - zw), 1.0 - 2.0 * (yy + zz))
+            yaw = atan2(-2.0 * (xy - zw), 1.0 - 2.0 * (yy + zz))
 
-        return MVector3D(math.degrees(pitch), math.degrees(yaw), math.degrees(roll))
+        return MVector3D(degrees(pitch), degrees(yaw), degrees(roll))
     
     # 角度に変換
     cpdef DTYPE_FLOAT_t toDegree(self):
-        return math.degrees(2 * math.acos(min(1, max(-1, self.scalar()))))
+        return degrees(2 * acos(min(1, max(-1, self.scalar()))))
 
     # 自分ともうひとつの値vとのtheta（変位量）を返す
     cpdef DTYPE_FLOAT_t calcTheata(self, MQuaternion v):
         cdef DTYPE_FLOAT_t dot = v.c_dotProduct(self.normalized(), v.normalized())
-        # cdef DTYPE_FLOAT_t theta = math.acos(min(1, max(-1, dot)))
-        # cdef DTYPE_FLOAT_t sinOfAngle = math.sin(theta)
+        # cdef DTYPE_FLOAT_t theta = acos(min(1, max(-1, dot)))
+        # cdef DTYPE_FLOAT_t sinOfAngle = sin(theta)
         return dot
 
     @classmethod
@@ -1173,16 +1174,16 @@ cdef class MQuaternion:
         cdef DTYPE_FLOAT_t x = vec3.x()
         cdef DTYPE_FLOAT_t y = vec3.y()
         cdef DTYPE_FLOAT_t z = vec3.z()
-        cdef DTYPE_FLOAT_t length = math.sqrt(x * x + y * y + z * z)
+        cdef DTYPE_FLOAT_t length = sqrt(x * x + y * y + z * z)
 
         if not is_almost_null(length - 1.0) and not is_almost_null(length):
             x /= length
             y /= length
             z /= length
 
-        cdef DTYPE_FLOAT_t a = math.radians(angle / 2.0)
-        cdef DTYPE_FLOAT_t s = math.sin(a)
-        cdef DTYPE_FLOAT_t c = math.cos(a)
+        cdef DTYPE_FLOAT_t a = radians(angle / 2.0)
+        cdef DTYPE_FLOAT_t s = sin(a)
+        cdef DTYPE_FLOAT_t c = cos(a)
         return MQuaternion(c, x * s, y * s, z * s).normalized()
 
     @classmethod
@@ -1196,18 +1197,18 @@ cdef class MQuaternion:
         cdef DTYPE_FLOAT_t x = vec3.x()
         cdef DTYPE_FLOAT_t y = vec3.y()
         cdef DTYPE_FLOAT_t z = vec3.z()
-        cdef DTYPE_FLOAT_t length = math.sqrt(x * x + y * y + z * z)
+        cdef DTYPE_FLOAT_t length = sqrt(x * x + y * y + z * z)
 
         if not is_almost_null(length - 1.0) and not is_almost_null(length):
             x /= length
             y /= length
             z /= length
 
-        cdef DTYPE_FLOAT_t a = math.acos(min(1, max(-1, qq.scalar())))
-        cdef DTYPE_FLOAT_t s = math.sin(a)
-        cdef DTYPE_FLOAT_t c = math.cos(a)
+        cdef DTYPE_FLOAT_t a = acos(min(1, max(-1, qq.scalar())))
+        cdef DTYPE_FLOAT_t s = sin(a)
+        cdef DTYPE_FLOAT_t c = cos(a)
 
-        # logger.test("scalar: %s, a: %s, c: %s, degree: %s", qq.scalar(), a, c, math.degrees(2 * math.acos(min(1, max(-1, qq.scalar())))))
+        # logger.test("scalar: %s, a: %s, c: %s, degree: %s", qq.scalar(), a, c, degrees(2 * acos(min(1, max(-1, qq.scalar())))))
 
         return MQuaternion(c, x * s, y * s, z * s).normalized()
 
@@ -1256,7 +1257,7 @@ cdef class MQuaternion:
         cdef DTYPE_INT_t k = 0
 
         if trace > 0.00000001:
-            s = 2.0 * math.sqrt(trace + 1.0)
+            s = 2.0 * sqrt(trace + 1.0)
             scalar = 0.25 * s
             axis[0] = (rot3x3[2][1] - rot3x3[1][2]) / s
             axis[1] = (rot3x3[0][2] - rot3x3[2][0]) / s
@@ -1271,7 +1272,7 @@ cdef class MQuaternion:
             j = s_next[i]
             k = s_next[j]
 
-            s = 2.0 * math.sqrt(rot3x3[i][i] - rot3x3[j][j] - rot3x3[k][k] + 1.0)
+            s = 2.0 * sqrt(rot3x3[i][i] - rot3x3[j][j] - rot3x3[k][k] + 1.0)
             axis[i] = 0.25 * s
 
             scalar = (rot3x3[k][j] - rot3x3[j][k]) / s
@@ -1300,7 +1301,7 @@ cdef class MQuaternion:
             # same as MQuaternion.fromAxisAndAngle(axis, 180.0)
             return MQuaternion(0.0, axis.x(), axis.y(), axis.z()).normalized()
 
-        d = math.sqrt(2.0 * d)
+        d = sqrt(2.0 * d)
         axis = v0.c_crossProduct(v0, v1) / d
         return MQuaternion(d * 0.5, axis.x(), axis.y(), axis.z()).normalized()
         
@@ -1310,20 +1311,20 @@ cdef class MQuaternion:
         return v.c_fromEulerAngles(pitch, yaw, roll) 
     
     cdef MQuaternion c_fromEulerAngles(self, DTYPE_FLOAT_t pitch, DTYPE_FLOAT_t yaw, DTYPE_FLOAT_t roll):
-        pitch = math.radians(pitch)
-        yaw = math.radians(yaw)
-        roll = math.radians(roll)
+        pitch = radians(pitch)
+        yaw = radians(yaw)
+        roll = radians(roll)
 
         pitch *= 0.5
         yaw *= 0.5
         roll *= 0.5
 
-        cdef DTYPE_FLOAT_t c1 = math.cos(yaw)
-        cdef DTYPE_FLOAT_t s1 = math.sin(yaw)
-        cdef DTYPE_FLOAT_t c2 = math.cos(roll)
-        cdef DTYPE_FLOAT_t s2 = math.sin(roll)
-        cdef DTYPE_FLOAT_t c3 = math.cos(pitch)
-        cdef DTYPE_FLOAT_t s3 = math.sin(pitch)
+        cdef DTYPE_FLOAT_t c1 = cos(yaw)
+        cdef DTYPE_FLOAT_t s1 = sin(yaw)
+        cdef DTYPE_FLOAT_t c2 = cos(roll)
+        cdef DTYPE_FLOAT_t s2 = sin(roll)
+        cdef DTYPE_FLOAT_t c3 = cos(pitch)
+        cdef DTYPE_FLOAT_t s3 = sin(pitch)
         cdef DTYPE_FLOAT_t c1c2 = c1 * c2
         cdef DTYPE_FLOAT_t s1s2 = s1 * s2
         cdef DTYPE_FLOAT_t w = c1c2 * c3 + s1s2 * s3
@@ -1387,11 +1388,11 @@ cdef class MQuaternion:
         cdef DTYPE_FLOAT_t sinOfAngle
 
         if (1.0 - dot) > 0.0000001:
-            angle = math.acos(max(0, min(1, dot)))
-            sinOfAngle = math.sin(angle)
+            angle = acos(max(0, min(1, dot)))
+            sinOfAngle = sin(angle)
             if sinOfAngle > 0.0000001:
-                factor1 = math.sin((1.0 - t) * angle) / sinOfAngle
-                factor2 = math.sin(t * angle) / sinOfAngle
+                factor1 = sin((1.0 - t) * angle) / sinOfAngle
+                factor2 = sin(t * angle) / sinOfAngle
 
         # Construct the result quaternion.
         return MQuaternion(q1.data() * factor1 + q2b.data() * factor2)
@@ -1627,13 +1628,13 @@ cdef class MMatrix4x4:
         if nearPlane == farPlane or aspectRatio == 0:
             return
 
-        cdef DTYPE_FLOAT_t radians = math.radians(verticalAngle / 2)
-        cdef DTYPE_FLOAT_t sine = math.sin(radians)
+        cdef DTYPE_FLOAT_t rad = radians(verticalAngle / 2)
+        cdef DTYPE_FLOAT_t sine = sin(rad)
 
         if sine == 0:
             return
         
-        cdef DTYPE_FLOAT_t cotan = math.cos(radians) / sine
+        cdef DTYPE_FLOAT_t cotan = cos(rad) / sine
         cdef DTYPE_FLOAT_t clip = farPlane - nearPlane
 
         cdef MMatrix4x4 m = MMatrix4x4()
@@ -1669,26 +1670,26 @@ cdef class MMatrix4x4:
 
         # I changed M_EPSILON to 0
         if trace > 0:
-            s = 0.5 / math.sqrt(trace + 1)
+            s = 0.5 / sqrt(trace + 1)
             q.setScalar(0.25 / s)
             q.setX((a[2][1] - a[1][2]) * s)
             q.setY((a[0][2] - a[2][0]) * s)
             q.setZ((a[1][0] - a[0][1]) * s)
         else:
             if a[0][0] > a[1][1] and a[0][0] > a[2][2]:
-                s = 2 * math.sqrt(1 + a[0][0] - a[1][1] - a[2][2])
+                s = 2 * sqrt(1 + a[0][0] - a[1][1] - a[2][2])
                 q.setScalar((a[2][1] - a[1][2]) / s)
                 q.setX(0.25 * s)
                 q.setY((a[0][1] + a[1][0]) / s)
                 q.setZ((a[0][2] + a[2][0]) / s)
             elif a[1][1] > a[2][2]:
-                s = 2 * math.sqrt(1 + a[1][1] - a[0][0] - a[2][2])
+                s = 2 * sqrt(1 + a[1][1] - a[0][0] - a[2][2])
                 q.setScalar((a[0][2] - a[2][0]) / s)
                 q.setX((a[0][1] + a[1][0]) / s)
                 q.setY(0.25 * s)
                 q.setZ((a[1][2] + a[2][1]) / s)
             else:
-                s = 2 * math.sqrt(1 + a[2][2] - a[0][0] - a[1][1])
+                s = 2 * sqrt(1 + a[2][2] - a[0][0] - a[1][1])
                 q.setScalar((a[1][0] - a[0][1]) / s)
                 q.setX((a[0][2] + a[2][0]) / s)
                 q.setY((a[1][2] + a[2][1]) / s)
