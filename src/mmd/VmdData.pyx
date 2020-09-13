@@ -339,59 +339,65 @@ cdef class VmdMotion:
         return self.c_get_differ_fnos(data_set_no, bone_name_list, limit_degrees, limit_length)
 
     cdef list c_get_differ_fnos(self, int data_set_no, list bone_name_list, float limit_degrees, float limit_length):
-        cdef float limit_radians = cmath.cos(math.radians(limit_degrees))
+        # cdef float limit_radians = cmath.cos(math.radians(limit_degrees))
         cdef list fnos = [0]
         cdef str bone_name
         cdef int prev_sep_fno = 0
         cdef list bone_fnos
-        cdef VmdBoneFrame before_bf
+        cdef VmdBoneFrame prev_bf
         cdef int fno
         cdef int last_fno
         cdef VmdBoneFrame bf
         cdef DTYPE_FLOAT_t dot
-        cdef DTYPE_FLOAT_t diff
+        cdef DTYPE_FLOAT_t rot_diff, mov_diff
 
-        for bone_name in bone_name_list:
-            prev_sep_fno = 0
+        prev_sep_fno = 0
 
-            # 有効キーを取得
-            bone_fnos = self.get_bone_fnos(bone_name, is_key=True)
+        # 有効キーを取得
+        bone_fnos = self.get_bone_fnos(*bone_name_list, is_key=True)
 
-            if len(bone_fnos) <= 0:
-                continue
-            
-            # 比較対象bf
-            before_bf = self.c_calc_bf(bone_name, 0, is_key=False, is_read=False, is_reset_interpolation=False)
-            last_fno = bone_fnos[-1] + 1
-            for fno in range(1, last_fno):
+        if len(bone_fnos) <= 0:
+            return []
+        
+        # 比較対象bf
+        rot_diff = 0
+        mov_diff = 0
+        prev_bf = None
+        last_fno = bone_fnos[-1] + 1
+        for fno in range(1, last_fno + 1):
+            for bone_name in bone_name_list:
+                prev_bf = self.c_calc_bf(bone_name, fno - 1, is_key=False, is_read=False, is_reset_interpolation=False)
                 bf = self.c_calc_bf(bone_name, fno, is_key=False, is_read=False, is_reset_interpolation=False)
 
                 if bf.read:
                     # 読み込みキーである場合、必ず処理対象に追加
                     fnos.append(fno)
-                    # 前回キーとして保持
-                    before_bf = bf.copy()
+                    rot_diff = 0
+                    mov_diff = 0
                 else:
                     # 読み込みキーではない場合、処理対象にするかチェック
+                    if fno - 1 in fnos:
+                        # 前のキーがある場合、とりあえずスルー
+                        continue
 
                     # 読み込みキーとの差
-                    diff = MQuaternion.dotProduct(before_bf.rotation, bf.rotation)
-                    if diff < limit_radians and limit_degrees > 0:
+                    rot_diff += abs(prev_bf.rotation.toDegree() - bf.rotation.toDegree())
+                    if rot_diff > limit_degrees and limit_degrees > 0:
                         # 前と今回の内積の差が指定度数より離れている場合、追加
-                        logger.test("★ 追加 set: %s, %s, f: %s, diff: %s", data_set_no, bone_name, fno, diff)
+                        logger.debug("★ 追加 set: %s, %s, f: %s, diff: %s", data_set_no, bone_name, fno, rot_diff)
                         fnos.append(fno)
-                        # 前回キーとして保持
-                        before_bf = bf.copy()
+                        rot_diff = 0
                     elif limit_length > 0:
                         # 読み込みキーとの差
-                        diff = before_bf.position.distanceToPoint(bf.position)
-                        if diff > limit_length:
+                        mov_diff += prev_bf.position.distanceToPoint(bf.position)
+                        if mov_diff > limit_length:
                             # 前と今回の移動量の差が指定値より離れている場合、追加
-                            logger.test("★ 追加 set: %s, %s, f: %s, diff: %s", data_set_no, bone_name, fno, diff)
+                            logger.test("★ 追加 set: %s, %s, f: %s, diff: %s", data_set_no, bone_name, fno, mov_diff)
                             fnos.append(fno)
-                            # 前回キーとして保持
-                            before_bf = bf.copy()
-                
+                            mov_diff = 0
+                    else:
+                        logger.test("× 追加なし set: %s, %s, f: %s, rot_diff: %s, mov_diff: %s", data_set_no, bone_name, fno, rot_diff, mov_diff)
+
                 if fno // 2000 > prev_sep_fno and bone_fnos[-1] > 0:
                     if data_set_no > 0:
                         logger.info("-- %sフレーム目:終了(%s％)【No.%s - キーフレ追加準備 - %s】", fno, round((fno / bone_fnos[-1]) * 100, 3), data_set_no, bone_name)
