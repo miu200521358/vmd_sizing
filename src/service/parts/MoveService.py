@@ -49,6 +49,10 @@ class MoveService():
             if not f.result():
                 return False
 
+        if self.options.now_process_ctrl:
+            self.options.now_process += 1
+            self.options.now_process_ctrl.write(str(self.options.now_process))
+        
         return True
     
     def adjust_move(self, data_set_idx: int, bone_name: str):
@@ -70,7 +74,7 @@ class MoveService():
 
             if len(fnos) > 0:
                 logger.info("移動補正:終了【No.%s - %s】", data_set_idx + 1, bone_name)
-            
+
             return True
         except MKilledException as ke:
             raise ke

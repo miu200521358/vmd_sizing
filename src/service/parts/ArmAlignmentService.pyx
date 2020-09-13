@@ -87,6 +87,10 @@ cdef class ArmAlignmentService():
 
             # 位置合わせ実行
             self.execute_alignment(fnos, all_alignment_group_list, all_messages, bone_names)
+            
+            if self.options.now_process_ctrl:
+                self.options.now_process += 1
+                self.options.now_process_ctrl.write(str(self.options.now_process))
 
             return True
         except MKilledException as ke:

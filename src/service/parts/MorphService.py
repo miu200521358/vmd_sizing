@@ -26,7 +26,10 @@ class MorphService():
             logger.info("モーフ置換　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
 
             self.replace_morph(data_set_idx, data_set)
-        
+
+            if self.options.now_process_ctrl:
+                self.options.now_process += 1
+                self.options.now_process_ctrl.write(str(self.options.now_process))
         return True
 
     # モーフ置換実行

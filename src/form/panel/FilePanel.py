@@ -7,6 +7,7 @@ import sys
 from form.panel.BasePanel import BasePanel
 from form.parts.SizingFileSet import SizingFileSet
 from form.parts.ConsoleCtrl import ConsoleCtrl
+from form.parts.StatusCtrl import StatusCtrl
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from utils import MFormUtils, MFileUtils # noqa
 from utils.MLogger import MLogger # noqa
@@ -51,10 +52,35 @@ class FilePanel(BasePanel):
         self.console_ctrl.Bind(wx.EVT_CHAR, lambda event: MFormUtils.on_select_all(event, self.console_ctrl))
         self.sizer.Add(self.console_ctrl, 1, wx.ALL | wx.EXPAND, 5)
 
+        status_sizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        # 進捗ステータス
+        self.before_bracket_ctrl = wx.TextCtrl(self, wx.ID_ANY, "(", wx.DefaultPosition, wx.Size(5, -1), wx.TE_READONLY | wx.BORDER_NONE | wx.WANTS_CHARS)
+        self.before_bracket_ctrl.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DLIGHT))
+        status_sizer.Add(self.before_bracket_ctrl, 0, wx.ALIGN_LEFT, 5)
+
+        self.now_process_ctrl = StatusCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(20, -1), wx.TE_READONLY | wx.BORDER_NONE | wx.WANTS_CHARS)
+        self.now_process_ctrl.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DLIGHT))
+        status_sizer.Add(self.now_process_ctrl, 0, wx.ALIGN_LEFT, 5)
+
+        self.slash_ctrl = wx.TextCtrl(self, wx.ID_ANY, "/", wx.DefaultPosition, wx.Size(5, -1), wx.TE_READONLY | wx.BORDER_NONE | wx.WANTS_CHARS)
+        self.slash_ctrl.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DLIGHT))
+        status_sizer.Add(self.slash_ctrl, 0, wx.ALIGN_LEFT, 5)
+
+        self.total_process_ctrl = StatusCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(20, -1), wx.TE_READONLY | wx.BORDER_NONE | wx.WANTS_CHARS)
+        self.total_process_ctrl.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DLIGHT))
+        status_sizer.Add(self.total_process_ctrl, 0, wx.ALIGN_LEFT, 5)
+
+        self.after_bracket_ctrl = wx.TextCtrl(self, wx.ID_ANY, ")", wx.DefaultPosition, wx.Size(5, -1), wx.TE_READONLY | wx.BORDER_NONE | wx.WANTS_CHARS)
+        self.after_bracket_ctrl.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DLIGHT))
+        status_sizer.Add(self.after_bracket_ctrl, 0, wx.ALIGN_LEFT, 5)
+
         # ゲージ
-        self.gauge_ctrl = wx.Gauge(self, wx.ID_ANY, 100, wx.DefaultPosition, wx.DefaultSize, wx.GA_HORIZONTAL)
+        self.gauge_ctrl = wx.Gauge(self, wx.ID_ANY, 100, wx.DefaultPosition, wx.Size(550, -1), wx.GA_HORIZONTAL)
         self.gauge_ctrl.SetValue(0)
-        self.sizer.Add(self.gauge_ctrl, 0, wx.ALL | wx.EXPAND, 5)
+        status_sizer.Add(self.gauge_ctrl, 0, wx.ALL | wx.EXPAND, 5)
+
+        self.sizer.Add(status_sizer, 0, wx.ALL, 0)
 
         self.fit()
     

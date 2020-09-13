@@ -35,6 +35,7 @@ class SizingWorkerThread(BaseWorkerThread):
             start = time.time()
             # データセットリスト
             data_set_list = []
+            total_process = 0
 
             if self.frame.file_panel_ctrl.file_set.motion_vmd_file_ctrl.load():
 
@@ -46,6 +47,12 @@ class SizingWorkerThread(BaseWorkerThread):
                         camera_org_model = self.frame.camera_panel_ctrl.camera_set_dict[1].camera_model_file_ctrl.data
                     camera_offset_y = self.frame.camera_panel_ctrl.camera_set_dict[1].camera_offset_y_ctrl.GetValue()
                 
+                total_process += 2                                                                                      # 基本補正・腕スタンス補正
+                if self.frame.file_panel_ctrl.file_set.org_model_file_ctrl.title_parts_ctrl.GetValue() > 0:
+                    total_process += len(self.frame.file_panel_ctrl.file_set.get_selected_stance_details())             # スタンス追加補正
+                total_process += self.frame.file_panel_ctrl.file_set.rep_model_file_ctrl.title_parts_ctrl.GetValue()    # 捩り分散
+                total_process += min(1, len(self.frame.morph_panel_ctrl.get_morph_list(1)))                             # モーフ置換
+
                 # 1件目は必ず読み込む
                 first_data_set = MOptionsDataSet(
                     motion=self.frame.file_panel_ctrl.file_set.motion_vmd_file_ctrl.data.copy(), \
@@ -64,6 +71,11 @@ class SizingWorkerThread(BaseWorkerThread):
             # 2件目以降は有効なのだけ読み込む
             for multi_idx, file_set in enumerate(self.frame.multi_panel_ctrl.file_set_list):
                 if file_set.is_loaded():
+                    total_process += 2                                                                          # 基本補正・腕スタンス補正
+                    if file_set.org_model_file_ctrl.title_parts_ctrl.GetValue() > 0:
+                        total_process += len(file_set.get_selected_stance_details())                            # スタンス追加補正
+                    total_process += file_set.rep_model_file_ctrl.title_parts_ctrl.GetValue()                   # 捩り分散
+                    total_process += min(1, len(self.frame.morph_panel_ctrl.get_morph_list(file_set.set_no)))   # モーフ置換
                     
                     camera_offset_y = 0
                     camera_org_model = file_set.org_model_file_ctrl.data
@@ -86,6 +98,15 @@ class SizingWorkerThread(BaseWorkerThread):
                         selected_stance_details=file_set.get_selected_stance_details()
                     )
                     data_set_list.append(multi_data_set)
+            
+            now_camera_output_vmd_path = self.frame.camera_panel_ctrl.output_camera_vmd_file_ctrl.file_ctrl.GetPath()
+            now_camera_data = None
+            if now_camera_output_vmd_path:
+                now_camera_data = self.frame.camera_panel_ctrl.camera_vmd_file_ctrl.data
+                total_process += 1                                                                                  # カメラ
+            
+            total_process += self.frame.arm_panel_ctrl.arm_process_flg_avoidance.GetValue() * len(data_set_list)    # 接触回避
+            total_process += self.frame.arm_panel_ctrl.arm_process_flg_alignment.GetValue()                         # 位置合わせ
 
             self.options = MOptions(\
                 version_name=self.frame.version_name, \
@@ -102,12 +123,16 @@ class SizingWorkerThread(BaseWorkerThread):
                     self.frame.arm_panel_ctrl.alignment_distance_floor_slider.GetValue(), \
                     self.frame.arm_panel_ctrl.arm_check_skip_flg_ctrl.GetValue()
                 ), \
-                camera_motion=self.frame.camera_panel_ctrl.camera_vmd_file_ctrl.data, \
-                camera_output_vmd_path=self.frame.camera_panel_ctrl.output_camera_vmd_file_ctrl.file_ctrl.GetPath(), \
+                camera_motion=now_camera_data, \
+                camera_output_vmd_path=now_camera_output_vmd_path, \
                 monitor=self.frame.file_panel_ctrl.console_ctrl, \
                 is_file=False, \
                 outout_datetime=logger.outout_datetime, \
-                max_workers=(1 if self.is_exec_saving else min(32, os.cpu_count() + 4)))
+                max_workers=(1 if self.is_exec_saving else min(32, os.cpu_count() + 4)), \
+                total_process=total_process, \
+                now_process=0, \
+                total_process_ctrl=self.frame.file_panel_ctrl.total_process_ctrl, \
+                now_process_ctrl=self.frame.file_panel_ctrl.now_process_ctrl)
             
             self.result = SizingService(self.options).execute() and self.result
 

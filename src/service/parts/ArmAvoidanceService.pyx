@@ -121,6 +121,10 @@ cdef class ArmAvoidanceService():
             #     if not f.result():
             #         return False
 
+            if self.options.now_process_ctrl:
+                self.options.now_process += 1
+                self.options.now_process_ctrl.write(str(self.options.now_process))
+
             return True
         except MKilledException as ke:
             raise ke

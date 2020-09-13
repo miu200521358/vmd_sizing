@@ -82,6 +82,11 @@ class SizingService():
 
             service_data_txt = "{service_data_txt}------------------------".format(service_data_txt=service_data_txt) # noqa
 
+            if self.options.total_process_ctrl:
+                self.options.total_process_ctrl.write(str(self.options.total_process))
+                self.options.now_process_ctrl.write("0")
+                self.options.now_process_ctrl.write(str(self.options.now_process_ctrl))
+
             logger.info(service_data_txt, decoration=MLogger.DECORATION_BOX)
 
             for data_set_idx, data_set in enumerate(self.options.data_set_list):

@@ -34,6 +34,10 @@ cdef class MOptions():
     cdef public object monitor
     cdef public bint is_file
     cdef public str outout_datetime
+    cdef public int total_process
+    cdef public int now_process
+    cdef public object total_process_ctrl
+    cdef public object now_process_ctrl
 
 cdef c_parse(str version_name)
 
