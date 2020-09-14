@@ -962,9 +962,9 @@ cdef class StanceService():
                     for test_degree in degree_list:
                         arm_twist_test_degree = arm_twist_result_degree + test_degree
 
-                        if abs(arm_twist_test_degree) > 180:
-                            logger.debug("フリップ防止(%s-%s) f: %s, %s, n: %s(%s), arm_twist_test_degree: %s", i, j, fno, arm_twist_bone_name, n, m, arm_twist_test_degree)
-                            arm_twist_test_degree = arm_twist_test_degree % 180
+                        # if abs(arm_twist_test_degree) > 180:
+                        #     logger.debug("フリップ防止(%s-%s) f: %s, %s, n: %s(%s), arm_twist_test_degree: %s", i, j, fno, arm_twist_bone_name, n, m, arm_twist_test_degree)
+                        #     arm_twist_test_degree = arm_twist_test_degree % 180
 
                         arm_twist_test_qq = MQuaternion.fromAxisAndAngle(arm_twist_local_x_axis, arm_twist_test_degree)
 
@@ -1163,9 +1163,9 @@ cdef class StanceService():
                 for test_degree in twist_degree_list:
                     wrist_twist_test_degree = wrist_twist_result_degree + test_degree
 
-                    if abs(wrist_twist_test_degree) > 180:
-                        logger.debug("手捩りフリップ防止 f: %s, %s, n: %s(%s), wrist_twist_test_degree: %s", fno, wrist_twist_bone_name, n, m, wrist_twist_test_degree)
-                        wrist_twist_test_degree = wrist_twist_test_degree % 180
+                    # if abs(wrist_twist_test_degree) > 180:
+                    #     logger.debug("手捩りフリップ防止 f: %s, %s, n: %s(%s), wrist_twist_test_degree: %s", fno, wrist_twist_bone_name, n, m, wrist_twist_test_degree)
+                    #     wrist_twist_test_degree = wrist_twist_test_degree % 180
 
                     wrist_twist_test_qq = MQuaternion.fromAxisAndAngle(wrist_twist_local_x_axis, wrist_twist_test_degree)
 
