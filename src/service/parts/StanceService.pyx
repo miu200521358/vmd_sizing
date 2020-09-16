@@ -167,9 +167,9 @@ cdef class StanceService():
         cdef str arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name, bone_name
         cdef MVector3D local_z_axis, arm_local_x_axis, arm_twist_local_x_axis, elbow_local_x_axis, elbow_local_y_axis, arm_local_z2y_axis, arm_local_y_axis
         cdef MVector3D wrist_twist_local_x_axis, wrist_local_x_axis, wrist_local_y_axis
-        cdef list twist_target_bones, fnos, log_target_idxs, new_fnos
+        cdef list twist_target_bones, fnos, log_target_idxs, new_fnos, check_fnos
         cdef set append_fnos
-        cdef int prev_sep_fno, fno_idx, fno, prev_fno, next_fno
+        cdef int prev_sep_fno, fno_idx, fno, prev_fno, next_fno, d
         cdef MOptionsDataSet data_set
         cdef MQuaternion arm_z2y_qq
         cdef VmdMotion prev_twist_motion
@@ -224,11 +224,11 @@ cdef class StanceService():
                 # 内積差分に基づきキー追加
                 logger.info("%s捩り分散準備開始【No.%s】", direction, (data_set_idx + 1))
                 fnos = data_set.motion.get_differ_fnos((data_set_idx + 1), [arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name], \
-                                                       limit_degrees=50, limit_length=0)
+                                                       limit_degrees=70, limit_length=0)
                 
                 futures = []
                 with ThreadPoolExecutor(thread_name_prefix="twist_regist{0}".format(data_set_idx), max_workers=self.options.max_workers) as executor:
-                    for bone_name in [arm_bone_name, elbow_bone_name, wrist_bone_name, arm_twist_bone_name, wrist_twist_bone_name]:
+                    for bone_name in [arm_bone_name, elbow_bone_name, wrist_bone_name]:
                         futures.append(executor.submit(self.regist_twist_bf, self, data_set_idx, bone_name, fnos, None))
 
                 concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
@@ -239,15 +239,15 @@ cdef class StanceService():
                 # 捩り前のを保持
                 prev_twist_motion = data_set.motion.copy()
 
-                # futures = []
-                # with ThreadPoolExecutor(thread_name_prefix="twist_regist{0}".format(data_set_idx), max_workers=self.options.max_workers) as executor:
-                #     futures.append(executor.submit(self.regist_twist_bf, self, data_set_idx, arm_twist_bone_name, fnos, arm_bone_name))
-                #     futures.append(executor.submit(self.regist_twist_bf, self, data_set_idx, wrist_twist_bone_name, fnos, wrist_bone_name))
+                futures = []
+                with ThreadPoolExecutor(thread_name_prefix="twist_regist{0}".format(data_set_idx), max_workers=self.options.max_workers) as executor:
+                    futures.append(executor.submit(self.regist_twist_bf, self, data_set_idx, arm_twist_bone_name, fnos, arm_bone_name))
+                    futures.append(executor.submit(self.regist_twist_bf, self, data_set_idx, wrist_twist_bone_name, fnos, wrist_bone_name))
 
-                # concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
-                # for f in futures:
-                #     if not f.result():
-                #         return False
+                concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
+                for f in futures:
+                    if not f.result():
+                        return False
 
                 logger.info("-- %s捩り分散準備:終了【No.%s】", direction, (data_set_idx + 1))
 
@@ -281,13 +281,26 @@ cdef class StanceService():
                 
                 logger.info("%s捩り分散後処理 - 分散中間チェック①【No.%s】", arm_bone_name, (data_set_idx + 1))
 
+                check_fnos = []
                 futures = []
                 with ThreadPoolExecutor(thread_name_prefix="twist_exec{0}".format(data_set_idx), max_workers=min(5, self.options.max_workers)) as executor:
                     # 分散後にフリップ起こしてないかチェック
                     for fno_idx, (prev_fno, next_fno) in enumerate(zip(fnos[:-1], fnos[1:])):
                         fno = int(prev_fno + ((next_fno - prev_fno) / 2))
                         if fno not in fnos:
-                            futures.append(executor.submit(self.check_twist_pool, self, data_set_idx, prev_twist_motion, fno_idx, fno, fnos[-1], \
+                            check_fnos.append(fno)
+
+                    if len(check_fnos) > 0:
+                        prev_sep_fno = 0
+                        log_target_idxs = []
+                        for fno_idx, fno in enumerate(check_fnos):
+                            if fno // 1000 > prev_sep_fno:
+                                log_target_idxs.append(fno)
+                                prev_sep_fno = fno // 1000
+                        log_target_idxs.append(check_fnos[-1])
+
+                        for fno in check_fnos:
+                            futures.append(executor.submit(self.check_twist_pool, self, data_set_idx, prev_twist_motion, fno_idx, fno, check_fnos[-1], \
                                                            arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name, \
                                                            arm_local_x_axis, arm_local_y_axis, arm_twist_local_x_axis, arm_twist_local_y_axis, elbow_local_x_axis, elbow_local_y_axis, \
                                                            wrist_twist_local_x_axis, wrist_twist_local_y_axis, wrist_local_x_axis, wrist_local_y_axis, \
@@ -305,23 +318,39 @@ cdef class StanceService():
 
                 append_fnos = set(fnos) ^ set(new_fnos)
 
-                futures = []
-                with ThreadPoolExecutor(thread_name_prefix="twist_exec{0}".format(data_set_idx), max_workers=min(5, self.options.max_workers)) as executor:
-                    # 分散後にフリップ起こしてないかチェック
-                    for fno_idx, (prev_fno, next_fno) in enumerate(zip(new_fnos[:-1], new_fnos[1:])):
-                        fno = int(prev_fno + ((next_fno - prev_fno) / 2))
-                        if (prev_fno in append_fnos or next_fno in append_fnos) and fno not in new_fnos:
-                            # 最初のfnoリストに含まれず、チェック後のfnoリストに含まれており、かつ新fnoがまだ追加されていない場合のみチェック
-                            futures.append(executor.submit(self.check_twist_pool, self, data_set_idx, prev_twist_motion, fno_idx, fno, fnos[-1], \
-                                                           arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name, \
-                                                           arm_local_x_axis, arm_local_y_axis, arm_twist_local_x_axis, arm_twist_local_y_axis, elbow_local_x_axis, elbow_local_y_axis, \
-                                                           wrist_twist_local_x_axis, wrist_twist_local_y_axis, wrist_local_x_axis, wrist_local_y_axis, \
-                                                           elbow_y2z_qq, elbow_local_z2y_axis, elbow_stance_degree, log_target_idxs))
-                concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
+                if len(append_fnos) > 0:
+                    check_fnos = []
+                    futures = []
+                    with ThreadPoolExecutor(thread_name_prefix="twist_exec{0}".format(data_set_idx), max_workers=min(5, self.options.max_workers)) as executor:
+                        # 最初のfnoリストに含まれず、チェック後のfnoリストに含まれており、かつ新fnoがまだ追加されていない場合のみチェック
+                        # よっぽどじゃないと引っかからないけど、ここまでひっかっかってたら全打ちに近い形にしないと無理
+                        for fno_idx, (prev_fno, next_fno) in enumerate(zip(new_fnos[:-1], new_fnos[1:])):
+                            if (prev_fno in append_fnos or next_fno in append_fnos):
+                                for d in range(1, int((next_fno - prev_fno) / 2) + 1):
+                                    for fno in [int(prev_fno + ((next_fno - prev_fno) / 2) + d), int(prev_fno + ((next_fno - prev_fno) / 2) - d)]:
+                                        if fno not in new_fnos:
+                                            check_fnos.append(fno)
 
-                for f in futures:
-                    if not f.result():
-                        return False
+                        if len(check_fnos) > 0:
+                            prev_sep_fno = 0
+                            log_target_idxs = []
+                            for fno_idx, fno in enumerate(check_fnos):
+                                if fno // 1000 > prev_sep_fno:
+                                    log_target_idxs.append(fno)
+                                    prev_sep_fno = fno // 1000
+                            log_target_idxs.append(check_fnos[-1])
+
+                            for fno in check_fnos:
+                                futures.append(executor.submit(self.check_twist_pool, self, data_set_idx, prev_twist_motion, fno_idx, fno, check_fnos[-1], \
+                                                               arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name, \
+                                                               arm_local_x_axis, arm_local_y_axis, arm_twist_local_x_axis, arm_twist_local_y_axis, elbow_local_x_axis, elbow_local_y_axis, \
+                                                               wrist_twist_local_x_axis, wrist_twist_local_y_axis, wrist_local_x_axis, wrist_local_y_axis, \
+                                                               elbow_y2z_qq, elbow_local_z2y_axis, elbow_stance_degree, log_target_idxs))
+                    concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
+
+                    for f in futures:
+                        if not f.result():
+                            return False
 
                 # logger.info("%s捩り分散後処理 - 円滑化【No.%s】", arm_bone_name, (data_set_idx + 1))
 
@@ -411,7 +440,7 @@ cdef class StanceService():
 
     cdef bint regist_twist_bf(self, int data_set_idx, str bone_name, list fnos, str parent_bone_name):
         cdef MOptionsDataSet data_set
-        cdef prev_sep_fno, fno
+        cdef int prev_sep_fno, fno
         cdef VmdBoneFrame bf, parent_bf
         cdef list target_fnos
         cdef bint is_target_copy = (parent_bone_name is not None)
@@ -575,8 +604,8 @@ cdef class StanceService():
             twist_test_y_dot = MVector3D.dotProduct(twisted_local_y_vec.normalized(), original_local_y_vec.normalized())
             twist_test_dot = np.mean([twist_test_x_dot, twist_test_y_dot])
             
-            if twist_test_dot < 0.9:
-                # かなり離れていたらやり直し
+            if twist_test_dot < 0.95:
+                # 離れていたらやり直し
                 logger.debug("×中間乖離 f: %s, %s, twist_test_dot: %s, twist_test_x_dot: %s, twist_test_y_dot: %s", fno, arm_twist_bone_name, twist_test_dot, twist_test_x_dot, twist_test_y_dot)
                 
                 arm_bf.rotation = org_arm_bf.rotation
@@ -600,10 +629,11 @@ cdef class StanceService():
                                        wrist_twist_local_x_axis, wrist_twist_local_y_axis, wrist_local_x_axis, wrist_local_y_axis, \
                                        elbow_y2z_qq, elbow_local_z2y_axis, elbow_stance_degree, log_target_idxs)
 
-                if fno in log_target_idxs and last_fno > 0:
-                    logger.info("-- %sフレーム目【No.%s - 中間捩り分散 - %s】", fno, data_set_idx + 1, arm_twist_bone_name)
             else:
                 logger.debug("○中間一致 f: %s, %s, twist_test_dot: %s, twist_test_x_dot: %s, twist_test_y_dot: %s", fno, arm_twist_bone_name, twist_test_dot, twist_test_x_dot, twist_test_y_dot)
+
+            if fno in log_target_idxs and last_fno > 0:
+                logger.info("-- %sフレーム目【No.%s - 中間捩り分散 - %s】", fno, data_set_idx + 1, arm_twist_bone_name)
 
             return True
         except MKilledException as ke:
