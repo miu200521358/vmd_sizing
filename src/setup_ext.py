@@ -21,6 +21,7 @@ ext = [Extension("module.MMath", sources=["module/MMath.pyx"], include_dirs=['.'
        Extension("service.parts.ArmAvoidanceService", sources=["service/parts/ArmAvoidanceService.pyx"], include_dirs=['.', bezier_path, get_include()]), \
        Extension("service.parts.ArmAlignmentService", sources=["service/parts/ArmAlignmentService.pyx"], include_dirs=['.', bezier_path, get_include()]), \
        Extension("service.SizingService", sources=["service/SizingService.py"], include_dirs=['.', bezier_path, get_include()]), \
+       Extension("service.ConvertSmoothService", sources=["service/ConvertSmoothService.py"], include_dirs=['.', bezier_path, get_include()]), \
        ]
 
 

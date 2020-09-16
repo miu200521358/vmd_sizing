@@ -78,3 +78,18 @@ cdef class MArmProcessOptions():
     cdef public bint arm_check_skip_flg
 
 
+cdef class MSmoothOptions():
+    cdef public str version_name
+    cdef public int logging_level
+    cdef public int max_workers
+    cdef public VmdMotion motion
+    cdef public PmxModel model
+    cdef public str output_path
+    cdef public int loop_cnt
+    cdef public int interpolation
+    cdef public list bone_list
+    cdef public object monitor
+    cdef public bint is_file
+    cdef public str outout_datetime
+
+

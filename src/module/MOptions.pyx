@@ -342,9 +342,9 @@ class MBlendOptions():
         self.inc_value = inc_value
 
 
-class MSmoothOptions():
+cdef class MSmoothOptions():
 
-    def __init__(self, version_name, logging_level, max_workers, motion, model, output_path, loop_cnt, interpolation, monitor, is_file, outout_datetime):
+    def __init__(self, version_name, logging_level, max_workers, motion, model, output_path, loop_cnt, interpolation, bone_list, monitor, is_file, outout_datetime):
         self.version_name = version_name
         self.logging_level = logging_level
         self.motion = motion
@@ -352,49 +352,52 @@ class MSmoothOptions():
         self.output_path = output_path
         self.loop_cnt = loop_cnt
         self.interpolation = interpolation
+        self.bone_list = bone_list
         self.monitor = monitor
         self.is_file = is_file
         self.outout_datetime = outout_datetime
         self.max_workers = max_workers
 
-    @classmethod
-    def parse(cls, version_name: str):
-        parser = argparse.ArgumentParser()
-        parser.add_argument('--motion_path', dest='motion_path', help='input vmd', type=str)
-        parser.add_argument('--model_path', dest='model_path', help='model_path', type=str)
-        parser.add_argument('--loop_cnt', dest='loop_cnt', help='loop_cnt', type=int)
-        parser.add_argument('--interpolation', dest='interpolation', help='interpolation', type=int)
-        parser.add_argument("--verbose", type=int, default=20)
+    # @classmethod
+    # def parse(cls, version_name: str):
+    #     parser = argparse.ArgumentParser()
+    #     parser.add_argument('--motion_path', dest='motion_path', help='input vmd', type=str)
+    #     parser.add_argument('--model_path', dest='model_path', help='model_path', type=str)
+    #     parser.add_argument('--loop_cnt', dest='loop_cnt', help='loop_cnt', type=int)
+    #     parser.add_argument('--interpolation', dest='interpolation', help='interpolation', type=int)
+    #     parser.add_argument("--verbose", type=int, default=20)
 
-        args = parser.parse_args()
+    #     args = parser.parse_args()
 
-        # ログディレクトリ作成
-        os.makedirs("log", exist_ok=True)
+    #     # ログディレクトリ作成
+    #     os.makedirs("log", exist_ok=True)
 
-        MLogger.initialize(level=args.verbose, is_file=True)
+    #     MLogger.initialize(level=args.verbose, is_file=True)
 
-        try:
-            motion = VmdReader(args.motion_path).read_data()
-            model = PmxReader(args.model_path).read_data()
+    #     try:
+    #         motion = VmdReader(args.motion_path).read_data()
+    #         model = PmxReader(args.model_path).read_data()
 
-            # 出力ファイルパス
-            output_vmd_path = MFileUtils.get_output_smooth_vmd_path(motion.path, model.path, "", args.interpolation, args.loop_cnt, True)
+    #         # 出力ファイルパス
+    #         output_vmd_path = MFileUtils.get_output_smooth_vmd_path(motion.path, model.path, "", args.interpolation, args.loop_cnt, True)
 
-            options = MSmoothOptions(\
-                version_name=version_name, \
-                logging_level=args.verbose, \
-                motion=motion, \
-                model=model, \
-                output_path=output_vmd_path, \
-                loop_cnt=args.loop_cnt, \
-                interpolation=args.interpolation, \
-                monitor=sys.stdout, \
-                is_file=True, \
-                outout_datetime=logger.outout_datetime, \
-                max_workers=1)
+    #         options = MSmoothOptions(\
+    #             version_name=version_name, \
+    #             logging_level=args.verbose, \
+    #             motion=motion, \
+    #             model=model, \
+    #             output_path=output_vmd_path, \
+    #             loop_cnt=args.loop_cnt, \
+    #             interpolation=args.interpolation, \
+    #             monitor=sys.stdout, \
+    #             is_file=True, \
+    #             outout_datetime=logger.outout_datetime, \
+    #             max_workers=1)
 
-            return options
-        except SizingException as se:
-            logger.error("スムージング処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
-        except Exception as e:
-            logger.critical("スムージング処理が意図せぬエラーで終了しました。", e, decoration=MLogger.DECORATION_BOX)
+    #         return options
+    #     except SizingException as se:
+    #         logger.error("スムージング処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
+    #     except Exception as e:
+    #         logger.critical("スムージング処理が意図せぬエラーで終了しました。", e, decoration=MLogger.DECORATION_BOX)
+
+
