@@ -831,6 +831,7 @@ cdef class StanceService():
             
             # ひじYZ
             twist_x_qq = MQuaternion.rotationTo(separate_local_elbow_x_vec, original_local_elbow_x_vec)
+
             if twist_x_qq.toDegree() > 20:
                 elbow_degree_list = [twist_x_qq.toDegree()]
             else:
@@ -1082,7 +1083,7 @@ cdef class StanceService():
         cdef MVector3D test_wrist_x_vec, test_wrist_y_vec, test_local_wrist_x_vec, test_local_wrist_y_vec, separate_local_wrist_twist_x_vec, separate_local_wrist_twist_y_vec
         cdef MVector3D separate_wrist_twist_x_vec, separate_wrist_twist_y_vec, test_local_wrist_twist_x_vec, test_local_wrist_twist_y_vec
         cdef MVector3D test_wrist_twist_x_vec, test_wrist_twist_y_vec
-        cdef MQuaternion wrist_twist_result_qq, twist_x_qq, twist_y_qq, wrist_result_qq, wrist_twist_test_qq
+        cdef MQuaternion wrist_twist_result_qq, twist_x_qq, twist_y_qq, wrist_result_qq, wrist_twist_test_qq, twist_x_yz_qq, twist_y_yz_qq
         cdef list wrist_qq_list, degree_list
         cdef float wrist_twist_result_dot, wrist_twist_result_degree, x_weight, twist_test_dot
         cdef float twist_test_x_dot, twist_test_y_dot, wrist_result_dot, wrist_twist_test_degree
@@ -1149,7 +1150,11 @@ cdef class StanceService():
             twist_x_qq = MQuaternion.rotationTo(separate_local_wrist_x_vec, original_local_wrist_x_vec)
             twist_y_qq = MQuaternion.rotationTo(separate_local_wrist_y_vec, original_local_wrist_y_vec)
 
-            wrist_qq_list = [twist_x_qq, twist_y_qq]
+            # 分離
+            _, _, _, twist_x_yz_qq = MServiceUtils.separate_local_qq(fno, wrist_bone_name, twist_x_qq, wrist_twist_local_x_axis)
+            _, _, _, twist_y_yz_qq = MServiceUtils.separate_local_qq(fno, wrist_bone_name, twist_y_qq, wrist_twist_local_x_axis)
+
+            wrist_qq_list = [twist_x_yz_qq, twist_y_yz_qq]
 
             for j, wrist_result_qq in enumerate(wrist_qq_list):
                 # 初期化
