@@ -279,7 +279,7 @@ cdef class StanceService():
                     if not f.result():
                         return False
                 
-                logger.info("%s捩り分散後処理 - 分散中間チェック【No.%s】", arm_bone_name, (data_set_idx + 1))
+                logger.info("%s捩り分散後処理 - 分散中間チェック①【No.%s】", arm_bone_name, (data_set_idx + 1))
 
                 futures = []
                 with ThreadPoolExecutor(thread_name_prefix="twist_exec{0}".format(data_set_idx), max_workers=min(5, self.options.max_workers)) as executor:
@@ -298,30 +298,30 @@ cdef class StanceService():
                     if not f.result():
                         return False
 
-                # # 腕系ボーンのfnos再取得
-                # new_fnos = data_set.motion.get_bone_fnos(arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name)
+                # 腕系ボーンのfnos再取得
+                new_fnos = data_set.motion.get_bone_fnos(arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name)
                 
-                # logger.info("%s捩り分散後処理 - 分散中間チェック②【No.%s】", arm_bone_name, (data_set_idx + 1))
+                logger.info("%s捩り分散後処理 - 分散中間チェック②【No.%s】", arm_bone_name, (data_set_idx + 1))
 
-                # append_fnos = set(fnos) ^ set(new_fnos)
+                append_fnos = set(fnos) ^ set(new_fnos)
 
-                # futures = []
-                # with ThreadPoolExecutor(thread_name_prefix="twist_exec{0}".format(data_set_idx), max_workers=min(5, self.options.max_workers)) as executor:
-                #     # 分散後にフリップ起こしてないかチェック
-                #     for fno_idx, (prev_fno, next_fno) in enumerate(zip(new_fnos[:-1], new_fnos[1:])):
-                #         fno = int(prev_fno + ((next_fno - prev_fno) / 2))
-                #         if (prev_fno in append_fnos or next_fno in append_fnos) and fno not in new_fnos:
-                #             # 最初のfnoリストに含まれず、チェック後のfnoリストに含まれており、かつ新fnoがまだ追加されていない場合のみチェック
-                #             futures.append(executor.submit(self.check_twist_pool, self, data_set_idx, prev_twist_motion, fno_idx, fno, fnos[-1], \
-                #                                            arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name, \
-                #                                            arm_local_x_axis, arm_local_y_axis, arm_twist_local_x_axis, arm_twist_local_y_axis, elbow_local_x_axis, elbow_local_y_axis, \
-                #                                            wrist_twist_local_x_axis, wrist_twist_local_y_axis, wrist_local_x_axis, wrist_local_y_axis, \
-                #                                            elbow_y2z_qq, elbow_local_z2y_axis, elbow_stance_degree, log_target_idxs))
-                # concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
+                futures = []
+                with ThreadPoolExecutor(thread_name_prefix="twist_exec{0}".format(data_set_idx), max_workers=min(5, self.options.max_workers)) as executor:
+                    # 分散後にフリップ起こしてないかチェック
+                    for fno_idx, (prev_fno, next_fno) in enumerate(zip(new_fnos[:-1], new_fnos[1:])):
+                        fno = int(prev_fno + ((next_fno - prev_fno) / 2))
+                        if (prev_fno in append_fnos or next_fno in append_fnos) and fno not in new_fnos:
+                            # 最初のfnoリストに含まれず、チェック後のfnoリストに含まれており、かつ新fnoがまだ追加されていない場合のみチェック
+                            futures.append(executor.submit(self.check_twist_pool, self, data_set_idx, prev_twist_motion, fno_idx, fno, fnos[-1], \
+                                                           arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name, \
+                                                           arm_local_x_axis, arm_local_y_axis, arm_twist_local_x_axis, arm_twist_local_y_axis, elbow_local_x_axis, elbow_local_y_axis, \
+                                                           wrist_twist_local_x_axis, wrist_twist_local_y_axis, wrist_local_x_axis, wrist_local_y_axis, \
+                                                           elbow_y2z_qq, elbow_local_z2y_axis, elbow_stance_degree, log_target_idxs))
+                concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
-                # for f in futures:
-                #     if not f.result():
-                #         return False
+                for f in futures:
+                    if not f.result():
+                        return False
 
                 # logger.info("%s捩り分散後処理 - 円滑化【No.%s】", arm_bone_name, (data_set_idx + 1))
 
@@ -871,7 +871,7 @@ cdef class StanceService():
                 test_local_elbow_y_vec = original_elbow_mat.inverted() * test_elbow_y_vec
 
                 # NewValue = (((OldValue - OldMin) * (NewMax - NewMin)) / (OldMax - OldMin)) + NewMin
-                x_weight = max(0.5, min(1, (((elbow_test_qq.toDegree() - 0) * (1 - 0.3)) / (20 - 0)) + 0.5))
+                x_weight = max(0.5, min(1, (((elbow_test_qq.toDegree() - 0) * (1 - 0.4)) / (20 - 0)) + 0.5))
 
                 # オリジナルと分散後の差
                 twist_test_x_dot = MVector3D.dotProduct(test_local_elbow_x_vec.normalized(), original_local_elbow_x_vec.normalized())
@@ -891,7 +891,7 @@ cdef class StanceService():
                 elbow_result_qq = MQuaternion.fromAxisAndAngle(elbow_local_y_axis, elbow_result_degree)
 
                 # NewValue = (((OldValue - OldMin) * (NewMax - NewMin)) / (OldMax - OldMin)) + NewMin
-                x_weight = max(0.5, min(1, (((elbow_result_qq.toDegree() - 0) * (1 - 0.3)) / (20 - 0)) + 0.5))
+                x_weight = max(0.5, min(1, (((elbow_result_qq.toDegree() - 0) * (1 - 0.4)) / (20 - 0)) + 0.5))
 
                 logger.debug("仮設定(%s-%s) f: %s, %s, x_weight: %s, elbow_result_dot: %s, elbow_result_degree: %s", i, j, fno, elbow_bone_name, x_weight, elbow_result_dot, elbow_result_degree)
 
@@ -1078,10 +1078,10 @@ cdef class StanceService():
 
         cdef int i, j, n, m
         cdef MMatrix4x4 original_wrist_mat, separate_wrist_mat, test_wrist_mat, separate_wrist_twist_mat, test_wrist_twist_mat
-        cdef MVector3D original_wrist_x_vec, original_wrist_y_vec, original_local_wrist_x_vec, original_local_wrist_y_vec
-        cdef MVector3D separate_wrist_x_vec, separate_wrist_y_vec, separate_local_wrist_x_vec, separate_local_wrist_y_vec
+        cdef MVector3D original_wrist_x_vec, original_wrist_y_vec, original_local_wrist_x_vec, original_local_wrist_y_vec, original_wrist_origin_vec
+        cdef MVector3D separate_wrist_x_vec, separate_wrist_y_vec, separate_local_wrist_x_vec, separate_local_wrist_y_vec, separate_local_wrist_origin_vec
         cdef MVector3D test_wrist_x_vec, test_wrist_y_vec, test_local_wrist_x_vec, test_local_wrist_y_vec, separate_local_wrist_twist_x_vec, separate_local_wrist_twist_y_vec
-        cdef MVector3D separate_wrist_twist_x_vec, separate_wrist_twist_y_vec, test_local_wrist_twist_x_vec, test_local_wrist_twist_y_vec
+        cdef MVector3D separate_wrist_twist_x_vec, separate_wrist_twist_y_vec, test_local_wrist_twist_x_vec, test_local_wrist_twist_y_vec, test_local_wrist_origin_vec
         cdef MVector3D test_wrist_twist_x_vec, test_wrist_twist_y_vec
         cdef MQuaternion wrist_twist_result_qq, twist_x_qq, twist_y_qq, wrist_result_qq, wrist_twist_test_qq, twist_x_yz_qq, twist_y_yz_qq
         cdef list wrist_qq_list, degree_list
@@ -1110,6 +1110,9 @@ cdef class StanceService():
         original_wrist_mat.translate(wrist_twist_local_x_axis)
         original_wrist_mat.rotate(original_wrist_qq)
 
+        # オリジナルの手首起点
+        original_wrist_origin_vec = original_wrist_mat * MVector3D()
+
         # オリジナルの手首方向
         original_wrist_x_vec = original_wrist_mat * wrist_local_x_axis
         original_wrist_y_vec = original_wrist_mat * wrist_local_y_axis
@@ -1135,8 +1138,13 @@ cdef class StanceService():
             separate_wrist_mat.rotate(elbow_qq)
             separate_wrist_mat.translate(elbow_local_x_axis)
             separate_wrist_mat.rotate(wrist_twist_result_qq)
-            separate_wrist_mat.translate(wrist_twist_local_x_axis)
             # separate_wrist_mat.rotate(wrist_result_qq)
+
+            # オリジナルの手首原点に移動
+            separate_local_wrist_origin_vec = separate_wrist_mat.inverted() * original_wrist_origin_vec
+            separate_wrist_mat.translate(separate_local_wrist_origin_vec)
+
+            separate_wrist_mat.translate(wrist_twist_local_x_axis)
 
             # 分散後の手首方向
             separate_wrist_x_vec = separate_wrist_mat * wrist_local_x_axis
@@ -1165,7 +1173,7 @@ cdef class StanceService():
                 wrist_twist_result_qq = MQuaternion.fromAxisAndAngle(wrist_twist_local_x_axis, wrist_twist_result_degree)
 
                 # # NewValue = (((OldValue - OldMin) * (NewMax - NewMin)) / (OldMax - OldMin)) + NewMin
-                # x_weight = max(0.5, min(1, (((wrist_result_qq.toDegree() - 0) * (1 - 0.3)) / (20 - 0)) + 0.5))
+                # x_weight = max(0.5, min(1, (((wrist_result_qq.toDegree() - 0) * (1 - 0.4)) / (20 - 0)) + 0.5))
 
                 # 手捩り ------------------
 
@@ -1180,6 +1188,11 @@ cdef class StanceService():
                 separate_wrist_twist_mat.translate(elbow_local_x_axis)
                 separate_wrist_twist_mat.rotate(wrist_twist_result_qq)
                 separate_wrist_twist_mat.translate(wrist_twist_local_x_axis)
+
+                # オリジナルの手首原点に移動
+                separate_local_wrist_origin_vec = separate_wrist_twist_mat.inverted() * original_wrist_origin_vec
+                separate_wrist_twist_mat.translate(separate_local_wrist_origin_vec)
+
                 separate_wrist_twist_mat.rotate(wrist_result_qq)
 
                 # 分散後の手首方向
@@ -1221,6 +1234,11 @@ cdef class StanceService():
                         test_wrist_twist_mat.translate(elbow_local_x_axis)
                         test_wrist_twist_mat.rotate(wrist_twist_test_qq)
                         test_wrist_twist_mat.translate(wrist_twist_local_x_axis)
+
+                        # オリジナルの手首原点に移動
+                        test_local_wrist_origin_vec = test_wrist_twist_mat.inverted() * original_wrist_origin_vec
+                        test_wrist_twist_mat.translate(test_local_wrist_origin_vec)
+
                         test_wrist_twist_mat.rotate(wrist_result_qq)
 
                         # 分散後の手首方向
@@ -1290,6 +1308,11 @@ cdef class StanceService():
                 test_wrist_mat.translate(elbow_local_x_axis)
                 test_wrist_mat.rotate(wrist_twist_result_qq)
                 test_wrist_mat.translate(wrist_twist_local_x_axis)
+
+                # オリジナルの手首原点に移動
+                test_local_wrist_origin_vec = test_wrist_mat.inverted() * original_wrist_origin_vec
+                test_wrist_mat.translate(test_local_wrist_origin_vec)
+
                 test_wrist_mat.rotate(wrist_result_qq)
 
                 # テストの手首方向
@@ -1301,7 +1324,7 @@ cdef class StanceService():
                 test_local_wrist_y_vec = original_wrist_mat.inverted() * test_wrist_y_vec
 
                 # # NewValue = (((OldValue - OldMin) * (NewMax - NewMin)) / (OldMax - OldMin)) + NewMin
-                # x_weight = max(0.5, min(1, (((wrist_result_qq.toDegree() - 0) * (1 - 0.3)) / (20 - 0)) + 0.5))
+                # x_weight = max(0.5, min(1, (((wrist_result_qq.toDegree() - 0) * (1 - 0.4)) / (20 - 0)) + 0.5))
 
                 # オリジナルと分散後の差
                 twist_test_x_dot = MVector3D.dotProduct(test_local_wrist_x_vec.normalized(), original_local_wrist_x_vec.normalized())
@@ -1318,7 +1341,7 @@ cdef class StanceService():
                     wrist_result_qq = prev_wrist_result_qq
 
                 # NewValue = (((OldValue - OldMin) * (NewMax - NewMin)) / (OldMax - OldMin)) + NewMin
-                x_weight = max(0.5, min(1, (((wrist_result_qq.toDegree() - 0) * (1 - 0.3)) / (20 - 0)) + 0.5))
+                x_weight = max(0.5, min(1, (((wrist_result_qq.toDegree() - 0) * (1 - 0.4)) / (20 - 0)) + 0.5))
 
                 logger.debug("仮置き(%s-%s) f: %s, %s, x_weight: %s, wrist_result_dot: %s, wrist_result_qq: %s", i, j, fno, wrist_bone_name, x_weight, wrist_result_dot, wrist_result_qq)
 
