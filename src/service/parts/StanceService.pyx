@@ -289,6 +289,8 @@ cdef class StanceService():
                         fno = int(prev_fno + ((next_fno - prev_fno) / 2))
                         if fno not in fnos:
                             check_fnos.append(fno)
+                    
+                    check_fnos = list(sorted(list(set(check_fnos))))
 
                     if len(check_fnos) > 0:
                         prev_sep_fno = 0
@@ -304,7 +306,7 @@ cdef class StanceService():
                                                            arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name, \
                                                            arm_local_x_axis, arm_local_y_axis, arm_twist_local_x_axis, arm_twist_local_y_axis, elbow_local_x_axis, elbow_local_y_axis, \
                                                            wrist_twist_local_x_axis, wrist_twist_local_y_axis, wrist_local_x_axis, wrist_local_y_axis, \
-                                                           elbow_y2z_qq, elbow_local_z2y_axis, elbow_stance_degree, log_target_idxs))
+                                                           elbow_y2z_qq, elbow_local_z2y_axis, elbow_stance_degree, log_target_idxs, "①"))
                 concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
                 for f in futures:
@@ -326,10 +328,12 @@ cdef class StanceService():
                         # よっぽどじゃないと引っかからないけど、ここまでひっかっかってたら全打ちに近い形にしないと無理
                         for fno_idx, (prev_fno, next_fno) in enumerate(zip(new_fnos[:-1], new_fnos[1:])):
                             if (prev_fno in append_fnos or next_fno in append_fnos):
-                                for d in range(1, int((next_fno - prev_fno) / 2) + 1):
+                                for d in range(0, int((next_fno - prev_fno) / 2) + 1):
                                     for fno in [int(prev_fno + ((next_fno - prev_fno) / 2) + d), int(prev_fno + ((next_fno - prev_fno) / 2) - d)]:
                                         if fno not in new_fnos:
                                             check_fnos.append(fno)
+
+                        check_fnos = list(sorted(list(set(check_fnos))))
 
                         if len(check_fnos) > 0:
                             prev_sep_fno = 0
@@ -345,7 +349,7 @@ cdef class StanceService():
                                                                arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name, \
                                                                arm_local_x_axis, arm_local_y_axis, arm_twist_local_x_axis, arm_twist_local_y_axis, elbow_local_x_axis, elbow_local_y_axis, \
                                                                wrist_twist_local_x_axis, wrist_twist_local_y_axis, wrist_local_x_axis, wrist_local_y_axis, \
-                                                               elbow_y2z_qq, elbow_local_z2y_axis, elbow_stance_degree, log_target_idxs))
+                                                               elbow_y2z_qq, elbow_local_z2y_axis, elbow_stance_degree, log_target_idxs, "②"))
                     concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
                     for f in futures:
@@ -532,10 +536,11 @@ cdef class StanceService():
                                str wrist_twist_bone_name, str wrist_bone_name, MVector3D arm_local_x_axis, MVector3D arm_local_y_axis, MVector3D arm_twist_local_x_axis, \
                                MVector3D arm_twist_local_y_axis, MVector3D elbow_local_x_axis, MVector3D elbow_local_y_axis, \
                                MVector3D wrist_twist_local_x_axis, MVector3D wrist_twist_local_y_axis, MVector3D wrist_local_x_axis, MVector3D wrist_local_y_axis, \
-                               MQuaternion elbow_y2z_qq, MVector3D elbow_local_z2y_axis, float elbow_stance_degree, list log_target_idxs):
+                               MQuaternion elbow_y2z_qq, MVector3D elbow_local_z2y_axis, float elbow_stance_degree, list log_target_idxs, str count):
 
         cdef MOptionsDataSet data_set
         cdef VmdBoneFrame org_arm_bf, org_arm_twist_bf, org_elbow_bf, org_wrist_twist_bf, org_wrist_bf, arm_bf, arm_twist_bf, elbow_bf, wrist_twist_bf, wrist_bf
+        cdef MMatrix4x4 original_mat, original_origin_mat, twisted_mat
 
         try:
             logger.copy(self.options)
@@ -600,11 +605,11 @@ cdef class StanceService():
             twisted_local_y_vec = original_mat.inverted() * twisted_y_vec
 
             # オリジナルと分散後の差
-            twist_test_x_dot = MVector3D.dotProduct(twisted_local_x_vec.normalized(), original_local_x_vec.normalized())
-            twist_test_y_dot = MVector3D.dotProduct(twisted_local_y_vec.normalized(), original_local_y_vec.normalized())
+            twist_test_x_dot = MVector3D.dotProduct(twisted_local_x_vec, original_local_x_vec)
+            twist_test_y_dot = MVector3D.dotProduct(twisted_local_y_vec, original_local_y_vec)
             twist_test_dot = np.mean([twist_test_x_dot, twist_test_y_dot])
             
-            if twist_test_dot < 0.95:
+            if not (0.95 <= twist_test_dot <= 1.05):
                 # 離れていたらやり直し
                 logger.debug("×中間乖離 f: %s, %s, twist_test_dot: %s, twist_test_x_dot: %s, twist_test_y_dot: %s", fno, arm_twist_bone_name, twist_test_dot, twist_test_x_dot, twist_test_y_dot)
                 
@@ -633,7 +638,7 @@ cdef class StanceService():
                 logger.debug("○中間一致 f: %s, %s, twist_test_dot: %s, twist_test_x_dot: %s, twist_test_y_dot: %s", fno, arm_twist_bone_name, twist_test_dot, twist_test_x_dot, twist_test_y_dot)
 
             if fno in log_target_idxs and last_fno > 0:
-                logger.info("-- %sフレーム目【No.%s - 中間捩り分散 - %s】", fno, data_set_idx + 1, arm_twist_bone_name)
+                logger.info("-- %sフレーム目【No.%s - 中間捩り分散%s - %s】", fno, data_set_idx + 1, count, arm_twist_bone_name)
 
             return True
         except MKilledException as ke:

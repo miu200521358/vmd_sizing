@@ -141,8 +141,9 @@ def join_value_2_bezier(fno: int, bone_name: str, values: list, offset=0, diff_l
     return return_tuple[0], return_tuple[1]
 
 cdef tuple c_join_value_2_bezier(int fno, str bone_name, list values, float offset, float diff_limit):
-    if np.isclose(np.max(np.array(values)), np.min(np.array(values)), atol=1e-6) or len(values) <= 2:
-        # すべてがだいたい同じ値（最小と最大が同じ値)か次数が1の場合、線形補間
+    if len(values) <= 2:
+        # 次数が1の場合、線形補間
+        logger.debug("次数1: values: %s", values)
         return (LINEAR_MMD_INTERPOLATION, [])
 
     cdef np.ndarray[np.double_t, ndim=1] xs, yx
@@ -165,6 +166,7 @@ cdef tuple c_join_value_2_bezier(int fno, str bone_name, list values, float offs
 
         if len(bz_x) == 0:
             # 始点と終点が指定されていて、カトマル曲線が描けなかった場合、線形補間
+            logger.debug("カトマル曲線失敗: bz_x: %s", bz_x)
             return (LINEAR_MMD_INTERPOLATION, [])
 
         # 次数
@@ -228,7 +230,7 @@ cdef tuple c_join_value_2_bezier(int fno, str bone_name, list values, float offs
         logger.test("joined_curve: %s", joined_curve.nodes)
 
         # 全体のキーフレ
-        bezier_x = np.arange(0, len(values), dtype=np.float)[1:-1]
+        bezier_x = np.arange(0, len(values), dtype=np.float)[1:]
 
         # 元の2つのベジェ曲線との交点を取得する
         full_ys = intersect_by_x(full_curve, bezier_x)
@@ -239,7 +241,7 @@ cdef tuple c_join_value_2_bezier(int fno, str bone_name, list values, float offs
         logger.test("f: %s, %s, reduced_ys: %s", fno, bone_name, reduced_ys)
 
         # 交点の差を取得する(前後は必ず一致)
-        diff_ys = np.concatenate([[0], np.array(full_ys) - np.array(reduced_ys), [0]])
+        diff_ys = np.concatenate([[0], np.array(full_ys) - np.array(reduced_ys)])
 
         # 差が大きい箇所をピックアップする
         diff_large = np.where(np.abs(diff_ys) > (diff_limit * (offset + 1)), 1, 0).astype(np.float)
@@ -256,10 +258,21 @@ cdef tuple c_join_value_2_bezier(int fno, str bone_name, list values, float offs
 
         if np.count_nonzero(diff_large) > 0:
             # 差が大きい箇所がある場合、分割不可
-            return (None, np.where(diff_large))
+            return (None, np.where(diff_large)[0].tolist())
 
         if not is_fit_bezier_mmd(joined_bz, offset):
             # 補間曲線がMMD補間曲線内に収まらない場合、NG
+
+            # 差分の大きなところを返す
+            diff_large = np.where(np.abs(diff_ys) > (diff_limit * 0.5 * (offset + 1)), 1, 0).astype(np.float)            
+            if np.count_nonzero(diff_large) > 0:
+                return (None, np.where(diff_large)[0].tolist())
+
+            # 差分の大きなところを返す
+            diff_large = np.where(np.abs(diff_ys) > 0, 1, 0).astype(np.float)
+            if np.count_nonzero(diff_large) > 0:
+                return (None, np.where(diff_large)[0].tolist())
+
             return (None, [])
         
         # オフセット込みの場合、MMD用補間曲線枠内に収める

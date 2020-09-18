@@ -358,46 +358,52 @@ cdef class MSmoothOptions():
         self.outout_datetime = outout_datetime
         self.max_workers = max_workers
 
-    # @classmethod
-    # def parse(cls, version_name: str):
-    #     parser = argparse.ArgumentParser()
-    #     parser.add_argument('--motion_path', dest='motion_path', help='input vmd', type=str)
-    #     parser.add_argument('--model_path', dest='model_path', help='model_path', type=str)
-    #     parser.add_argument('--loop_cnt', dest='loop_cnt', help='loop_cnt', type=int)
-    #     parser.add_argument('--interpolation', dest='interpolation', help='interpolation', type=int)
-    #     parser.add_argument("--verbose", type=int, default=20)
+    @classmethod
+    def parse(cls, version_name: str):
+        return c_smooth_parse(version_name)
 
-    #     args = parser.parse_args()
 
-    #     # ログディレクトリ作成
-    #     os.makedirs("log", exist_ok=True)
+cdef c_smooth_parse(str version_name):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--motion_path', dest='motion_path', help='input vmd', type=str)
+    parser.add_argument('--model_path', dest='model_path', help='model_path', type=str)
+    parser.add_argument('--loop_cnt', dest='loop_cnt', help='loop_cnt', type=int)
+    parser.add_argument('--interpolation', dest='interpolation', help='interpolation', type=int)
+    parser.add_argument("--bone_list", default=[], type=(lambda x: list(map(str, x.split(';')))))
+    parser.add_argument("--verbose", type=int, default=20)
 
-    #     MLogger.initialize(level=args.verbose, is_file=True)
+    args = parser.parse_args()
 
-    #     try:
-    #         motion = VmdReader(args.motion_path).read_data()
-    #         model = PmxReader(args.model_path).read_data()
+    # ログディレクトリ作成
+    os.makedirs("log", exist_ok=True)
 
-    #         # 出力ファイルパス
-    #         output_vmd_path = MFileUtils.get_output_smooth_vmd_path(motion.path, model.path, "", args.interpolation, args.loop_cnt, True)
+    MLogger.initialize(level=args.verbose, is_file=True)
 
-    #         options = MSmoothOptions(\
-    #             version_name=version_name, \
-    #             logging_level=args.verbose, \
-    #             motion=motion, \
-    #             model=model, \
-    #             output_path=output_vmd_path, \
-    #             loop_cnt=args.loop_cnt, \
-    #             interpolation=args.interpolation, \
-    #             monitor=sys.stdout, \
-    #             is_file=True, \
-    #             outout_datetime=logger.outout_datetime, \
-    #             max_workers=1)
+    try:
+        motion = VmdReader(args.motion_path).read_data()
+        model = PmxReader(args.model_path).read_data()
 
-    #         return options
-    #     except SizingException as se:
-    #         logger.error("スムージング処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
-    #     except Exception as e:
-    #         logger.critical("スムージング処理が意図せぬエラーで終了しました。", e, decoration=MLogger.DECORATION_BOX)
+        # 出力ファイルパス
+        output_vmd_path = MFileUtils.get_output_smooth_vmd_path(motion.path, model.path, "", args.interpolation, args.loop_cnt, True)
+
+        options = MSmoothOptions(\
+            version_name=version_name, \
+            logging_level=args.verbose, \
+            motion=motion, \
+            model=model, \
+            output_path=output_vmd_path, \
+            loop_cnt=args.loop_cnt, \
+            interpolation=args.interpolation, \
+            bone_list=args.bone_list, \
+            monitor=sys.stdout, \
+            is_file=True, \
+            outout_datetime=logger.outout_datetime, \
+            max_workers=1)
+
+        return options
+    except SizingException as se:
+        logger.error("スムージング処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
+    except Exception as e:
+        logger.critical("スムージング処理が意図せぬエラーで終了しました。", e, decoration=MLogger.DECORATION_BOX)
 
 

@@ -92,4 +92,6 @@ cdef class MSmoothOptions():
     cdef public bint is_file
     cdef public str outout_datetime
 
+cdef c_smooth_parse(str version_name)
+
 

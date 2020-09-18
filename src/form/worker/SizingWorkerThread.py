@@ -37,15 +37,25 @@ class SizingWorkerThread(BaseWorkerThread):
             data_set_list = []
             total_process = 0
 
+            now_camera_output_vmd_path = None
+            now_camera_data = None
+            now_camera_path = self.frame.camera_panel_ctrl.camera_vmd_file_ctrl.file_ctrl.GetPath()
+            if len(now_camera_path) > 0:
+                now_camera_data = self.frame.camera_panel_ctrl.camera_vmd_file_ctrl.data
+                now_camera_output_vmd_path = self.frame.camera_panel_ctrl.output_camera_vmd_file_ctrl.file_ctrl.GetPath()
+                total_process += 1                                                                                  # カメラ
+            
             if self.frame.file_panel_ctrl.file_set.motion_vmd_file_ctrl.load():
-
-                camera_org_model = self.frame.file_panel_ctrl.file_set.org_model_file_ctrl.data
+                
                 camera_offset_y = 0
-                if 1 in self.frame.camera_panel_ctrl.camera_set_dict:
-                    if self.frame.camera_panel_ctrl.camera_set_dict[1].camera_model_file_ctrl.is_set_path():
-                        # カメラ元モデルが指定されている場合、カメラ元モデル再指定
-                        camera_org_model = self.frame.camera_panel_ctrl.camera_set_dict[1].camera_model_file_ctrl.data
-                    camera_offset_y = self.frame.camera_panel_ctrl.camera_set_dict[1].camera_offset_y_ctrl.GetValue()
+                camera_org_model = None
+                if len(now_camera_path) > 0:
+                    camera_org_model = self.frame.file_panel_ctrl.file_set.org_model_file_ctrl.data
+                    if 1 in self.frame.camera_panel_ctrl.camera_set_dict:
+                        if self.frame.camera_panel_ctrl.camera_set_dict[1].camera_model_file_ctrl.is_set_path():
+                            # カメラ元モデルが指定されている場合、カメラ元モデル再指定
+                            camera_org_model = self.frame.camera_panel_ctrl.camera_set_dict[1].camera_model_file_ctrl.data
+                        camera_offset_y = self.frame.camera_panel_ctrl.camera_set_dict[1].camera_offset_y_ctrl.GetValue()
                 
                 total_process += 2                                                                                      # 基本補正・腕スタンス補正
                 if self.frame.file_panel_ctrl.file_set.org_model_file_ctrl.title_parts_ctrl.GetValue() > 0:
@@ -98,12 +108,6 @@ class SizingWorkerThread(BaseWorkerThread):
                         selected_stance_details=file_set.get_selected_stance_details()
                     )
                     data_set_list.append(multi_data_set)
-            
-            now_camera_output_vmd_path = self.frame.camera_panel_ctrl.output_camera_vmd_file_ctrl.file_ctrl.GetPath()
-            now_camera_data = None
-            if now_camera_output_vmd_path:
-                now_camera_data = self.frame.camera_panel_ctrl.camera_vmd_file_ctrl.data
-                total_process += 1                                                                                  # カメラ
             
             total_process += self.frame.arm_panel_ctrl.arm_process_flg_avoidance.GetValue() * len(data_set_list)    # 接触回避
             total_process += self.frame.arm_panel_ctrl.arm_process_flg_alignment.GetValue()                         # 位置合わせ
