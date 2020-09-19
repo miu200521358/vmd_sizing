@@ -19,12 +19,16 @@ class ConsoleCtrl(wx.TextCtrl):
 
         self.texts = ""
 
-    def write(self, text):
+    def write(self, text, stack=False):
         try:
             self.texts += text
 
-            if len(self.texts) > self.limit_cnt:
+            if len(self.texts) > self.limit_cnt and stack:
                 # 一定文字数を超えた場合にのみ出力
+                wx.CallAfter(self.AppendText, self.texts)
+                self.texts = ""
+            elif not stack:
+                # stackではない場合、そのまま出力
                 wx.CallAfter(self.AppendText, self.texts)
                 self.texts = ""
 

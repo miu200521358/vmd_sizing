@@ -632,11 +632,11 @@ cdef class VmdMotion:
             (joined_rot_bzs, rot_inflection) = MBezierUtils.join_value_2_bezier(fno, bone_name, rot_values, \
                                                                                 offset=offset, diff_limit=rot_diff_limit) if is_rot else (True, [])
             (joined_mx_bzs, mx_inflection) = MBezierUtils.join_value_2_bezier(fno, bone_name, mx_values, \
-                                                                                offset=offset, diff_limit=mov_diff_limit) if is_mov else (True, [])
+                                                                              offset=offset, diff_limit=mov_diff_limit) if is_mov else (True, [])
             (joined_my_bzs, my_inflection) = MBezierUtils.join_value_2_bezier(fno, bone_name, my_values, \
-                                                                                offset=offset, diff_limit=mov_diff_limit) if is_mov else (True, [])
+                                                                              offset=offset, diff_limit=mov_diff_limit) if is_mov else (True, [])
             (joined_mz_bzs, mz_inflection) = MBezierUtils.join_value_2_bezier(fno, bone_name, mz_values, \
-                                                                                offset=offset, diff_limit=mov_diff_limit) if is_mov else (True, [])
+                                                                              offset=offset, diff_limit=mov_diff_limit) if is_mov else (True, [])
 
             if joined_rot_bzs and joined_mx_bzs and joined_my_bzs and joined_mz_bzs:
                 next_bf = self.c_calc_bf(bone_name, fno, is_key=False, is_read=False, is_reset_interpolation=False)
@@ -790,7 +790,7 @@ cdef class VmdMotion:
                 last_fno += 1
                 is_inflection = True
 
-            if fno // 100 > prev_sep_fno:
+            if fno // 100 > prev_sep_fno and fnos[-1] > 0:
                 if data_set_no == 0:
                     logger.info("-- %sフレーム目:終了(%s％)【不要キー削除 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
                 else:

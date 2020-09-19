@@ -609,11 +609,11 @@ cdef class StanceService():
             twisted_local_y_vec = original_mat.inverted() * twisted_y_vec
 
             # オリジナルと分散後の差
-            twist_test_x_dot = MVector3D.dotProduct(twisted_local_x_vec, original_local_x_vec)
-            twist_test_y_dot = MVector3D.dotProduct(twisted_local_y_vec, original_local_y_vec)
+            twist_test_y_dot = MVector3D.dotProduct(twisted_local_y_vec.normalized(), original_local_y_vec.normalized())
+            twist_test_x_dot = MVector3D.dotProduct(twisted_local_x_vec.normalized(), original_local_x_vec.normalized())
             twist_test_dot = np.mean([twist_test_x_dot, twist_test_y_dot])
             
-            if not (0.95 <= twist_test_dot <= 1.05):
+            if 0.95 > twist_test_dot:
                 # 離れていたらやり直し
                 logger.debug("×中間乖離 f: %s, %s, twist_test_dot: %s, twist_test_x_dot: %s, twist_test_y_dot: %s", fno, arm_twist_bone_name, twist_test_dot, twist_test_x_dot, twist_test_y_dot)
                 
@@ -910,7 +910,7 @@ cdef class StanceService():
                 test_local_elbow_y_vec = original_elbow_mat.inverted() * test_elbow_y_vec
 
                 # NewValue = (((OldValue - OldMin) * (NewMax - NewMin)) / (OldMax - OldMin)) + NewMin
-                x_weight = max(0.5, min(1, (((elbow_test_qq.toDegree() - 0) * (1 - 0.4)) / (20 - 0)) + 0.5))
+                x_weight = ((((elbow_test_qq.toDegree() - 0) * (1 - 0.5)) / (20 - 0)) + 0.5) if elbow_test_qq.toDegree() < 20 else 1
 
                 # オリジナルと分散後の差
                 twist_test_x_dot = MVector3D.dotProduct(test_local_elbow_x_vec.normalized(), original_local_elbow_x_vec.normalized())
@@ -930,7 +930,7 @@ cdef class StanceService():
                 elbow_result_qq = MQuaternion.fromAxisAndAngle(elbow_local_y_axis, elbow_result_degree)
 
                 # NewValue = (((OldValue - OldMin) * (NewMax - NewMin)) / (OldMax - OldMin)) + NewMin
-                x_weight = max(0.5, min(1, (((elbow_result_qq.toDegree() - 0) * (1 - 0.4)) / (20 - 0)) + 0.5))
+                x_weight = ((((elbow_result_qq.toDegree() - 0) * (1 - 0.5)) / (20 - 0)) + 0.5) if elbow_test_qq.toDegree() < 20 else 1
 
                 logger.debug("仮設定(%s-%s) f: %s, %s, x_weight: %s, elbow_result_dot: %s, elbow_result_degree: %s", i, j, fno, elbow_bone_name, x_weight, elbow_result_dot, elbow_result_degree)
 
@@ -997,9 +997,9 @@ cdef class StanceService():
                     for test_degree in degree_list:
                         arm_twist_test_degree = arm_twist_result_degree + test_degree
 
-                        # if abs(arm_twist_test_degree) > 180:
-                        #     logger.debug("フリップ防止(%s-%s) f: %s, %s, n: %s(%s), arm_twist_test_degree: %s", i, j, fno, arm_twist_bone_name, n, m, arm_twist_test_degree)
-                        #     arm_twist_test_degree = arm_twist_test_degree % 180
+                        # if abs(arm_twist_test_degree) > 135:
+                        #     logger.debug("フリップ不可(%s-%s) f: %s, %s, n: %s(%s), arm_twist_test_degree: %s", i, j, fno, arm_twist_bone_name, n, m, arm_twist_test_degree)
+                        #     arm_twist_test_degree += (180 * np.sign(arm_twist_test_degree) * -1)
 
                         arm_twist_test_qq = MQuaternion.fromAxisAndAngle(arm_twist_local_x_axis, arm_twist_test_degree)
 
@@ -1260,6 +1260,11 @@ cdef class StanceService():
                 while m < 3 and n < 50:
                     for test_degree in degree_list:
                         wrist_twist_test_degree = wrist_twist_result_degree + test_degree
+
+                        # if abs(wrist_twist_test_degree) > 135:
+                        #     logger.debug("フリップ防止(%s-%s) f: %s, %s, n: %s(%s), wrist_twist_test_degree: %s", i, j, fno, wrist_twist_bone_name, n, m, wrist_twist_test_degree)
+                        #     wrist_twist_test_degree += (180 * np.sign(wrist_twist_test_degree) * -1)
+
                         wrist_twist_test_qq = MQuaternion.fromAxisAndAngle(wrist_twist_local_x_axis, wrist_twist_test_degree)
 
                         # 分散後
@@ -1380,9 +1385,9 @@ cdef class StanceService():
                     wrist_result_qq = prev_wrist_result_qq
 
                 # NewValue = (((OldValue - OldMin) * (NewMax - NewMin)) / (OldMax - OldMin)) + NewMin
-                x_weight = max(0.5, min(1, (((wrist_result_qq.toDegree() - 0) * (1 - 0.4)) / (20 - 0)) + 0.5))
+                # x_weight = max(0.5, min(1, (((wrist_result_qq.toDegree() - 0) * (1 - 0.4)) / (20 - 0)) + 0.5))
 
-                logger.debug("仮置き(%s-%s) f: %s, %s, x_weight: %s, wrist_result_dot: %s, wrist_result_qq: %s", i, j, fno, wrist_bone_name, x_weight, wrist_result_dot, wrist_result_qq)
+                logger.debug("仮置き(%s-%s) f: %s, %s, wrist_result_dot: %s, wrist_result_qq: %s", i, j, fno, wrist_bone_name, wrist_result_dot, wrist_result_qq)
 
                 if RADIANS_2 < wrist_twist_result_dot and RADIANS_2 < wrist_result_dot and prev_wrist_twist_result_dot < wrist_twist_result_dot and prev_wrist_result_dot < wrist_result_dot:
                     # 充分に近い場合、終了
@@ -1689,6 +1694,7 @@ cdef class StanceService():
 
             if set(toe_ik_target_bones).issubset(data_set.org_model.bones) and set(toe_ik_target_bones).issubset(data_set.rep_model.bones):
                 prev_sep_fno = 0
+                is_execed_toe_ik = False
 
                 if toe_ik_bone_name in data_set.org_model.bones and toe_ik_bone_name in data_set.rep_model.bones \
                         and toe_ik_bone_name in data_set.motion.bones and data_set.motion.is_active_bones(toe_ik_bone_name):
@@ -1773,6 +1779,8 @@ cdef class StanceService():
                         if round(toe_ik_bf.position.x(), 2) == 0 and round(toe_ik_bf.position.y(), 2) == 0 and round(toe_ik_bf.position.z(), 2) == 0:
                             # つま先IKにキーがあっても値がなければスルー
                             continue
+                        
+                        is_execed_toe_ik = True
 
                         # 元モデルデータ --------
 
@@ -1832,8 +1840,9 @@ cdef class StanceService():
                             logger.info("-- %sフレーム目:終了(%s％)【No.%s - %s補正】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1, toe_ik_bone_name)
                             prev_sep_fno = fno // 500
 
-                self.remove_unnecessary_bf_pool_parts(data_set_idx, leg_ik_bone_name, 0)
-                self.remove_unnecessary_bf_pool_parts(data_set_idx, toe_ik_bone_name, 0)
+                # if is_execed_toe_ik:
+                #     self.remove_unnecessary_bf_pool_parts(data_set_idx, leg_ik_bone_name, 0)
+                #     self.remove_unnecessary_bf_pool_parts(data_set_idx, toe_ik_bone_name, 0)
 
                 logger.info("%sつま先ＩＫ補正:終了【No.%s】", direction, (data_set_idx + 1))
             else:

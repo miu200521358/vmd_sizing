@@ -258,7 +258,8 @@ cdef c_parse(str version_name):
             total_process=0, \
             now_process=0, \
             total_process_ctrl=None, \
-            now_process_ctrl=None)
+            now_process_ctrl=None, \
+            tree_process_dict={})
 
         return options
     except SizingException as se:

@@ -154,7 +154,6 @@ cdef tuple c_join_value_2_bezier(int fno, str bone_name, list values, float offs
     cdef int degree
 
     try:
-
         # Xは次数（フレーム数）分移動
         xs = np.arange(0, len(values), dtype=np.float)
         # YはXの移動分を許容範囲とする
