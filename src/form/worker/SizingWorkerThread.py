@@ -26,6 +26,7 @@ class SizingWorkerThread(BaseWorkerThread):
         self.target_idx = target_idx
         self.gauge_ctrl = frame.file_panel_ctrl.gauge_ctrl
         self.options = None
+        self.output_log_path = None
 
         super().__init__(frame, result_event, frame.file_panel_ctrl.console_ctrl)
 
@@ -36,6 +37,7 @@ class SizingWorkerThread(BaseWorkerThread):
             # データセットリスト
             data_set_list = []
             total_process = 0
+            self.frame.file_panel_ctrl.tree_process_dict = {}
 
             now_camera_output_vmd_path = None
             now_camera_data = None
@@ -43,10 +45,16 @@ class SizingWorkerThread(BaseWorkerThread):
             if len(now_camera_path) > 0:
                 now_camera_data = self.frame.camera_panel_ctrl.camera_vmd_file_ctrl.data
                 now_camera_output_vmd_path = self.frame.camera_panel_ctrl.output_camera_vmd_file_ctrl.file_ctrl.GetPath()
-                total_process += 1                                                                                  # カメラ
-            
+
             if self.frame.file_panel_ctrl.file_set.motion_vmd_file_ctrl.load():
                 
+                proccess_key = "【No.1】{0}({1})".format( \
+                    os.path.basename(self.frame.file_panel_ctrl.file_set.motion_vmd_file_ctrl.data.path), \
+                    self.frame.file_panel_ctrl.file_set.rep_model_file_ctrl.data.name)
+
+                # 1件目のモーションとモデル
+                self.frame.file_panel_ctrl.tree_process_dict[proccess_key] = {"移動縮尺補正": False}
+
                 camera_offset_y = 0
                 camera_org_model = None
                 if len(now_camera_path) > 0:
@@ -60,8 +68,23 @@ class SizingWorkerThread(BaseWorkerThread):
                 total_process += 2                                                                                      # 基本補正・腕スタンス補正
                 if self.frame.file_panel_ctrl.file_set.org_model_file_ctrl.title_parts_ctrl.GetValue() > 0:
                     total_process += len(self.frame.file_panel_ctrl.file_set.get_selected_stance_details())             # スタンス追加補正
+                    self.frame.file_panel_ctrl.tree_process_dict[proccess_key]["スタンス追加補正"] = {}
+
+                    for v in self.frame.file_panel_ctrl.file_set.get_selected_stance_details():
+                        self.frame.file_panel_ctrl.tree_process_dict[proccess_key]["スタンス追加補正"][v] = False
+
                 total_process += self.frame.file_panel_ctrl.file_set.rep_model_file_ctrl.title_parts_ctrl.GetValue()    # 捩り分散
+                if self.frame.file_panel_ctrl.file_set.rep_model_file_ctrl.title_parts_ctrl.GetValue() == 1:
+                    self.frame.file_panel_ctrl.tree_process_dict[proccess_key]["捩り分散"] = False
+                
+                self.frame.file_panel_ctrl.tree_process_dict[proccess_key]["腕スタンス補正"] = False
+
+                if self.frame.arm_panel_ctrl.arm_process_flg_avoidance.GetValue() > 0:
+                    self.frame.file_panel_ctrl.tree_process_dict[proccess_key]["接触回避"] = False
+
                 total_process += min(1, len(self.frame.morph_panel_ctrl.get_morph_list(1)))                             # モーフ置換
+                if len(self.frame.morph_panel_ctrl.get_morph_list(1)) > 0:
+                    self.frame.file_panel_ctrl.tree_process_dict[proccess_key]["モーフ置換"] = False
 
                 # 1件目は必ず読み込む
                 first_data_set = MOptionsDataSet(
@@ -81,11 +104,36 @@ class SizingWorkerThread(BaseWorkerThread):
             # 2件目以降は有効なのだけ読み込む
             for multi_idx, file_set in enumerate(self.frame.multi_panel_ctrl.file_set_list):
                 if file_set.is_loaded():
+
+                    proccess_key = "【No.{0}】{1}({2})".format( \
+                        file_set.set_no, \
+                        os.path.basename(file_set.motion_vmd_file_ctrl.data.path), \
+                        file_set.rep_model_file_ctrl.data.name)
+
+                    # 1件目のモーションとモデル
+                    self.frame.file_panel_ctrl.tree_process_dict[proccess_key] = {"移動縮尺補正": False}
+
                     total_process += 2                                                                          # 基本補正・腕スタンス補正
                     if file_set.org_model_file_ctrl.title_parts_ctrl.GetValue() > 0:
                         total_process += len(file_set.get_selected_stance_details())                            # スタンス追加補正
+                        self.frame.file_panel_ctrl.tree_process_dict[proccess_key]["スタンス追加補正"] = {}
+
+                        for v in file_set.get_selected_stance_details():
+                            self.frame.file_panel_ctrl.tree_process_dict[proccess_key]["スタンス追加補正"][v] = False
+
                     total_process += file_set.rep_model_file_ctrl.title_parts_ctrl.GetValue()                   # 捩り分散
+                    if file_set.rep_model_file_ctrl.title_parts_ctrl.GetValue() == 1:
+                        self.frame.file_panel_ctrl.tree_process_dict[proccess_key]["捩り分散"] = False
+
+                    self.frame.file_panel_ctrl.tree_process_dict[proccess_key]["腕スタンス補正"] = False
+
+                    if self.frame.arm_panel_ctrl.arm_process_flg_avoidance.GetValue() > 0:
+                        self.frame.file_panel_ctrl.tree_process_dict[proccess_key]["接触回避"] = False
+
                     total_process += min(1, len(self.frame.morph_panel_ctrl.get_morph_list(file_set.set_no)))   # モーフ置換
+
+                    if len(self.frame.morph_panel_ctrl.get_morph_list(file_set.set_no)) > 0:
+                        self.frame.file_panel_ctrl.tree_process_dict[proccess_key]["モーフ置換"] = False
                     
                     camera_offset_y = 0
                     camera_org_model = file_set.org_model_file_ctrl.data
@@ -111,6 +159,12 @@ class SizingWorkerThread(BaseWorkerThread):
             
             total_process += self.frame.arm_panel_ctrl.arm_process_flg_avoidance.GetValue() * len(data_set_list)    # 接触回避
             total_process += self.frame.arm_panel_ctrl.arm_process_flg_alignment.GetValue()                         # 位置合わせ
+            if self.frame.arm_panel_ctrl.arm_process_flg_alignment.GetValue() > 0:
+                self.frame.file_panel_ctrl.tree_process_dict["位置合わせ"] = False
+
+            if len(now_camera_path) > 0:
+                total_process += 1                                                                                  # カメラ
+                self.frame.file_panel_ctrl.tree_process_dict["カメラ補正"] = False
 
             self.options = MOptions(\
                 version_name=self.frame.version_name, \
@@ -136,7 +190,8 @@ class SizingWorkerThread(BaseWorkerThread):
                 total_process=total_process, \
                 now_process=0, \
                 total_process_ctrl=self.frame.file_panel_ctrl.total_process_ctrl, \
-                now_process_ctrl=self.frame.file_panel_ctrl.now_process_ctrl)
+                now_process_ctrl=self.frame.file_panel_ctrl.now_process_ctrl, \
+                tree_process_dict=self.frame.file_panel_ctrl.tree_process_dict)
             
             self.result = SizingService(self.options).execute() and self.result
 
@@ -149,10 +204,10 @@ class SizingWorkerThread(BaseWorkerThread):
                 if self.is_out_log or (not self.result and not self.is_killed):
                     # ログパス生成
                     output_vmd_path = self.frame.file_panel_ctrl.file_set.output_vmd_file_ctrl.file_ctrl.GetPath()
-                    output_log_path = re.sub(r'\.vmd$', '.log', output_vmd_path)
+                    self.output_log_path = re.sub(r'\.vmd$', '.log', output_vmd_path)
 
                     # 出力されたメッセージを全部出力
-                    self.frame.file_panel_ctrl.console_ctrl.SaveFile(filename=output_log_path)
+                    self.frame.file_panel_ctrl.console_ctrl.SaveFile(filename=self.output_log_path)
 
             except Exception:
                 pass
@@ -164,5 +219,5 @@ class SizingWorkerThread(BaseWorkerThread):
         gc.collect()
 
     def post_event(self):
-        wx.PostEvent(self.frame, self.result_event(result=self.result and not self.is_killed, target_idx=self.target_idx, elapsed_time=self.elapsed_time))
+        wx.PostEvent(self.frame, self.result_event(result=self.result and not self.is_killed, target_idx=self.target_idx, elapsed_time=self.elapsed_time, output_log_path=self.output_log_path))
 

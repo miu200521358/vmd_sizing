@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 #
 import wx
+from wx.core import TreeItemId
 import wx.lib.newevent
 import sys
+import os
 
 from form.panel.BasePanel import BasePanel
 from form.parts.SizingFileSet import SizingFileSet
@@ -22,6 +24,7 @@ class FilePanel(BasePanel):
         super().__init__(frame, parent, tab_idx)
         self.file_hitories = file_hitories
         self.timer = None
+        self.tree_process_dict = {}
 
         # ファイルセット
         self.file_set = SizingFileSet(frame, self, self.file_hitories, 1)
@@ -46,13 +49,16 @@ class FilePanel(BasePanel):
         self.sizer.Add(btn_sizer, 0, wx.ALIGN_CENTER | wx.SHAPED, 5)
 
         # コンソール
-        self.console_ctrl = ConsoleCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), \
+        self.console_ctrl = ConsoleCtrl(self, self.frame.logging_level, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), \
                                         wx.TE_MULTILINE | wx.TE_READONLY | wx.BORDER_NONE | wx.HSCROLL | wx.VSCROLL | wx.WANTS_CHARS)
         self.console_ctrl.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DLIGHT))
         self.console_ctrl.Bind(wx.EVT_CHAR, lambda event: MFormUtils.on_select_all(event, self.console_ctrl))
         self.sizer.Add(self.console_ctrl, 1, wx.ALL | wx.EXPAND, 5)
 
         status_sizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        # 進捗ダイアログ
+        self.process_dialog = None
 
         # 進捗ステータス
         self.before_bracket_ctrl = wx.TextCtrl(self, wx.ID_ANY, "(", wx.DefaultPosition, wx.Size(5, -1), wx.TE_READONLY | wx.BORDER_NONE | wx.WANTS_CHARS)
@@ -61,6 +67,8 @@ class FilePanel(BasePanel):
 
         self.now_process_ctrl = StatusCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(20, -1), wx.TE_READONLY | wx.BORDER_NONE | wx.WANTS_CHARS)
         self.now_process_ctrl.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DLIGHT))
+        self.now_process_ctrl.SetToolTip(u"現在進んでいるの大まかな処理数です。クリックすると、具体的な処理進捗がダイアログで表示されます。")
+        self.now_process_ctrl.Bind(wx.EVT_LEFT_DOWN, self.show_process_dialog)
         status_sizer.Add(self.now_process_ctrl, 0, wx.ALIGN_LEFT, 5)
 
         self.slash_ctrl = wx.TextCtrl(self, wx.ID_ANY, "/", wx.DefaultPosition, wx.Size(5, -1), wx.TE_READONLY | wx.BORDER_NONE | wx.WANTS_CHARS)
@@ -69,6 +77,8 @@ class FilePanel(BasePanel):
 
         self.total_process_ctrl = StatusCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(20, -1), wx.TE_READONLY | wx.BORDER_NONE | wx.WANTS_CHARS)
         self.total_process_ctrl.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DLIGHT))
+        self.total_process_ctrl.SetToolTip(u"全体の大まかな処理数です。クリックすると、具体的な処理進捗がダイアログで表示されます。")
+        self.total_process_ctrl.Bind(wx.EVT_LEFT_DOWN, self.show_process_dialog)
         status_sizer.Add(self.total_process_ctrl, 0, wx.ALIGN_LEFT, 5)
 
         self.after_bracket_ctrl = wx.TextCtrl(self, wx.ID_ANY, ")", wx.DefaultPosition, wx.Size(5, -1), wx.TE_READONLY | wx.BORDER_NONE | wx.WANTS_CHARS)
@@ -84,6 +94,16 @@ class FilePanel(BasePanel):
 
         self.fit()
     
+    def show_process_dialog(self, event: wx.Event):
+        if self.process_dialog:
+            # 既にある場合、一旦破棄
+            self.process_dialog.Destroy()
+
+        self.process_dialog = ProcessDialog(self.frame, self)
+        self.process_dialog.Show()
+
+        event.Skip()
+
     # マルチプロセス用flush
     def print(self, txt):
         print(txt)
@@ -230,3 +250,59 @@ class FilePanel(BasePanel):
 
         # JSON出力
         MFileUtils.save_history(self.frame.mydir_path, self.frame.file_hitories)
+
+
+class ProcessDialog(wx.Dialog):
+
+    def __init__(self, frame: wx.Frame, panel: wx.Panel):
+        super().__init__(frame, id=wx.ID_ANY, title="進捗ダイアログ", pos=(-1, -1), size=(700, 450), style=wx.DEFAULT_DIALOG_STYLE | wx.STAY_ON_TOP)
+
+        self.frame = frame
+        self.panel = panel
+
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+
+        # データツリー
+        self.tree_ctrl = wx.TreeCtrl(self, id=wx.ID_ANY, pos=(-1, -1), size=(650, 400), style=wx.TR_ROW_LINES)
+        # 初期化
+        self.initialize(self.panel.tree_process_dict)
+
+        self.sizer.Add(self.tree_ctrl, 0, wx.ALL, 5)
+
+        self.SetSizer(self.sizer)
+        self.sizer.Layout()
+        
+        # 画面中央に表示
+        self.CentreOnScreen()
+        
+        # 最初は隠しておく
+        self.Hide()
+
+    # 初期化
+    def initialize(self, tree_dict: dict):
+        # Root
+        tr_root_ctrl = self.tree_ctrl.AddRoot(text="VMDサイジング")
+
+        # ツリー追加
+        self.append_tree(tree_dict, tr_root_ctrl)
+
+    # ツリー追加
+    def append_tree(self, item_dict: dict, parent_ctrl: TreeItemId):
+        for tk, tv in item_dict.items():
+            if isinstance(tv, bool) and tv:
+                # 処理が終了している場合、アイコン追加
+                display_ctrl = self.tree_ctrl.AppendItem(parent=parent_ctrl, text=("○ {0}".format(tk)))
+                self.tree_ctrl.SetItemTextColour(display_ctrl, "BLUE")
+            elif isinstance(tv, bool) and not tv:
+                # 終了していない場合
+                display_ctrl = self.tree_ctrl.AppendItem(parent=parent_ctrl, text=("－ {0}".format(tk)))
+                self.tree_ctrl.SetItemTextColour(display_ctrl, "GREY")
+            else:
+                display_ctrl = self.tree_ctrl.AppendItem(parent=parent_ctrl, text=tk)
+
+            if isinstance(tv, dict):
+                # 下位が辞書の場合、ループ再帰
+                self.append_tree(tv, display_ctrl)
+            
+        self.tree_ctrl.ExpandAllChildren(parent_ctrl)
+

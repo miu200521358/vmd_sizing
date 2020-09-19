@@ -3,6 +3,7 @@
 import os
 import sys
 import wx
+import threading
 
 from form.panel.FilePanel import FilePanel
 from form.panel.MorphPanel import MorphPanel
@@ -424,7 +425,13 @@ class MainFrame(wx.Frame):
             return False
         
         self.elapsed_time += event.elapsed_time
-        logger.info("\n処理時間: %s", self.show_worked_time())
+        worked_time = "\n処理時間: {0}".format(self.show_worked_time())
+        logger.info(worked_time)
+
+        if self.is_out_log and event.output_log_path and os.path.exists(event.output_log_path):
+            # ログ出力対象である場合、追記
+            with open(event.output_log_path, mode='a', encoding='utf-8') as f:
+                f.write(worked_time)
 
         # ワーカー終了
         self.worker = None
@@ -449,6 +456,9 @@ class MainFrame(wx.Frame):
         self.file_panel_ctrl.gauge_ctrl.SetValue(0)
 
     def sound_finish(self):
+        threading.Thread(target=self.sound_finish_thread).start()
+    
+    def sound_finish_thread(self):
         # 終了音を鳴らす
         if os.name == "nt":
             # Windows

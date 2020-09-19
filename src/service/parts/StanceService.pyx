@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #
+import os
 import numpy as np
 cimport numpy as np
 import math
@@ -159,6 +160,9 @@ cdef class StanceService():
         if self.options.now_process_ctrl:
             self.options.now_process += 1
             self.options.now_process_ctrl.write(str(self.options.now_process))
+
+            proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
+            self.options.tree_process_dict[proccess_key]["捩り分散"] = True
 
         return True
 
@@ -1433,6 +1437,9 @@ cdef class StanceService():
             self.options.now_process += 1
             self.options.now_process_ctrl.write(str(self.options.now_process))
 
+            proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
+            self.options.tree_process_dict[proccess_key]["スタンス追加補正"]["足ＩＫ補正"] = True
+                        
         return True
                  
     # 足ＩＫ補正
@@ -1650,6 +1657,9 @@ cdef class StanceService():
             self.options.now_process += 1
             self.options.now_process_ctrl.write(str(self.options.now_process))
 
+            proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
+            self.options.tree_process_dict[proccess_key]["スタンス追加補正"]["つま先ＩＫ補正"] = True
+
         return True
                  
     # つま先ＩＫ補正
@@ -1859,6 +1869,9 @@ cdef class StanceService():
             self.options.now_process += 1
             self.options.now_process_ctrl.write(str(self.options.now_process))
 
+            proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
+            self.options.tree_process_dict[proccess_key]["スタンス追加補正"]["つま先補正"] = True
+
         return True
                  
     # つま先補正
@@ -2051,7 +2064,10 @@ cdef class StanceService():
         if self.options.now_process_ctrl:
             self.options.now_process += 1
             self.options.now_process_ctrl.write(str(self.options.now_process))
-        
+
+            proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
+            self.options.tree_process_dict[proccess_key]["スタンス追加補正"]["センターXZ補正"] = True
+                        
         return True
 
     # センターY補正
@@ -2144,6 +2160,9 @@ cdef class StanceService():
         if self.options.now_process_ctrl:
             self.options.now_process += 1
             self.options.now_process_ctrl.write(str(self.options.now_process))
+
+            proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
+            self.options.tree_process_dict[proccess_key]["スタンス追加補正"]["センターY補正"] = True
 
         return True
 
@@ -2630,6 +2649,9 @@ cdef class StanceService():
             self.options.now_process += 1
             self.options.now_process_ctrl.write(str(self.options.now_process))
 
+            proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
+            self.options.tree_process_dict[proccess_key]["スタンス追加補正"]["上半身補正"] = True
+
         return True
 
     # 下半身補正
@@ -2760,6 +2782,9 @@ cdef class StanceService():
             self.options.now_process += 1
             self.options.now_process_ctrl.write(str(self.options.now_process))
         
+            proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
+            self.options.tree_process_dict[proccess_key]["スタンス追加補正"]["下半身補正"] = True
+
         return True
 
     # 体幹スタンス補正
@@ -2904,6 +2929,9 @@ cdef class StanceService():
         if self.options.now_process_ctrl:
             self.options.now_process += 1
             self.options.now_process_ctrl.write(str(self.options.now_process))
+
+            proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
+            self.options.tree_process_dict[proccess_key]["スタンス追加補正"]["肩補正"] = True
 
         return True
 
@@ -3479,6 +3507,9 @@ cdef class StanceService():
         if self.options.now_process_ctrl:
             self.options.now_process += 1
             self.options.now_process_ctrl.write(str(self.options.now_process))
+
+            proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
+            self.options.tree_process_dict[proccess_key]["腕スタンス補正"] = True
 
         return True
 

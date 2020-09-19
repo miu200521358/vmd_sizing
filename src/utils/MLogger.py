@@ -190,7 +190,7 @@ class MLogger():
             
     def create_box_message(self, msg, level, title=None):
         msg_block = []
-        msg_block.append("■■■■■■■■■■■■■■■■■")
+        msg_block.append("\n■■■■■■■■■■■■■■■■■")
 
         if level == logging.CRITICAL:
             msg_block.append("■　**CRITICAL**　")
@@ -215,7 +215,7 @@ class MLogger():
         msg_block = []
 
         for msg_line in msg.split("\n"):
-            msg_block.append("■■ {0} --------------------".format(msg_line))
+            msg_block.append("\n■■ {0} --------------------".format(msg_line))
 
         return "\n".join(msg_block)
 

@@ -11,9 +11,9 @@ import math
 import numpy as np
 import quaternion # noqa
 cimport numpy as np
-cimport libc.math as math
 cimport cython
-from math import sin, cos, acos, atan2, asin, pi, sqrt, degrees, radians
+from libc.math cimport sin, cos, acos, atan2, asin, pi, sqrt
+from math import degrees, radians
 
 from utils.MLogger import MLogger # noqa
 

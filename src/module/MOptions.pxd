@@ -38,6 +38,7 @@ cdef class MOptions():
     cdef public int now_process
     cdef public object total_process_ctrl
     cdef public object now_process_ctrl
+    cdef public dict tree_process_dict
 
 cdef c_parse(str version_name)
 

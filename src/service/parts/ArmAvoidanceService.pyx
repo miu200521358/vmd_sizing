@@ -4,6 +4,7 @@
 # cython: linetrace=True
 # cython: binding=True
 # distutils: define_macros=CYTHON_TRACE_NOGIL=1
+import os
 import numpy as np
 cimport numpy as np
 import math
@@ -124,6 +125,10 @@ cdef class ArmAvoidanceService():
             if self.options.now_process_ctrl:
                 self.options.now_process += 1
                 self.options.now_process_ctrl.write(str(self.options.now_process))
+
+                data_set = self.options.data_set_list[data_set_idx]
+                proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
+                self.options.tree_process_dict[proccess_key]["接触回避"] = True
 
             return True
         except MKilledException as ke:

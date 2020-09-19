@@ -4,6 +4,7 @@
 # cython: linetrace=True
 # cython: binding=True
 # distutils: define_macros=CYTHON_TRACE_NOGIL=1
+import os
 import numpy as np
 cimport numpy as np
 import math
@@ -91,6 +92,8 @@ cdef class ArmAlignmentService():
             if self.options.now_process_ctrl:
                 self.options.now_process += 1
                 self.options.now_process_ctrl.write(str(self.options.now_process))
+
+                self.options.tree_process_dict["位置合わせ"] = True
 
             return True
         except MKilledException as ke:

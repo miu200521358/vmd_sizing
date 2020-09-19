@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-import logging # noqa
+import os
 import numpy as np
 import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor
@@ -43,16 +43,19 @@ class MoveService():
                     if bone_name in data_set.motion.bones and bone_name in data_set.rep_model.bones and len(data_set.motion.bones[bone_name].keys()) > 0:
                         futures.append(executor.submit(self.adjust_move, data_set_idx, bone_name))
 
+                if self.options.now_process_ctrl:
+                    self.options.now_process += 1
+                    self.options.now_process_ctrl.write(str(self.options.now_process))
+
+                    proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
+                    self.options.tree_process_dict[proccess_key]["移動縮尺補正"] = True
+                
         concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
         for f in futures:
             if not f.result():
                 return False
 
-        if self.options.now_process_ctrl:
-            self.options.now_process += 1
-            self.options.now_process_ctrl.write(str(self.options.now_process))
-        
         return True
     
     def adjust_move(self, data_set_idx: int, bone_name: str):

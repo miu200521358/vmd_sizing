@@ -73,6 +73,8 @@ class CameraService():
             if self.options.now_process_ctrl:
                 self.options.now_process += 1
                 self.options.now_process_ctrl.write(str(self.options.now_process))
+
+                self.options.tree_process_dict["カメラ補正"] = True
             
             return True
         except MKilledException as ke:
