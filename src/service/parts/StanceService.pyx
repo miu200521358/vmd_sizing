@@ -842,6 +842,7 @@ cdef class StanceService():
 
             if i == 0:
                 # 初回は初期化
+                logger.debug("(%s) 腕捩り初期化 f: %s, %s: arm_twist_degree: %s", i, fno, elbow_bone_name, arm_twist_degree)
                 arm_twist_result_qq = MQuaternion.fromAxisAndAngle(arm_twist_local_x_axis, arm_twist_degree)
 
             # 分散後
