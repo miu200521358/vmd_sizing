@@ -701,11 +701,14 @@ cdef class StanceService():
             # 腕Xを腕捩りに
             arm_twist_degree = arm_x_qq.toDegree() * np.sign(MVector3D.dotProduct(arm_twist_local_x_axis, arm_x_qq.vector()))
 
+            # ひじYZをひじに
+            elbow_degree = elbow_yz_qq.toDegree() * np.sign(MVector3D.dotProduct(elbow_local_y_axis, elbow_yz_qq.vector()))
+
             # 腕～ひじまでを求める
             (arm_result_dot, arm_result_qq, arm_twist_result_dot, arm_twist_result_qq, elbow_result_dot, elbow_result_qq) \
                 = self.calc_arm_twist_elbow_qq(data_set_idx, fno, arm_bone_name, arm_local_x_axis, arm_local_y_axis, arm_bf.rotation, arm_yz_qq, \
                                                arm_twist_bone_name, arm_twist_local_x_axis, arm_twist_local_y_axis, arm_twist_bf.rotation, arm_twist_degree, \
-                                               elbow_bone_name, elbow_local_x_axis, elbow_local_y_axis, MVector3D(0, 0, -1), elbow_y2z_qq, elbow_bf.rotation, elbow_yz_qq, elbow_y_qq, elbow_z_qq, \
+                                               elbow_bone_name, elbow_local_x_axis, elbow_local_y_axis, MVector3D(0, 0, -1), elbow_y2z_qq, elbow_bf.rotation, elbow_degree, elbow_y_qq, elbow_z_qq, \
                                                wrist_twist_bone_name, wrist_twist_local_x_axis, wrist_twist_local_y_axis, wrist_twist_bf.rotation, \
                                                wrist_bone_name, wrist_local_x_axis, wrist_local_y_axis, wrist_bf.rotation, elbow_stance_degree)
 
@@ -763,7 +766,7 @@ cdef class StanceService():
                                        MQuaternion arm_qq, str arm_twist_bone_name, MVector3D arm_twist_local_x_axis, MVector3D arm_twist_local_y_axis, \
                                        MQuaternion original_arm_twist_qq, float arm_twist_degree, str elbow_bone_name, MVector3D elbow_local_x_axis, \
                                        MVector3D elbow_local_y_axis, MVector3D elbow_local_z_axis, MQuaternion elbow_y2z_qq, MQuaternion original_elbow_qq, \
-                                       MQuaternion elbow_qq, MQuaternion elbow_y_qq, MQuaternion elbow_z_qq, \
+                                       float elbow_degree, MQuaternion elbow_y_qq, MQuaternion elbow_z_qq, \
                                        str wrist_twist_bone_name, MVector3D wrist_twist_local_x_axis, MVector3D wrist_twist_local_y_axis, MQuaternion original_wrist_twist_qq, \
                                        str wrist_bone_name, MVector3D wrist_local_x_axis, MVector3D wrist_local_y_axis, MQuaternion original_wrist_qq, float elbow_stance_degree):
 
@@ -857,9 +860,15 @@ cdef class StanceService():
             # ひじZに回っている場合、ローカルY軸のチェックを変える
             if is_elbow_z:
                 # separate_elbow_mat.rotate(elbow_y2z_qq)
-                logger.debug("(%s) Zひじ f: %s, %s: yz: %s, y: %s, z: %s", i, fno, elbow_bone_name, elbow_qq.toDegree(), elbow_y_qq.toDegree(), elbow_z_qq.toDegree())
+                if elbow_degree < 0:
+                    logger.debug("(%s) Z逆ひじ f: %s, %s: yz: %s, y: %s, z: %s", i, fno, elbow_bone_name, elbow_degree, elbow_y_qq.toDegree(), elbow_z_qq.toDegree())
+                else:
+                    logger.debug("(%s) Z順ひじ f: %s, %s: yz: %s, y: %s, z: %s", i, fno, elbow_bone_name, elbow_degree, elbow_y_qq.toDegree(), elbow_z_qq.toDegree())
             else:
-                logger.debug("(%s) Yひじ f: %s, %s: yz: %s, y: %s, z: %s", i, fno, elbow_bone_name, elbow_qq.toDegree(), elbow_y_qq.toDegree(), elbow_z_qq.toDegree())
+                if elbow_degree < 0:
+                    logger.debug("(%s) Y逆ひじ f: %s, %s: yz: %s, y: %s, z: %s", i, fno, elbow_bone_name, elbow_degree, elbow_y_qq.toDegree(), elbow_z_qq.toDegree())
+                else:
+                    logger.debug("(%s) Y順ひじ f: %s, %s: yz: %s, y: %s, z: %s", i, fno, elbow_bone_name, elbow_degree, elbow_y_qq.toDegree(), elbow_z_qq.toDegree())
 
             # 分散後の腕方向
             separate_elbow_x_vec = separate_elbow_mat * elbow_local_x_axis
@@ -872,7 +881,7 @@ cdef class StanceService():
             # ひじYZ
             twist_x_qq = MQuaternion.rotationTo(separate_local_elbow_x_vec, original_local_elbow_x_vec)
 
-            if twist_x_qq.toDegree() > 20:
+            if twist_x_qq.toDegree() > 20 or np.sign(elbow_degree) > 0:
                 elbow_degree_list = [twist_x_qq.toDegree()]
             else:
                 elbow_degree_list = [twist_x_qq.toDegree(), -twist_x_qq.toDegree()]
@@ -911,7 +920,7 @@ cdef class StanceService():
                 test_local_elbow_y_vec = original_elbow_mat.inverted() * test_elbow_y_vec
 
                 # NewValue = (((OldValue - OldMin) * (NewMax - NewMin)) / (OldMax - OldMin)) + NewMin
-                x_weight = max(0.5, min(1, ((((elbow_test_qq.toDegree() - 0) * (1 - 0.3)) / (25 - 0)) + 0.3)))
+                x_weight = max(0.5, min(1, ((((elbow_test_qq.toDegree() - 0) * (1 - 0.5)) / (10 - 0)) + 0.5)))
 
                 # オリジナルと分散後の差
                 twist_test_x_dot = MVector3D.dotProduct(test_local_elbow_x_vec.normalized(), original_local_elbow_x_vec.normalized())
@@ -937,7 +946,7 @@ cdef class StanceService():
                 elbow_result_qq = MQuaternion.fromAxisAndAngle(elbow_local_y_axis, elbow_result_degree)
 
                 # NewValue = (((OldValue - OldMin) * (NewMax - NewMin)) / (OldMax - OldMin)) + NewMin
-                x_weight = max(0.5, min(1, ((((elbow_result_qq.toDegree() - 0) * (1 - 0.3)) / (25 - 0)) + 0.3)))
+                x_weight = max(0.5, min(1, ((((elbow_result_qq.toDegree() - 0) * (1 - 0.5)) / (10 - 0)) + 0.5)))
 
                 logger.debug("仮設定(%s-%s) f: %s, %s, x_weight: %s, elbow_result_dot: %s, elbow_result_degree: %s", i, j, fno, elbow_bone_name, x_weight, elbow_result_dot, elbow_result_degree)
 
@@ -947,7 +956,7 @@ cdef class StanceService():
                 separate_arm_twist_mat.setToIdentity()
                 separate_arm_twist_mat.rotate(arm_result_qq)
                 separate_arm_twist_mat.translate(arm_local_x_axis)
-                separate_arm_twist_mat.rotate(arm_twist_result_qq)
+                # separate_arm_twist_mat.rotate(arm_twist_result_qq)
                 separate_arm_twist_mat.translate(arm_twist_local_x_axis)
                 separate_arm_twist_mat.rotate(elbow_result_qq)
                 # separate_arm_twist_mat.translate(elbow_local_x_axis)
@@ -961,24 +970,24 @@ cdef class StanceService():
 
                 # 分散後の手首方向
                 separate_arm_twist_x_vec = separate_arm_twist_mat * elbow_local_x_axis
-                # separate_arm_twist_y_vec = separate_arm_twist_mat * elbow_local_y_axis
+                separate_arm_twist_y_vec = separate_arm_twist_mat * elbow_local_y_axis
 
                 # オリジナルから見た分散後の手首方向
                 separate_local_arm_twist_x_vec = original_elbow_mat.inverted() * separate_arm_twist_x_vec
-                # separate_local_arm_twist_y_vec = original_elbow_mat.inverted() * separate_arm_twist_y_vec
+                separate_local_arm_twist_y_vec = original_elbow_mat.inverted() * separate_arm_twist_y_vec
 
                 # 腕捩りの初期角度
                 twist_x_qq = MQuaternion.rotationTo(separate_local_arm_twist_x_vec, original_local_elbow_x_vec)
-                # twist_y_qq = MQuaternion.rotationTo(separate_local_arm_twist_y_vec, original_local_elbow_y_vec)
+                twist_y_qq = MQuaternion.rotationTo(separate_local_arm_twist_y_vec, original_local_elbow_y_vec)
                 
-                degree_list = [twist_x_qq.toDegree(), -twist_x_qq.toDegree()]
-                logger.debug("候補(%s-%s) f: %s, %s, degree_list: %s, elbow: %s, x_weight: %s", i, j, fno, arm_twist_bone_name, degree_list, elbow_result_qq.toDegree(), x_weight)
+                degree_list = [twist_x_qq.toDegree(), -twist_x_qq.toDegree(), twist_y_qq.toDegree(), -twist_y_qq.toDegree()]
+                logger.debug("候補(%s-%s) f: %s, %s, degree_list: %s, elbow: %s, x_weight: %s", i, j, fno, arm_twist_bone_name, degree_list, elbow_result_degree, x_weight)
 
                 m = 0
                 n = 0
                 while m < 3 and n < 50:
                     for test_degree in degree_list:
-                        arm_twist_test_degree = arm_twist_result_degree + test_degree
+                        arm_twist_test_degree = arm_twist_result_degree + test_degree if m > 0 else test_degree
 
                         # if abs(arm_twist_test_degree) > 135:
                         #     logger.debug("フリップ不可(%s-%s) f: %s, %s, n: %s(%s), arm_twist_test_degree: %s", i, j, fno, arm_twist_bone_name, n, m, arm_twist_test_degree)
