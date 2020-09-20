@@ -962,24 +962,30 @@ cdef class PmxModel:
 
         if bone.fixed_axis != MVector3D():
             # 軸制限がある場合、親からの向きを保持
-            x_axis = bone.fixed_axis.normalized()
+            fixed_x_axis = bone.fixed_axis.normalized()
         else:
-            from_pos = self.bones[bone.name].position
-            if bone.tail_position != MVector3D():
-                # 表示先が相対パスの場合、保持
-                to_pos = from_pos + bone.tail_position
-            elif bone.tail_index >= 0 and bone.tail_index in self.bone_indexes and self.bones[self.bone_indexes[bone.tail_index]].position != bone.position:
-                # 表示先が指定されているの場合、保持
-                to_pos = self.bones[self.bone_indexes[bone.tail_index]].position
-            else:
-                # 表示先がない場合、とりあえず子ボーンのどれかを選択
-                for b in self.bones.values():
-                    if b.parent_index == bone.index and self.bones[self.bone_indexes[b.index]].position != bone.position:
-                        to_pos = self.bones[self.bone_indexes[b.index]].position
-                        break
-            
-            # 軸制限の指定が無い場合、子の方向
-            x_axis = (to_pos - from_pos).normalized()
+            fixed_x_axis = MVector3D()
+        
+        from_pos = self.bones[bone.name].position
+        if bone.tail_position != MVector3D():
+            # 表示先が相対パスの場合、保持
+            to_pos = from_pos + bone.tail_position
+        elif bone.tail_index >= 0 and bone.tail_index in self.bone_indexes and self.bones[self.bone_indexes[bone.tail_index]].position != bone.position:
+            # 表示先が指定されているの場合、保持
+            to_pos = self.bones[self.bone_indexes[bone.tail_index]].position
+        else:
+            # 表示先がない場合、とりあえず子ボーンのどれかを選択
+            for b in self.bones.values():
+                if b.parent_index == bone.index and self.bones[self.bone_indexes[b.index]].position != bone.position:
+                    to_pos = self.bones[self.bone_indexes[b.index]].position
+                    break
+        
+        # 軸制限の指定が無い場合、子の方向
+        x_axis = (to_pos - from_pos).normalized()
+
+        if fixed_x_axis != MVector3D() and np.sign(fixed_x_axis.x()) != np.sign(x_axis.x()):
+            # 軸制限の軸方向と計算上の軸方向が違う場合、逆ベクトル
+            x_axis = -fixed_x_axis
 
         return x_axis
     
