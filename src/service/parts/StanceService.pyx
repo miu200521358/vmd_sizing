@@ -283,39 +283,39 @@ cdef class StanceService():
                     if not f.result():
                         return False
                 
-                # logger.info("%s捩り分散後処理 - 分散中間チェック①【No.%s】", arm_bone_name, (data_set_idx + 1))
+                logger.info("%s捩り分散後処理 - 分散中間チェック①【No.%s】", arm_bone_name, (data_set_idx + 1))
 
-                # check_fnos = []
-                # futures = []
-                # with ThreadPoolExecutor(thread_name_prefix="twist_exec{0}".format(data_set_idx), max_workers=min(5, self.options.max_workers)) as executor:
-                #     # 分散後にフリップ起こしてないかチェック
-                #     for fno_idx, (prev_fno, next_fno) in enumerate(zip(fnos[:-1], fnos[1:])):
-                #         fno = int(prev_fno + ((next_fno - prev_fno) / 2))
-                #         if fno not in fnos:
-                #             check_fnos.append(fno)
+                check_fnos = []
+                futures = []
+                with ThreadPoolExecutor(thread_name_prefix="twist_exec{0}".format(data_set_idx), max_workers=min(5, self.options.max_workers)) as executor:
+                    # 分散後にフリップ起こしてないかチェック
+                    for fno_idx, (prev_fno, next_fno) in enumerate(zip(fnos[:-1], fnos[1:])):
+                        fno = int(prev_fno + ((next_fno - prev_fno) / 2))
+                        if fno not in fnos:
+                            check_fnos.append(fno)
                     
-                #     check_fnos = list(sorted(list(set(check_fnos))))
+                    check_fnos = list(sorted(list(set(check_fnos))))
 
-                #     if len(check_fnos) > 0:
-                #         prev_sep_fno = 0
-                #         log_target_idxs = []
-                #         for fno_idx, fno in enumerate(check_fnos):
-                #             if fno // 1000 > prev_sep_fno:
-                #                 log_target_idxs.append(fno)
-                #                 prev_sep_fno = fno // 1000
-                #         log_target_idxs.append(check_fnos[-1])
+                    if len(check_fnos) > 0:
+                        prev_sep_fno = 0
+                        log_target_idxs = []
+                        for fno_idx, fno in enumerate(check_fnos):
+                            if fno // 1000 > prev_sep_fno:
+                                log_target_idxs.append(fno)
+                                prev_sep_fno = fno // 1000
+                        log_target_idxs.append(check_fnos[-1])
 
-                #         for fno in check_fnos:
-                #             futures.append(executor.submit(self.check_twist_pool, self, data_set_idx, prev_twist_motion, fno_idx, fno, check_fnos[-1], \
-                #                                            arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name, \
-                #                                            arm_local_x_axis, arm_local_y_axis, arm_twist_local_x_axis, arm_twist_local_y_axis, elbow_local_x_axis, elbow_local_y_axis, \
-                #                                            wrist_twist_local_x_axis, wrist_twist_local_y_axis, wrist_local_x_axis, wrist_local_y_axis, \
-                #                                            elbow_y2z_qq, elbow_local_z2y_axis, elbow_stance_degree, log_target_idxs, "①"))
-                # concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
+                        for fno in check_fnos:
+                            futures.append(executor.submit(self.check_twist_pool, self, data_set_idx, prev_twist_motion, fno_idx, fno, check_fnos[-1], \
+                                                           arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name, \
+                                                           arm_local_x_axis, arm_local_y_axis, arm_twist_local_x_axis, arm_twist_local_y_axis, elbow_local_x_axis, elbow_local_y_axis, \
+                                                           wrist_twist_local_x_axis, wrist_twist_local_y_axis, wrist_local_x_axis, wrist_local_y_axis, \
+                                                           elbow_y2z_qq, elbow_local_z2y_axis, elbow_stance_degree, log_target_idxs, "①"))
+                concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
-                # for f in futures:
-                #     if not f.result():
-                #         return False
+                for f in futures:
+                    if not f.result():
+                        return False
 
                 # # 腕系ボーンのfnos再取得
                 # new_fnos = data_set.motion.get_bone_fnos(arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name)
@@ -615,7 +615,7 @@ cdef class StanceService():
             
             if 0.95 > twist_test_dot:
                 # 離れていたらやり直し
-                logger.info("×中間乖離%s f: %s, %s, twist_test_dot: %s, twist_test_x_dot: %s, twist_test_y_dot: %s", count, fno, arm_twist_bone_name, twist_test_dot, twist_test_x_dot, twist_test_y_dot)
+                logger.debug("×中間乖離%s f: %s, %s, twist_test_dot: %s, twist_test_x_dot: %s, twist_test_y_dot: %s", count, fno, arm_twist_bone_name, twist_test_dot, twist_test_x_dot, twist_test_y_dot)
                 
                 arm_bf.rotation = org_arm_bf.rotation
                 data_set.motion.c_regist_bf(arm_bf, arm_bone_name, fno, copy_interpolation=False)
@@ -691,7 +691,7 @@ cdef class StanceService():
             logger.test("f: %s, %s: y: %s", fno, arm_bone_name, arm_y_qq.toEulerAngles())
             logger.test("f: %s, %s: z: %s", fno, arm_bone_name, arm_z_qq.toEulerAngles())
             logger.test("f: %s, %s: yz: %s", fno, arm_bone_name, arm_yz_qq.toEulerAngles())
-            logger.debug("f: %s, %s: total: %s, x: %s, y: %s, z: %s, yz: %s", fno, elbow_bone_name, elbow_bf.rotation.toDegree(), elbow_x_qq.toDegree(), elbow_y_qq.toDegree(), elbow_z_qq.toDegree(), elbow_yz_qq.toEulerAngles())
+            logger.debug("f: %s, %s: total: %s, x: %s, y: %s, z: %s, yz: %s", fno, elbow_bone_name, elbow_bf.rotation.toDegree(), elbow_x_qq.toDegree(), elbow_y_qq.toDegree(), elbow_z_qq.toDegree(), elbow_yz_qq)
             logger.test("f: %s, %s: total: %s", fno, wrist_bone_name, wrist_bf.rotation.toEulerAngles())
             logger.test("f: %s, %s: x: %s", fno, wrist_bone_name, wrist_x_qq.toEulerAngles())
             logger.test("f: %s, %s: y: %s", fno, wrist_bone_name, wrist_y_qq.toEulerAngles())
@@ -702,7 +702,12 @@ cdef class StanceService():
             arm_twist_degree = arm_x_qq.toDegree() * np.sign(MVector3D.dotProduct(arm_twist_local_x_axis, arm_x_qq.vector()))
 
             # ひじYZをひじに
-            elbow_degree = elbow_yz_qq.toDegree() * np.sign(MVector3D.dotProduct(elbow_local_y_axis, elbow_yz_qq.vector()))
+            if elbow_y_qq.toDegree() + 3 < elbow_z_qq.toDegree():
+                # ZひじはZとの内積
+                elbow_degree = elbow_yz_qq.toDegree() * np.sign(MVector3D.dotProduct(MVector3D(0, 0, -1), elbow_yz_qq.vector()))
+            else:
+                # YひじはYとの内積
+                elbow_degree = elbow_yz_qq.toDegree() * np.sign(MVector3D.dotProduct(elbow_local_y_axis, elbow_yz_qq.vector()))
 
             # 腕～ひじまでを求める
             (arm_result_dot, arm_result_qq, arm_twist_result_dot, arm_twist_result_qq, elbow_result_dot, elbow_result_qq) \
@@ -920,7 +925,7 @@ cdef class StanceService():
                 test_local_elbow_y_vec = original_elbow_mat.inverted() * test_elbow_y_vec
 
                 # NewValue = (((OldValue - OldMin) * (NewMax - NewMin)) / (OldMax - OldMin)) + NewMin
-                x_weight = max(0.5, min(1, ((((elbow_test_qq.toDegree() - 0) * (1 - 0.5)) / (10 - 0)) + 0.5)))
+                x_weight = max(0.5, min(1, ((((elbow_test_qq.toDegree() - 0) * (1 - 0.5)) / (20 - 0)) + 0.5)))
 
                 # オリジナルと分散後の差
                 twist_test_x_dot = MVector3D.dotProduct(test_local_elbow_x_vec.normalized(), original_local_elbow_x_vec.normalized())
@@ -946,7 +951,7 @@ cdef class StanceService():
                 elbow_result_qq = MQuaternion.fromAxisAndAngle(elbow_local_y_axis, elbow_result_degree)
 
                 # NewValue = (((OldValue - OldMin) * (NewMax - NewMin)) / (OldMax - OldMin)) + NewMin
-                x_weight = max(0.5, min(1, ((((elbow_result_qq.toDegree() - 0) * (1 - 0.5)) / (10 - 0)) + 0.5)))
+                x_weight = max(0.5, min(1, ((((elbow_result_qq.toDegree() - 0) * (1 - 0.5)) / (20 - 0)) + 0.5)))
 
                 logger.debug("仮設定(%s-%s) f: %s, %s, x_weight: %s, elbow_result_dot: %s, elbow_result_degree: %s", i, j, fno, elbow_bone_name, x_weight, elbow_result_dot, elbow_result_degree)
 
