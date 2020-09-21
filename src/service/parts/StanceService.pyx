@@ -704,7 +704,7 @@ cdef class StanceService():
             # ひじYZをひじに
             if elbow_y_qq.toDegree() + 3 < elbow_z_qq.toDegree():
                 # ZひじはZとの内積
-                elbow_degree = elbow_yz_qq.toDegree() * np.sign(MVector3D.dotProduct(MVector3D(0, 0, -1), elbow_yz_qq.vector()))
+                elbow_degree = elbow_yz_qq.toDegree() * np.sign(MVector3D.dotProduct(MVector3D(0, 0, -1 * np.sign(elbow_local_x_axis.x())), elbow_yz_qq.vector()))
             else:
                 # YひじはYとの内積
                 elbow_degree = elbow_yz_qq.toDegree() * np.sign(MVector3D.dotProduct(elbow_local_y_axis, elbow_yz_qq.vector()))
