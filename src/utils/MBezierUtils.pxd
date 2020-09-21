@@ -4,13 +4,13 @@ from module.MMath cimport MRect, MVector2D, MVector3D, MVector4D, MQuaternion, M
 import numpy as np
 cimport numpy as np
 
-cdef double calc_catmull_rom_one_point(double x, double v0, double v1, double v2, double v3)
+cdef double calc_catmull_rom_one_point(double x, double v0, double v1, double v2, double v3) except? -1
 
 cdef np.ndarray calc_value_from_catmullrom(str bone_name, list fnos, list values)
 
 cdef bint fit_bezier_mmd(list bzs)
 
-cdef tuple c_join_value_2_bezier(int fno, str bone_name, list values, float offset, float diff_limit)
+cdef tuple c_join_value_2_bezier(int fno, str bone_name, list values, double offset, double diff_limit)
 
 cdef tuple convert_catmullrom_2_bezier(np.ndarray xs, np.ndarray ys)
 
@@ -26,7 +26,7 @@ cdef MVector2D scale_bezier_point(MVector2D pn, MVector2D p1, MVector2D diff)
 
 cdef MVector2D round_bezier_mmd(MVector2D target)
 
-cdef int round_integer(float t)
+cdef int round_integer(double t)
 
 
 

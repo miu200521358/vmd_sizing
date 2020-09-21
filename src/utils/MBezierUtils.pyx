@@ -57,7 +57,7 @@ def from_bz_type(bz_type: str):
 
 
 # https://github.com/vmichals/python-algos/blob/master/catmull_rom_spline.py
-cdef double calc_catmull_rom_one_point(double x, double v0, double v1, double v2, double v3):
+cdef double calc_catmull_rom_one_point(double x, double v0, double v1, double v2, double v3) except? -1:
     """Computes interpolated y-coord for given x-coord using Catmull-Rom.
     Computes an interpolated y-coordinate for the given x-coordinate between
     the support points v1 and v2. The neighboring support points v0 and v3 are
@@ -140,7 +140,7 @@ def join_value_2_bezier(fno: int, bone_name: str, values: list, offset=0, diff_l
     return_tuple = c_join_value_2_bezier(fno, bone_name, values, offset, diff_limit)
     return return_tuple[0], return_tuple[1]
 
-cdef tuple c_join_value_2_bezier(int fno, str bone_name, list values, float offset, float diff_limit):
+cdef tuple c_join_value_2_bezier(int fno, str bone_name, list values, double offset, double diff_limit):
     if len(values) <= 2:
         # 次数が1の場合、線形補間
         logger.debug("次数1: values: %s", values)
@@ -560,7 +560,7 @@ cdef MVector2D round_bezier_mmd(MVector2D target):
     return t2
 
 
-cdef int round_integer(float t):
+cdef int round_integer(double t):
     # 一旦整数部にまで持ち上げる
     cdef double t2 = t * 1000000
     
