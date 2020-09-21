@@ -10,25 +10,25 @@ from module.MMath cimport MRect, MVector2D, MVector3D, MVector4D, MQuaternion, M
 
 
 cdef class LowPassFilter:
-    cdef float __y
-    cdef float __s
-    cdef float __alpha
-    cdef __setAlpha(self, float alpha)
-    cdef float c__call__(self, float value, float timestamp, float alpha)
-    cdef float lastValue(self)
-    cdef float skip(self, float value)
+    cdef double __y
+    cdef double __s
+    cdef double __alpha
+    cdef __setAlpha(self, double alpha)
+    cdef double c__call__(self, double value, double timestamp, double alpha)
+    cdef double lastValue(self)
+    cdef double skip(self, double value)
 
 cdef class OneEuroFilter:
-    cdef float __freq
-    cdef float __mincutoff
-    cdef float __beta
-    cdef float __dcutoff
+    cdef double __freq
+    cdef double __mincutoff
+    cdef double __beta
+    cdef double __dcutoff
     cdef LowPassFilter __x
     cdef LowPassFilter __dx
-    cdef float __lasttime
-    cdef float __alpha(self, float cutoff)
-    cdef float c__call__(self, float x, float timestamp)
-    cdef c_skip(self, float x, str timestamp)
+    cdef double __lasttime
+    cdef double __alpha(self, double cutoff)
+    cdef double c__call__(self, double x, double timestamp)
+    cdef c_skip(self, double x, str timestamp)
 
 cdef class VmdBoneFrame:
     cdef public str name
@@ -65,14 +65,14 @@ cdef class VmdMotion:
 
     cdef c_regist_full_bf(self, int data_set_no, list bone_name_list, int offset)
 
-    cdef list c_get_differ_fnos(self, int data_set_no, list bone_name_list, float limit_degrees, float limit_length)
+    cdef list c_get_differ_fnos(self, int data_set_no, list bone_name_list, double limit_degrees, double limit_length)
 
-    cdef c_smooth_bf(self, int data_set_no, str bone_name, bint is_rot, bint is_mov, float limit_degrees, int start_fno, int end_fno, bint is_show_log)
+    cdef c_smooth_bf(self, int data_set_no, str bone_name, bint is_rot, bint is_mov, double limit_degrees, int start_fno, int end_fno, bint is_show_log)
 
     cdef c_smooth_filter_bf(self, int data_set_no, str bone_name, bint is_rot, bint is_mov, int loop, dict config, int start_fno, int end_fno, bint is_show_log)
     
     cdef c_remove_unnecessary_bf(self, int data_set_no, str bone_name, bint is_rot, bint is_mov, \
-                                 float offset, float rot_diff_limit, float mov_diff_limit, int start_fno, int end_fno, bint is_show_log, bint is_force)
+                                 double offset, double rot_diff_limit, double mov_diff_limit, int start_fno, int end_fno, bint is_show_log, bint is_force)
 
     cdef c_regist_bf(self, VmdBoneFrame bf, str bone_name, int fno, bint copy_interpolation)
 

@@ -36,7 +36,7 @@ cdef class ArmAvoidanceOption():
     cdef public dict ik_count_list
     cdef public dict avoidance_links
     cdef public dict avoidances
-    cdef public float face_length
+    cdef public double face_length
 
     def __init__(self, arm_links: list, ik_links_list: dict, ik_count_list: dict, avoidance_links: dict, avoidances: dict, face_length: float):
         super().__init__()
@@ -80,6 +80,13 @@ cdef class ArmAvoidanceService():
             self.execute_avoidance_pool(data_set_idx, "右")
             self.execute_avoidance_pool(data_set_idx, "左")
 
+            if self.options.now_process_ctrl:
+                self.options.now_process += 1
+                self.options.now_process_ctrl.write(str(self.options.now_process))
+
+                proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
+                self.options.tree_process_dict[proccess_key]["接触回避"] = True
+
         # futures = []
         # with ThreadPoolExecutor(thread_name_prefix="avoidance", max_workers=self.options.max_workers) as executor:
         #     for data_set_idx, data_set in enumerate(self.options.data_set_list):
@@ -121,14 +128,6 @@ cdef class ArmAvoidanceService():
             # for f in futures:
             #     if not f.result():
             #         return False
-
-            if self.options.now_process_ctrl:
-                self.options.now_process += 1
-                self.options.now_process_ctrl.write(str(self.options.now_process))
-
-                data_set = self.options.data_set_list[data_set_idx]
-                proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
-                self.options.tree_process_dict[proccess_key]["接触回避"] = True
 
             return True
         except MKilledException as ke:
@@ -519,7 +518,7 @@ cdef class ArmAvoidanceService():
         logger.info("接触回避準備【No.%s - %s】", (data_set_idx + 1), direction)
 
         cdef int aidx, fno, from_fno, prev_block_fno, to_fno
-        cdef float block_x_distance, block_z_distance, x_distance, z_distance
+        cdef double block_x_distance, block_z_distance, x_distance, z_distance
         cdef list all_avoidance_list, fnos, prev_collisions
         cdef dict all_avoidance_axis, rep_avbone_global_3ds, rep_avbone_global_mats, rep_global_3ds, rep_matrixs, avoidance_list
         cdef str avoidance_name, bone_name

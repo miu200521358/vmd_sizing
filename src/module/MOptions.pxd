@@ -51,7 +51,7 @@ cdef class MOptionsDataSet():
     cdef public bint twist_flg
     cdef public list morph_list
     cdef public PmxModel camera_org_model
-    cdef public float camera_offset_y
+    cdef public double camera_offset_y
     cdef public list selected_stance_details
 
     cdef public VmdMotion org_motion
@@ -59,12 +59,12 @@ cdef class MOptionsDataSet():
     cdef public bint full_arms
 
     # 本来の足IKの比率
-    cdef public float original_xz_ratio
-    cdef public float original_y_ratio
+    cdef public double original_xz_ratio
+    cdef public double original_y_ratio
 
     # 実際に計算に使う足IKの比率
-    cdef public float xz_ratio
-    cdef public float y_ratio
+    cdef public double xz_ratio
+    cdef public double y_ratio
 
 
 cdef class MArmProcessOptions():
@@ -73,9 +73,9 @@ cdef class MArmProcessOptions():
     cdef public bint alignment
     cdef public bint alignment_finger_flg
     cdef public bint alignment_floor_flg
-    cdef public float alignment_distance_wrist
-    cdef public float alignment_distance_finger
-    cdef public float alignment_distance_floor
+    cdef public double alignment_distance_wrist
+    cdef public double alignment_distance_finger
+    cdef public double alignment_distance_floor
     cdef public bint arm_check_skip_flg
 
 

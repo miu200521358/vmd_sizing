@@ -58,14 +58,14 @@ cdef c_calc_IK(PmxModel model, BoneLinks links, VmdMotion motion, int fno, MVect
     cdef MMatrix4x4 inv_coord
     cdef MVector3D basis2_effector
     cdef MVector3D basis2_target
-    cdef float rotation_dot
-    cdef float rotation_radian
+    cdef double rotation_dot
+    cdef double rotation_radian
     cdef MVector3D rotation_axis
-    cdef float rotation_degree
+    cdef double rotation_degree
     cdef MQuaternion correct_qq
     cdef MQuaternion new_ik_qq
     cdef MQuaternion x_qq, y_qq, z_qq, yz_qq
-    cdef float euler_x, euler_y, euler_z
+    cdef double euler_x, euler_y, euler_z
 
     for cnt in range(max_count):
         # 規定回数ループ

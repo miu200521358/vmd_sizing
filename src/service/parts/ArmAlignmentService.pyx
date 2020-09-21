@@ -110,7 +110,7 @@ cdef class ArmAlignmentService():
     cdef prepare_alignment(self, list fnos):           
         cdef int from_data_set_idx, to_data_set_idx, alignment_idx, data_set_idx, fidx, from_alignment_idx
         cdef int group_idx, to_alignment_idx, fno, priority, prev_block_fno
-        cdef float base_distance, distance, distance_ratio, org_palm_mean
+        cdef double base_distance, distance, distance_ratio, org_palm_mean
         cdef dict alignment_options, all_alignment_group, all_distances, all_is_alignment, all_messages, all_org_global_effector_matrixs, all_org_global_effector_vec
         cdef dict all_org_global_neck_vec, all_org_global_tip_vec, all_org_global_trunk_matrixs, all_org_global_upper_vec, distances, org_global_3ds, org_global_matrixs
         cdef dict all_alignment_idx
@@ -1431,16 +1431,16 @@ cdef class ArmAlignmentOption():
     cdef public list ik_links_list
     cdef public list ik_count_list
     cdef public BoneLinks tip_ik_links
-    cdef public float org_palm_length
-    cdef public float rep_palm_length
+    cdef public double org_palm_length
+    cdef public double rep_palm_length
     cdef public str start_bone_name
     cdef public str effector_bone_name
     cdef public str effector_display_bone_name
-    cdef public float distance
+    cdef public double distance
     cdef public str tip_bone_name
     cdef public int priority
-    cdef public float ratio
-    cdef public float multi_ratio
+    cdef public double ratio
+    cdef public double multi_ratio
 
     def __init__(self, org_links: BoneLinks, rep_links: BoneLinks, ik_links_list: list, ik_count_list: list, tip_ik_links: BoneLinks, \
                  org_palm_length: float, rep_palm_length: float, org_model: PmxModel, rep_model: PmxModel, start_bone_name: str, \

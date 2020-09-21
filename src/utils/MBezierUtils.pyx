@@ -57,7 +57,7 @@ def from_bz_type(bz_type: str):
 
 
 # https://github.com/vmichals/python-algos/blob/master/catmull_rom_spline.py
-cdef float calc_catmull_rom_one_point(float x, float v0, float v1, float v2, float v3):
+cdef double calc_catmull_rom_one_point(double x, double v0, double v1, double v2, double v3):
     """Computes interpolated y-coord for given x-coord using Catmull-Rom.
     Computes an interpolated y-coordinate for the given x-coordinate between
     the support points v1 and v2. The neighboring support points v0 and v3 are
@@ -70,10 +70,10 @@ cdef float calc_catmull_rom_one_point(float x, float v0, float v1, float v2, flo
         v2: 3rd support point
         v3: 4th support point
     """
-    cdef float c1 = 1. * v1
-    cdef float c2 = -.5 * v0 + .5 * v2
-    cdef float c3 = 1. * v0 + -2.5 * v1 + 2. * v2 - 0.5 * v3
-    cdef float c4 = -.5 * v0 + 1.5 * v1 + -1.5 * v2 + 0.5 * v3
+    cdef double c1 = 1. * v1
+    cdef double c2 = -.5 * v0 + .5 * v2
+    cdef double c3 = 1. * v0 + -2.5 * v1 + 2. * v2 - 0.5 * v3
+    cdef double c4 = -.5 * v0 + 1.5 * v1 + -1.5 * v2 + 0.5 * v3
     return (((c4 * x + c3) * x + c2) * x + c1)
 
 
@@ -82,7 +82,7 @@ cdef np.ndarray calc_value_from_catmullrom(str bone_name, list fnos, list values
     cdef np.ndarray[np.float_t, ndim=1] y_intpol
     cdef list prev_list, next_list
     cdef int fidx, sfno, efno, res
-    cdef float t
+    cdef double t
 
     try:
         # create arrays for spline points
@@ -169,7 +169,7 @@ cdef tuple c_join_value_2_bezier(int fno, str bone_name, list values, float offs
             return (LINEAR_MMD_INTERPOLATION, [])
 
         # 次数
-        degree = len(bz_x) - 1
+        degree = int(len(bz_x) - 1)
         logger.test("degree: %s", degree)
 
         # すべての制御点を加味したベジェ曲線
@@ -353,7 +353,7 @@ cdef tuple convert_catmullrom_2_bezier(np.ndarray xs, np.ndarray ys):
 
 # 指定された複数のXと交わるそれぞれのYを返す
 cdef np.ndarray intersect_by_x(curve, np.ndarray xs):
-    cdef float x
+    cdef double x
     cdef list ys = []
     cdef np.ndarray[np.float_t, ndim=1] s_vals
     cdef np.ndarray[np.float_t, ndim=2] intersections
@@ -394,7 +394,7 @@ cdef tuple c_evaluate(int x1v, int y1v, int x2v, int y2v, int start, int now, in
     if (now - start) == 0 or (end - start) == 0:
         return (0, 0, 0)
     
-    cdef float x, x1, x2, y1, y2, t, s, ft, y
+    cdef double x, x1, x2, y1, y2, t, s, ft, y
     cdef int i
         
     x = (now - start) / (end - start)
@@ -431,12 +431,12 @@ def evaluate_by_t(x1v: int, y1v: int, x2v: int, y2v: int, start: int, end: int, 
     return_tuple = c_evaluate_by_t(x1v, y1v, x2v, y2v, start, end, t)
     return return_tuple[0], return_tuple[1], return_tuple[2]
 
-cdef tuple c_evaluate_by_t(int x1v, int y1v, int x2v, int y2v, int start, int end, float t):
+cdef tuple c_evaluate_by_t(int x1v, int y1v, int x2v, int y2v, int start, int end, double t):
     if (end - start) <= 1:
         # 差が1以内の場合、終了
         return (start, 0, t)
     
-    cdef float x1, x2, y1, y2
+    cdef double x1, x2, y1, y2
     cdef int fno
 
     x1 = x1v / INTERPOLATION_MMD_MAX
@@ -492,9 +492,9 @@ def is_fit_bezier_mmd(bz: list, offset=0):
 cdef tuple split_bezier(int x1v, int y1v, int x2v, int y2v, int start, int now, int end):
     # 補間曲線の進んだ時間分を求める
     return_tuple = c_evaluate(x1v, y1v, x2v, y2v, start, now, end)
-    cdef float x = return_tuple[0]
-    cdef float y = return_tuple[1]
-    cdef float t = return_tuple[2]
+    cdef double x = return_tuple[0]
+    cdef double y = return_tuple[1]
+    cdef double t = return_tuple[2]
 
     cdef MVector2D A = MVector2D(0.0, 0.0)
     cdef MVector2D B = MVector2D(x1v / INTERPOLATION_MMD_MAX, y1v / INTERPOLATION_MMD_MAX)
@@ -562,7 +562,7 @@ cdef MVector2D round_bezier_mmd(MVector2D target):
 
 cdef int round_integer(float t):
     # 一旦整数部にまで持ち上げる
-    cdef float t2 = t * 1000000
+    cdef double t2 = t * 1000000
     
     # pythonは偶数丸めなので、整数部で丸めた後、元に戻す
     return round(round(t2, -6) / 1000000)

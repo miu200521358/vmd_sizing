@@ -34,17 +34,17 @@ cdef class LowPassFilter:
         self.__y = -1
         self.__s = -1
 
-    cdef __setAlpha(self, float alpha):
-        alpha = max(0.000001, min(1, float(alpha)))
+    cdef __setAlpha(self, double alpha):
+        alpha = max(0.000001, min(1, alpha))
         if alpha <= 0 or alpha > 1.0:
             raise ValueError("alpha (%s) should be in (0.0, 1.0]" % alpha)
         self.__alpha = alpha
 
-    def __call__(self, value: float, timestamp=-1, alpha=-1):
+    def __call__(self, value: double, timestamp=-1, alpha=-1):
         return self.c__call__(value, timestamp, alpha)
 
-    cdef float c__call__(self, float value, float timestamp, float alpha):
-        cdef float s = 0
+    cdef double c__call__(self, double value, double timestamp, double alpha):
+        cdef double s = 0
         if alpha >= 0:
             self.__setAlpha(alpha)
         if self.__y < 0:
@@ -55,11 +55,11 @@ cdef class LowPassFilter:
         self.__s = s
         return s
 
-    cdef float lastValue(self):
+    cdef double lastValue(self):
         return self.__y
 
     # IK用処理スキップ
-    cdef float skip(self, float value):
+    cdef double skip(self, double value):
         self.__y = value
         self.__s = value
 
@@ -76,46 +76,46 @@ cdef class OneEuroFilter:
             raise ValueError("mincutoff should be >0")
         if dcutoff <= 0:
             raise ValueError("dcutoff should be >0")
-        self.__freq = float(freq)
-        self.__mincutoff = float(mincutoff)
-        self.__beta = float(beta)
-        self.__dcutoff = float(dcutoff)
+        self.__freq = freq
+        self.__mincutoff = mincutoff
+        self.__beta = beta
+        self.__dcutoff = dcutoff
         self.__x = LowPassFilter(self.__alpha(self.__mincutoff))
         self.__dx = LowPassFilter(self.__alpha(self.__dcutoff))
         self.__lasttime = -1
 
-    cdef float __alpha(self, float cutoff):
-        cdef float te = 1.0 / self.__freq
-        cdef float tau = 1.0 / (2 * cmath.pi * cutoff)
+    cdef double __alpha(self, double cutoff):
+        cdef double te = 1.0 / self.__freq
+        cdef double tau = 1.0 / (2 * cmath.pi * cutoff)
         return 1.0 / (1.0 + tau / te)
 
-    def __call__(self, x: float, timestamp=-1):
+    def __call__(self, x: double, timestamp=-1):
         return self.c__call__(x, timestamp)
 
-    cdef float c__call__(self, float x, float timestamp):
+    cdef double c__call__(self, double x, double timestamp):
         # ---- update the sampling frequency based on timestamps
         if self.__lasttime and timestamp:
             self.__freq = 1.0 / (timestamp - self.__lasttime)
         self.__lasttime = timestamp
         # ---- estimate the current variation per second
-        cdef float prev_x = self.__x.lastValue()
-        cdef float dx = 0.0 if prev_x < 0 else (x - prev_x) * self.__freq  # FIXME: 0.0 or value?
-        cdef float edx = self.__dx(dx, timestamp, alpha=self.__alpha(self.__dcutoff))
+        cdef double prev_x = self.__x.lastValue()
+        cdef double dx = 0.0 if prev_x < 0 else (x - prev_x) * self.__freq  # FIXME: 0.0 or value?
+        cdef double edx = self.__dx(dx, timestamp, alpha=self.__alpha(self.__dcutoff))
         # ---- use it to update the cutoff frequency
-        cdef float cutoff = self.__mincutoff + self.__beta * cmath.fabs(edx)
+        cdef double cutoff = self.__mincutoff + self.__beta * cmath.fabs(edx)
         # ---- filter the given value
         return self.__x(x, timestamp, alpha=self.__alpha(cutoff))
 
-    def skip(self, float x, timestamp=-1):
+    def skip(self, double x, timestamp=-1):
         self.c_skip(x, timestamp)
 
     # IK用処理スキップ
-    cdef c_skip(self, float x, str timestamp):
+    cdef c_skip(self, double x, str timestamp):
         # ---- update the sampling frequency based on timestamps
         if self.__lasttime and timestamp and self.__lasttime != timestamp:
             self.__freq = 1.0 / (timestamp - self.__lasttime)
         self.__lasttime = timestamp
-        cdef float prev_x = self.__x.lastValue()
+        cdef double prev_x = self.__x.lastValue()
         self.__dx.skip(prev_x)
         self.__x.skip(x)
 
@@ -342,8 +342,8 @@ cdef class VmdMotion:
     def get_differ_fnos(self, data_set_no: int, bone_name_list: list, limit_degrees: float, limit_length: float):
         return self.c_get_differ_fnos(data_set_no, bone_name_list, limit_degrees, limit_length)
 
-    cdef list c_get_differ_fnos(self, int data_set_no, list bone_name_list, float limit_degrees, float limit_length):
-        # cdef float limit_radians = cmath.cos(math.radians(limit_degrees))
+    cdef list c_get_differ_fnos(self, int data_set_no, list bone_name_list, double limit_degrees, double limit_length):
+        # cdef double limit_radians = cmath.cos(math.radians(limit_degrees))
         cdef list fnos = [0]
         cdef str bone_name
         cdef int prev_sep_fno = 0
@@ -417,7 +417,7 @@ cdef class VmdMotion:
     def smooth_bf(self, data_set_no: int, bone_name: str, is_rot: bint, is_mov: bint, limit_degrees: float, start_fno=-1, end_fno=-1, is_show_log=True):
         self.c_smooth_bf(data_set_no, bone_name, is_rot, is_mov, limit_degrees, start_fno, end_fno, is_show_log)
 
-    cdef c_smooth_bf(self, int data_set_no, str bone_name, bint is_rot, bint is_mov, float limit_degrees, int start_fno, int end_fno, bint is_show_log):
+    cdef c_smooth_bf(self, int data_set_no, str bone_name, bint is_rot, bint is_mov, double limit_degrees, int start_fno, int end_fno, bint is_show_log):
         cdef list fnos
 
         # キーフレを取得する
@@ -428,7 +428,7 @@ cdef class VmdMotion:
             # 範囲指定がある場合はその範囲内だけ
             fnos = self.get_bone_fnos(bone_name, start_fno=start_fno, end_fno=end_fno)
         
-        cdef float limit_radians = math.radians(limit_degrees)
+        cdef double limit_radians = math.radians(limit_degrees)
 
         cdef int prev_sep_fno = 0
         cdef int fno
@@ -481,12 +481,12 @@ cdef class VmdMotion:
         cdef list fnos
         cdef prev_sep_fno = 0
         cdef VmdBoneFrame now_bf
-        cdef float px
-        cdef float py
-        cdef float pz
-        cdef float rx
-        cdef float ry
-        cdef float rz
+        cdef double px
+        cdef double py
+        cdef double pz
+        cdef double rx
+        cdef double ry
+        cdef double rz
         cdef MVector3D r
         cdef MQuaternion new_qq
 
@@ -557,7 +557,7 @@ cdef class VmdMotion:
     # 変曲点を求める
     # https://teratail.com/questions/162391
     cdef c_remove_unnecessary_bf(self, int data_set_no, str bone_name, bint is_rot, bint is_mov, \
-                                 float offset, float rot_diff_limit, float mov_diff_limit, int r_start_fno, int r_end_fno, bint is_show_log, bint is_force):
+                                 double offset, double rot_diff_limit, double mov_diff_limit, int r_start_fno, int r_end_fno, bint is_show_log, bint is_force):
         cdef int prev_sep_fno = 0
         cdef list fnos
 
@@ -986,7 +986,7 @@ cdef class VmdMotion:
 
     # 補間曲線を元に、回転ボーンの値を求める
     cpdef MQuaternion calc_bf_rot(self, VmdBoneFrame prev_bf, VmdBoneFrame fill_bf, VmdBoneFrame next_bf):
-        cdef float rx, ry, rt
+        cdef double rx, ry, rt
 
         if prev_bf.rotation != next_bf.rotation:
             # 回転補間曲線
@@ -999,7 +999,7 @@ cdef class VmdMotion:
 
     # 補間曲線を元に移動ボーンの値を求める
     cpdef MVector3D calc_bf_pos(self, VmdBoneFrame prev_bf, VmdBoneFrame fill_bf, VmdBoneFrame next_bf):
-        cdef float xx, xy, xt, yx, yy, yt, zx, zy, zt
+        cdef double xx, xy, xt, yx, yy, yt, zx, zy, zt
         cdef MVector3D fill_pos
 
         # 補間曲線を元に間を埋める

@@ -4,7 +4,7 @@ from module.MMath cimport MRect, MVector2D, MVector3D, MVector4D, MQuaternion, M
 import numpy as np
 cimport numpy as np
 
-cdef float calc_catmull_rom_one_point(float x, float v0, float v1, float v2, float v3)
+cdef double calc_catmull_rom_one_point(double x, double v0, double v1, double v2, double v3)
 
 cdef np.ndarray calc_value_from_catmullrom(str bone_name, list fnos, list values)
 
@@ -16,7 +16,7 @@ cdef tuple convert_catmullrom_2_bezier(np.ndarray xs, np.ndarray ys)
 
 cdef tuple c_evaluate(int x1v, int y1v, int x2v, int y2v, int start, int now, int end)
 
-cdef tuple c_evaluate_by_t(int x1v, int y1v, int x2v, int y2v, int start, int end, float t)
+cdef tuple c_evaluate_by_t(int x1v, int y1v, int x2v, int y2v, int start, int end, double t)
 
 cdef tuple split_bezier(int x1v, int y1v, int x2v, int y2v, int start, int now, int end)
 

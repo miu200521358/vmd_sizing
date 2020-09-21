@@ -8,9 +8,6 @@ import traceback
 import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor
 
-import pyximport
-pyximport.install()
-
 from module.MOptions import MSmoothOptions, MOptionsDataSet
 from mmd.PmxData import PmxModel # noqa
 from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
