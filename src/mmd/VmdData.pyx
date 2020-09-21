@@ -313,7 +313,7 @@ cdef class VmdMotion:
 
     cdef c_regist_full_bf(self, int data_set_no, list bone_name_list, int offset):
         # 指定された全部のボーンのキーフレ取得
-        fnos = self.get_bone_fnos(*bone_name_list)
+        cdef list fnos = self.get_bone_fnos(*bone_name_list)
 
         if len(fnos) == 0:
             return
@@ -322,6 +322,10 @@ cdef class VmdMotion:
         fnos.extend(x for x in range(fnos[-1])[::offset])
         # 重複を除いて再計算
         fnos = sorted(list(set(fnos)))
+
+        cdef str bone_name
+        cdef int fno, prev_sep_fno
+        cdef VmdBoneFrame bf
 
         # 指定ボーン名でキーフレ登録
         for bone_name in bone_name_list:
@@ -888,7 +892,7 @@ cdef class VmdMotion:
         # return cfun(bone_name, fno, is_key, is_read, is_reset_interpolation)
         return self.c_calc_bf(bone_name, fno, is_key, is_read, is_reset_interpolation)
 
-    cpdef VmdBoneFrame c_calc_bf(self, str bone_name, int fno, bint is_key, bint is_read, bint is_reset_interpolation):
+    cdef VmdBoneFrame c_calc_bf(self, str bone_name, int fno, bint is_key, bint is_read, bint is_reset_interpolation):
         cdef VmdBoneFrame fill_bf = VmdBoneFrame(fno)
 
         if bone_name not in self.bones:
@@ -985,7 +989,7 @@ cdef class VmdMotion:
         return fill_bf
 
     # 補間曲線を元に、回転ボーンの値を求める
-    cpdef MQuaternion calc_bf_rot(self, VmdBoneFrame prev_bf, VmdBoneFrame fill_bf, VmdBoneFrame next_bf):
+    cdef MQuaternion calc_bf_rot(self, VmdBoneFrame prev_bf, VmdBoneFrame fill_bf, VmdBoneFrame next_bf):
         cdef double rx, ry, rt
 
         if prev_bf.rotation != next_bf.rotation:
@@ -998,7 +1002,7 @@ cdef class VmdMotion:
         return prev_bf.rotation.copy()
 
     # 補間曲線を元に移動ボーンの値を求める
-    cpdef MVector3D calc_bf_pos(self, VmdBoneFrame prev_bf, VmdBoneFrame fill_bf, VmdBoneFrame next_bf):
+    cdef MVector3D calc_bf_pos(self, VmdBoneFrame prev_bf, VmdBoneFrame fill_bf, VmdBoneFrame next_bf):
         cdef double xx, xy, xt, yx, yy, yt, zx, zy, zt
         cdef MVector3D fill_pos
 
@@ -1028,7 +1032,7 @@ cdef class VmdMotion:
         return prev_bf.position.copy()
     
     # キーフレを指定されたフレーム番号の前後で分割する
-    cpdef bint split_bf_by_fno(self, str target_bone_name, VmdBoneFrame prev_bf, VmdBoneFrame next_bf, int fill_fno):
+    cdef bint split_bf_by_fno(self, str target_bone_name, VmdBoneFrame prev_bf, VmdBoneFrame next_bf, int fill_fno):
         if not (prev_bf.fno < fill_fno < next_bf.fno):
             # 間の分割が出来ない場合、終了
             return False
@@ -1048,7 +1052,7 @@ cdef class VmdMotion:
         return fill_result
 
     # キーフレを移動量の中心で分割する
-    cpdef bint split_bf(self, str target_bone_name, VmdBoneFrame prev_bf, VmdBoneFrame next_bf):
+    cdef bint split_bf(self, str target_bone_name, VmdBoneFrame prev_bf, VmdBoneFrame next_bf):
         if prev_bf.fno == next_bf.fno:
             # 間の分割が出来ない場合、終了
             return True
@@ -1085,7 +1089,7 @@ cdef class VmdMotion:
     
     # キーフレを指定bf間の中間で区切れるフレーム番号を取得する
     # 分割が不要（範囲内に収まってる）場合、-1で対象外
-    cpdef int get_split_fill_fno(self, str target_bone_name, VmdBoneFrame prev_bf, VmdBoneFrame next_bf, \
+    cdef int get_split_fill_fno(self, str target_bone_name, VmdBoneFrame prev_bf, VmdBoneFrame next_bf, \
                                  list x1_idxs, list y1_idxs, list x2_idxs, list y2_idxs):
         cdef int next_x1v = next_bf.interpolation[x1_idxs[3]]
         cdef int next_y1v = next_bf.interpolation[y1_idxs[3]]
@@ -1104,7 +1108,7 @@ cdef class VmdMotion:
         return -1
 
     # 補間曲線の再設定処理
-    cpdef reset_interpolation(self, str target_bone_name, VmdBoneFrame prev_bf, VmdBoneFrame now_bf, VmdBoneFrame next_bf, \
+    cdef reset_interpolation(self, str target_bone_name, VmdBoneFrame prev_bf, VmdBoneFrame now_bf, VmdBoneFrame next_bf, \
                               list before_bz, list after_bz, list x1_idxs, list y1_idxs, list x2_idxs, list y2_idxs):
         
         # 今回キーに設定
@@ -1114,7 +1118,7 @@ cdef class VmdMotion:
         self.reset_interpolation_parts(target_bone_name, next_bf, after_bz, x1_idxs, y1_idxs, x2_idxs, y2_idxs)
     
     # 補間曲線のコピー
-    cpdef copy_interpolation(self, VmdBoneFrame org_bf, VmdBoneFrame rep_bf, str bz_type):
+    cdef copy_interpolation(self, VmdBoneFrame org_bf, VmdBoneFrame rep_bf, str bz_type):
         cdef list bz_x1_idxs, bz_y1_idxs, bz_x2_idxs, bz_y2_idxs
         cdef list org_interpolation = cPickle.loads(cPickle.dumps(org_bf.interpolation, -1))
 
@@ -1131,7 +1135,7 @@ cdef class VmdMotion:
             = org_interpolation[bz_y2_idxs[3]]
 
     # 補間曲線の再設定部品
-    cpdef reset_interpolation_parts(self, str target_bone_name, VmdBoneFrame bf, list bzs, list x1_idxs, list y1_idxs, list x2_idxs, list y2_idxs):
+    cdef reset_interpolation_parts(self, str target_bone_name, VmdBoneFrame bf, list bzs, list x1_idxs, list y1_idxs, list x2_idxs, list y2_idxs):
         # キーの始点は、B
         bf.interpolation[x1_idxs[0]] = bf.interpolation[x1_idxs[1]] = bf.interpolation[x1_idxs[2]] = bf.interpolation[x1_idxs[3]] = int(bzs[1].x())
         bf.interpolation[y1_idxs[0]] = bf.interpolation[y1_idxs[1]] = bf.interpolation[y1_idxs[2]] = bf.interpolation[y1_idxs[3]] = int(bzs[1].y())

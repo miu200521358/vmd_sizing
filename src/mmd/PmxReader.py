@@ -773,22 +773,22 @@ class PmxReader:
             if k in ["左足ＩＫ", "右足ＩＫ", "右足ＩＫ親", "左足ＩＫ親"] and v.getIkFlag():
                 #   足IKの場合、ひざボーンの位置を採用する
                 knee_pos = MVector3D(0, 0, 0)
-                for l in v.ik.link:
-                    logger.test("k %s, link %s", k, l)
-                    if l.bone_index in bone_indexes and "ひざ" in bones[bone_indexes[l.bone_index]].name:
+                for lk in v.ik.link:
+                    logger.test("k %s, link %s", k, lk)
+                    if lk.bone_index in bone_indexes and "ひざ" in bones[bone_indexes[lk.bone_index]].name:
                         # 存在するボーンで、大きい方を採用
-                        knee_pos = bones[bone_indexes[l.bone_index]].position
+                        knee_pos = bones[bone_indexes[lk.bone_index]].position
                 v.len_1d = knee_pos.length()
 
             elif k in ["左つま先ＩＫ", "右つま先ＩＫ"] and v.getIkFlag():
                 # IKの場合、リンクボーンの離れている方を採用する
                 farer_pos = MVector3D(0, 0, 0)
-                for l in v.ik.link:
-                    logger.test("k %s, link %s", k, l)
-                    if l.bone_index in bone_indexes and farer_pos.length() < bones[bone_indexes[l.bone_index]].position.length():
+                for lk in v.ik.link:
+                    logger.test("k %s, link %s", k, lk)
+                    if lk.bone_index in bone_indexes and farer_pos.length() < bones[bone_indexes[lk.bone_index]].position.length():
                         # 存在するボーンで、大きい方を採用
-                        farer_pos = bones[bone_indexes[l.bone_index]].position
-                        logger.test("farer: %s", bones[bone_indexes[l.bone_index]].position)
+                        farer_pos = bones[bone_indexes[lk.bone_index]].position
+                        logger.test("farer: %s", bones[bone_indexes[lk.bone_index]].position)
                 # 最も大きな値（離れている）のを採用
                 v.len_1d = farer_pos.length()
 
