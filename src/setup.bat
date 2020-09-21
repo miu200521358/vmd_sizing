@@ -8,6 +8,6 @@ rem kernprof -l setup.py build_ext --inplace
 
 
 rem -- í èÌóp
-python setup.py build_ext --inplace
+python setup.py build_ext --inplace --compiler=mingw32 -DMS_WIN64
 
 cd ..
