@@ -8,6 +8,6 @@ rem kernprof -l setup.py build_ext --inplace
 
 
 rem -- ’Êí—p
-python setup.py build_ext
+python setup.py build_ext --inplace
 
 cd ..

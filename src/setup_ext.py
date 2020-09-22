@@ -5,13 +5,21 @@ bezier_path = 'C:/Development/Anaconda3/envs/vmdsizing_cython_exe1/Lib/site-pack
 
 kwargs = {"output_dir": "./build/output", "build_dir": "./build/"}
 
-sources = ["module/MMath.py", "module/MParams.py"]
-
 
 def get_ext():
     ext = []
+    sources = ["module\\MMath.pyx", "module\\MParams.py"]
+    # for path in glob.glob("*/**/*.pyx", recursive=True):
+    #     if os.path.isfile(path):
+    #         print(path)
+    #         sources.append(path)
+    # for path in glob.glob("*/**/*.py", recursive=True):
+    #     if "__init__" not in path and os.path.isfile(path):
+    #         sources.append(path)
+
     for source in sources:
-        path = source.replace("/", ".").replace(".py", "")
+        path = source.replace("\\", ".").replace(".pyx", "").replace(".py", "")
+        print("%s -> %s" % (source, path))
         ext.append(Extension(path, sources=[source], include_dirs=['.', bezier_path, get_include()], define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")]))
     
     return ext
