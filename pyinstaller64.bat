@@ -8,4 +8,8 @@ cd /d %~dp0
 
 cls
 
-activate vmdsizing_np64_3 && pyinstaller --clean vmdising_np64.spec
+rem activate vmdsizing_cython_exe1 && src\setup_install.bat && pyinstaller --clean vmdising_np64.spec
+
+activate vmdsizing_cython_exe1 && src\setup.bat && pyinstaller --clean vmdising_np64.spec
+
+
