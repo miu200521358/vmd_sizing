@@ -230,7 +230,7 @@
             "pythonPath": "${command:python.interpreterPath}",
             "stopOnEntry": false,
             "args": [
-                "--verbose", "20",
+                "--verbose", "10",
                 // "--out_log",
             ]
         },

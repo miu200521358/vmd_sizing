@@ -26,6 +26,11 @@ class HistoryFilePickerCtrl(BaseFilePickerCtrl):
                          title_parts2_ctrl=title_parts2_ctrl, file_parts_ctrl=self.histroy_btn_ctrl, is_change_output=is_change_output, is_aster=is_aster, \
                          is_save=is_save, set_no=set_no)
 
+        # 履歴ボタンのあるファイルコントロールは直近のパスを開く
+        if len(self.file_ctrl.GetPath()) == 0 and self.frame.file_hitories and self.file_histories_key in self.frame.file_hitories and len(self.frame.file_hitories[self.file_histories_key]) > 0:
+            # パスが未指定である場合、直近のパスを設定してひらく
+            self.file_ctrl.SetInitialDirectory(MFileUtils.get_dir_path(self.frame.file_hitories[self.file_histories_key][0]))
+
         # 「履歴」ボタン押下時処理
         self.histroy_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_show_history)
     
@@ -44,14 +49,14 @@ class HistoryFilePickerCtrl(BaseFilePickerCtrl):
         # 上限50件
         self.frame.file_hitories[self.file_histories_key] = self.frame.file_hitories[self.file_histories_key][:50]
 
-    # 履歴ボタンのあるファイルコントロールは直近のパスを開く
-    def on_pick_file(self, event):
+    # # 履歴ボタンのあるファイルコントロールは直近のパスを開く
+    # def on_pick_file(self, event):
 
-        if len(self.file_ctrl.GetPath()) == 0 and self.frame.file_hitories and self.file_histories_key in self.frame.file_hitories and len(self.frame.file_hitories[self.file_histories_key]) > 0:
-            # パスが未指定である場合、直近のパスを設定してひらく
-            self.file_ctrl.SetInitialDirectory(MFileUtils.get_dir_path(self.frame.file_hitories[self.file_histories_key][0]))
+    #     if len(self.file_ctrl.GetPath()) == 0 and self.frame.file_hitories and self.file_histories_key in self.frame.file_hitories and len(self.frame.file_hitories[self.file_histories_key]) > 0:
+    #         # パスが未指定である場合、直近のパスを設定してひらく
+    #         self.file_ctrl.SetInitialDirectory(MFileUtils.get_dir_path(self.frame.file_hitories[self.file_histories_key][0]))
 
-        event.Skip()
+    #     event.Skip()
     
     # 履歴ボタンを開く
     def on_show_history(self, event):

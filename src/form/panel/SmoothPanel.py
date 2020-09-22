@@ -2,7 +2,6 @@
 #
 import os
 import wx
-from wx.core import Position
 import wx.dataview
 import sys
 
@@ -194,7 +193,8 @@ class SmoothPanel(BasePanel):
             # フォーム有効化
             self.enable()
             # 出力先をデフォルトに戻す
-            sys.stdout = self.frame.file_panel_ctrl.console_ctrl
+            if sys.stdout != self.frame.file_panel_ctrl.console_ctrl:
+                sys.stdout = self.frame.file_panel_ctrl.console_ctrl
 
             return result
 
@@ -226,7 +226,8 @@ class SmoothPanel(BasePanel):
         self.gauge_ctrl.SetValue(0)
 
         # 出力先をデフォルトに戻す
-        sys.stdout = self.frame.file_panel_ctrl.console_ctrl
+        if sys.stdout != self.frame.file_panel_ctrl.console_ctrl:
+            sys.stdout = self.frame.file_panel_ctrl.console_ctrl
 
     def show_worked_time(self):
         # 経過秒数を時分秒に変換

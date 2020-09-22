@@ -3,7 +3,7 @@
 import os
 import sys
 import wx
-import threading
+from threading import Thread
 
 from form.panel.FilePanel import FilePanel
 from form.panel.MorphPanel import MorphPanel
@@ -24,7 +24,7 @@ from utils.MLogger import MLogger # noqa
 if os.name == "nt":
     import winsound     # Windows版のみインポート
 
-logger = MLogger(__name__)
+logger = MLogger(__name__, level=1)
 
 
 # イベント
@@ -433,6 +433,8 @@ class MainFrame(wx.Frame):
             with open(event.output_log_path, mode='a', encoding='utf-8') as f:
                 f.write(worked_time)
 
+        logger.debug("self.worker = None")
+
         # ワーカー終了
         self.worker = None
 
@@ -442,23 +444,34 @@ class MainFrame(wx.Frame):
 
             return self.load(event, event.target_idx + 1, is_exec=True)
 
-        # ファイルタブのコンソール
-        sys.stdout = self.file_panel_ctrl.console_ctrl
+        logger.debug("sound_finish")
 
         # 終了音を鳴らす
         self.sound_finish()
 
-        # タブ移動可
-        self.release_tab()
-        # フォーム有効化
-        self.enable()
+        logger.debug("self.file_panel_ctrl.gauge_ctrl.SetValue(0)")
+
         # プログレス非表示
         self.file_panel_ctrl.gauge_ctrl.SetValue(0)
 
+        # ファイルタブのコンソール
+        if sys.stdout != self.file_panel_ctrl.console_ctrl:
+            logger.debug("sys.stdout = self.file_panel_ctrl.console_ctrl")
+            sys.stdout = self.file_panel_ctrl.console_ctrl
+
+        logger.debug("self.release_tab")
+
+        # タブ移動可
+        self.release_tab()
+
+        logger.debug("self.enable")
+
+        # フォーム有効化
+        self.enable()
+
+        logger.debug("finish")
+
     def sound_finish(self):
-        threading.Thread(target=self.sound_finish_thread).start()
-    
-    def sound_finish_thread(self):
         # 終了音を鳴らす
         if os.name == "nt":
             # Windows
@@ -466,7 +479,7 @@ class MainFrame(wx.Frame):
                 winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
             except Exception:
                 pass
-
+    
     def on_wheel_spin_ctrl(self, event: wx.Event, inc=0.1):
         # スピンコントロール変更時
         if event.GetWheelRotation() > 0:
@@ -486,3 +499,4 @@ class MainFrame(wx.Frame):
 
             dialog.Destroy()
             self.popuped_finger_warning = True
+

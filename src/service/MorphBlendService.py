@@ -49,8 +49,6 @@ class MorphBlendService():
             logger.error("モーフブレンド処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
         except Exception:
             logger.critical("モーフブレンド処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc(), decoration=MLogger.DECORATION_BOX)
-        finally:
-            logging.shutdown()
 
     # モーフブレンド処理実行
     def blend_morph(self):

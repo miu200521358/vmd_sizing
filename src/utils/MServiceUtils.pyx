@@ -257,6 +257,7 @@ cdef tuple c_calc_front_global_pos(PmxModel model, BoneLinks links, VmdMotion mo
 
 # グローバル位置算出
 def calc_global_pos(model: PmxModel, links: BoneLinks, motion: VmdMotion, fno: int, limit_links=None, return_matrix=False, is_local_x=False):
+    logger.debug("calc_global_pos.start: %s", fno)
     # cfun = profile(c_calc_global_pos)
     # return_tuple = cfun(model, links, motion, fno, limit_links, return_matrix, is_local_x)
     return_tuple = c_calc_global_pos(model, links, motion, fno, limit_links, return_matrix, is_local_x)
@@ -270,7 +271,9 @@ cdef tuple c_calc_global_pos(PmxModel model, BoneLinks links, VmdMotion motion, 
     # pfun = profile(c_calc_relative_position)
     # cdef list trans_vs = pfun(model, links, motion, fno, limit_links)
     cdef list trans_vs = c_calc_relative_position(model, links, motion, fno, limit_links)
+    logger.debug("trans_vs.start: %s", fno)
     cdef list add_qs = c_calc_relative_rotation(model, links, motion, fno, limit_links)
+    logger.debug("add_qs.start: %s", fno)
 
     # 行列
     cdef list matrixs = [MMatrix4x4() for i in range(links.size())]
@@ -279,6 +282,7 @@ cdef tuple c_calc_global_pos(PmxModel model, BoneLinks links, VmdMotion motion, 
     cdef MVector3D v
     cdef MQuaternion q
     cdef MMatrix4x4 mm
+    logger.debug("行列.start: %s", fno)
 
     for n, (lname, v, q) in enumerate(zip(links.all().keys(), trans_vs, add_qs)):
         # 行列を生成
@@ -292,11 +296,10 @@ cdef tuple c_calc_global_pos(PmxModel model, BoneLinks links, VmdMotion motion, 
         # 設定
         matrixs[n] = mm
 
-    cdef dict total_mats
-    cdef dict global_3ds_dic
+    logger.debug("行列.end: %s", fno)
 
-    total_mats = {}
-    global_3ds_dic = {}
+    cdef dict total_mats = {}
+    cdef dict global_3ds_dic = {}
 
     cdef MMatrix4x4 local_x_matrix
     cdef MVector3D local_axis
@@ -317,10 +320,14 @@ cdef tuple c_calc_global_pos(PmxModel model, BoneLinks links, VmdMotion motion, 
                 mm *= matrixs[m]
         
         # 自分は、位置だけ掛ける
-        global_3ds_dic[lname] = mm.mul_MVector3D(v)
-        
+        global_3ds_dic[lname] = mm * v
+
+        logger.debug("mm.mul_MVector3D: %s", fno)
+
         # 最後の行列をかけ算する
-        total_mats[lname] = mm.imul_MMatrix4x4(matrixs[n])
+        total_mats[lname] = mm * matrixs[n]
+
+        logger.debug("mm.imul_MMatrix4x4: %s", fno)
         
         # ローカル軸の向きを調整する
         if n > 0 and is_local_x:

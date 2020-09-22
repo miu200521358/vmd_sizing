@@ -17,7 +17,7 @@ from math import degrees, radians
 
 from utils.MLogger import MLogger # noqa
 
-logger = MLogger(__name__)
+logger = MLogger(__name__, level=1)
 
 
 cdef class MRect:
@@ -365,17 +365,26 @@ cdef class MVector3D:
         return MVector3D(self.data() - v.data()).length()
     
     cpdef MVector3D project(self, MMatrix4x4 modelView, MMatrix4x4 projection, MRect viewport):
+        logger.debug("project 1")
         cdef MVector4D tmp = MVector4D(self.x(), self.y(), self.z(), 1)
-        tmp = projection * modelView * tmp
+        logger.debug("project 2")
+        tmp = (projection * modelView) * tmp
+        logger.debug("project 3")
         if is_almost_null(tmp.w()):
             tmp.setW(1)
+        logger.debug("project 4")
 
         tmp /= tmp.w()
+        logger.debug("project 5")
         tmp = tmp * 0.5 + MVector4D(0.5, 0.5, 0.5, 0.5)
+        logger.debug("project 6")
         tmp.setX(tmp.x() * viewport.width() + viewport.x())
+        logger.debug("project 7")
         tmp.setY(tmp.y() * viewport.height() + viewport.y())
+        logger.debug("project 8")
 
         tmp.effective()
+        logger.debug("project 9")
 
         return tmp.toVector3D()
 
@@ -1765,7 +1774,7 @@ cdef class MMatrix4x4:
         elif isinstance(other, MVector4D):
             return self.mul_MVector4D(other)
         elif isinstance(other, MMatrix4x4):
-            return self.mul_MMatrix4x4(other)
+            v = self.mul_MMatrix4x4(other)
         elif isinstance(other, np.int):
             v = self.mul_int(other)
         elif isinstance(other, np.float):
@@ -1773,11 +1782,11 @@ cdef class MMatrix4x4:
         else:       
             v = self.data() * other
 
-        return self.__class__(v)
+        return MMatrix4x4(v)
     
-    cpdef MMatrix4x4 mul_MMatrix4x4(self, MMatrix4x4 other):
-        cdef  v = np.dot(self.data(), other.data())
-        return self.__class__(v)
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=2] mul_MMatrix4x4(self, MMatrix4x4 other):
+        logger.debug("mul_MMatrix4x4")
+        return np.dot(self.data(), other.data())
 
     cpdef MVector3D mul_MVector3D(self, MVector3D other):
         cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] vec_mat = np.array([[other.x(), other.y(), other.z()], 
@@ -1800,6 +1809,7 @@ cdef class MMatrix4x4:
             return MVector3D(x / w, y / w, z / w)
 
     cpdef MVector4D mul_MVector4D(self, MVector4D other):
+        logger.debug("mul_MVector4D")
         cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] vec_mat = np.array([[other.x(), other.y(), other.z(), other.w()], 
                                                                    [other.x(), other.y(), other.z(), other.w()], 
                                                                    [other.x(), other.y(), other.z(), other.w()], 

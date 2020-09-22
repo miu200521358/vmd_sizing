@@ -98,8 +98,8 @@ class BaseFilePickerCtrl():
         self.sizer.Add(self.file_sizer, 0, wx.EXPAND, 5)
 
         # ------------------------
-        # 「開く」ボタン押下時処理
-        self.file_ctrl.GetPickerCtrl().Bind(wx.EVT_BUTTON, self.on_pick_file)
+        # # 「開く」ボタン押下時処理
+        # self.file_ctrl.GetPickerCtrl().Bind(wx.EVT_BUTTON, self.on_pick_file)
 
         # D&Dの実装
         self.file_ctrl.SetDropTarget(MFileDropTarget(self, self.is_aster))
@@ -109,7 +109,7 @@ class BaseFilePickerCtrl():
     
     def on_pick_file(self, event):
         event.Skip()
-    
+        
     def on_change_file(self, event):
         # ダイアログFLGクリア
         self.frame.popuped_finger_warning = False
@@ -326,8 +326,6 @@ class BaseFilePickerCtrl():
             logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
         except Exception as e:
             logger.critical("サイジング処理が意図せぬエラーで終了しました。", e, decoration=MLogger.DECORATION_BOX)
-        finally:
-            logging.shutdown()
 
         logger.error("%s%s 読み込み失敗: %s", display_set_no, self.title, os.path.basename(file_path), decoration=MLogger.DECORATION_BOX)
         return False

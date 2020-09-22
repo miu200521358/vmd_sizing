@@ -31,8 +31,6 @@ if __name__ == "__main__":
     except Exception:
         print("スムージング処理が意図せぬエラーで終了しました。")
         print(traceback.format_exc())
-    finally:
-        logging.shutdown()
 
     # 終了音を鳴らす
     if os.name == "nt":

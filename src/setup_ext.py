@@ -16,12 +16,17 @@ ext = [Extension("module.MMath", sources=["module/MMath.pyx"], include_dirs=['.'
        # Extension("mmd.VmdData", sources=["mmd/VmdData.pyx"], include_dirs=['.', bezier_path, get_include()], define_macros=[('CYTHON_TRACE', '1')]), \
        Extension("mmd.VmdData", sources=["mmd/VmdData.pyx"], include_dirs=['.', bezier_path, get_include()]), \
        Extension("mmd.VmdReader", sources=["mmd/VmdReader.py"], include_dirs=['.', bezier_path, get_include()]), \
+       # Extension("mmd.VpdReader", sources=["mmd/VpdReader.py"], include_dirs=['.', bezier_path, get_include()]), \
+       # Extension("mmd.VmdWriter", sources=["mmd/VmdWriter.py"], include_dirs=['.', bezier_path, get_include()]), \
+       # Extension("service.parts.MoveService", sources=["service/parts/MoveService.py"], include_dirs=['.', bezier_path, get_include()]), \
+       # Extension("service.parts.CameraService", sources=["service/parts/CameraService.py"], include_dirs=['.', bezier_path, get_include()]), \
+       # Extension("service.parts.MorphService", sources=["service/parts/MorphService.py"], include_dirs=['.', bezier_path, get_include()]), \
        Extension("service.parts.StanceService", sources=["service/parts/StanceService.pyx"], include_dirs=['.', bezier_path, get_include()]), \
        # Extension("service.parts.ArmAvoidanceService", sources=["service/parts/ArmAvoidanceService.pyx"], include_dirs=['.', bezier_path, get_include()], define_macros=[('CYTHON_TRACE', '1')]), \
        Extension("service.parts.ArmAvoidanceService", sources=["service/parts/ArmAvoidanceService.pyx"], include_dirs=['.', bezier_path, get_include()]), \
        Extension("service.parts.ArmAlignmentService", sources=["service/parts/ArmAlignmentService.pyx"], include_dirs=['.', bezier_path, get_include()]), \
        Extension("service.SizingService", sources=["service/SizingService.py"], include_dirs=['.', bezier_path, get_include()]), \
-       Extension("service.ConvertSmoothService", sources=["service/ConvertSmoothService.py"], include_dirs=['.', bezier_path, get_include()]), \
+       # Extension("service.ConvertSmoothService", sources=["service/ConvertSmoothService.pyx"], include_dirs=['.', bezier_path, get_include()]), \
        ]
 
 

@@ -95,16 +95,19 @@ def task_takes_time(acallable):
                         th._kwargs["is_killed"] = True
                 break
         
-        return t.result()
+        t.join()
+        result = t.result()
+        del t
+        return result
     return f
 
 
-# コンソールに文字列を出力する
-def monitering(console, queue):
-    while True:
+def sound_finish_process():
+    # 終了音を鳴らす
+    if os.name == "nt":
+        # Windows
         try:
-            console.write(queue.get(timeout=3))
-            wx.Yield()
+            winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS)
         except Exception:
             pass
 

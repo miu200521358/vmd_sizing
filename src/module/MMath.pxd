@@ -340,7 +340,7 @@ cdef class MMatrix4x4:
 
     cpdef np.ndarray[DTYPE_FLOAT_t, ndim=2] sub_int(self, DTYPE_INT_t other)
     
-    cpdef MMatrix4x4 mul_MMatrix4x4(self, MMatrix4x4 other)
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=2] mul_MMatrix4x4(self, MMatrix4x4 other)
 
     cpdef MVector3D mul_MVector3D(self, MVector3D other)
 

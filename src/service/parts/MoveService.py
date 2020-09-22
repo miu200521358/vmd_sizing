@@ -5,9 +5,12 @@ import numpy as np
 import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor
 
+import pyximport
+pyximport.install()
+
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from module.MOptions import MOptions, MOptionsDataSet
-from utils import MUtils, MServiceUtils, MBezierUtils # noqa
+from utils import MServiceUtils, MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
 from utils.MException import SizingException, MKilledException
 

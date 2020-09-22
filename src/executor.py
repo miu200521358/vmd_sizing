@@ -32,7 +32,7 @@ from service.parts.MorphService import MorphService
 from service.parts.CameraService import CameraService
 from utils.MException import SizingException, MKilledException
 
-VERSION_NAME = "5.01_β29"
+VERSION_NAME = "5.01_β31"
 
 # 指数表記なし、有効小数点桁数6、30を超えると省略あり、一行の文字数200
 np.set_printoptions(suppress=True, precision=6, threshold=30, linewidth=200)
@@ -55,8 +55,6 @@ if __name__ == '__main__':
         except Exception:
             print("サイジング処理が意図せぬエラーで終了しました。")
             print(traceback.format_exc())
-        finally:
-            logging.shutdown()
 
         # 終了音を鳴らす
         if os.name == "nt":
@@ -101,10 +99,15 @@ if __name__ == '__main__':
 
         now_version_name = "{0}{1}".format(VERSION_NAME, log_level_name)
 
-        # 引数指定がない場合、通常起動
-        app = wx.App(False)
-        icon = wx.Icon(MFileUtils.resource_path('src/vmdsizing.ico'), wx.BITMAP_TYPE_ICO)
-        frame = MainFrame(None, mydir_path, now_version_name, args.verbose, is_saving, is_out_log)
-        frame.SetIcon(icon)
-        frame.Show(True)
-        app.MainLoop()
+        try:
+            # 引数指定がない場合、通常起動
+            app = wx.App(False)
+            icon = wx.Icon(MFileUtils.resource_path('src/vmdsizing.ico'), wx.BITMAP_TYPE_ICO)
+            frame = MainFrame(None, mydir_path, now_version_name, args.verbose, is_saving, is_out_log)
+            frame.SetIcon(icon)
+            frame.Show(True)
+            app.MainLoop()
+        except Exception as e:
+            wx.MessageDialog(None, "VMDサイジングが予期せぬエラーで終了しました。\n\n{0}\n{1}".format(e.message, traceback.format_exc()), style=wx.ICON_ERROR)
+
+

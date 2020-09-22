@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 #
 
-import logging
 import os
 import time
 import wx
@@ -43,7 +42,7 @@ class SizingWorkerThread(BaseWorkerThread):
             now_camera_data = None
             now_camera_path = self.frame.camera_panel_ctrl.camera_vmd_file_ctrl.file_ctrl.GetPath()
             if len(now_camera_path) > 0:
-                now_camera_data = self.frame.camera_panel_ctrl.camera_vmd_file_ctrl.data
+                now_camera_data = self.frame.camera_panel_ctrl.camera_vmd_file_ctrl.data.copy()
                 now_camera_output_vmd_path = self.frame.camera_panel_ctrl.output_camera_vmd_file_ctrl.file_ctrl.GetPath()
 
             if self.frame.file_panel_ctrl.file_set.motion_vmd_file_ctrl.load():
@@ -211,8 +210,6 @@ class SizingWorkerThread(BaseWorkerThread):
 
             except Exception:
                 pass
-
-            logging.shutdown()
 
     def thread_delete(self):
         del self.options

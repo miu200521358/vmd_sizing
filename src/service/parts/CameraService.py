@@ -2,19 +2,19 @@
 #
 import numpy as np
 
+import pyximport
+pyximport.install()
+
 from mmd.PmxData import PmxModel, Bone # noqa
 from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
 from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from module.MOptions import MOptions, MOptionsDataSet # noqa
 from module.MParams import BoneLinks # noqa
-from utils import MUtils, MServiceUtils, MBezierUtils # noqa
+from utils import MServiceUtils, MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
 from utils.MException import SizingException, MKilledException
 
 logger = MLogger(__name__, level=1)
-
-# 床処理用INDEX
-FLOOR_IDX = -1
 
 # 顔系ボーン名
 HEAD_BONE_NAMES = ["頭頂実体", "頭", "首", "左目", "右目"]
@@ -59,11 +59,15 @@ class CameraService():
                         cf.length = past_cf.length
                         continue
 
+                logger.debug("calc_camera_ratio.start")
+
                 # 比率計算
                 org_inner_global_poses, org_inner_square_poses, rep_inner_global_poses, ratio, (nearest_data_set_idx, nearest_bone_name), \
                     (left_data_set_idx, left_bone_name), (right_data_set_idx, right_bone_name), (top_data_set_idx, top_bone_name), (bottom_data_set_idx, bottom_bone_name) \
                     = self.calc_camera_ratio(fno, cf)
-                
+
+                logger.debug("execute_rep_camera.start")
+
                 # カメラサイジング実行
                 self.execute_rep_camera(fno, cf, org_inner_global_poses, org_inner_square_poses, rep_inner_global_poses, ratio, nearest_data_set_idx, nearest_bone_name, \
                                         left_data_set_idx, left_bone_name, right_data_set_idx, right_bone_name, top_data_set_idx, top_bone_name, bottom_data_set_idx, bottom_bone_name)
@@ -197,6 +201,7 @@ class CameraService():
         nearest_data_set_idx = -1
         nearest_bone_name = None
         ratio = 0
+        logger.debug("f: %s, calc_camera_ratio.start", fno)
 
         # まず全体のグローバル位置とプロジェクション座標正規位置を算出
         self.calc_org_project_square_poses(fno, cf, 0, -1, all_org_global_poses, all_org_project_square_poses)
@@ -444,18 +449,25 @@ class CameraService():
                     # 処理対象がなければスルー
                     continue
 
+                logger.debug("calc_org_project_square_poses: 1: %s", link_idx)
+
                 # 処理対象データセット
                 data_set = self.options.data_set_list[data_set_idx]
 
+                logger.debug("calc_org_project_square_poses: 2: %s", link_idx)
+
                 # 元モデルのそれぞれのグローバル位置
                 org_global_3ds = MServiceUtils.calc_global_pos(data_set.camera_org_model, org_link, data_set.org_motion, fno)
+                logger.debug("calc_org_project_square_poses: 3: %s, %s", link_idx, org_global_3ds)
+
                 for bone_name, org_vec in org_global_3ds.items():
                     if bone_name in camera_option.org_link_target.keys():
+                        logger.debug("calc_org_project_square_poses: 4: %s, %s", link_idx, bone_name)
                         # 処理対象ボーンである場合、データを保持
                         all_org_global_poses[(data_set_idx, bone_name)] = org_vec.data()
                         all_org_project_square_poses[(data_set_idx, bone_name)] = self.calc_project_square_pos(cf, org_vec).data()
 
-        [logger.test("f: %s, k: %s, v: %s, s: %s", fno, k, v, sv) for (k, v), (sk, sv) in zip(all_org_global_poses.items(), all_org_project_square_poses.items())]
+        # [logger.test("f: %s, k: %s, v: %s, s: %s", fno, k, v, sv) for (k, v), (sk, sv) in zip(all_org_global_poses.items(), all_org_project_square_poses.items())]
 
     def calc_rep_global_poses(self, fno: int, data_bone_name_list: list):
         rep_links = []
@@ -487,21 +499,28 @@ class CameraService():
 
     # プロジェクション座標正規位置算出
     def calc_project_square_pos(self, cf: VmdCameraFrame, global_vec: MVector3D):
+        logger.debug("calc_project_square_pos.start")
+
         # モデル座標系
         model_view = self.create_model_view(cf)
+        logger.debug("create_model_view")
 
         # プロジェクション座標系
         projection_view = self.create_projection_view(cf)
+        logger.debug("create_projection_view")
 
         # viewport
         viewport_rect = MRect(0, 0, 16, 9)
+        logger.debug("MRect")
 
         # プロジェクション座標位置
         project_vec = global_vec.project(model_view, projection_view, viewport_rect)
+        logger.debug("project")
 
         # プロジェクション座標正規位置
         project_square_vec = MVector3D()
         project_square_vec.setX(project_vec.x() / 16)
+        logger.debug("setX")
 
         if cf.length <= 0:
             project_square_vec.setY((-project_vec.y() + 9) / 9)
@@ -509,6 +528,7 @@ class CameraService():
             project_square_vec.setY(project_vec.y() / 9)
         
         project_square_vec.setZ(project_vec.z())
+        logger.debug("setZ")
 
         return project_square_vec
 
@@ -644,6 +664,7 @@ class CameraService():
                     # 元リンクの中にあり、かつ先ボーンの中にある場合のみ登録
                     rep_links[target_bone_name] = rep_model.create_link_2_top_one(target_bone_name)
                     rep_target_bone_name_list.append(target_bone_name)
+                    logger.debug("prepare_link rep_target_bone_name_list.append: %s", target_bone_name)
 
             if len(rep_target_bone_name_list) > 0:
                 # 先に処理対象が１件でもある場合、リンク登録
@@ -651,6 +672,7 @@ class CameraService():
                 for bone_name in rep_target_bone_name_list:
                     org_link_target[bone_name] = len(org_links)
                 org_links.append(org_link)
+                logger.debug("prepare_link org_links.append: %s", org_link)
             else:
                 # 処理対象がない場合、スルー
                 pass
@@ -687,3 +709,4 @@ class CameraOption():
         self.body_ratio = body_ratio
         self.head_ratio = head_ratio
 
+        logger.debug("CameraOption init")

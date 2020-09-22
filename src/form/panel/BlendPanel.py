@@ -231,7 +231,8 @@ class BlendPanel(BasePanel):
             # フォーム有効化
             self.enable()
             # 出力先をデフォルトに戻す
-            sys.stdout = self.frame.file_panel_ctrl.console_ctrl
+            if sys.stdout != self.frame.file_panel_ctrl.console_ctrl:
+                sys.stdout = self.frame.file_panel_ctrl.console_ctrl
 
             return result
 
@@ -272,7 +273,8 @@ class BlendPanel(BasePanel):
         logger.info("モーフブレンドが完了しました", decoration=MLogger.DECORATION_BOX, title="OK")
 
         # 出力先をデフォルトに戻す
-        sys.stdout = self.frame.file_panel_ctrl.console_ctrl
+        if sys.stdout != self.frame.file_panel_ctrl.console_ctrl:
+            sys.stdout = self.frame.file_panel_ctrl.console_ctrl
 
     def is_valid(self):
         if len(self.morph_eye_list.GetSelections()) + len(self.morph_eyebrow_list.GetSelections()) \

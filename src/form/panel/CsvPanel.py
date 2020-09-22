@@ -98,7 +98,8 @@ class CsvPanel(BasePanel):
             # フォーム有効化
             self.enable()
             # 出力先をデフォルトに戻す
-            sys.stdout = self.frame.file_panel_ctrl.console_ctrl
+            if sys.stdout != self.frame.file_panel_ctrl.console_ctrl:
+                sys.stdout = self.frame.file_panel_ctrl.console_ctrl
 
             return result
 
@@ -139,4 +140,6 @@ class CsvPanel(BasePanel):
         logger.info("CSV変換が完了しました", decoration=MLogger.DECORATION_BOX, title="OK")
 
         # 出力先をデフォルトに戻す
-        sys.stdout = self.frame.file_panel_ctrl.console_ctrl
+        if sys.stdout != self.frame.file_panel_ctrl.console_ctrl:
+            sys.stdout = self.frame.file_panel_ctrl.console_ctrl
+
