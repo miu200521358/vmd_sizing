@@ -10,7 +10,7 @@ from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdL
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from module.MOptions import MOptions, MOptionsDataSet
 from module.MParams import BoneLinks
-from utils import MUtils, MServiceUtils, MBezierUtils # noqa
+from utils import MServiceUtils, MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
 from utils.MException import SizingException, MKilledException
 
