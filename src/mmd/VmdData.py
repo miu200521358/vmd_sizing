@@ -816,7 +816,7 @@ class VmdMotion():
                 target_fnos[bone_name] = self.get_bone_fnos(bone_name, is_key=True)
 
         for bone_name, fnos in target_fnos.items():
-            logger.debug("%s, %s", bone_name, target_fnos[bone_name])
+            logger.test("%s, %s", bone_name, target_fnos[bone_name])
 
             if len(fnos) > 0:
                 # 各ボーンの最終キーだけ先に登録

@@ -3,13 +3,17 @@
 import math
 import numpy as np
 import quaternion # noqa
+cimport numpy as np
+cimport cython
+from libc.math cimport sin, cos, acos, atan2, asin, pi, sqrt
+from math import degrees, radians
 
 from utils.MLogger import MLogger # noqa
 
 logger = MLogger(__name__)
 
 
-class MRect():
+cdef class MRect:
 
     def __init__(self, x=0, y=0, width=0, height=0):
         self.__x = x
@@ -33,12 +37,12 @@ class MRect():
         return "MRect({0}, {1}, {2}, {3})".format(self.__x, self.__y, self.__width, self.__height)
 
 
-class MVector2D():
+cdef class MVector2D:
 
     def __init__(self, x=0, y=0):
         if isinstance(x, MVector2D):
             # クラスの場合
-            self.__data = x.__data
+            self.__data = x.data()
         elif isinstance(x, np.ndarray):
             # arrayそのものの場合
             self.__data = np.array([x[0], x[1]], dtype=np.float64)
@@ -46,180 +50,171 @@ class MVector2D():
             self.__data = np.array([x, y], dtype=np.float64)
 
     def length(self):
-        return float(np.linalg.norm(self.__data, ord=2))
+        return float(np.linalg.norm(self.data(), ord=2))
 
     def lengthSquared(self):
-        return float(np.linalg.norm(self.__data, ord=2)**2)
+        return float(np.linalg.norm(self.data(), ord=2)**2)
 
     def normalized(self):
-        l2 = np.linalg.norm(self.__data, ord=2, axis=-1, keepdims=True)
+        l2 = np.linalg.norm(self.data(), ord=2, axis=-1, keepdims=True)
         l2[l2 == 0] = 1
-        normv = self.__data / l2
+        normv = self.data() / l2
         return MVector2D(normv[0], normv[1])
 
     def normalize(self):
-        l2 = np.linalg.norm(self.__data, ord=2, axis=-1, keepdims=True)
+        l2 = np.linalg.norm(self.data(), ord=2, axis=-1, keepdims=True)
         l2[l2 == 0] = 1
-        normv = self.__data / l2
+        normv = self.data() / l2
         self.__data = normv
     
-    def effective(self):
-        self.__data[np.isnan(self.__data)] = 0
-        self.__data[np.isinf(self.__data)] = 0
+    cpdef effective(self):
+        self.__data[np.isnan(self.data())] = 0
+        self.__data[np.isinf(self.data())] = 0
 
         return self
             
-    def data(self):
+    cpdef data(self):
         return self.__data
 
     def __str__(self):
-        return "MVector2D({0}, {1})".format(self.__data[0], self.__data[1])
+        return "MVector2D({0}, {1})".format(self.data()[0], self.data()[1])
 
     def __lt__(self, other):
-        return np.all(self.__data < other.__data)
+        return np.all(self.data() < other.data())
 
     def __le__(self, other):
-        return np.all(self.__data <= other.__data)
+        return np.all(self.data() <= other.data())
 
     def __eq__(self, other):
-        return np.all(self.__data == other.__data)
+        return np.all(self.data() == other.data())
 
     def __ne__(self, other):
-        return np.any(self.__data != other.__data)
+        return np.any(self.data() != other.data())
 
     def __gt__(self, other):
-        return np.all(self.__data > other.__data)
+        return np.all(self.data() > other.data())
 
     def __ge__(self, other):
-        return np.all(self.__data >= other.__data)
+        return np.all(self.data() >= other.data())
 
     def __add__(self, other):
         if isinstance(other, MVector2D):
-            v = self.__data + other.__data
+            v = self.data() + other.data()
         else:
-            v = self.__data + other
+            v = self.data() + other
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __sub__(self, other):
         if isinstance(other, MVector2D):
-            v = self.__data - other.__data
+            v = self.data() - other.data()
         else:
-            v = self.__data - other
+            v = self.data() - other
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __mul__(self, other):
         if isinstance(other, MVector2D):
-            v = self.__data * other.__data
+            v = self.data() * other.data()
         else:
-            v = self.__data * other
+            v = self.data() * other
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __truediv__(self, other):
         if isinstance(other, MVector2D):
-            v = self.__data / other.__data
+            v = self.data() / other.data()
         else:
-            v = self.__data / other
+            v = self.data() / other
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __floordiv__(self, other):
         if isinstance(other, MVector2D):
-            v = self.__data // other.__data
+            v = self.data() // other.data()
         else:
-            v = self.__data // other
+            v = self.data() // other
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __mod__(self, other):
         if isinstance(other, MVector2D):
-            v = self.__data % other.__data
+            v = self.data() % other.data()
         else:
-            v = self.__data % other
-        v2 = self.__class__(v)
-        v2.effective()
-        return v2
-
-    def __pow__(self, other):
-        if isinstance(other, MVector2D):
-            v = self.__data ** other.__data
-        else:
-            v = self.__data ** other
+            v = self.data() % other
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __lshift__(self, other):
         if isinstance(other, MVector2D):
-            v = self.__data << other.__data
+            v = self.data() << other.data()
         else:
-            v = self.__data << other
+            v = self.data() << other
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __rshift__(self, other):
         if isinstance(other, MVector2D):
-            v = self.__data >> other.__data
+            v = self.data() >> other.data()
         else:
-            v = self.__data >> other
+            v = self.data() >> other
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __and__(self, other):
-        v = self.__data & other.__data
+        v = self.data() & other.data()
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __dataor__(self, other):
-        v = self.__data ^ other.__data
+        v = self.data() ^ other.data()
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __or__(self, other):
-        v = self.__data | other.__data
+        v = self.data() | other.data()
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __neg__(self):
-        return self.__class__(-self.__data[0], -self.__data[1])
+        return self.__class__(-self.data()[0], -self.data()[1])
 
     def __pos__(self):
-        return self.__class__(+self.__data[0], +self.__data[1])
+        return self.__class__(+self.data()[0], +self.data()[1])
 
     def __invert__(self):
-        return self.__class__(~self.__data[0], ~self.__data[1])
+        return self.__class__(~self.data()[0], ~self.data()[1])
     
     def x(self):
-        return self.__data[0]
+        return self.data()[0]
 
     def y(self):
-        return self.__data[1]
+        return self.data()[1]
     
-    def setX(self, x):
+    cpdef setX(self, x):
         self.__data[0] = x
 
-    def setY(self, y):
+    cpdef setY(self, y):
         self.__data[1] = y
 
 
-class MVector3D():
+cdef class MVector3D:
 
     def __init__(self, x=0.0, y=0.0, z=0.0):
         if isinstance(x, MVector3D):
             # クラスの場合
-            self.__data = x.__data
+            self.__data = x.data()
         elif isinstance(x, np.ndarray):
             # arrayそのものの場合
             self.__data = np.array([x[0], x[1], x[2]], dtype=np.float64)
@@ -230,26 +225,26 @@ class MVector3D():
         return MVector3D(self.x(), self.y(), self.z())
 
     def length(self):
-        return np.linalg.norm(self.__data, ord=2)
+        return np.linalg.norm(self.data(), ord=2)
 
     def lengthSquared(self):
-        return np.linalg.norm(self.__data, ord=2)**2
+        return np.linalg.norm(self.data(), ord=2)**2
 
     def normalized(self):
-        l2 = np.linalg.norm(self.__data, ord=2, axis=-1, keepdims=True)
+        l2 = np.linalg.norm(self.data(), ord=2, axis=-1, keepdims=True)
         l2[l2 == 0] = 1
-        normv = self.__data / l2
+        normv = self.data() / l2
         return MVector3D(normv[0], normv[1], normv[2])
 
     def normalize(self):
         self.effective()
-        l2 = np.linalg.norm(self.__data, ord=2, axis=-1, keepdims=True)
+        l2 = np.linalg.norm(self.data(), ord=2, axis=-1, keepdims=True)
         l2[l2 == 0] = 1
-        normv = self.__data / l2
+        normv = self.data() / l2
         self.__data = normv
     
     def distanceToPoint(self, v):
-        return MVector3D(self.__data - v.__data).length()
+        return MVector3D(self.data() - v.data()).length()
     
     def project(self, modelView, projection, viewport):
         tmp = MVector4D(self.x(), self.y(), self.z(), 1)
@@ -285,14 +280,14 @@ class MVector3D():
         return obj.toVector3D()
         
     def toVector4D(self):
-        return MVector4D(self.__data[0], self.__data[1], self.__data[2], 0)
+        return MVector4D(self.data()[0], self.data()[1], self.data()[2], 0)
 
     def is_almost_null(self):
-        return (is_almost_null(self.__data[0]) and is_almost_null(self.__data[1]) and is_almost_null(self.__data[2]))
+        return (is_almost_null(self.data()[0]) and is_almost_null(self.data()[1]) and is_almost_null(self.data()[2]))
     
-    def effective(self):
-        self.__data[np.isnan(self.__data)] = 0
-        self.__data[np.isinf(self.__data)] = 0
+    cpdef effective(self):
+        self.__data[np.isnan(self.data())] = 0
+        self.__data[np.isinf(self.data())] = 0
 
         return self
                 
@@ -325,174 +320,165 @@ class MVector3D():
                 
     @classmethod
     def crossProduct(cls, v1, v2):
-        crossv = np.cross(v1.__data, v2.__data)
+        crossv = np.cross(v1.data(), v2.data())
         return MVector3D(crossv[0], crossv[1], crossv[2])
 
     @classmethod
     def dotProduct(cls, v1, v2):
-        dotv = np.dot(v1.__data, v2.__data)
+        dotv = np.dot(v1.data(), v2.data())
         return dotv
-    
-    def data(self):
+        
+    cpdef data(self):
         return self.__data
-    
+
     def to_log(self):
-        return "x: {0}, y: {1} z: {2}".format(round(self.__data[0], 5), round(self.__data[1], 5), round(self.__data[2], 5))
+        return "x: {0}, y: {1} z: {2}".format(round(self.data()[0], 5), round(self.data()[1], 5), round(self.data()[2], 5))
 
     def __str__(self):
-        return "MVector3D({0}, {1}, {2})".format(self.__data[0], self.__data[1], self.__data[2])
+        return "MVector3D({0}, {1}, {2})".format(self.data()[0], self.data()[1], self.data()[2])
 
     def __lt__(self, other):
-        return np.all(self.__data < other.__data)
+        return np.all(self.data() < other.data())
 
     def __le__(self, other):
-        return np.all(self.__data <= other.__data)
+        return np.all(self.data() <= other.data())
 
     def __eq__(self, other):
-        return np.all(self.__data == other.__data)
+        return np.all(self.data() == other.data())
 
     def __ne__(self, other):
-        return np.any(self.__data != other.__data)
+        return np.any(self.data() != other.data())
 
     def __gt__(self, other):
-        return np.all(self.__data > other.__data)
+        return np.all(self.data() > other.data())
 
     def __ge__(self, other):
-        return np.all(self.__data >= other.__data)
+        return np.all(self.data() >= other.data())
 
     def __add__(self, other):
         if isinstance(other, MVector3D):
-            v = self.__data + other.__data
+            v = self.data() + other.data()
         else:
-            v = self.__data + other
+            v = self.data() + other
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __sub__(self, other):
         if isinstance(other, MVector3D):
-            v = self.__data - other.__data
+            v = self.data() - other.data()
         else:
-            v = self.__data - other
+            v = self.data() - other
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __mul__(self, other):
         if isinstance(other, MVector3D):
-            v = self.__data * other.__data
+            v = self.data() * other.data()
         else:
-            v = self.__data * other
+            v = self.data() * other
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __truediv__(self, other):
         if isinstance(other, MVector3D):
-            v = self.__data / other.__data
+            v = self.data() / other.data()
         else:
-            v = self.__data / other
+            v = self.data() / other
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __floordiv__(self, other):
         if isinstance(other, MVector3D):
-            v = self.__data // other.__data
+            v = self.data() // other.data()
         else:
-            v = self.__data // other
+            v = self.data() // other
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __mod__(self, other):
         if isinstance(other, MVector3D):
-            v = self.__data % other.__data
+            v = self.data() % other.data()
         else:
-            v = self.__data % other
-        v2 = self.__class__(v)
-        v2.effective()
-        return v2
-
-    def __pow__(self, other):
-        if isinstance(other, MVector3D):
-            v = self.__data ** other.__data
-        else:
-            v = self.__data ** other
+            v = self.data() % other
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __lshift__(self, other):
         if isinstance(other, MVector3D):
-            v = self.__data << other.__data
+            v = self.data() << other.data()
         else:
-            v = self.__data << other
+            v = self.data() << other
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __rshift__(self, other):
         if isinstance(other, MVector3D):
-            v = self.__data >> other.__data
+            v = self.data() >> other.data()
         else:
-            v = self.__data >> other
+            v = self.data() >> other
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __and__(self, other):
-        v = self.__data & other.__data
+        v = self.data() & other.data()
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __dataor__(self, other):
-        v = self.__data ^ other.__data
+        v = self.data() ^ other.data()
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __or__(self, other):
-        v = self.__data | other.__data
+        v = self.data() | other.data()
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __neg__(self):
-        return self.__class__(-self.__data[0], -self.__data[1], -self.__data[2])
+        return self.__class__(-self.data()[0], -self.data()[1], -self.data()[2])
 
     def __pos__(self):
-        return self.__class__(+self.__data[0], +self.__data[1], +self.__data[2])
+        return self.__class__(+self.data()[0], +self.data()[1], +self.data()[2])
 
     def __invert__(self):
-        return self.__class__(~self.__data[0], ~self.__data[1], ~self.__data[2])
+        return self.__class__(~self.data()[0], ~self.data()[1], ~self.data()[2])
     
     def x(self):
-        return self.__data[0]
+        return self.data()[0]
 
     def y(self):
-        return self.__data[1]
+        return self.data()[1]
 
     def z(self):
-        return self.__data[2]
+        return self.data()[2]
     
-    def setX(self, x):
+    cpdef setX(self, x):
         self.__data[0] = x
 
-    def setY(self, y):
+    cpdef setY(self, y):
         self.__data[1] = y
 
-    def setZ(self, z):
+    cpdef setZ(self, z):
         self.__data[2] = z
 
 
-class MVector4D():
+cdef class MVector4D:
 
     def __init__(self, x=0, y=0, z=0, w=0):
         if isinstance(x, MVector4D):
             # クラスの場合
-            self.__data = x.__data
+            self.__data = x.data()
         elif isinstance(x, np.ndarray):
             # 行列そのものの場合
             self.__data = np.array([x[0], x[1], x[2], x[3]], dtype=np.float64)
@@ -500,237 +486,228 @@ class MVector4D():
             self.__data = np.array([x, y, z, w], dtype=np.float64)
     
     def length(self):
-        return np.linalg.norm(self.__data, ord=2)
+        return np.linalg.norm(self.data(), ord=2)
 
     def lengthSquared(self):
-        return np.linalg.norm(self.__data, ord=2)**2
+        return np.linalg.norm(self.data(), ord=2)**2
 
     def normalized(self):
-        l2 = np.linalg.norm(self.__data, ord=2, axis=-1, keepdims=True)
+        l2 = np.linalg.norm(self.data(), ord=2, axis=-1, keepdims=True)
         l2[l2 == 0] = 1
-        normv = self.__data / l2
+        normv = self.data() / l2
         return MVector4D(normv[0], normv[1], normv[2], normv[3])
 
     def normalize(self):
-        l2 = np.linalg.norm(self.__data, ord=2, axis=-1, keepdims=True)
+        l2 = np.linalg.norm(self.data(), ord=2, axis=-1, keepdims=True)
         l2[l2 == 0] = 1
-        normv = self.__data / l2
+        normv = self.data() / l2
         self.__data = normv
 
     def toVector3D(self):
-        return MVector3D(self.__data[0], self.__data[1], self.__data[2])
+        return MVector3D(self.data()[0], self.data()[1], self.data()[2])
 
     def is_almost_null(self):
-        return (is_almost_null(self.__data[0]) and is_almost_null(self.__data[1]) and is_almost_null(self.__data[2]) and is_almost_null(self.__data[3]))
+        return (is_almost_null(self.data()[0]) and is_almost_null(self.data()[1]) and is_almost_null(self.data()[2]) and is_almost_null(self.data()[3]))
                    
-    def effective(self):
-        self.__data[np.isnan(self.__data)] = 0
-        self.__data[np.isinf(self.__data)] = 0
+    cpdef effective(self):
+        self.__data[np.isnan(self.data())] = 0
+        self.__data[np.isinf(self.data())] = 0
                                 
     @classmethod
     def dotProduct(cls, v1, v2):
-        dotv = np.dot(v1.__data, v2.__data)
+        dotv = np.dot(v1.data(), v2.data())
         return dotv
     
-    def data(self):
+    cpdef data(self):
         return self.__data
 
     def __str__(self):
-        return "MVector4D({0}, {1}, {2}, {3})".format(self.__data[0], self.__data[1], self.__data[2], self.__data[3])
+        return "MVector4D({0}, {1}, {2}, {3})".format(self.data()[0], self.data()[1], self.data()[2], self.data()[3])
 
     def __lt__(self, other):
-        return np.all(self.__data < other.__data)
+        return np.all(self.data() < other.data())
 
     def __le__(self, other):
-        return np.all(self.__data <= other.__data)
+        return np.all(self.data() <= other.data())
 
     def __eq__(self, other):
-        return np.all(self.__data == other.__data)
+        return np.all(self.data() == other.data())
 
     def __ne__(self, other):
-        return np.any(self.__data != other.__data)
+        return np.any(self.data() != other.data())
 
     def __gt__(self, other):
-        return np.all(self.__data > other.__data)
+        return np.all(self.data() > other.data())
 
     def __ge__(self, other):
-        return np.all(self.__data >= other.__data)
+        return np.all(self.data() >= other.data())
 
     def __add__(self, other):
         if isinstance(other, MVector4D):
-            v = self.__data + other.__data
+            v = self.data() + other.data()
         else:
-            v = self.__data + other
+            v = self.data() + other
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __sub__(self, other):
         if isinstance(other, MVector4D):
-            v = self.__data - other.__data
+            v = self.data() - other.data()
         else:
-            v = self.__data - other
+            v = self.data() - other
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __mul__(self, other):
         if isinstance(other, MVector4D):
-            v = self.__data * other.__data
+            v = self.data() * other.data()
         else:
-            v = self.__data * other
+            v = self.data() * other
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __truediv__(self, other):
         if isinstance(other, MVector4D):
-            v = self.__data / other.__data
+            v = self.data() / other.data()
         else:
-            v = self.__data / other
+            v = self.data() / other
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __floordiv__(self, other):
         if isinstance(other, MVector4D):
-            v = self.__data // other.__data
+            v = self.data() // other.data()
         else:
-            v = self.__data // other
+            v = self.data() // other
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __mod__(self, other):
         if isinstance(other, MVector4D):
-            v = self.__data % other.__data
+            v = self.data() % other.data()
         else:
-            v = self.__data % other
-        v2 = self.__class__(v)
-        v2.effective()
-        return v2
-
-    def __pow__(self, other):
-        if isinstance(other, MVector4D):
-            v = self.__data ** other.__data
-        else:
-            v = self.__data ** other
+            v = self.data() % other
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __lshift__(self, other):
         if isinstance(other, MVector4D):
-            v = self.__data << other.__data
+            v = self.data() << other.data()
         else:
-            v = self.__data << other
+            v = self.data() << other
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __rshift__(self, other):
         if isinstance(other, MVector4D):
-            v = self.__data >> other.__data
+            v = self.data() >> other.data()
         else:
-            v = self.__data >> other
+            v = self.data() >> other
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __and__(self, other):
-        v = self.__data & other.__data
+        v = self.data() & other.data()
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __dataor__(self, other):
-        v = self.__data ^ other.__data
+        v = self.data() ^ other.data()
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __or__(self, other):
-        v = self.__data | other.__data
+        v = self.data() | other.data()
         v2 = self.__class__(v)
         v2.effective()
         return v2
 
     def __neg__(self):
-        return self.__class__(-self.__data[0], -self.__data[1], -self.__data[2], -self.__data[3])
+        return self.__class__(-self.data()[0], -self.data()[1], -self.data()[2], -self.data()[3])
 
     def __pos__(self):
-        return self.__class__(+self.__data[0], +self.__data[1], +self.__data[2], +self.__data[3])
+        return self.__class__(+self.data()[0], +self.data()[1], +self.data()[2], +self.data()[3])
 
     def __invert__(self):
-        return self.__class__(~self.__data[0], ~self.__data[1], ~self.__data[2], ~self.__data[3])
+        return self.__class__(~self.data()[0], ~self.data()[1], ~self.data()[2], ~self.data()[3])
     
     def x(self):
-        return self.__data[0]
+        return self.data()[0]
 
     def y(self):
-        return self.__data[1]
+        return self.data()[1]
 
     def z(self):
-        return self.__data[2]
+        return self.data()[2]
     
     def w(self):
-        return self.__data[3]
+        return self.data()[3]
     
-    def setX(self, x):
+    cpdef setX(self, x):
         self.__data[0] = x
 
-    def setY(self, y):
+    cpdef setY(self, y):
         self.__data[1] = y
 
-    def setZ(self, z):
+    cpdef setZ(self, z):
         self.__data[2] = z
 
-    def setW(self, w):
+    cpdef setW(self, w):
         self.__data[3] = w
 
 
-class MQuaternion():
+cdef class MQuaternion:
 
     def __init__(self, w=1, x=0, y=0, z=0):
         if isinstance(w, MQuaternion):
             # クラスの場合
-            self.__data = w.__data
+            self.__data = w.data().components
         elif isinstance(w, np.quaternion):
             # quaternionの場合
-            self.__data = w
+            self.__data = w.components
         elif isinstance(w, np.ndarray):
             # arrayそのものの場合
-            self.__data = np.quaternion(w[0], w[1], w[2], w[3])
+            self.__data = w
         else:
-            self.__data = np.quaternion(w, x, y, z)
+            self.__data = np.array([w, x, y, z], dtype=np.float64)
 
     def copy(self):
         return MQuaternion(self.scalar(), self.x(), self.y(), self.z())
     
     def __str__(self):
-        return "MQuaternion({0}, {1}, {2}, {3})".format(self.__data.w, self.__data.x, self.__data.y, self.__data.z)
+        return "MQuaternion({0}, {1}, {2}, {3})".format(self.data().w, self.data().x, self.data().y, self.data().z)
 
     def inverted(self):
-        v = self.__data.inverse()
+        v = self.data().inverse()
         return self.__class__(v.w, v.x, v.y, v.z)
 
     def length(self):
-        return self.__data.abs()
+        return self.data().abs()
 
     def lengthSquared(self):
-        return self.__data.abs()**2
+        return self.data().abs()**2
 
     def normalized(self):
         self.effective()
-        v = self.__data.normalized()
+        v = self.data().normalized()
         return MQuaternion(v.w, v.x, v.y, v.z)
 
     def normalize(self):
-        self.__data = self.__data.normalized()
+        self.__data = self.data().normalized().components
 
     def effective(self):
-        self.__data.components[np.isnan(self.__data.components)] = 0
-        self.__data.components[np.isinf(self.__data.components)] = 0
+        self.data().components[np.isnan(self.data().components)] = 0
+        self.data().components[np.isinf(self.data().components)] = 0
         # Scalarは1がデフォルトとなる
         self.setScalar(1 if self.scalar() == 0 else self.scalar())
 
@@ -739,7 +716,7 @@ class MQuaternion():
         m = mat.data()
 
         # q(w,x,y,z)から(x,y,z,w)に並べ替え.
-        q2 = np.array([self.__data.x, self.__data.y, self.__data.z, self.__data.w], dtype=np.float64)
+        q2 = np.array([self.data().x, self.data().y, self.data().z, self.data().w], dtype=np.float64)
 
         m[0, 0] = q2[3] * q2[3] + q2[0] * q2[0] - q2[1] * q2[1] - q2[2] * q2[2]
         m[0, 1] = 2.0 * q2[0] * q2[1] - 2.0 * q2[3] * q2[2]
@@ -767,7 +744,7 @@ class MQuaternion():
         return mat
     
     def toVector4D(self):
-        return MVector4D(self.__data.x, self.__data.y, self.__data.z, self.__data.w)
+        return MVector4D(self.data().x, self.data().y, self.data().z, self.data().w)
 
     def toEulerAngles4MMD(self):
         # MMDの表記に合わせたオイラー角
@@ -777,10 +754,10 @@ class MQuaternion():
 
     # http://www.j3d.org/matrix_faq/matrfaq_latest.html#Q37
     def toEulerAngles(self):
-        xp = self.__data.x
-        yp = self.__data.y
-        zp = self.__data.z
-        wp = self.__data.w
+        xp = self.data().x
+        yp = self.data().y
+        zp = self.data().z
+        wp = self.data().w
 
         xx = xp * xp
         xy = xp * yp
@@ -835,7 +812,7 @@ class MQuaternion():
     
     @classmethod
     def dotProduct(cls, v1, v2):
-        dotv = np.sum(v1.__data.components * v2.__data.components)
+        dotv = np.sum(v1.data().components * v2.data().components)
         return dotv
     
     @classmethod
@@ -879,7 +856,7 @@ class MQuaternion():
                 
     @classmethod
     def fromDirection(cls, direction, up):
-        if direction.is_almost_null():
+        if direction.is_almost_null:
             return MQuaternion()
 
         zAxis = direction.normalized()
@@ -1023,151 +1000,144 @@ class MQuaternion():
         return q1 * factor1 + q2b * factor2
     
     def x(self):
-        return self.__data.x
+        return self.data().x
 
     def y(self):
-        return self.__data.y
+        return self.data().y
 
     def z(self):
-        return self.__data.z
+        return self.data().z
 
     def scalar(self):
-        return self.__data.w
+        return self.data().w
 
     def vector(self):
-        return MVector3D(self.__data.x, self.__data.y, self.__data.z)
+        return MVector3D(self.data().x, self.data().y, self.data().z)
 
-    def setX(self, x):
-        self.__data.x = x
+    cpdef setX(self, x):
+        self.__data[1] = x
 
-    def setY(self, y):
-        self.__data.y = y
+    cpdef setY(self, y):
+        self.__data[2] = y
 
-    def setZ(self, z):
-        self.__data.z = z
+    cpdef setZ(self, z):
+        self.__data[3] = z
 
-    def setScalar(self, w):
-        self.__data.w = w
-    
-    def data(self):
-        return self.__data
+    cpdef setScalar(self, w):
+        self.__data[0] = w
+        
+    cpdef data(self):
+        return np.quaternion(self.__data[0], self.__data[1], self.__data[2], self.__data[3])
 
     def __lt__(self, other):
-        return np.all(self.__data < other.__data)
+        return np.all(self.data() < other.data())
 
     def __le__(self, other):
-        return np.all(self.__data <= other.__data)
+        return np.all(self.data() <= other.data())
 
     def __eq__(self, other):
-        return np.all(self.__data == other.__data)
+        return np.all(self.data() == other.data())
 
     def __ne__(self, other):
-        return np.any(self.__data != other.__data)
+        return np.any(self.data() != other.data())
 
     def __gt__(self, other):
-        return np.all(self.__data > other.__data)
+        return np.all(self.data() > other.data())
 
     def __ge__(self, other):
-        return np.all(self.__data >= other.__data)
+        return np.all(self.data() >= other.data())
 
     def __add__(self, other):
         if isinstance(other, MQuaternion):
-            v = self.__data + other.__data
+            v = self.data() + other.data()
         else:
-            v = self.__data + other
+            v = self.data() + other
         return self.__class__(v.w, v.x, v.y, v.z)
 
     def __sub__(self, other):
         if isinstance(other, MQuaternion):
-            v = self.__data - other.__data
+            v = self.data() - other.data()
         else:
-            v = self.__data - other
+            v = self.data() - other
         return self.__class__(v.w, v.x, v.y, v.z)
 
     def __mul__(self, other):
         if isinstance(other, MQuaternion):
-            v = self.__data * other.__data
+            v = self.data() * other.data()
             return self.__class__(v)
         elif isinstance(other, MVector3D):
             v = self.toMatrix4x4() * other
             return v
         else:
-            v = self.__data * other
+            v = self.data() * other
             return self.__class__(v.w, v.x, v.y, v.z)
 
     def __truediv__(self, other):
         if isinstance(other, MQuaternion):
-            v = self.__data / other.__data
+            v = self.data() / other.data()
         else:
-            v = self.__data / other
+            v = self.data() / other
         return self.__class__(v.w, v.x, v.y, v.z)
 
     def __floordiv__(self, other):
         if isinstance(other, MQuaternion):
-            v = self.__data // other.__data
+            v = self.data() // other.data()
         else:
-            v = self.__data // other
+            v = self.data() // other
         return self.__class__(v.w, v.x, v.y, v.z)
 
     def __mod__(self, other):
         if isinstance(other, MQuaternion):
-            v = self.__data % other.__data
+            v = self.data() % other.data()
         else:
-            v = self.__data % other
-        return self.__class__(v.w, v.x, v.y, v.z)
-
-    def __pow__(self, other):
-        if isinstance(other, MQuaternion):
-            v = self.__data ** other.__data
-        else:
-            v = self.__data ** other
+            v = self.data() % other
         return self.__class__(v.w, v.x, v.y, v.z)
 
     def __lshift__(self, other):
         if isinstance(other, MQuaternion):
-            v = self.__data << other.__data
+            v = self.data() << other.data()
         else:
-            v = self.__data << other
+            v = self.data() << other
         return self.__class__(v.w, v.x, v.y, v.z)
 
     def __rshift__(self, other):
         if isinstance(other, MQuaternion):
-            v = self.__data >> other.__data
+            v = self.data() >> other.data()
         else:
-            v = self.__data >> other
+            v = self.data() >> other
         return self.__class__(v.w, v.x, v.y, v.z)
 
     def __and__(self, other):
-        v = self.__data & other.__data
+        v = self.data() & other.data()
         return self.__class__(v.w, v.x, v.y, v.z)
 
     def __dataor__(self, other):
-        v = self.__data ^ other.__data
+        v = self.data() ^ other.data()
         return self.__class__(v.w, v.x, v.y, v.z)
 
     def __or__(self, other):
-        v = self.__data | other.__data
+        v = self.data() | other.data()
         return self.__class__(v.w, v.x, v.y, v.z)
     
     def __neg__(self):
-        return self.__class__(-self.__data.w, -self.__data.x, -self.__data.y, -self.__data.z)
+        return self.__class__(-self.data().w, -self.data().x, -self.data().y, -self.data().z)
 
     def __pos__(self):
-        return self.__class__(+self.__data.w, +self.__data.x, +self.__data.y, +self.__data.z)
+        return self.__class__(+self.data().w, +self.data().x, +self.data().y, +self.data().z)
 
     def __invert__(self):
-        return self.__class__(~self.__data.w, ~self.__data.x, ~self.__data.y, ~self.__data.z)
+        return self.__class__(~self.data().w, ~self.data().x, ~self.data().y, ~self.data().z)
 
 
-class MMatrix4x4():
+cdef class MMatrix4x4:
     
     def __init__(self, m11=1, m12=0, m13=0, m14=0, m21=0, m22=1, m23=0, m24=0, m31=0, m32=0, m33=1, m34=0, m41=0, m42=0, m43=0, m44=1):
         if isinstance(m11, MMatrix4x4):
             # 行列クラスの場合
-            self.__data = np.array([[m11.__data[0, 0], m11.__data[0, 1], m11.__data[0, 2], m11.__data[0, 3]], \
-                                    [m11.__data[1, 0], m11.__data[1, 1], m11.__data[1, 2], m11.__data[1, 3]], \
-                                    [m11.__data[2, 0], m11.__data[2, 1], m11.__data[2, 2], m11.__data[2, 3]], \
-                                    [m11.__data[3, 0], m11.__data[3, 1], m11.__data[3, 2], m11.__data[3, 3]]], dtype=np.float64)
+            self.__data = np.array([[m11.data()[0, 0], m11.data()[0, 1], m11.data()[0, 2], m11.data()[0, 3]], \
+                                    [m11.data()[1, 0], m11.data()[1, 1], m11.data()[1, 2], m11.data()[1, 3]], \
+                                    [m11.data()[2, 0], m11.data()[2, 1], m11.data()[2, 2], m11.data()[2, 3]], \
+                                    [m11.data()[3, 0], m11.data()[3, 1], m11.data()[3, 2], m11.data()[3, 3]]], dtype=np.float64)
         elif isinstance(m11, np.ndarray):
             # 行列そのものの場合
             self.__data = np.array([[m11[0, 0], m11[0, 1], m11[0, 2], m11[0, 3]], [m11[1, 0], m11[1, 1], m11[1, 2], m11[1, 3]], \
@@ -1177,29 +1147,29 @@ class MMatrix4x4():
             self.__data = np.array([[m11, m12, m13, m14], [m21, m22, m23, m24], [m31, m32, m33, m34], [m41, m42, m43, m44]], dtype=np.float64)
 
     def copy(self):
-        return MMatrix4x4(self.__data)
-
-    def data(self):
-        return self.__data
+        return MMatrix4x4(self.data())
     
+    cpdef data(self):
+        return self.__data
+
     # 逆行列
     def inverted(self):
-        v = np.linalg.inv(self.__data)
+        v = np.linalg.inv(self.data())
         return MMatrix4x4(v)
 
     # 回転行列
-    def rotate(self, qq):
+    cpdef rotate(self, qq):
         qq_mat = qq.toMatrix4x4()
-        self.__data = self.__data.dot(qq_mat.__data)
+        self.__data = self.data().dot(qq_mat.data())
 
     # 平行移動行列
-    def translate(self, vec3):
+    cpdef translate(self, vec3):
         vec_mat = np.tile(np.array([vec3.x(), vec3.y(), vec3.z()]), (4, 1))
         data_mat = self.__data[:, :3] * vec_mat
         self.__data[:, 3] += np.sum(data_mat, axis=1)
 
     # 縮尺行列
-    def scale(self, vec3):
+    cpdef scale(self, vec3):
         vec_mat = np.tile(np.array([vec3.x(), vec3.y(), vec3.z()]), (4, 1))
         self.__data[:, :3] *= vec_mat
         
@@ -1207,7 +1177,7 @@ class MMatrix4x4():
     def setToIdentity(self):
         self.__data = np.eye(4)
     
-    def lookAt(self, eye, center, up):
+    cpdef lookAt(self, eye, center, up):
         forward = center - eye
         if forward.is_almost_null():
             # ほぼ0の場合終了
@@ -1240,25 +1210,28 @@ class MMatrix4x4():
         clip = farPlane - nearPlane
 
         m = MMatrix4x4()
-        m.__data[0, 0] = cotan / aspectRatio
-        m.__data[1, 1] = cotan
-        m.__data[2, 2] = -(nearPlane + farPlane) / clip
-        m.__data[2, 3] = -(2 * nearPlane * farPlane) / clip
-        m.__data[3, 2] = -1
+        md = m.data()
+        md[0, 0] = cotan / aspectRatio
+        md[1, 1] = cotan
+        md[2, 2] = -(nearPlane + farPlane) / clip
+        md[2, 3] = -(2 * nearPlane * farPlane) / clip
+        md[3, 2] = -1
 
         self *= m
     
     def mapVector(self, vector):
         vec_mat = np.array([vector.x(), vector.y(), vector.z()])
-        xyz = np.sum(vec_mat * self.__data[:3, :3], axis=1)
+        d = self.data()
+        xyz = np.sum(vec_mat * d[:3, :3], axis=1)
 
         return MVector3D(xyz[0], xyz[1], xyz[2])
     
     def toQuaternion(self):
-        a = [[self.__data[0, 0], self.__data[0, 1], self.__data[0, 2], self.__data[0, 3]],
-             [self.__data[1, 0], self.__data[1, 1], self.__data[1, 2], self.__data[1, 3]],
-             [self.__data[2, 0], self.__data[2, 1], self.__data[2, 2], self.__data[2, 3]],
-             [self.__data[3, 0], self.__data[3, 1], self.__data[3, 2], self.__data[3, 3]]]
+        d = self.data()
+        a = [[d[0, 0], d[0, 1], d[0, 2], d[0, 3]],
+             [d[1, 0], d[1, 1], d[1, 2], d[1, 3]],
+             [d[2, 0], d[2, 1], d[2, 2], d[2, 3]],
+             [d[3, 0], d[3, 1], d[3, 2], d[3, 3]]]
         
         q = MQuaternion()
         
@@ -1294,45 +1267,46 @@ class MMatrix4x4():
         return q
 
     def __str__(self):
-        return "MMatrix4x4({0})".format(self.__data)
+        return "MMatrix4x4({0})".format(self.data())
 
     def __lt__(self, other):
-        return np.all(self.__data < other.__data)
+        return np.all(self.data() < other.data())
 
     def __le__(self, other):
-        return np.all(self.__data <= other.__data)
+        return np.all(self.data() <= other.data())
 
     def __eq__(self, other):
-        return np.all(self.__data == other.__data)
+        return np.all(self.data() == other.data())
 
     def __ne__(self, other):
-        return np.any(self.__data != other.__data)
+        return np.any(self.data() != other.data())
 
     def __gt__(self, other):
-        return np.all(self.__data > other.__data)
+        return np.all(self.data() > other.data())
 
     def __ge__(self, other):
-        return np.all(self.__data >= other.__data)
+        return np.all(self.data() >= other.data())
 
     def __add__(self, other):
         if isinstance(other, MMatrix4x4):
-            v = self.__data + other.__data
+            v = self.data() + other.data()
         else:
-            v = self.__data + other
+            v = self.data() + other
         return self.__class__(v)
 
     def __sub__(self, other):
         if isinstance(other, MMatrix4x4):
-            v = self.__data - other.__data
+            v = self.data() - other.data()
         else:
-            v = self.__data - other
+            v = self.data() - other
         return self.__class__(v)
 
     # *演算子
     def __mul__(self, other):
         if isinstance(other, MVector3D):
+            d = self.data()
             vec_mat = np.tile(np.array([other.x(), other.y(), other.z()]), (4, 1))
-            data_sum = np.sum(vec_mat * self.__data[:, :3], axis=1) + self.__data[:, 3]
+            data_sum = np.sum(vec_mat * d[:, :3], axis=1) + d[:, 3]
 
             x = data_sum[0]
             y = data_sum[1]
@@ -1347,7 +1321,7 @@ class MMatrix4x4():
                 return MVector3D(x / w, y / w, z / w)
         elif isinstance(other, MVector4D):
             vec_mat = np.tile(np.array([other.x(), other.y(), other.z(), other.w()]), (4, 1))
-            data_sum = np.sum(vec_mat * self.__data, axis=1)
+            data_sum = np.sum(vec_mat * self.data(), axis=1)
 
             x = data_sum[0]
             y = data_sum[1]
@@ -1356,27 +1330,27 @@ class MMatrix4x4():
 
             return MVector4D(x, y, z, w)
         elif isinstance(other, MMatrix4x4):
-            v = np.dot(self.__data, other.__data)
+            v = np.dot(self.data(), other.data())
             return self.__class__(v)
         
-        v = self.__data * other
+        v = self.data() * other
         return self.__class__(v)
         
     def __iadd__(self, other):
-        self.__data = self.__data + other.__data.T
+        self.__data = self.data() + other.data().T
         return self
 
     def __isub__(self, other):
-        self.__data = self.__data + other.__data.T
+        self.__data = self.data() + other.data().T
         return self
 
     def __imul__(self, other):
-        self.__data = np.dot(self.__data, other.__data)
+        self.__data = np.dot(self.data(), other.data())
 
         return self
 
     def __itruediv__(self, other):
-        self.__data = self.__data / other.__data.T
+        self.__data = self.data() / other.data().T
         return self
 
 

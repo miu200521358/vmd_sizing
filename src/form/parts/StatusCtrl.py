@@ -14,7 +14,7 @@ class StatusCtrl(wx.TextCtrl):
 
     def write(self, text):
         try:
-            wx.CallAfter(self.SetValue, text)
+            wx.CallAfter(self.SetValue, str(int(text)))
         except: # noqa
             pass
 
