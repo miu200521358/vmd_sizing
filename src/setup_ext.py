@@ -8,7 +8,7 @@ kwargs = {"output_dir": "./build/output", "build_dir": "./build/"}
 
 def get_ext():
     ext = []
-    sources = ["module\\MMath.py", "module\\MParams.py"]
+    sources = ["module\\MMath.pyx", "module\\MParams.py"]
     # for path in glob.glob("*/**/*.pyx", recursive=True):
     #     if os.path.isfile(path):
     #         print(path)

@@ -72,12 +72,12 @@ class SizingWorkerThread(BaseWorkerThread):
                     for v in self.frame.file_panel_ctrl.file_set.get_selected_stance_details():
                         self.frame.file_panel_ctrl.tree_process_dict[proccess_key]["スタンス追加補正"][v] = False
 
+                self.frame.file_panel_ctrl.tree_process_dict[proccess_key]["腕スタンス補正"] = False
+
                 total_process += self.frame.file_panel_ctrl.file_set.rep_model_file_ctrl.title_parts_ctrl.GetValue()    # 捩り分散
                 if self.frame.file_panel_ctrl.file_set.rep_model_file_ctrl.title_parts_ctrl.GetValue() == 1:
                     self.frame.file_panel_ctrl.tree_process_dict[proccess_key]["捩り分散"] = False
                 
-                self.frame.file_panel_ctrl.tree_process_dict[proccess_key]["腕スタンス補正"] = False
-
                 if self.frame.arm_panel_ctrl.arm_process_flg_avoidance.GetValue() > 0:
                     self.frame.file_panel_ctrl.tree_process_dict[proccess_key]["接触回避"] = False
 
