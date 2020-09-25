@@ -41,6 +41,7 @@ class SmoothWorkerThread(BaseWorkerThread):
                 output_path=self.frame.smooth_panel_ctrl.output_smooth_vmd_file_ctrl.file_ctrl.GetPath(), \
                 loop_cnt=self.frame.smooth_panel_ctrl.loop_cnt_ctrl.GetValue(), \
                 interpolation=self.frame.smooth_panel_ctrl.interpolation_ctrl.GetSelection(), \
+                bone_list=self.frame.smooth_panel_ctrl.get_bone_list(), \
                 monitor=self.frame.smooth_panel_ctrl.console_ctrl, \
                 is_file=False, \
                 outout_datetime=logger.outout_datetime, \

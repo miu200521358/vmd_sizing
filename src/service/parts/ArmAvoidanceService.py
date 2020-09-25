@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #
+import os
 import numpy as np
 import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor
@@ -86,6 +87,15 @@ class ArmAvoidanceService():
             # for f in futures:
             #     if not f.result():
             #         return False
+
+            data_set = self.options.data_set_list[data_set_idx]
+
+            if self.options.now_process_ctrl and direction == "右":
+                self.options.now_process += 1
+                self.options.now_process_ctrl.write(str(self.options.now_process))
+
+                proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
+                self.options.tree_process_dict[proccess_key]["接触回避"] = True
 
             return True
         except MKilledException as ke:

@@ -18,7 +18,8 @@ logger = MLogger(__name__)
 class MOptions():
 
     def __init__(self, version_name, logging_level, max_workers, data_set_list, arm_options, \
-                 camera_motion, camera_output_vmd_path, monitor, is_file, outout_datetime):
+                 camera_motion, camera_output_vmd_path, monitor, is_file, outout_datetime, \
+                 total_process, now_process, total_process_ctrl, now_process_ctrl, tree_process_dict):
         self.version_name = version_name
         self.logging_level = logging_level
         self.max_workers = max_workers
@@ -29,6 +30,11 @@ class MOptions():
         self.monitor = monitor
         self.is_file = is_file
         self.outout_datetime = outout_datetime
+        self.total_process = total_process
+        self.now_process = now_process
+        self.total_process_ctrl = total_process_ctrl
+        self.now_process_ctrl = now_process_ctrl
+        self.tree_process_dict = tree_process_dict
     
     # 複数件のファイルセットの足IKの比率を再設定する
     def calc_leg_ratio(self):

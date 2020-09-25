@@ -64,7 +64,7 @@ class VmdPanel(BasePanel):
         self.sizer.Add(btn_sizer, 0, wx.ALIGN_CENTER | wx.SHAPED, 5)
 
         # コンソール
-        self.console_ctrl = ConsoleCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, 420), \
+        self.console_ctrl = ConsoleCtrl(self, self.frame.logging_level, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, 420), \
                                         wx.TE_MULTILINE | wx.TE_READONLY | wx.BORDER_NONE | wx.HSCROLL | wx.VSCROLL | wx.WANTS_CHARS)
         self.console_ctrl.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DLIGHT))
         self.console_ctrl.Bind(wx.EVT_CHAR, lambda event: MFormUtils.on_select_all(event, self.console_ctrl))
@@ -119,7 +119,8 @@ class VmdPanel(BasePanel):
             # フォーム有効化
             self.enable()
             # 出力先をデフォルトに戻す
-            sys.stdout = self.frame.file_panel_ctrl.console_ctrl
+            if sys.stdout != self.frame.file_panel_ctrl.console_ctrl:
+                sys.stdout = self.frame.file_panel_ctrl.console_ctrl
 
             return result
 
@@ -160,4 +161,6 @@ class VmdPanel(BasePanel):
         logger.info("VMD変換が完了しました", decoration=MLogger.DECORATION_BOX, title="OK")
 
         # 出力先をデフォルトに戻す
-        sys.stdout = self.frame.file_panel_ctrl.console_ctrl
+        if sys.stdout != self.frame.file_panel_ctrl.console_ctrl:
+            sys.stdout = self.frame.file_panel_ctrl.console_ctrl
+

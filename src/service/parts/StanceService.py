@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #
+import os
 import numpy as np
 import math
 import concurrent.futures
@@ -82,13 +83,13 @@ class StanceService():
                         # 肩補正
                         self.adjust_shoulder_stance(data_set_idx, data_set)
 
+                # 腕スタンス補正
+                self.adjust_arm_stance(data_set_idx, data_set)
+
                 if data_set.twist_flg:
                     # 捩り分散あり
                     self.spread_twist(data_set_idx, data_set)
                 
-                # 腕スタンス補正
-                self.adjust_arm_stance(data_set_idx, data_set)
-
                 if data_set.detail_stance_flg:
                     # センターY補正
                     if "センターY補正" in data_set.selected_stance_details:
@@ -132,6 +133,13 @@ class StanceService():
         for f in futures:
             if not f.result():
                 return False
+
+        if self.options.now_process_ctrl:
+            self.options.now_process += 1
+            self.options.now_process_ctrl.write(str(self.options.now_process))
+
+            proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
+            self.options.tree_process_dict[proccess_key]["捩り分散"] = True
 
         return True
 
@@ -776,6 +784,13 @@ class StanceService():
             if not f.result():
                 return False
 
+        if self.options.now_process_ctrl:
+            self.options.now_process += 1
+            self.options.now_process_ctrl.write(str(self.options.now_process))
+
+            proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
+            self.options.tree_process_dict[proccess_key]["スタンス追加補正"]["足ＩＫ補正"] = True
+                        
         return True
                  
     # 足ＩＫ補正
@@ -978,6 +993,13 @@ class StanceService():
             if not f.result():
                 return False
 
+        if self.options.now_process_ctrl:
+            self.options.now_process += 1
+            self.options.now_process_ctrl.write(str(self.options.now_process))
+
+            proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
+            self.options.tree_process_dict[proccess_key]["スタンス追加補正"]["つま先ＩＫ補正"] = True
+
         return True
                  
     # つま先ＩＫ補正
@@ -1167,6 +1189,13 @@ class StanceService():
             if not f.result():
                 return False
 
+        if self.options.now_process_ctrl:
+            self.options.now_process += 1
+            self.options.now_process_ctrl.write(str(self.options.now_process))
+
+            proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
+            self.options.tree_process_dict[proccess_key]["スタンス追加補正"]["つま先補正"] = True
+
         return True
                  
     # つま先補正
@@ -1336,6 +1365,15 @@ class StanceService():
         else:
             logger.info("センターXZ補正: 【No.%s】[%s]のボーン群が、作成元もしくは変換先のいずれかで足りないため、処理をスキップします。", (data_set_idx + 1), ", ".join(center_target_bones))
 
+        if self.options.now_process_ctrl:
+            self.options.now_process += 1
+            self.options.now_process_ctrl.write(str(self.options.now_process))
+
+            proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
+            self.options.tree_process_dict[proccess_key]["スタンス追加補正"]["センターXZ補正"] = True
+
+        return True
+
     # センターY補正
     def adjust_center_arm_stance(self, data_set_idx: int, data_set: MOptionsDataSet):
         logger.info("センターY補正　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
@@ -1411,6 +1449,15 @@ class StanceService():
             logger.info("センターY補正: 終了【No.%s】", (data_set_idx + 1))
         else:
             logger.info("センターY補正: 【No.%s】[%s]のボーン群が、作成元もしくは変換先のいずれかで足りないため、処理をスキップします。", (data_set_idx + 1), ", ".join(center_target_bones))
+
+        if self.options.now_process_ctrl:
+            self.options.now_process += 1
+            self.options.now_process_ctrl.write(str(self.options.now_process))
+
+            proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
+            self.options.tree_process_dict[proccess_key]["スタンス追加補正"]["センターY補正"] = True
+        
+        return True
 
     # 足IKによるセンターオフセット値
     def calc_center_offset_by_arm(self, bf: VmdBoneFrame, data_set_idx: int, data_set: MOptionsDataSet, \
@@ -1857,6 +1904,15 @@ class StanceService():
         else:
             logger.info("上半身補正: 【No.%s】[%s]のボーン群が、作成元もしくは変換先のいずれかで足りないため、処理をスキップします。", (data_set_idx + 1), ", ".join(upper_target_bones))
 
+        if self.options.now_process_ctrl:
+            self.options.now_process += 1
+            self.options.now_process_ctrl.write(str(self.options.now_process))
+
+            proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
+            self.options.tree_process_dict[proccess_key]["スタンス追加補正"]["上半身補正"] = True
+
+        return True
+
     # 下半身補正
     def adjust_lower_stance(self, data_set_idx: int, data_set: MOptionsDataSet):
         logger.info("下半身補正　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
@@ -1969,6 +2025,15 @@ class StanceService():
             logger.info("下半身補正: 終了【No.%s】", (data_set_idx + 1))
         else:
             logger.info("下半身補正: 【No.%s】[%s]のボーン群が、作成元もしくは変換先のいずれかで足りないため、処理をスキップします。", (data_set_idx + 1), ", ".join(lower_target_bones))
+
+        if self.options.now_process_ctrl:
+            self.options.now_process += 1
+            self.options.now_process_ctrl.write(str(self.options.now_process))
+        
+            proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
+            self.options.tree_process_dict[proccess_key]["スタンス追加補正"]["下半身補正"] = True
+
+        return True
 
     # 体幹スタンス補正
     def calc_rotation_stance_trunk(self, bf: VmdBoneFrame, data_set_idx: int, data_set: MOptionsDataSet, \
@@ -2098,6 +2163,13 @@ class StanceService():
         for f in futures:
             if not f.result():
                 return False
+
+        if self.options.now_process_ctrl:
+            self.options.now_process += 1
+            self.options.now_process_ctrl.write(str(self.options.now_process))
+
+            proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
+            self.options.tree_process_dict[proccess_key]["スタンス追加補正"]["肩補正"] = True
 
         return True
 
@@ -2610,6 +2682,13 @@ class StanceService():
         for f in futures:
             if not f.result():
                 return False
+
+        if self.options.now_process_ctrl:
+            self.options.now_process += 1
+            self.options.now_process_ctrl.write(str(self.options.now_process))
+
+            proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
+            self.options.tree_process_dict[proccess_key]["腕スタンス補正"] = True
 
         return True
 

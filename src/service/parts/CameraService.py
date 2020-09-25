@@ -13,9 +13,6 @@ from utils.MException import SizingException, MKilledException
 
 logger = MLogger(__name__, level=1)
 
-# 床処理用INDEX
-FLOOR_IDX = -1
-
 # 顔系ボーン名
 HEAD_BONE_NAMES = ["頭頂実体", "頭", "首", "左目", "右目"]
 # 体幹ボーン名
@@ -69,6 +66,12 @@ class CameraService():
                                         left_data_set_idx, left_bone_name, right_data_set_idx, right_bone_name, top_data_set_idx, top_bone_name, bottom_data_set_idx, bottom_bone_name)
 
                 prev_fno = fno
+
+            if self.options.now_process_ctrl:
+                self.options.now_process += 1
+                self.options.now_process_ctrl.write(str(self.options.now_process))
+
+                self.options.tree_process_dict["カメラ補正"] = True
             
             return True
         except MKilledException as ke:

@@ -35,6 +35,8 @@ class ConvertSmoothService():
                                     vmd=os.path.basename(self.options.motion.path)) # noqa
             service_data_txt = "{service_data_txt}　モデル: {model}({model_name})\n".format(service_data_txt=service_data_txt,
                                     model=os.path.basename(self.options.motion.path), model_name=self.options.model.name) # noqa
+            service_data_txt = "{service_data_txt}　対象ボーン: {bone_names}回\n".format(service_data_txt=service_data_txt,
+                                    bone_names=", ".join(self.options.bone_list)) # noqa
             service_data_txt = "{service_data_txt}　処理回数: {loop_cnt}回\n".format(service_data_txt=service_data_txt,
                                     loop_cnt=self.options.loop_cnt) # noqa
             service_data_txt = "{service_data_txt}　補間方法: {interpolation}\n".format(service_data_txt=service_data_txt,
@@ -65,7 +67,7 @@ class ConvertSmoothService():
         futures = []
         with ThreadPoolExecutor(thread_name_prefix="prepare", max_workers=self.options.max_workers) as executor:
             for bone_name in self.options.motion.bones.keys():
-                if bone_name in self.options.model.bones:
+                if bone_name in self.options.model.bones and bone_name in self.options.bone_list:
                     if self.options.interpolation == 0 and len(self.options.motion.bones[bone_name].keys()) >= 2:
                         # 線形補間の場合、そのまま全打ち
                         futures.append(executor.submit(self.prepare_linear, bone_name))
@@ -96,7 +98,7 @@ class ConvertSmoothService():
             futures = []
             with ThreadPoolExecutor(thread_name_prefix="filter", max_workers=self.options.max_workers) as executor:
                 for bone_name in self.options.motion.bones.keys():
-                    if bone_name in self.options.model.bones:
+                    if bone_name in self.options.model.bones and bone_name in self.options.bone_list:
                         futures.append(executor.submit(self.fitering, bone_name))
             concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
@@ -109,7 +111,7 @@ class ConvertSmoothService():
             futures = []
             with ThreadPoolExecutor(thread_name_prefix="remove", max_workers=self.options.max_workers) as executor:
                 for bone_name in self.options.motion.bones.keys():
-                    if bone_name in self.options.model.bones:
+                    if bone_name in self.options.model.bones and bone_name in self.options.bone_list:
                         futures.append(executor.submit(self.remove_unnecessary_bf, bone_name))
             concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
@@ -217,7 +219,7 @@ class ConvertSmoothService():
                 logger.info("【スムージング1回目】%s - 回転Y 終了", bone_name)
 
                 rz_all_values = MBezierUtils.calc_value_from_catmullrom(bone_name, fnos, rz_values)
-                logger.info("【スムージング1回目】%s - 回転X 終了", bone_name)
+                logger.info("【スムージング1回目】%s - 回転Z 終了", bone_name)
             else:
                 if len(fnos) > 0:
                     rx_all_values = np.zeros(fnos[-1] + 1)
