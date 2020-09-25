@@ -3,6 +3,7 @@
 import os
 import sys
 import wx
+import threading
 
 from form.panel.FilePanel import FilePanel
 from form.panel.MorphPanel import MorphPanel
@@ -461,6 +462,9 @@ class MainFrame(wx.Frame):
         self.file_panel_ctrl.gauge_ctrl.SetValue(0)
 
     def sound_finish(self):
+        threading.Thread(target=self.sound_finish_thread).start()
+
+    def sound_finish_thread(self):
         # 終了音を鳴らす
         if os.name == "nt":
             # Windows

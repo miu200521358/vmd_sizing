@@ -244,7 +244,12 @@ class MOptions():
                 monitor=sys.stdout, \
                 is_file=True, \
                 outout_datetime=logger.outout_datetime, \
-                max_workers=1)
+                max_workers=1, \
+                total_process=0, \
+                now_process=0, \
+                total_process_ctrl=None, \
+                now_process_ctrl=None, \
+                tree_process_dict={})
 
             return options
         except SizingException as se:
