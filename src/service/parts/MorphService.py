@@ -33,7 +33,7 @@ class MorphService():
                 self.options.now_process_ctrl.write(str(self.options.now_process))
 
                 proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
-                self.options.tree_process_dict[proccess_key]["スタンス追加補正"]["モーフ置換"] = True
+                self.options.tree_process_dict[proccess_key]["モーフ置換"] = True
 
         return True
 

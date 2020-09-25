@@ -424,7 +424,15 @@ class MainFrame(wx.Frame):
             return False
         
         self.elapsed_time += event.elapsed_time
-        logger.info("\n処理時間: %s", self.show_worked_time())
+        worked_time = "\n処理時間: {0}".format(self.show_worked_time())
+        logger.info(worked_time)
+
+        if self.is_out_log and event.output_log_path and os.path.exists(event.output_log_path):
+            # ログ出力対象である場合、追記
+            with open(event.output_log_path, mode='a', encoding='utf-8') as f:
+                f.write(worked_time)
+
+        logger.debug("self.worker = None")
 
         # ワーカー終了
         self.worker = None
@@ -440,6 +448,10 @@ class MainFrame(wx.Frame):
 
         # 終了音を鳴らす
         self.sound_finish()
+
+        # ファイルタブのコンソール
+        if sys.stdout != self.file_panel_ctrl.console_ctrl:
+            sys.stdout = self.file_panel_ctrl.console_ctrl
 
         # タブ移動可
         self.release_tab()
