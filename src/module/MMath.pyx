@@ -83,76 +83,154 @@ cdef class MVector2D:
         return "MVector2D({0}, {1})".format(self.__data[0], self.__data[1])
 
     def __lt__(self, other):
-        return np.all(self.data() < other.data())
+        return np.all(np.less(self.data(), other.data()))
 
     def __le__(self, other):
-        return np.all(self.data() <= other.data())
+        return np.all(np.less_equal(self.data(), other.data()))
 
     def __eq__(self, other):
-        return np.all(self.data() == other.data())
+        return np.all(np.equal(self.data(), other.data()))
 
     def __ne__(self, other):
-        return np.any(self.data() != other.data())
+        return np.any(np.not_equal(self.data(), other.data()))
 
     def __gt__(self, other):
-        return np.all(self.data() > other.data())
+        return np.all(np.greater(self.data(), other.data()))
 
     def __ge__(self, other):
-        return np.all(self.data() >= other.data())
+        return np.all(np.greater_equal(self.data(), other.data()))
 
     def __add__(self, other):
-        if isinstance(other, MVector2D):
-            v = self.data() + other.data()
+        if isinstance(other, np.float):
+            v = self.add_float(other)
+        elif isinstance(other, MVector2D):
+            v = self.add_MVector2D(other)
+        elif isinstance(other, np.int):
+            v = self.add_int(other)
         else:
             v = self.data() + other
         v2 = self.__class__(v)
         v2.effective()
         return v2
+    
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] add_MVector2D(self, MVector2D other):
+        return self.__data + other.__data
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] add_float(self, DTYPE_FLOAT_t other):
+        return self.__data + other
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] add_int(self, DTYPE_INT_t other):
+        return self.__data + other
 
     def __sub__(self, other):
-        if isinstance(other, MVector2D):
-            v = self.data() - other.data()
+        if isinstance(other, np.float):
+            v = self.sub_float(other)
+        elif isinstance(other, MVector2D):
+            v = self.sub_MVector2D(other)
+        elif isinstance(other, np.int):
+            v = self.sub_int(other)
         else:
             v = self.data() - other
         v2 = self.__class__(v)
         v2.effective()
         return v2
+    
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] sub_MVector2D(self, MVector2D other):
+        return self.__data - other.__data
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] sub_float(self, DTYPE_FLOAT_t other):
+        return self.__data - other
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] sub_int(self, DTYPE_INT_t other):
+        return self.__data - other
 
     def __mul__(self, other):
-        if isinstance(other, MVector2D):
-            v = self.data() * other.data()
+        if isinstance(other, np.float):
+            v = self.mul_float(other)
+        elif isinstance(other, MVector2D):
+            v = self.mul_MVector2D(other)
+        elif isinstance(other, np.int):
+            v = self.mul_int(other)
         else:
             v = self.data() * other
         v2 = self.__class__(v)
         v2.effective()
         return v2
+    
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] mul_MVector2D(self, MVector2D other):
+        return self.__data * other.__data
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] mul_float(self, DTYPE_FLOAT_t other):
+        return self.__data * other
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] mul_int(self, DTYPE_INT_t other):
+        return self.__data * other
 
     def __truediv__(self, other):
-        if isinstance(other, MVector2D):
-            v = self.data() / other.data()
+        if isinstance(other, np.float):
+            v = self.truediv_float(other)
+        elif isinstance(other, MVector2D):
+            v = self.truediv_MVector2D(other)
+        elif isinstance(other, np.int):
+            v = self.truediv_int(other)
         else:
             v = self.data() / other
         v2 = self.__class__(v)
         v2.effective()
         return v2
+    
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] truediv_MVector2D(self, MVector2D other):
+        return self.__data / other.__data
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] truediv_float(self, DTYPE_FLOAT_t other):
+        return self.__data / other
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] truediv_int(self, DTYPE_INT_t other):
+        return self.__data / other
 
     def __floordiv__(self, other):
-        if isinstance(other, MVector2D):
-            v = self.data() // other.data()
+        if isinstance(other, np.float):
+            v = self.floordiv_float(other)
+        elif isinstance(other, MVector2D):
+            v = self.floordiv_MVector2D(other)
+        elif isinstance(other, np.int):
+            v = self.floordiv_int(other)
         else:
             v = self.data() // other
         v2 = self.__class__(v)
         v2.effective()
         return v2
+    
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] floordiv_MVector2D(self, MVector2D other):
+        return self.__data // other.__data
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] floordiv_float(self, DTYPE_FLOAT_t other):
+        return self.__data // other
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] floordiv_int(self, DTYPE_INT_t other):
+        return self.__data // other
 
     def __mod__(self, other):
-        if isinstance(other, MVector2D):
-            v = self.data() % other.data()
+        if isinstance(other, np.float):
+            v = self.mod_float(other)
+        elif isinstance(other, MVector2D):
+            v = self.mod_MVector2D(other)
+        elif isinstance(other, np.int):
+            v = self.mod_int(other)
         else:
             v = self.data() % other
         v2 = self.__class__(v)
         v2.effective()
         return v2
+    
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] mod_MVector2D(self, MVector2D other):
+        return self.__data % other.__data
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] mod_float(self, DTYPE_FLOAT_t other):
+        return self.__data % other
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] mod_int(self, DTYPE_INT_t other):
+        return self.__data % other
 
     def __lshift__(self, other):
         if isinstance(other, MVector2D):
@@ -191,14 +269,11 @@ cdef class MVector2D:
         return v2
 
     def __neg__(self):
-        return self.__class__(-self.__data[0], -self.__data[1])
+        return self.__class__(-self.x(), -self.y())
 
     def __pos__(self):
-        return self.__class__(+self.__data[0], +self.__data[1])
+        return self.__class__(+self.x(), +self.y())
 
-    def __invert__(self):
-        return self.__class__(~self.__data[0], ~self.__data[1])
-    
     cpdef DTYPE_FLOAT_t x(self):
         return self.__data[0]
 
@@ -342,76 +417,158 @@ cdef class MVector3D:
         return "MVector3D({0}, {1}, {2})".format(self.__data[0], self.__data[1], self.__data[2])
 
     def __lt__(self, other):
-        return np.all(self.data() < other.data())
+        return np.all(np.less(self.data(), other.data()))
 
     def __le__(self, other):
-        return np.all(self.data() <= other.data())
+        return np.all(np.less_equal(self.data(), other.data()))
 
     def __eq__(self, other):
-        return np.all(self.data() == other.data())
+        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d1 = self.data()
+        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d2 = other.data()
+        return d1[0] == d2[0] and d1[1] == d2[1] and d1[2] == d2[2]
 
     def __ne__(self, other):
-        return np.any(self.data() != other.data())
+        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d1 = self.data()
+        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d2 = other.data()
+        return d1[0] != d2[0] or d1[1] != d2[1] or d1[2] != d2[2]
 
     def __gt__(self, other):
-        return np.all(self.data() > other.data())
+        return np.all(np.greater(self.data(), other.data()))
 
     def __ge__(self, other):
-        return np.all(self.data() >= other.data())
+        return np.all(np.greater_equal(self.data(), other.data()))
 
     def __add__(self, other):
-        if isinstance(other, MVector3D):
-            v = self.data() + other.data()
+        if isinstance(other, np.float):
+            v = self.add_float(other)
+        elif isinstance(other, MVector3D):
+            v = self.add_MVector3D(other)
+        elif isinstance(other, np.int):
+            v = self.add_int(other)
         else:
             v = self.data() + other
         v2 = self.__class__(v)
         v2.effective()
         return v2
+    
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] add_MVector3D(self, MVector3D other):
+        return self.__data + other.__data
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] add_float(self, DTYPE_FLOAT_t other):
+        return self.__data + other
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] add_int(self, DTYPE_INT_t other):
+        return self.__data + other
 
     def __sub__(self, other):
-        if isinstance(other, MVector3D):
-            v = self.data() - other.data()
+        if isinstance(other, np.float):
+            v = self.sub_float(other)
+        elif isinstance(other, MVector3D):
+            v = self.sub_MVector3D(other)
+        elif isinstance(other, np.int):
+            v = self.sub_int(other)
         else:
             v = self.data() - other
         v2 = self.__class__(v)
         v2.effective()
         return v2
+    
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] sub_MVector3D(self, MVector3D other):
+        return self.__data - other.__data
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] sub_float(self, DTYPE_FLOAT_t other):
+        return self.__data - other
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] sub_int(self, DTYPE_INT_t other):
+        return self.__data - other
 
     def __mul__(self, other):
-        if isinstance(other, MVector3D):
-            v = self.data() * other.data()
+        if isinstance(other, np.float):
+            v = self.mul_float(other)
+        elif isinstance(other, MVector3D):
+            v = self.mul_MVector3D(other)
+        elif isinstance(other, np.int):
+            v = self.mul_int(other)
         else:
             v = self.data() * other
         v2 = self.__class__(v)
         v2.effective()
         return v2
+    
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] mul_MVector3D(self, MVector3D other):
+        return self.__data * other.__data
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] mul_float(self, DTYPE_FLOAT_t other):
+        return self.__data * other
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] mul_int(self, DTYPE_INT_t other):
+        return self.__data * other
 
     def __truediv__(self, other):
-        if isinstance(other, MVector3D):
-            v = self.data() / other.data()
+        if isinstance(other, np.float):
+            v = self.truediv_float(other)
+        elif isinstance(other, MVector3D):
+            v = self.truediv_MVector3D(other)
+        elif isinstance(other, np.int):
+            v = self.truediv_int(other)
         else:
             v = self.data() / other
         v2 = self.__class__(v)
         v2.effective()
         return v2
+    
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] truediv_MVector3D(self, MVector3D other):
+        return self.__data / other.__data
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] truediv_float(self, DTYPE_FLOAT_t other):
+        return self.__data / other
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] truediv_int(self, DTYPE_INT_t other):
+        return self.__data / other
 
     def __floordiv__(self, other):
-        if isinstance(other, MVector3D):
-            v = self.data() // other.data()
+        if isinstance(other, np.float):
+            v = self.floordiv_float(other)
+        elif isinstance(other, MVector3D):
+            v = self.floordiv_MVector3D(other)
+        elif isinstance(other, np.int):
+            v = self.floordiv_int(other)
         else:
             v = self.data() // other
         v2 = self.__class__(v)
         v2.effective()
         return v2
+    
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] floordiv_MVector3D(self, MVector3D other):
+        return self.__data // other.__data
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] floordiv_float(self, DTYPE_FLOAT_t other):
+        return self.__data // other
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] floordiv_int(self, DTYPE_INT_t other):
+        return self.__data // other
 
     def __mod__(self, other):
-        if isinstance(other, MVector3D):
-            v = self.data() % other.data()
+        if isinstance(other, np.float):
+            v = self.mod_float(other)
+        elif isinstance(other, MVector3D):
+            v = self.mod_MVector3D(other)
+        elif isinstance(other, np.int):
+            v = self.mod_int(other)
         else:
             v = self.data() % other
         v2 = self.__class__(v)
         v2.effective()
         return v2
+    
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] mod_MVector3D(self, MVector3D other):
+        return self.__data % other.__data
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] mod_float(self, DTYPE_FLOAT_t other):
+        return self.__data % other
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] mod_int(self, DTYPE_INT_t other):
+        return self.__data % other
 
     def __lshift__(self, other):
         if isinstance(other, MVector3D):
@@ -450,14 +607,11 @@ cdef class MVector3D:
         return v2
 
     def __neg__(self):
-        return self.__class__(-self.__data[0], -self.__data[1], -self.__data[2])
+        return self.__class__(-self.x(), -self.y(), -self.z())
 
     def __pos__(self):
-        return self.__class__(+self.__data[0], +self.__data[1], +self.__data[2])
+        return self.__class__(+self.x(), +self.y(), +self.z())
 
-    def __invert__(self):
-        return self.__class__(~self.__data[0], ~self.__data[1], ~self.__data[2])
-    
     cpdef DTYPE_FLOAT_t x(self):
         return self.__data[0]
 
@@ -540,76 +694,164 @@ cdef class MVector4D:
         return "MVector4D({0}, {1}, {2}, {3})".format(self.__data[0], self.__data[1], self.__data[2], self.__data[3])
 
     def __lt__(self, other):
-        return np.all(self.data() < other.data())
+        return self.data().less(other.data())
 
     def __le__(self, other):
-        return np.all(self.data() <= other.data())
+        return self.data().less_equal(other.data())
 
     def __eq__(self, other):
-        return np.all(self.data() == other.data())
+        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d1 = self.data()
+        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d2 = other.data()
+        return d1[0] == d2[0] and d1[1] == d2[1] and d1[2] == d2[2] and d1[3] == d2[3]
 
     def __ne__(self, other):
-        return np.any(self.data() != other.data())
+        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d1 = self.data()
+        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] d2 = other.data()
+        return d1[0] != d2[0] or d1[1] != d2[1] or d1[2] != d2[2] or d1[3] != d2[3]
+
+    def __eq__(self, other):
+        return self.data().equal(other.data())
+
+    def __ne__(self, other):
+        return self.data().not_equal(other.data())
 
     def __gt__(self, other):
-        return np.all(self.data() > other.data())
+        return self.data().greater(other.data())
 
     def __ge__(self, other):
-        return np.all(self.data() >= other.data())
+        return self.data().greater_equal(other.data())
 
     def __add__(self, other):
-        if isinstance(other, MVector4D):
-            v = self.data() + other.data()
+        if isinstance(other, np.float):
+            v = self.add_float(other)
+        elif isinstance(other, MVector4D):
+            v = self.add_MVector4D(other)
+        elif isinstance(other, np.int):
+            v = self.add_int(other)
         else:
             v = self.data() + other
         v2 = self.__class__(v)
         v2.effective()
         return v2
+    
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] add_MVector4D(self, MVector4D other):
+        return self.__data + other.__data
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] add_float(self, DTYPE_FLOAT_t other):
+        return self.__data + other
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] add_int(self, DTYPE_INT_t other):
+        return self.__data + other
 
     def __sub__(self, other):
-        if isinstance(other, MVector4D):
-            v = self.data() - other.data()
+        if isinstance(other, np.float):
+            v = self.sub_float(other)
+        elif isinstance(other, MVector4D):
+            v = self.sub_MVector4D(other)
+        elif isinstance(other, np.int):
+            v = self.sub_int(other)
         else:
             v = self.data() - other
         v2 = self.__class__(v)
         v2.effective()
         return v2
+    
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] sub_MVector4D(self, MVector4D other):
+        return self.__data - other.__data
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] sub_float(self, DTYPE_FLOAT_t other):
+        return self.__data - other
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] sub_int(self, DTYPE_INT_t other):
+        return self.__data - other
 
     def __mul__(self, other):
-        if isinstance(other, MVector4D):
-            v = self.data() * other.data()
+        if isinstance(other, np.float):
+            v = self.mul_float(other)
+        elif isinstance(other, MVector4D):
+            v = self.mul_MVector4D(other)
+        elif isinstance(other, np.int):
+            v = self.mul_int(other)
         else:
             v = self.data() * other
         v2 = self.__class__(v)
         v2.effective()
         return v2
+    
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] mul_MVector4D(self, MVector4D other):
+        return self.__data * other.__data
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] mul_float(self, DTYPE_FLOAT_t other):
+        return self.__data * other
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] mul_int(self, DTYPE_INT_t other):
+        return self.__data * other
 
     def __truediv__(self, other):
-        if isinstance(other, MVector4D):
-            v = self.data() / other.data()
+        if isinstance(other, np.float):
+            v = self.truediv_float(other)
+        elif isinstance(other, MVector4D):
+            v = self.truediv_MVector4D(other)
+        elif isinstance(other, np.int):
+            v = self.truediv_int(other)
         else:
             v = self.data() / other
         v2 = self.__class__(v)
         v2.effective()
         return v2
+    
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] truediv_MVector4D(self, MVector4D other):
+        return self.__data / other.__data
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] truediv_float(self, DTYPE_FLOAT_t other):
+        return self.__data / other
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] truediv_int(self, DTYPE_INT_t other):
+        return self.__data / other
 
     def __floordiv__(self, other):
-        if isinstance(other, MVector4D):
-            v = self.data() // other.data()
+        if isinstance(other, np.float):
+            v = self.floordiv_float(other)
+        elif isinstance(other, MVector4D):
+            v = self.floordiv_MVector4D(other)
+        elif isinstance(other, np.int):
+            v = self.floordiv_int(other)
         else:
             v = self.data() // other
         v2 = self.__class__(v)
         v2.effective()
         return v2
+    
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] floordiv_MVector4D(self, MVector4D other):
+        return self.__data // other.__data
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] floordiv_float(self, DTYPE_FLOAT_t other):
+        return self.__data // other
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] floordiv_int(self, DTYPE_INT_t other):
+        return self.__data // other
 
     def __mod__(self, other):
-        if isinstance(other, MVector4D):
-            v = self.data() % other.data()
+        if isinstance(other, np.float):
+            v = self.mod_float(other)
+        elif isinstance(other, MVector4D):
+            v = self.mod_MVector4D(other)
+        elif isinstance(other, np.int):
+            v = self.mod_int(other)
         else:
             v = self.data() % other
         v2 = self.__class__(v)
         v2.effective()
         return v2
+    
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] mod_MVector4D(self, MVector4D other):
+        return self.__data % other.__data
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] mod_float(self, DTYPE_FLOAT_t other):
+        return self.__data % other
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] mod_int(self, DTYPE_INT_t other):
+        return self.__data % other
 
     def __lshift__(self, other):
         if isinstance(other, MVector4D):
@@ -648,14 +890,11 @@ cdef class MVector4D:
         return v2
 
     def __neg__(self):
-        return self.__class__(-self.__data[0], -self.__data[1], -self.__data[2], -self.__data[3])
+        return self.__class__(-self.x(), -self.y(), -self.z(), -self.w())
 
     def __pos__(self):
-        return self.__class__(+self.__data[0], +self.__data[1], +self.__data[2], +self.__data[3])
+        return self.__class__(+self.x(), +self.y(), +self.z(), +self.w())
 
-    def __invert__(self):
-        return self.__class__(~self.__data[0], ~self.__data[1], ~self.__data[2], ~self.__data[3])
-    
     cpdef DTYPE_FLOAT_t x(self):
         return self.__data[0]
 
@@ -903,22 +1142,22 @@ cdef class MQuaternion:
         return np.quaternion(self.__data[0], self.__data[1], self.__data[2], self.__data[3])
 
     def __lt__(self, other):
-        return np.all(self.data() < other.data())
+        return self.data().less(other.data())
 
     def __le__(self, other):
-        return np.all(self.data() <= other.data())
+        return self.data().less_equal(other.data())
 
     def __eq__(self, other):
-        return np.all(self.data() == other.data())
+        return self.data().equal(other.data())
 
     def __ne__(self, other):
-        return np.any(self.data() != other.data())
+        return self.data().not_equal(other.data())
 
     def __gt__(self, other):
-        return np.all(self.data() > other.data())
+        return self.data().greater(other.data())
 
     def __ge__(self, other):
-        return np.all(self.data() >= other.data())
+        return self.data().greater_equal(other.data())
 
     def __add__(self, other):
         if isinstance(other, MQuaternion):
@@ -1322,72 +1561,117 @@ cdef class MMatrix4x4:
         return "MMatrix4x4({0})".format(self.data())
 
     def __lt__(self, other):
-        return np.all(self.data() < other.data())
+        return np.all(np.less(self.data(), other.data()))
 
     def __le__(self, other):
-        return np.all(self.data() <= other.data())
+        return np.all(np.less_equal(self.data(), other.data()))
 
     def __eq__(self, other):
-        return np.all(self.data() == other.data())
+        return np.all(np.equal(self.data(), other.data()))
 
     def __ne__(self, other):
-        return np.any(self.data() != other.data())
+        return np.any(np.not_equal(self.data(), other.data()))
 
     def __gt__(self, other):
-        return np.all(self.data() > other.data())
+        return np.all(np.greater(self.data(), other.data()))
 
     def __ge__(self, other):
-        return np.all(self.data() >= other.data())
+        return np.all(np.greater_equal(self.data(), other.data()))
 
     def __add__(self, other):
-        if isinstance(other, MMatrix4x4):
-            v = self.data() + other.data()
+        if isinstance(other, np.float):
+            v = self.add_float(other)
+        elif isinstance(other, MMatrix4x4):
+            v = self.add_MMatrix4x4(other)
+        elif isinstance(other, np.int):
+            v = self.add_int(other)
         else:
             v = self.data() + other
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        return v2
+    
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=2] add_MMatrix4x4(self, MMatrix4x4 other):
+        return self.__data + other.__data
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=2] add_float(self, DTYPE_FLOAT_t other):
+        return self.__data + other
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=2] add_int(self, DTYPE_INT_t other):
+        return self.__data + other
 
     def __sub__(self, other):
-        if isinstance(other, MMatrix4x4):
-            v = self.data() - other.data()
+        if isinstance(other, np.float):
+            v = self.sub_float(other)
+        elif isinstance(other, MMatrix4x4):
+            v = self.sub_MMatrix4x4(other)
+        elif isinstance(other, np.int):
+            v = self.sub_int(other)
         else:
             v = self.data() - other
-        return self.__class__(v)
+        v2 = self.__class__(v)
+        return v2
+    
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=2] sub_MMatrix4x4(self, MMatrix4x4 other):
+        return self.__data - other.__data
 
-    # *演算子
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=2] sub_float(self, DTYPE_FLOAT_t other):
+        return self.__data - other
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=2] sub_int(self, DTYPE_INT_t other):
+        return self.__data - other
+
     def __mul__(self, other):
-        if isinstance(other, MVector3D):
-            d = self.data()
-            vec_mat = np.tile(np.array([other.x(), other.y(), other.z()]), (4, 1))
-            data_sum = np.sum(vec_mat * d[:, :3], axis=1) + d[:, 3]
-
-            x = data_sum[0]
-            y = data_sum[1]
-            z = data_sum[2]
-            w = data_sum[3]
-
-            if w == 1.0:
-                return MVector3D(x, y, z)
-            elif w == 0.0:
-                return MVector3D()
-            else:
-                return MVector3D(x / w, y / w, z / w)
-        elif isinstance(other, MVector4D):
-            vec_mat = np.tile(np.array([other.x(), other.y(), other.z(), other.w()]), (4, 1))
-            data_sum = np.sum(vec_mat * self.data(), axis=1)
-
-            x = data_sum[0]
-            y = data_sum[1]
-            z = data_sum[2]
-            w = data_sum[3]
-
-            return MVector4D(x, y, z, w)
+        if isinstance(other, np.float):
+            v = self.mul_float(other)
         elif isinstance(other, MMatrix4x4):
-            v = np.dot(self.data(), other.data())
-            return self.__class__(v)
-        
-        v = self.data() * other
-        return self.__class__(v)
-        
+            v = self.mul_MMatrix4x4(other)
+        elif isinstance(other, MVector3D):
+            return self.mul_MVector3D(other)
+        elif isinstance(other, MVector4D):
+            return self.mul_MVector4D(other)
+        elif isinstance(other, np.int):
+            v = self.mul_int(other)
+        else:
+            v = self.data() * other
+        v2 = self.__class__(v)
+        return v2
+    
+    cpdef MVector3D mul_MVector3D(self, MVector3D other):
+        vec_mat = np.tile(np.array([other.x(), other.y(), other.z()]), (4, 1))
+        data_sum = np.sum(vec_mat * self.__data[:, :3], axis=1) + self.__data[:, 3]
+
+        x = data_sum[0]
+        y = data_sum[1]
+        z = data_sum[2]
+        w = data_sum[3]
+
+        if w == 1.0:
+            return MVector3D(x, y, z)
+        elif w == 0.0:
+            return MVector3D()
+        else:
+            return MVector3D(x / w, y / w, z / w)
+
+    cpdef MVector4D mul_MVector4D(self, MVector4D other):
+        vec_mat = np.tile(np.array([other.x(), other.y(), other.z(), other.w()]), (4, 1))
+        data_sum = np.sum(vec_mat * self.__data, axis=1)
+
+        x = data_sum[0]
+        y = data_sum[1]
+        z = data_sum[2]
+        w = data_sum[3]
+
+        return MVector4D(x, y, z, w)
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=2] mul_MMatrix4x4(self, MMatrix4x4 other):
+        return np.dot(self.data(), other.data())
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=2] mul_float(self, DTYPE_FLOAT_t other):
+        return self.__data * other
+
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=2] mul_int(self, DTYPE_INT_t other):
+        return self.__data * other
+
     def __iadd__(self, other):
         self.__data = self.data() + other.data().T
         return self

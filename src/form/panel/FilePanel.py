@@ -228,7 +228,7 @@ class FilePanel(BasePanel):
             event.Skip(False)
 
     def set_output_vmd_path(self, event, is_force=False):
-        self.file_set.set_output_vmd_path(event)
+        self.file_set.set_output_vmd_path(event, is_force)
         # カメラ出力パスも一緒に変更する
         self.frame.camera_panel_ctrl.header_panel.set_output_vmd_path(event)
 

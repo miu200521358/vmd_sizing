@@ -370,11 +370,13 @@ class MainFrame(wx.Frame):
             # そのまま実行する場合、サイジング実行処理に遷移
 
             # 念のため出力ファイルパス自動生成（空の場合設定）
-            self.file_panel_ctrl.file_set.set_output_vmd_path(event)
+            if not self.file_panel_ctrl.file_set.output_vmd_file_ctrl.file_ctrl.GetPath():
+                self.file_panel_ctrl.file_set.set_output_vmd_path(event)
 
             # multiのも出力ファイルパス自動生成（空の場合設定）
             for file_set in self.multi_panel_ctrl.file_set_list:
-                file_set.set_output_vmd_path(event)
+                if not file_set.output_vmd_file_ctrl.file_ctrl.GetPath():
+                    file_set.set_output_vmd_path(event)
 
             # フォーム無効化
             self.file_panel_ctrl.disable()
