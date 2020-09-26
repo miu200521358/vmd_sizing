@@ -21,17 +21,17 @@ cdef class MRect:
         self.__width = width
         self.__height = height
 
-    def x(self):
-        return int(self.__x)
+    cpdef DTYPE_FLOAT_t x(self):
+        return self.__x
 
-    def y(self):
-        return int(self.__y)
+    cpdef DTYPE_FLOAT_t y(self):
+        return self.__y
 
-    def width(self):
-        return int(self.__width)
+    cpdef DTYPE_FLOAT_t width(self):
+        return self.__width
 
-    def height(self):
-        return int(self.__height)
+    cpdef DTYPE_FLOAT_t height(self):
+        return self.__height
 
     def __str__(self):
         return "MRect({0}, {1}, {2}, {3})".format(self.__x, self.__y, self.__width, self.__height)
@@ -52,22 +52,22 @@ cdef class MVector2D:
         else:
             self.__data = np.array([x, y], dtype=np.float64)
 
-    def length(self):
+    cpdef double length(self):
         return float(np.linalg.norm(self.data(), ord=2))
 
-    def lengthSquared(self):
+    cpdef double lengthSquared(self):
         return float(np.linalg.norm(self.data(), ord=2)**2)
 
-    def normalized(self):
-        l2 = np.linalg.norm(self.data(), ord=2, axis=-1, keepdims=True)
+    cpdef MVector2D normalized(self):
+        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] l2 = np.linalg.norm(self.data(), ord=2, axis=-1, keepdims=True)
         l2[l2 == 0] = 1
-        normv = self.data() / l2
+        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] normv = self.data() / l2
         return MVector2D(normv[0], normv[1])
 
-    def normalize(self):
-        l2 = np.linalg.norm(self.data(), ord=2, axis=-1, keepdims=True)
+    cpdef normalize(self):
+        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] l2 = np.linalg.norm(self.data(), ord=2, axis=-1, keepdims=True)
         l2[l2 == 0] = 1
-        normv = self.data() / l2
+        cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] normv = self.data() / l2
         self.__data = normv
     
     cpdef effective(self):
@@ -76,11 +76,11 @@ cdef class MVector2D:
 
         return self
             
-    cpdef data(self):
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] data(self):
         return self.__data
 
     def __str__(self):
-        return "MVector2D({0}, {1})".format(self.data()[0], self.data()[1])
+        return "MVector2D({0}, {1})".format(self.__data[0], self.__data[1])
 
     def __lt__(self, other):
         return np.all(self.data() < other.data())
@@ -191,19 +191,19 @@ cdef class MVector2D:
         return v2
 
     def __neg__(self):
-        return self.__class__(-self.data()[0], -self.data()[1])
+        return self.__class__(-self.__data[0], -self.__data[1])
 
     def __pos__(self):
-        return self.__class__(+self.data()[0], +self.data()[1])
+        return self.__class__(+self.__data[0], +self.__data[1])
 
     def __invert__(self):
-        return self.__class__(~self.data()[0], ~self.data()[1])
+        return self.__class__(~self.__data[0], ~self.__data[1])
     
-    def x(self):
-        return self.data()[0]
+    cpdef DTYPE_FLOAT_t x(self):
+        return self.__data[0]
 
-    def y(self):
-        return self.data()[1]
+    cpdef DTYPE_FLOAT_t y(self):
+        return self.__data[1]
     
     cpdef setX(self, x):
         self.__data[0] = x
@@ -227,32 +227,32 @@ cdef class MVector3D:
         else:
             self.__data = np.array([x, y, z], dtype=np.float64)
 
-    def copy(self):
+    cpdef MVector3D copy(self):
         return MVector3D(self.x(), self.y(), self.z())
 
-    def length(self):
-        return np.linalg.norm(self.data(), ord=2)
+    cpdef double length(self):
+        return float(np.linalg.norm(self.data(), ord=2))
 
-    def lengthSquared(self):
-        return np.linalg.norm(self.data(), ord=2)**2
+    cpdef double lengthSquared(self):
+        return float(np.linalg.norm(self.data(), ord=2)**2)
 
-    def normalized(self):
+    cpdef MVector3D normalized(self):
         l2 = np.linalg.norm(self.data(), ord=2, axis=-1, keepdims=True)
         l2[l2 == 0] = 1
         normv = self.data() / l2
         return MVector3D(normv[0], normv[1], normv[2])
 
-    def normalize(self):
+    cpdef normalize(self):
         self.effective()
         l2 = np.linalg.norm(self.data(), ord=2, axis=-1, keepdims=True)
         l2[l2 == 0] = 1
         normv = self.data() / l2
         self.__data = normv
     
-    def distanceToPoint(self, v):
+    cpdef double distanceToPoint(self, v):
         return MVector3D(self.data() - v.data()).length()
     
-    def project(self, modelView, projection, viewport):
+    cpdef MVector3D project(self, modelView, projection, viewport):
         tmp = MVector4D(self.x(), self.y(), self.z(), 1)
         tmp = projection * modelView * tmp
         if is_almost_null(tmp.w()):
@@ -267,7 +267,7 @@ cdef class MVector3D:
 
         return tmp.toVector3D()
 
-    def unproject(self, modelView, projection, viewport):
+    cpdef MVector3D unproject(self, modelView, projection, viewport):
         inverse = (projection * modelView).inverted()
 
         tmp = MVector4D(self.x(), self.y(), self.z(), 1)
@@ -285,26 +285,26 @@ cdef class MVector3D:
         
         return obj.toVector3D()
         
-    def toVector4D(self):
-        return MVector4D(self.data()[0], self.data()[1], self.data()[2], 0)
+    cpdef MVector4D toVector4D(self):
+        return MVector4D(self.__data[0], self.__data[1], self.__data[2], 0)
 
-    def is_almost_null(self):
-        return (is_almost_null(self.data()[0]) and is_almost_null(self.data()[1]) and is_almost_null(self.data()[2]))
+    cpdef bint is_almost_null(self):
+        return (is_almost_null(self.__data[0]) and is_almost_null(self.__data[1]) and is_almost_null(self.__data[2]))
     
-    cpdef effective(self):
+    cpdef MVector3D effective(self):
         self.__data[np.isnan(self.data())] = 0
         self.__data[np.isinf(self.data())] = 0
 
         return self
                 
-    def abs(self):
+    cpdef MVector3D abs(self):
         self.setX(abs(get_effective_value(self.x())))
         self.setY(abs(get_effective_value(self.y())))
         self.setZ(abs(get_effective_value(self.z())))
 
         return self
                 
-    def one(self):
+    cpdef MVector3D one(self):
         self.effective()
         self.setX(1 if is_almost_null(self.x()) else self.x())
         self.setY(1 if is_almost_null(self.y()) else self.y())
@@ -312,7 +312,7 @@ cdef class MVector3D:
 
         return self
     
-    def non_zero(self):
+    cpdef MVector3D non_zero(self):
         self.effective()
         self.setX(0.0001 if is_almost_null(self.x()) else self.x())
         self.setY(0.0001 if is_almost_null(self.y()) else self.y())
@@ -320,28 +320,26 @@ cdef class MVector3D:
 
         return self
     
-    def isnan(self):
+    cpdef bint isnan(self):
         self.__data = self.data().astype(np.float64)
         return np.isnan(self.data()).any()
-                
+
     @classmethod
     def crossProduct(cls, v1, v2):
-        crossv = np.cross(v1.data(), v2.data())
-        return MVector3D(crossv[0], crossv[1], crossv[2])
+        return crossProduct_MVector3D(v1, v2)
 
     @classmethod
     def dotProduct(cls, v1, v2):
-        dotv = np.dot(v1.data(), v2.data())
-        return dotv
+        return dotProduct_MVector3D(v1, v2)
         
-    cpdef data(self):
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] data(self):
         return self.__data
 
     def to_log(self):
-        return "x: {0}, y: {1} z: {2}".format(round(self.data()[0], 5), round(self.data()[1], 5), round(self.data()[2], 5))
+        return "x: {0}, y: {1} z: {2}".format(round(self.__data[0], 5), round(self.__data[1], 5), round(self.__data[2], 5))
 
     def __str__(self):
-        return "MVector3D({0}, {1}, {2})".format(self.data()[0], self.data()[1], self.data()[2])
+        return "MVector3D({0}, {1}, {2})".format(self.__data[0], self.__data[1], self.__data[2])
 
     def __lt__(self, other):
         return np.all(self.data() < other.data())
@@ -452,22 +450,22 @@ cdef class MVector3D:
         return v2
 
     def __neg__(self):
-        return self.__class__(-self.data()[0], -self.data()[1], -self.data()[2])
+        return self.__class__(-self.__data[0], -self.__data[1], -self.__data[2])
 
     def __pos__(self):
-        return self.__class__(+self.data()[0], +self.data()[1], +self.data()[2])
+        return self.__class__(+self.__data[0], +self.__data[1], +self.__data[2])
 
     def __invert__(self):
-        return self.__class__(~self.data()[0], ~self.data()[1], ~self.data()[2])
+        return self.__class__(~self.__data[0], ~self.__data[1], ~self.__data[2])
     
-    def x(self):
-        return self.data()[0]
+    cpdef DTYPE_FLOAT_t x(self):
+        return self.__data[0]
 
-    def y(self):
-        return self.data()[1]
+    cpdef DTYPE_FLOAT_t y(self):
+        return self.__data[1]
 
-    def z(self):
-        return self.data()[2]
+    cpdef DTYPE_FLOAT_t z(self):
+        return self.__data[2]
     
     cpdef setX(self, x):
         self.__data[0] = x
@@ -477,6 +475,16 @@ cdef class MVector3D:
 
     cpdef setZ(self, z):
         self.__data[2] = z
+
+
+cdef MVector3D crossProduct_MVector3D(v1, v2):
+    crossv = np.cross(v1.data(), v2.data())
+    return MVector3D(crossv[0], crossv[1], crossv[2])
+
+
+cdef double dotProduct_MVector3D(v1, v2):
+    dotv = np.dot(v1.data(), v2.data())
+    return dotv
 
 
 cdef class MVector4D:
@@ -493,29 +501,29 @@ cdef class MVector4D:
         else:
             self.__data = np.array([x, y, z, w], dtype=np.float64)
     
-    def length(self):
+    cpdef double length(self):
         return np.linalg.norm(self.data(), ord=2)
 
-    def lengthSquared(self):
+    cpdef double lengthSquared(self):
         return np.linalg.norm(self.data(), ord=2)**2
 
-    def normalized(self):
+    cpdef MVector4D normalized(self):
         l2 = np.linalg.norm(self.data(), ord=2, axis=-1, keepdims=True)
         l2[l2 == 0] = 1
         normv = self.data() / l2
         return MVector4D(normv[0], normv[1], normv[2], normv[3])
 
-    def normalize(self):
+    cpdef normalize(self):
         l2 = np.linalg.norm(self.data(), ord=2, axis=-1, keepdims=True)
         l2[l2 == 0] = 1
         normv = self.data() / l2
         self.__data = normv
 
-    def toVector3D(self):
-        return MVector3D(self.data()[0], self.data()[1], self.data()[2])
+    cpdef MVector3D toVector3D(self):
+        return MVector3D(self.__data[0], self.__data[1], self.__data[2])
 
-    def is_almost_null(self):
-        return (is_almost_null(self.data()[0]) and is_almost_null(self.data()[1]) and is_almost_null(self.data()[2]) and is_almost_null(self.data()[3]))
+    cpdef bint is_almost_null(self):
+        return (is_almost_null(self.__data[0]) and is_almost_null(self.__data[1]) and is_almost_null(self.__data[2]) and is_almost_null(self.__data[3]))
                    
     cpdef effective(self):
         self.__data[np.isnan(self.data())] = 0
@@ -523,14 +531,13 @@ cdef class MVector4D:
                                 
     @classmethod
     def dotProduct(cls, v1, v2):
-        dotv = np.dot(v1.data(), v2.data())
-        return dotv
+        return dotProduct_MVector4D(v1, v2)
     
-    cpdef data(self):
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] data(self):
         return self.__data
 
     def __str__(self):
-        return "MVector4D({0}, {1}, {2}, {3})".format(self.data()[0], self.data()[1], self.data()[2], self.data()[3])
+        return "MVector4D({0}, {1}, {2}, {3})".format(self.__data[0], self.__data[1], self.__data[2], self.__data[3])
 
     def __lt__(self, other):
         return np.all(self.data() < other.data())
@@ -641,25 +648,25 @@ cdef class MVector4D:
         return v2
 
     def __neg__(self):
-        return self.__class__(-self.data()[0], -self.data()[1], -self.data()[2], -self.data()[3])
+        return self.__class__(-self.__data[0], -self.__data[1], -self.__data[2], -self.__data[3])
 
     def __pos__(self):
-        return self.__class__(+self.data()[0], +self.data()[1], +self.data()[2], +self.data()[3])
+        return self.__class__(+self.__data[0], +self.__data[1], +self.__data[2], +self.__data[3])
 
     def __invert__(self):
-        return self.__class__(~self.data()[0], ~self.data()[1], ~self.data()[2], ~self.data()[3])
+        return self.__class__(~self.__data[0], ~self.__data[1], ~self.__data[2], ~self.__data[3])
     
-    def x(self):
-        return self.data()[0]
+    cpdef DTYPE_FLOAT_t x(self):
+        return self.__data[0]
 
-    def y(self):
-        return self.data()[1]
+    cpdef DTYPE_FLOAT_t y(self):
+        return self.__data[1]
 
-    def z(self):
-        return self.data()[2]
+    cpdef DTYPE_FLOAT_t z(self):
+        return self.__data[2]
     
-    def w(self):
-        return self.data()[3]
+    cpdef DTYPE_FLOAT_t w(self):
+        return self.__data[3]
     
     cpdef setX(self, x):
         self.__data[0] = x
@@ -672,6 +679,11 @@ cdef class MVector4D:
 
     cpdef setW(self, w):
         self.__data[3] = w
+
+
+cdef double dotProduct_MVector4D(v1, v2):
+    dotv = np.dot(v1.data(), v2.data())
+    return dotv
 
 
 cdef class MQuaternion:
@@ -691,37 +703,37 @@ cdef class MQuaternion:
         else:
             self.__data = np.array([w, x, y, z], dtype=np.float64)
 
-    def copy(self):
+    cpdef MQuaternion copy(self):
         return MQuaternion(self.scalar(), self.x(), self.y(), self.z())
     
     def __str__(self):
         return "MQuaternion({0}, {1}, {2}, {3})".format(self.scalar(), self.x(), self.y(), self.z())
 
-    def inverted(self):
+    cpdef MQuaternion inverted(self):
         v = self.data().inverse()
         return self.__class__(v.w, v.x, v.y, v.z)
 
-    def length(self):
+    cpdef double length(self):
         return self.data().abs()
 
-    def lengthSquared(self):
+    cpdef double lengthSquared(self):
         return self.data().abs()**2
 
-    def normalized(self):
+    cpdef MQuaternion normalized(self):
         self.effective()
         v = self.data().normalized()
         return MQuaternion(v.w, v.x, v.y, v.z)
 
-    def normalize(self):
+    cpdef normalize(self):
         self.__data = self.data().normalized().components
 
-    def effective(self):
+    cpdef effective(self):
         self.data().components[np.isnan(self.data().components)] = 0
         self.data().components[np.isinf(self.data().components)] = 0
         # Scalarは1がデフォルトとなる
         self.setScalar(1 if self.scalar() == 0 else self.scalar())
 
-    def toMatrix4x4(self):
+    cpdef MMatrix4x4 toMatrix4x4(self):
         mat = MMatrix4x4()
         m = mat.data()
 
@@ -753,17 +765,17 @@ cdef class MQuaternion:
 
         return mat
     
-    def toVector4D(self):
+    cpdef MVector4D toVector4D(self):
         return MVector4D(self.data().x, self.data().y, self.data().z, self.data().w)
 
-    def toEulerAngles4MMD(self):
+    cpdef MVector3D toEulerAngles4MMD(self):
         # MMDの表記に合わせたオイラー角
         euler = self.toEulerAngles()
 
         return MVector3D(euler.x(), -euler.y(), -euler.z())
 
     # http://www.j3d.org/matrix_faq/matrfaq_latest.html#Q37
-    def toEulerAngles(self):
+    cpdef MVector3D toEulerAngles(self):
         xp = self.data().x
         yp = self.data().y
         zp = self.data().z
@@ -811,217 +823,68 @@ cdef class MQuaternion:
         return v
     
     # 角度に変換
-    def toDegree(self):
+    cpdef double toDegree(self):
         return math.degrees(2 * math.acos(min(1, max(-1, self.scalar()))))
 
     # 自分ともうひとつの値vとのtheta（変位量）を返す
-    def calcTheata(self, v):
+    cpdef double calcTheata(self, v):
         dot = MQuaternion.dotProduct(self.normalized(), v.normalized())
         theta = math.acos(min(1, max(-1, dot)))
         return theta
     
     @classmethod
     def dotProduct(cls, v1, v2):
-        dotv = np.sum(v1.data().components * v2.data().components)
-        return dotv
+        return dotProduct_MQuaternion(v1, v2)
     
     @classmethod
     def fromAxisAndAngle(cls, vec3: MVector3D, angle: float):
-        x = vec3.x()
-        y = vec3.y()
-        z = vec3.z()
-        length = math.sqrt(x * x + y * y + z * z)
-
-        if not is_almost_null(length - 1.0) and not is_almost_null(length):
-            x /= length
-            y /= length
-            z /= length
-
-        a = math.radians(angle / 2.0)
-        s = math.sin(a)
-        c = math.cos(a)
-        return MQuaternion(c, x * s, y * s, z * s).normalized()
+        return fromAxisAndAngle(vec3, angle)
 
     @classmethod
     def fromAxisAndQuaternion(cls, vec3: MVector3D, qq):
-        qq.normalize()
+        return fromAxisAndQuaternion(vec3, qq)
 
-        x = vec3.x()
-        y = vec3.y()
-        z = vec3.z()
-        length = math.sqrt(x * x + y * y + z * z)
-
-        if not is_almost_null(length - 1.0) and not is_almost_null(length):
-            x /= length
-            y /= length
-            z /= length
-
-        a = math.acos(min(1, max(-1, qq.scalar())))
-        s = math.sin(a)
-        c = math.cos(a)
-
-        # logger.test("scalar: %s, a: %s, c: %s, degree: %s", qq.scalar(), a, c, math.degrees(2 * math.acos(min(1, max(-1, qq.scalar())))))
-
-        return MQuaternion(c, x * s, y * s, z * s).normalized()
-                
     @classmethod
     def fromDirection(cls, direction, up):
-        if direction.is_almost_null:
-            return MQuaternion()
-
-        zAxis = direction.normalized()
-        xAxis = MVector3D.crossProduct(up, zAxis)
-        if (is_almost_null(xAxis.lengthSquared())):
-            # collinear or invalid up vector derive shortest arc to new direction
-            return MQuaternion.rotationTo(MVector3D(0.0, 0.0, 1.0), zAxis)
-        
-        xAxis.normalize()
-        yAxis = MVector3D.crossProduct(zAxis, xAxis)
-        return MQuaternion.fromAxes(xAxis, yAxis, zAxis)
+        return fromDirection(direction, up)
     
     @classmethod
     def fromAxes(cls, xAxis, yAxis, zAxis):
-        rot3x3 = np.array([[xAxis.x(), yAxis.x(), zAxis.x()], [xAxis.y(), yAxis.y(), zAxis.y()], [xAxis.z(), yAxis.z(), zAxis.z()]])
-        return MQuaternion.fromRotationMatrix(rot3x3)
-    
+        return fromAxes(xAxis, yAxis, zAxis)
+        
     @classmethod
     def fromRotationMatrix(cls, rot3x3):
-        scalar = 0
-        axis = np.zeros(3)
-
-        trace = rot3x3[0][0] + rot3x3[1][1] + rot3x3[2][2]
-        if trace > 0.00000001:
-            s = 2.0 * math.sqrt(trace + 1.0)
-            scalar = 0.25 * s
-            axis[0] = (rot3x3[2][1] - rot3x3[1][2]) / s
-            axis[1] = (rot3x3[0][2] - rot3x3[2][0]) / s
-            axis[2] = (rot3x3[1][0] - rot3x3[0][1]) / s
-        else:
-            s_next = np.array([1, 2, 0], dtype=np.int8)
-            i = 0
-            if rot3x3[1][1] > rot3x3[0][0]:
-                i = 1
-            if rot3x3[2][2] > rot3x3[i][i]:
-                i = 2
-
-            j = s_next[i]
-            k = s_next[j]
-
-            s = 2.0 * math.sqrt(rot3x3[i][i] - rot3x3[j][j] - rot3x3[k][k] + 1.0)
-            axis[i] = 0.25 * s
-
-            scalar = (rot3x3[k][j] - rot3x3[j][k]) / s
-            axis[j] = (rot3x3[j][i] + rot3x3[i][j]) / s
-            axis[k] = (rot3x3[k][i] + rot3x3[i][k]) / s
-
-        return MQuaternion(scalar, axis[0], axis[1], axis[2])
+        return fromRotationMatrix(rot3x3)
 
     @classmethod
     def rotationTo(cls, fromv, tov):
-        v0 = fromv.normalized()
-        v1 = tov.normalized()
-        d = MVector3D.dotProduct(v0, v1) + 1.0
+        return rotationTo(fromv, tov)
 
-        # if dest vector is close to the inverse of source vector, ANY axis of rotation is valid
-        if is_almost_null(d):
-            axis = MVector3D.crossProduct(MVector3D(1.0, 0.0, 0.0), v0)
-            if is_almost_null(axis.lengthSquared()):
-                axis = MVector3D.crossProduct(MVector3D(0.0, 1.0, 0.0), v0)
-            axis.normalize()
-            # same as MQuaternion.fromAxisAndAngle(axis, 180.0)
-            return MQuaternion(0.0, axis.x(), axis.y(), axis.z()).normalized()
-
-        d = math.sqrt(2.0 * d)
-        axis = MVector3D.crossProduct(v0, v1) / d
-        return MQuaternion(d * 0.5, axis.x(), axis.y(), axis.z()).normalized()
-    
     @classmethod
     def fromEulerAngles(cls, pitch, yaw, roll):
-        pitch = math.radians(pitch)
-        yaw = math.radians(yaw)
-        roll = math.radians(roll)
+        return fromEulerAngles(pitch, yaw, roll)
 
-        pitch *= 0.5
-        yaw *= 0.5
-        roll *= 0.5
-
-        c1 = math.cos(yaw)
-        s1 = math.sin(yaw)
-        c2 = math.cos(roll)
-        s2 = math.sin(roll)
-        c3 = math.cos(pitch)
-        s3 = math.sin(pitch)
-        c1c2 = c1 * c2
-        s1s2 = s1 * s2
-        w = c1c2 * c3 + s1s2 * s3
-        x = c1c2 * s3 + s1s2 * c3
-        y = s1 * c2 * c3 - c1 * s2 * s3
-        z = c1 * s2 * c3 - s1 * c2 * s3
-
-        return MQuaternion(w, x, y, z)
-    
     @classmethod
     def nlerp(cls, q1, q2, t):
-        # Handle the easy cases first.
-        if t <= 0.0:
-            return q1
-        elif t >= 1.0:
-            return q2
-            
-        # Determine the angle between the two quaternions.
-        q2b = MQuaternion(q2.scalar(), q2.x(), q2.y(), q2.z())
-        
-        dot = MQuaternion.dotProduct(q1, q2)
-        if dot < 0.0:
-            q2b = -q2b
-        
-        # Perform the linear interpolation.
-        return (q1 * (1.0 - t) + q2b * t).normalized()
+        return nlerp(q1, q2, t)
 
     @classmethod
     def slerp(cls, q1, q2, t):
-        # Handle the easy cases first.
-        if t <= 0.0:
-            return q1
-        elif t >= 1.0:
-            return q2
+        return slerp(q1, q2, t)
 
-        # Determine the angle between the two quaternions.
-        q2b = MQuaternion(q2.scalar(), q2.x(), q2.y(), q2.z())
-        dot = MQuaternion.dotProduct(q1, q2)
-        
-        if dot < 0.0:
-            q2b = -q2b
-            dot = -dot
-
-        # Get the scale factors.  If they are too small,
-        # then revert to simple linear interpolation.
-        factor1 = 1.0 - t
-        factor2 = t
-
-        if (1.0 - dot) > 0.0000001:
-            angle = math.acos(max(0, min(1, dot)))
-            sinOfAngle = math.sin(angle)
-            if sinOfAngle > 0.0000001:
-                factor1 = math.sin((1.0 - t) * angle) / sinOfAngle
-                factor2 = math.sin(t * angle) / sinOfAngle
-
-        # Construct the result quaternion.
-        return q1 * factor1 + q2b * factor2
-    
-    def x(self):
+    cpdef double x(self):
         return self.data().x
 
-    def y(self):
+    cpdef double y(self):
         return self.data().y
 
-    def z(self):
+    cpdef double z(self):
         return self.data().z
 
-    def scalar(self):
+    cpdef double scalar(self):
         return self.data().w
 
-    def vector(self):
+    cpdef MVector3D vector(self):
         return MVector3D(self.data().x, self.data().y, self.data().z)
 
     cpdef setX(self, x):
@@ -1139,6 +1002,186 @@ cdef class MQuaternion:
         return self.__class__(~self.data().w, ~self.data().x, ~self.data().y, ~self.data().z)
 
 
+cdef dotProduct_MQuaternion(v1, v2):
+    dotv = np.sum(v1.data().components * v2.data().components)
+    return dotv
+
+cdef MQuaternion fromAxisAndAngle(vec3, angle):
+    x = vec3.x()
+    y = vec3.y()
+    z = vec3.z()
+    length = math.sqrt(x * x + y * y + z * z)
+
+    if not is_almost_null(length - 1.0) and not is_almost_null(length):
+        x /= length
+        y /= length
+        z /= length
+
+    a = math.radians(angle / 2.0)
+    s = math.sin(a)
+    c = math.cos(a)
+    return MQuaternion(c, x * s, y * s, z * s).normalized()
+
+cdef MQuaternion fromAxisAndQuaternion(vec3, qq):
+    qq.normalize()
+
+    x = vec3.x()
+    y = vec3.y()
+    z = vec3.z()
+    length = math.sqrt(x * x + y * y + z * z)
+
+    if not is_almost_null(length - 1.0) and not is_almost_null(length):
+        x /= length
+        y /= length
+        z /= length
+
+    a = math.acos(min(1, max(-1, qq.scalar())))
+    s = math.sin(a)
+    c = math.cos(a)
+
+    # logger.test("scalar: %s, a: %s, c: %s, degree: %s", qq.scalar(), a, c, math.degrees(2 * math.acos(min(1, max(-1, qq.scalar())))))
+
+    return MQuaternion(c, x * s, y * s, z * s).normalized()
+
+cdef MQuaternion fromDirection(direction, up):
+    if direction.is_almost_null:
+        return MQuaternion()
+
+    zAxis = direction.normalized()
+    xAxis = MVector3D.crossProduct(up, zAxis)
+    if (is_almost_null(xAxis.lengthSquared())):
+        # collinear or invalid up vector derive shortest arc to new direction
+        return MQuaternion.rotationTo(MVector3D(0.0, 0.0, 1.0), zAxis)
+    
+    xAxis.normalize()
+    yAxis = MVector3D.crossProduct(zAxis, xAxis)
+    return MQuaternion.fromAxes(xAxis, yAxis, zAxis)
+
+cdef MQuaternion fromAxes(xAxis, yAxis, zAxis):
+    rot3x3 = np.array([[xAxis.x(), yAxis.x(), zAxis.x()], [xAxis.y(), yAxis.y(), zAxis.y()], [xAxis.z(), yAxis.z(), zAxis.z()]])
+    return MQuaternion.fromRotationMatrix(rot3x3)
+
+cdef MQuaternion fromRotationMatrix(rot3x3):
+    scalar = 0
+    axis = np.zeros(3)
+
+    trace = rot3x3[0][0] + rot3x3[1][1] + rot3x3[2][2]
+    if trace > 0.00000001:
+        s = 2.0 * math.sqrt(trace + 1.0)
+        scalar = 0.25 * s
+        axis[0] = (rot3x3[2][1] - rot3x3[1][2]) / s
+        axis[1] = (rot3x3[0][2] - rot3x3[2][0]) / s
+        axis[2] = (rot3x3[1][0] - rot3x3[0][1]) / s
+    else:
+        s_next = np.array([1, 2, 0], dtype=np.int8)
+        i = 0
+        if rot3x3[1][1] > rot3x3[0][0]:
+            i = 1
+        if rot3x3[2][2] > rot3x3[i][i]:
+            i = 2
+
+        j = s_next[i]
+        k = s_next[j]
+
+        s = 2.0 * math.sqrt(rot3x3[i][i] - rot3x3[j][j] - rot3x3[k][k] + 1.0)
+        axis[i] = 0.25 * s
+
+        scalar = (rot3x3[k][j] - rot3x3[j][k]) / s
+        axis[j] = (rot3x3[j][i] + rot3x3[i][j]) / s
+        axis[k] = (rot3x3[k][i] + rot3x3[i][k]) / s
+
+    return MQuaternion(scalar, axis[0], axis[1], axis[2])
+
+cdef MQuaternion rotationTo(fromv, tov):
+    v0 = fromv.normalized()
+    v1 = tov.normalized()
+    d = MVector3D.dotProduct(v0, v1) + 1.0
+
+    # if dest vector is close to the inverse of source vector, ANY axis of rotation is valid
+    if is_almost_null(d):
+        axis = MVector3D.crossProduct(MVector3D(1.0, 0.0, 0.0), v0)
+        if is_almost_null(axis.lengthSquared()):
+            axis = MVector3D.crossProduct(MVector3D(0.0, 1.0, 0.0), v0)
+        axis.normalize()
+        # same as MQuaternion.fromAxisAndAngle(axis, 180.0)
+        return MQuaternion(0.0, axis.x(), axis.y(), axis.z()).normalized()
+
+    d = math.sqrt(2.0 * d)
+    axis = MVector3D.crossProduct(v0, v1) / d
+    return MQuaternion(d * 0.5, axis.x(), axis.y(), axis.z()).normalized()
+
+cdef MQuaternion fromEulerAngles(pitch, yaw, roll):
+    pitch = math.radians(pitch)
+    yaw = math.radians(yaw)
+    roll = math.radians(roll)
+
+    pitch *= 0.5
+    yaw *= 0.5
+    roll *= 0.5
+
+    c1 = math.cos(yaw)
+    s1 = math.sin(yaw)
+    c2 = math.cos(roll)
+    s2 = math.sin(roll)
+    c3 = math.cos(pitch)
+    s3 = math.sin(pitch)
+    c1c2 = c1 * c2
+    s1s2 = s1 * s2
+    w = c1c2 * c3 + s1s2 * s3
+    x = c1c2 * s3 + s1s2 * c3
+    y = s1 * c2 * c3 - c1 * s2 * s3
+    z = c1 * s2 * c3 - s1 * c2 * s3
+
+    return MQuaternion(w, x, y, z)
+
+cdef MQuaternion nlerp(q1, q2, t):
+    # Handle the easy cases first.
+    if t <= 0.0:
+        return q1
+    elif t >= 1.0:
+        return q2
+        
+    # Determine the angle between the two quaternions.
+    q2b = MQuaternion(q2.scalar(), q2.x(), q2.y(), q2.z())
+    
+    dot = MQuaternion.dotProduct(q1, q2)
+    if dot < 0.0:
+        q2b = -q2b
+    
+    # Perform the linear interpolation.
+    return (q1 * (1.0 - t) + q2b * t).normalized()
+
+cdef MQuaternion slerp(q1, q2, t):
+    # Handle the easy cases first.
+    if t <= 0.0:
+        return q1
+    elif t >= 1.0:
+        return q2
+
+    # Determine the angle between the two quaternions.
+    q2b = MQuaternion(q2.scalar(), q2.x(), q2.y(), q2.z())
+    dot = MQuaternion.dotProduct(q1, q2)
+    
+    if dot < 0.0:
+        q2b = -q2b
+        dot = -dot
+
+    # Get the scale factors.  If they are too small,
+    # then revert to simple linear interpolation.
+    factor1 = 1.0 - t
+    factor2 = t
+
+    if (1.0 - dot) > 0.0000001:
+        angle = math.acos(max(0, min(1, dot)))
+        sinOfAngle = math.sin(angle)
+        if sinOfAngle > 0.0000001:
+            factor1 = math.sin((1.0 - t) * angle) / sinOfAngle
+            factor2 = math.sin(t * angle) / sinOfAngle
+
+    # Construct the result quaternion.
+    return q1 * factor1 + q2b * factor2
+
+
 cdef class MMatrix4x4:
     
     def __init__(self, m11=1.0, m12=0.0, m13=0.0, m14=0.0, m21=0.0, m22=1.0, m23=0.0, m24=0.0, m31=0.0, m32=0.0, m33=1.0, m34=0.0, m41=0.0, m42=0.0, m43=0.0, m44=1.0):
@@ -1146,10 +1189,10 @@ cdef class MMatrix4x4:
             self.__data = np.array([[m11, m12, m13, m14], [m21, m22, m23, m24], [m31, m32, m33, m34], [m41, m42, m43, m44]], dtype=np.float64)
         elif isinstance(m11, MMatrix4x4):
             # 行列クラスの場合
-            self.__data = np.array([[m11.data()[0, 0], m11.data()[0, 1], m11.data()[0, 2], m11.data()[0, 3]], \
-                                    [m11.data()[1, 0], m11.data()[1, 1], m11.data()[1, 2], m11.data()[1, 3]], \
-                                    [m11.data()[2, 0], m11.data()[2, 1], m11.data()[2, 2], m11.data()[2, 3]], \
-                                    [m11.data()[3, 0], m11.data()[3, 1], m11.data()[3, 2], m11.data()[3, 3]]], dtype=np.float64)
+            self.__data = np.array([[m11.__data[0, 0], m11.__data[0, 1], m11.__data[0, 2], m11.__data[0, 3]], \
+                                    [m11.__data[1, 0], m11.__data[1, 1], m11.__data[1, 2], m11.__data[1, 3]], \
+                                    [m11.__data[2, 0], m11.__data[2, 1], m11.__data[2, 2], m11.__data[2, 3]], \
+                                    [m11.__data[3, 0], m11.__data[3, 1], m11.__data[3, 2], m11.__data[3, 3]]], dtype=np.float64)
         elif isinstance(m11, np.ndarray):
             # 行列そのものの場合
             self.__data = np.array([[m11[0, 0], m11[0, 1], m11[0, 2], m11[0, 3]], [m11[1, 0], m11[1, 1], m11[1, 2], m11[1, 3]], \
@@ -1158,14 +1201,14 @@ cdef class MMatrix4x4:
             # べた値の場合
             self.__data = np.array([[m11, m12, m13, m14], [m21, m22, m23, m24], [m31, m32, m33, m34], [m41, m42, m43, m44]], dtype=np.float64)
 
-    def copy(self):
+    cpdef MMatrix4x4 copy(self):
         return MMatrix4x4(self.data())
     
-    cpdef data(self):
+    cpdef np.ndarray[DTYPE_FLOAT_t, ndim=2] data(self):
         return self.__data
 
     # 逆行列
-    def inverted(self):
+    cpdef MMatrix4x4 inverted(self):
         v = np.linalg.inv(self.data())
         return MMatrix4x4(v)
 
@@ -1186,7 +1229,7 @@ cdef class MMatrix4x4:
         self.__data[:, :3] *= vec_mat
         
     # 単位行列
-    def setToIdentity(self):
+    cpdef setToIdentity(self):
         self.__data = np.eye(4)
     
     cpdef lookAt(self, eye, center, up):
@@ -1208,7 +1251,7 @@ cdef class MMatrix4x4:
         self *= m
         self.translate(-eye)
     
-    def perspective(self, verticalAngle, aspectRatio, nearPlane, farPlane):
+    cpdef perspective(self, verticalAngle, aspectRatio, nearPlane, farPlane):
         if nearPlane == farPlane or aspectRatio == 0:
             return
 
@@ -1222,28 +1265,25 @@ cdef class MMatrix4x4:
         clip = farPlane - nearPlane
 
         m = MMatrix4x4()
-        md = m.data()
-        md[0, 0] = cotan / aspectRatio
-        md[1, 1] = cotan
-        md[2, 2] = -(nearPlane + farPlane) / clip
-        md[2, 3] = -(2 * nearPlane * farPlane) / clip
-        md[3, 2] = -1
+        m.__data[0, 0] = cotan / aspectRatio
+        m.__data[1, 1] = cotan
+        m.__data[2, 2] = -(nearPlane + farPlane) / clip
+        m.__data[2, 3] = -(2 * nearPlane * farPlane) / clip
+        m.__data[3, 2] = -1
 
         self *= m
     
-    def mapVector(self, vector):
+    cpdef MVector3D mapVector(self, vector):
         vec_mat = np.array([vector.x(), vector.y(), vector.z()])
-        d = self.data()
-        xyz = np.sum(vec_mat * d[:3, :3], axis=1)
+        xyz = np.sum(vec_mat * self.__data[:3, :3], axis=1)
 
         return MVector3D(xyz[0], xyz[1], xyz[2])
     
-    def toQuaternion(self):
-        d = self.data()
-        a = [[d[0, 0], d[0, 1], d[0, 2], d[0, 3]],
-             [d[1, 0], d[1, 1], d[1, 2], d[1, 3]],
-             [d[2, 0], d[2, 1], d[2, 2], d[2, 3]],
-             [d[3, 0], d[3, 1], d[3, 2], d[3, 3]]]
+    cpdef MQuaternion toQuaternion(self):
+        a = [[self.__data[0, 0], self.__data[0, 1], self.__data[0, 2], self.__data[0, 3]],
+             [self.__data[1, 0], self.__data[1, 1], self.__data[1, 2], self.__data[1, 3]],
+             [self.__data[2, 0], self.__data[2, 1], self.__data[2, 2], self.__data[2, 3]],
+             [self.__data[3, 0], self.__data[3, 1], self.__data[3, 2], self.__data[3, 3]]]
         
         q = MQuaternion()
         
@@ -1366,11 +1406,11 @@ cdef class MMatrix4x4:
         return self
 
 
-def is_almost_null(v):
+cpdef bint is_almost_null(v):
     return abs(v) < 0.0000001
 
 
-def get_effective_value(v):
+cpdef double get_effective_value(v):
     if math.isnan(v):
         return 0
     
@@ -1380,7 +1420,7 @@ def get_effective_value(v):
     return v
 
 
-def get_almost_zero_value(v):
+cpdef double get_almost_zero_value(v):
     if get_effective_value(v) == 0:
         return 0
         
