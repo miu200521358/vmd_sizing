@@ -2,6 +2,28 @@
 #
 from module.MMath cimport MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 
+
+cdef class LowPassFilter:
+    cdef double __y
+    cdef double __s
+    cdef double __alpha
+    cdef __setAlpha(self, double alpha)
+    cdef double c__call__(self, double value, double timestamp, double alpha)
+    cdef double lastValue(self)
+    cdef double skip(self, double value)
+
+cdef class OneEuroFilter:
+    cdef double __freq
+    cdef double __mincutoff
+    cdef double __beta
+    cdef double __dcutoff
+    cdef LowPassFilter __x
+    cdef LowPassFilter __dx
+    cdef double __lasttime
+    cdef double __alpha(self, double cutoff)
+    cdef double c__call__(self, double x, double timestamp)
+    cdef c_skip(self, double x, str timestamp)
+
 cdef class VmdBoneFrame:
     cdef public str name
     cdef public bytes bname

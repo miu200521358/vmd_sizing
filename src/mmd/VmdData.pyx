@@ -124,7 +124,6 @@ cdef class VmdBoneFrame:
         self.fno = fno
         self.position = MVector3D()
         self.rotation = MQuaternion()
-        self.org_position = MVector3D()
         self.org_rotation = MQuaternion()
         self.interpolation = [20, 20, 0, 0, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 20, 20, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 20, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 0, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 0, 0] # noqa
         self.org_interpolation = [20, 20, 0, 0, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 20, 20, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 20, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 0, 20, 20, 20, 20, 20, 107, 107, 107, 107, 107, 107, 107, 107, 0, 0, 0] # noqa
@@ -145,7 +144,6 @@ cdef class VmdBoneFrame:
         bf.bname = self.bname
         bf.position = self.position.copy()
         bf.rotation = self.rotation.copy()
-        bf.org_position = self.org_position.copy()
         bf.org_rotation = self.org_rotation.copy()
         bf.interpolation = cPickle.loads(cPickle.dumps(self.interpolation, -1))
         bf.key = self.key
@@ -864,7 +862,6 @@ cdef class VmdMotion:
         cdef VmdBoneFrame regist_bf = self.c_calc_bf(bone_name, fno, is_key=False, is_read=False, is_reset_interpolation=True)
         regist_bf.position = bf.position.copy()
         regist_bf.rotation = bf.rotation.copy()
-        regist_bf.org_position = bf.org_position.copy()
         regist_bf.org_rotation = bf.org_rotation.copy()
         if copy_interpolation:
             regist_bf.interpolation = cPickle.loads(cPickle.dumps(bf.interpolation, -1))
@@ -1214,7 +1211,8 @@ cdef class VmdMotion:
 
         for bone_name, bone_frames in self.bones.items():
             if bone_name not in ["SIZING_ROOT_BONE", "頭頂", "右つま先実体", "左つま先実体", "右足底辺", "左足底辺", "右足底実体", "左足底実体", "右足ＩＫ底実体", "左足ＩＫ底実体", "右足IK親底実体", "左足IK親底実体", \
-                                 "首根元", "右腕下延長", "左腕下延長", "右腕垂直", "左腕垂直", "センター実体", "左腕ひじ中間", "右腕ひじ中間", "左ひじ手首中間", "右ひじ手首中間", "左手首実体", "右手首実体"]:
+                                 "首根元", "右腕下延長", "左腕下延長", "右腕垂直", "左腕垂直", "センター実体", "左腕ひじ中間", "右腕ひじ中間", "左ひじ手首中間", "右ひじ手首中間", "左手首実体", "右手首実体", \
+                                 "左親指先実体", "左人指先実体", "左中指先実体", "左薬指先実体", "左小指先実体", "右親指先実体", "右人指先実体", "右中指先実体", "右薬指先実体", "右小指先実体"]:
                 # サイジング用ボーンは出力しない
                 target_fnos[bone_name] = self.get_bone_fnos(bone_name, is_key=True)
 

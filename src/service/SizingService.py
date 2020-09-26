@@ -83,7 +83,7 @@ class SizingService():
             if self.options.total_process_ctrl:
                 self.options.total_process_ctrl.write(str(self.options.total_process))
                 self.options.now_process_ctrl.write("0")
-                self.options.now_process_ctrl.write(str(self.options.now_process_ctrl))
+                self.options.now_process_ctrl.write(str(self.options.now_process))
 
             logger.info(service_data_txt, decoration=MLogger.DECORATION_BOX)
 
@@ -132,7 +132,7 @@ class SizingService():
                     logger.info("【No.%s】 出力終了: %s", (data_set_idx + 1), os.path.basename(data_set.output_vmd_path), decoration=MLogger.DECORATION_BOX, title="サイジング成功")
 
                 except FileNotFoundError as fe:
-                    logger.error("【No.%s】出力VMDファイルが正常に作成されなかったようです。\nパスを確認してください。%s\n\n%s", (data_set_idx + 1), data_set.output_vmd_path, fe.message, decoration=MLogger.DECORATION_BOX)
+                    logger.error("【No.%s】出力VMDファイルが正常に作成されなかったようです。\nパスを確認してください。%s\n\n%s", (data_set_idx + 1), data_set.output_vmd_path, fe, decoration=MLogger.DECORATION_BOX)
             
             if self.options.camera_motion:
                 try:
@@ -146,13 +146,13 @@ class SizingService():
 
                     logger.info("カメラ出力終了: %s", os.path.basename(data_set.output_vmd_path), decoration=MLogger.DECORATION_BOX, title="サイジング成功")
                 except FileNotFoundError as fe:
-                    logger.error("カメラ出力VMDファイルが正常に作成されなかったようです。\nパスを確認してください。%s\n\n%s", self.options.camera_output_vmd_path, fe.message, decoration=MLogger.DECORATION_BOX)
+                    logger.error("カメラ出力VMDファイルが正常に作成されなかったようです。\nパスを確認してください。%s\n\n%s", self.options.camera_output_vmd_path, fe, decoration=MLogger.DECORATION_BOX)
 
             return True
         except MKilledException:
             return False
         except SizingException as se:
-            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
+            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se, decoration=MLogger.DECORATION_BOX)
             return False
         except Exception as e:
             logger.critical("サイジング処理が意図せぬエラーで終了しました。", e, decoration=MLogger.DECORATION_BOX)

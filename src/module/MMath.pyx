@@ -287,6 +287,9 @@ cdef class MVector2D:
     cpdef setY(self, y):
         self.__data[1] = y
 
+    def to_log(self):
+        return "x: {0}, y: {1}".format(round(self.x(), 5), round(self.y(), 5))
+
 
 cdef class MVector3D:
 

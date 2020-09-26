@@ -1156,8 +1156,8 @@ class StanceService():
                             logger.info("-- %sフレーム目:終了(%s％)【No.%s - %s補正】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1, toe_ik_bone_name)
                             prev_sep_fno = fno // 500
 
-                self.remove_unnecessary_bf_pool_parts(data_set_idx, leg_ik_bone_name, 0)
-                self.remove_unnecessary_bf_pool_parts(data_set_idx, toe_ik_bone_name, 0)
+                # self.remove_unnecessary_bf_pool_parts(data_set_idx, leg_ik_bone_name, 0)
+                # self.remove_unnecessary_bf_pool_parts(data_set_idx, toe_ik_bone_name, 0)
 
                 logger.info("%sつま先ＩＫ補正:終了【No.%s】", direction, (data_set_idx + 1))
             else:
