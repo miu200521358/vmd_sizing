@@ -2,25 +2,45 @@
 #
 import os
 import numpy as np
+import math
+from libc.math cimport sin, cos, acos, atan2, asin, pi, sqrt
+
 import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor
 
-from mmd.PmxData import PmxModel, Bone # noqa
-from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
-from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
-from module.MOptions import MOptions, MOptionsDataSet # noqa
 from module.MParams import BoneLinks # noqa
-from utils import MUtils, MServiceUtils, MBezierUtils # noqa
+from module.MParams cimport BoneLinks # noqa
+
+from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
+from module.MMath cimport MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
+
+from mmd.PmxData import PmxModel, OBB, Bone, Vertex, Material, Morph, DisplaySlot, RigidBody, Joint # noqa
+from mmd.PmxData cimport PmxModel, OBB, Bone, RigidBody
+
+from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
+from mmd.VmdData cimport VmdMotion, VmdBoneFrame
+
+from module.MOptions import MOptions, MOptionsDataSet # noqa
+from module.MOptions cimport MOptions, MOptionsDataSet # noqa
+
+from utils import MServiceUtils
+from utils cimport MServiceUtils
+
 from utils.MLogger import MLogger # noqa
 from utils.MException import SizingException, MKilledException
 
 logger = MLogger(__name__, level=1)
 
-
 # 接触回避用オプション
-class ArmAvoidanceOption():
+cdef class ArmAvoidanceOption:
+    cdef public list arm_links
+    cdef public dict ik_links_list
+    cdef public dict ik_count_list
+    cdef public dict avoidance_links
+    cdef public dict avoidances
+    cdef public double face_length
 
-    def __init__(self, arm_links: BoneLinks, ik_links_list: list, ik_count_list: list, avoidance_links: dict, avoidances: dict, face_length: float):
+    def __init__(self, arm_links: list, ik_links_list: dict, ik_count_list: dict, avoidance_links: dict, avoidances: dict, face_length: float):
         super().__init__()
 
         self.arm_links = arm_links
@@ -31,7 +51,11 @@ class ArmAvoidanceOption():
         self.face_length = face_length
 
 
-class ArmAvoidanceService():
+cdef class ArmAvoidanceService:
+    cdef public object options
+    cdef public list target_data_set_idxs
+    cdef public dict avoidance_options
+
     def __init__(self, options: MOptions):
         self.options = options
 
@@ -54,28 +78,47 @@ class ArmAvoidanceService():
             self.avoidance_options[(data_set_idx, "左")] = self.prepare_avoidance(data_set_idx, "左")
             self.avoidance_options[(data_set_idx, "右")] = self.prepare_avoidance(data_set_idx, "右")
 
-        futures = []
-        with ThreadPoolExecutor(thread_name_prefix="avoidance", max_workers=self.options.max_workers) as executor:
-            for data_set_idx, data_set in enumerate(self.options.data_set_list):
-                futures.append(executor.submit(self.execute_avoidance_pool, data_set_idx, "右"))
-                futures.append(executor.submit(self.execute_avoidance_pool, data_set_idx, "左"))
+        for data_set_idx, data_set in enumerate(self.options.data_set_list):
+            self.execute_avoidance_pool(data_set_idx, "右")
+            self.execute_avoidance_pool(data_set_idx, "左")
 
-        concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
+            if self.options.now_process_ctrl:
+                self.options.now_process += 1
+                self.options.now_process_ctrl.write(str(self.options.now_process))
 
-        for f in futures:
-            if not f.result():
-                return False
+                proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
+                self.options.tree_process_dict[proccess_key]["接触回避"] = True
+
+        # futures = []
+        # with ThreadPoolExecutor(thread_name_prefix="avoidance", max_workers=self.options.max_workers) as executor:
+        #     for data_set_idx, data_set in enumerate(self.options.data_set_list):
+        #         futures.append(executor.submit(self.execute_avoidance_pool, data_set_idx, "右"))
+        #         futures.append(executor.submit(self.execute_avoidance_pool, data_set_idx, "左"))
+
+        # concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
+
+        # for f in futures:
+        #     if not f.result():
+        #         return False
     
         return True
     
     # 接触回避
-    def execute_avoidance_pool(self, data_set_idx: int, direction: str):
+    cpdef bint execute_avoidance_pool(self, int data_set_idx, str direction):
         try:
             # 接触回避準備
             all_avoidance_axis = self.prepare_avoidance_dataset(data_set_idx, direction)
 
             # 接触回避処理
             self.execute_avoidance(data_set_idx, direction, all_avoidance_axis)
+
+            # # 接触回避準備
+            # pfun = profile(self.prepare_avoidance_dataset)
+            # all_avoidance_axis = pfun(data_set_idx, direction)
+
+            # # 接触回避処理
+            # pfun = profile(self.execute_avoidance)
+            # pfun(data_set_idx, direction, all_avoidance_axis)
 
             # # 各ボーンのbfを円滑化
             # futures = []
@@ -87,15 +130,6 @@ class ArmAvoidanceService():
             # for f in futures:
             #     if not f.result():
             #         return False
-
-            data_set = self.options.data_set_list[data_set_idx]
-
-            if self.options.now_process_ctrl and direction == "右":
-                self.options.now_process += 1
-                self.options.now_process_ctrl.write(str(self.options.now_process))
-
-                proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
-                self.options.tree_process_dict[proccess_key]["接触回避"] = True
 
             return True
         except MKilledException as ke:
@@ -140,7 +174,22 @@ class ArmAvoidanceService():
             raise e
 
     # 接触回避処理
-    def execute_avoidance(self, data_set_idx: int, direction: str, all_avoidance_axis: dict):
+    cpdef bint execute_avoidance(self, int data_set_idx, str direction, dict all_avoidance_axis):
+        cdef int fno, ik_cnt, ik_max_count, now_ik_max_count, prev_block_fno
+        cdef str arm_bone_name, avoidance_name, bone_name, elbow_bone_name, link_name, wrist_bone_name, axis
+        cdef list fnos, ik_links_list, target_bone_names, is_success, failured_last_names
+        cdef dict dot_dict, dot_limit_dict, now_rep_global_3ds, org_bfs, rep_avbone_global_3ds, rep_avbone_global_mats, rep_global_3ds, avoidance_axis
+        cdef bint is_in_elbow
+        cdef MVector3D now_rep_effector_pos, rep_collision_vec, rep_diff, prev_rep_diff
+        cdef MOptionsDataSet data_set
+        cdef BoneLinks arm_link, avodance_link, ik_links
+        cdef VmdBoneFrame arm_bf, bf, elbow_bf, now_bf
+        cdef RigidBody avoidance
+        cdef ArmAvoidanceOption avoidance_options
+        cdef MQuaternion  elbow_adjust_qq
+        cdef Bone link_bone
+        cdef OBB obb
+        
         logger.info("接触回避処理【No.%s - %s】", (data_set_idx + 1), direction)
 
         logger.copy(self.options)
@@ -161,7 +210,7 @@ class ArmAvoidanceService():
 
         # 一度全部キーを追加する（キー自体は無効化のまま）
         for fno in fnos:
-            for bone_name in target_bone_names:
+            for bone_name in [arm_bone_name, elbow_bone_name]:
                 if bone_name not in data_set.motion.bones:
                     data_set.motion.bones[bone_name] = {}
                 data_set.motion.bones[bone_name][fno] = data_set.motion.calc_bf(bone_name, fno)
@@ -175,8 +224,8 @@ class ArmAvoidanceService():
 
             for ((avoidance_name, avodance_link), avoidance) in zip(avoidance_options.avoidance_links.items(), avoidance_options.avoidances.values()):
                 # 剛体の現在位置をチェック
-                rep_avbone_global_3ds, rep_avbone_global_mats = \
-                    MServiceUtils.calc_global_pos(data_set.rep_model, avodance_link, data_set.motion, fno, return_matrix=True)
+                (rep_avbone_global_3ds, rep_avbone_global_mats) = \
+                    MServiceUtils.c_calc_global_pos(data_set.rep_model, avodance_link, data_set.motion, fno, return_matrix=True, is_local_x=False, limit_links=None)
                 
                 obb = avoidance.get_obb(fno, avodance_link.get(avodance_link.last_name()).position, rep_avbone_global_mats, self.options.arm_options.alignment, direction == "左")
 
@@ -196,11 +245,12 @@ class ArmAvoidanceService():
             
                 for arm_link in avoidance_options.arm_links:
                     # 先モデルのそれぞれのグローバル位置
-                    rep_global_3ds = MServiceUtils.calc_global_pos(data_set.rep_model, arm_link, data_set.motion, fno)
+                    (rep_global_3ds, _) = \
+                        MServiceUtils.c_calc_global_pos(data_set.rep_model, arm_link, data_set.motion, fno, return_matrix=False, is_local_x=False, limit_links=None)
                     # [logger.test("f: %s, k: %s, v: %s", fno, k, v) for k, v in rep_global_3ds.items()]
 
                     # 衝突情報を取る
-                    collision, near_collision, x_distance, z_distance, rep_x_collision_vec, rep_z_collision_vec \
+                    (collision, near_collision, x_distance, z_distance, rep_x_collision_vec, rep_z_collision_vec) \
                         = obb.get_collistion(rep_global_3ds[arm_link.last_name()], rep_global_3ds[arm_bone_name], \
                                              data_set.rep_model.bones[arm_bone_name].position.distanceToPoint(data_set.rep_model.bones[arm_link.last_name()].position))
                     
@@ -261,10 +311,11 @@ class ArmAvoidanceService():
                                              list(ik_links.all().keys()), avoidance_name, axis, rep_global_3ds[arm_link.last_name()].to_log(), rep_collision_vec.to_log())
                                 
                                 # 修正角度がない場合、IK計算実行
-                                MServiceUtils.calc_IK(data_set.rep_model, arm_link, data_set.motion, fno, rep_collision_vec, ik_links, max_count=1)
+                                MServiceUtils.c_calc_IK(data_set.rep_model, arm_link, data_set.motion, fno, rep_collision_vec, ik_links, max_count=1)
 
                                 # 現在のエフェクタ位置
-                                now_rep_global_3ds = MServiceUtils.calc_global_pos(data_set.rep_model, arm_link, data_set.motion, fno)
+                                (now_rep_global_3ds, _) = \
+                                    MServiceUtils.c_calc_global_pos(data_set.rep_model, arm_link, data_set.motion, fno, return_matrix=False, is_local_x=False, limit_links=None)
                                 now_rep_effector_pos = now_rep_global_3ds[arm_link.last_name()]
 
                                 # 現在のエフェクタ位置との差分(エフェクタ位置が指定されている場合のみ)
@@ -315,7 +366,7 @@ class ArmAvoidanceService():
                                         is_success = [True]
                                         
                                         # 衝突を計り直す
-                                        collision, near_collision, x_distance, z_distance, rep_x_collision_vec, rep_z_collision_vec \
+                                        (collision, near_collision, x_distance, z_distance, rep_x_collision_vec, rep_z_collision_vec) \
                                             = obb.get_collistion(now_rep_global_3ds[arm_link.last_name()], now_rep_global_3ds[arm_link.first_name()], \
                                                                  data_set.rep_model.bones[arm_bone_name].position.distanceToPoint(data_set.rep_model.bones[arm_link.last_name()].position))
 
@@ -357,7 +408,7 @@ class ArmAvoidanceService():
                                         # 採用されたらOK
                                         is_success.append(True)
                                         # 衝突を計り直す
-                                        collision, near_collision, x_distance, z_distance, rep_x_collision_vec, rep_z_collision_vec \
+                                        (collision, near_collision, x_distance, z_distance, rep_x_collision_vec, rep_z_collision_vec) \
                                             = obb.get_collistion(now_rep_global_3ds[arm_link.last_name()], now_rep_global_3ds[arm_link.first_name()], \
                                                                  data_set.rep_model.bones[arm_bone_name].position.distanceToPoint(data_set.rep_model.bones[arm_link.last_name()].position))
 
@@ -465,8 +516,21 @@ class ArmAvoidanceService():
         return True
 
     # 接触回避準備
-    def prepare_avoidance_dataset(self, data_set_idx: int, direction: str):
+    cpdef dict prepare_avoidance_dataset(self, int data_set_idx, str direction):
         logger.info("接触回避準備【No.%s - %s】", (data_set_idx + 1), direction)
+
+        cdef int aidx, fno, from_fno, prev_block_fno, to_fno
+        cdef double block_x_distance, block_z_distance, x_distance, z_distance
+        cdef list all_avoidance_list, fnos, prev_collisions
+        cdef dict all_avoidance_axis, rep_avbone_global_3ds, rep_avbone_global_mats, rep_global_3ds, rep_matrixs, avoidance_list
+        cdef str avoidance_name, bone_name
+        cdef bint collision, near_collision
+        cdef BoneLinks arm_link, avodance_link
+        cdef ArmAvoidanceOption avoidance_options
+        cdef MOptionsDataSet data_set
+        cdef OBB obb
+        cdef RigidBody avoidance
+        cdef MVector3D rep_x_collision_vec, rep_z_collision_vec
 
         logger.copy(self.options)
         # 処理対象データセット
@@ -491,18 +555,19 @@ class ArmAvoidanceService():
 
             for ((avoidance_name, avodance_link), avoidance) in zip(avoidance_options.avoidance_links.items(), avoidance_options.avoidances.values()):
                 # 剛体の現在位置をチェック
-                rep_avbone_global_3ds, rep_avbone_global_mats = \
-                    MServiceUtils.calc_global_pos(data_set.rep_model, avodance_link, data_set.motion, fno, return_matrix=True)
+                (rep_avbone_global_3ds, rep_avbone_global_mats) = \
+                    MServiceUtils.c_calc_global_pos(data_set.rep_model, avodance_link, data_set.motion, fno, return_matrix=True, is_local_x=False, limit_links=None)
 
                 obb = avoidance.get_obb(fno, avodance_link.get(avodance_link.last_name()).position, rep_avbone_global_mats, self.options.arm_options.alignment, direction == "左")
             
                 for arm_link in avoidance_options.arm_links:
                     # 先モデルのそれぞれのグローバル位置
-                    rep_global_3ds, rep_matrixs = MServiceUtils.calc_global_pos(data_set.rep_model, arm_link, data_set.motion, fno, return_matrix=True)
-                    # [logger.test("f: %s, k: %s, v: %s", fno, k, v) for k, v in rep_global_3ds.items()]
+                    (rep_global_3ds, rep_matrixs) = \
+                        MServiceUtils.c_calc_global_pos(data_set.rep_model, arm_link, data_set.motion, fno, return_matrix=True, is_local_x=False, limit_links=None)
+                    # [logger.debug("f: %s, k: %s, v: %s", fno, k, v) for k, v in rep_global_3ds.items()]
 
                     # 衝突情報を取る
-                    collision, near_collision, x_distance, z_distance, rep_x_collision_vec, rep_z_collision_vec \
+                    (collision, near_collision, x_distance, z_distance, rep_x_collision_vec, rep_z_collision_vec) \
                         = obb.get_collistion(rep_global_3ds[arm_link.last_name()], rep_global_3ds["{0}腕".format(direction)], \
                                              data_set.rep_model.bones["{0}腕".format(direction)].position.distanceToPoint(data_set.rep_model.bones[arm_link.last_name()].position))
 
@@ -549,7 +614,7 @@ class ArmAvoidanceService():
                 # トータルで近い方の軸に移動させる
                 all_avoidance_axis[from_fno] = {"from_fno": from_fno, "to_fno": to_fno, "axis": ("x" if block_x_distance * 1.5 < block_z_distance else "z")}
                 logger.debug("aidx: %s, d: %s, from: %s, to: %s, axis: %s, xd: %s, zd: %s", aidx, direction, from_fno, to_fno, all_avoidance_axis[from_fno], block_x_distance, block_z_distance)
-
+                
             if fno // 1000 > prev_block_fno and fnos[-1] > 0:
                 logger.info("-- %sフレーム目:終了(%s％)【No.%s - 接触回避準備② - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1, direction)
                 prev_block_fno = fno // 1000
@@ -587,7 +652,7 @@ class ArmAvoidanceService():
         avoidance_links = {}
         avoidances = {}
         
-        if "頭接触回避" in self.options.arm_options.avoidance_target_list[data_set_idx]:
+        if data_set_idx in self.options.arm_options.avoidance_target_list and "頭接触回避" in self.options.arm_options.avoidance_target_list[data_set_idx]:
             # 頭接触回避用剛体取得
             head_rigidbody = data_set.rep_model.get_head_rigidbody()
             head_rigidbody.is_small = (face_length <= 3)

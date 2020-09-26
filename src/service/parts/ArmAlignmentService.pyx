@@ -1,27 +1,100 @@
 # -*- coding: utf-8 -*-
 #
-import math
+import os
 import numpy as np
+import math
 import itertools
+from libc.math cimport sin, cos, acos, atan2, asin, pi, sqrt
 
-from mmd.PmxData import PmxModel, Bone # noqa
-from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
-from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
-from module.MOptions import MOptions, MOptionsDataSet # noqa
+import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
+
 from module.MParams import BoneLinks # noqa
-from utils import MUtils, MServiceUtils, MBezierUtils # noqa
+from module.MParams cimport BoneLinks # noqa
+
+from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
+from module.MMath cimport MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
+
+from mmd.PmxData import PmxModel, OBB, Bone, Vertex, Material, Morph, DisplaySlot, RigidBody, Joint # noqa
+from mmd.PmxData cimport PmxModel, OBB, Bone, RigidBody
+
+from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
+from mmd.VmdData cimport VmdMotion, VmdBoneFrame
+
+from module.MOptions import MOptions, MOptionsDataSet # noqa
+from module.MOptions cimport MOptions, MOptionsDataSet # noqa
+
+from utils import MServiceUtils
+from utils cimport MServiceUtils
+
 from utils.MLogger import MLogger # noqa
 from utils.MException import SizingException, MKilledException
 
 logger = MLogger(__name__, level=1)
 
 # 床処理用INDEX
-FLOOR_IDX = -1
-# 近接コピー用ラジアン角度
-LIMIT_COPY_RADIANS = math.cos(math.radians(5))
+cdef int FLOOR_IDX = -1
 
 
-class ArmAlignmentService():
+# 位置合わせ用オプション
+cdef class ArmAlignmentOption:
+    cdef public BoneLinks org_links
+    cdef public BoneLinks rep_links
+    cdef public list ik_links_list
+    cdef public list ik_count_list
+    cdef public BoneLinks tip_ik_links
+    cdef public double org_palm_length
+    cdef public double rep_palm_length
+    cdef public str start_bone_name
+    cdef public str effector_bone_name
+    cdef public str effector_display_bone_name
+    cdef public double distance
+    cdef public str tip_bone_name
+    cdef public int priority
+    cdef public double ratio
+    cdef public double multi_ratio
+
+    def __init__(self, org_links: BoneLinks, rep_links: BoneLinks, ik_links_list: list, ik_count_list: list, tip_ik_links: BoneLinks, \
+                 org_palm_length: float, rep_palm_length: float, org_model: PmxModel, rep_model: PmxModel, start_bone_name: str, \
+                 effector_bone_name: str, effector_display_bone_name: str, tip_bone_name: str, distance: float, xz_ratio: float, priority: int):
+        super().__init__()
+
+        self.org_links = org_links
+        self.rep_links = rep_links
+        self.ik_links_list = ik_links_list
+        self.ik_count_list = ik_count_list
+        self.tip_ik_links = tip_ik_links
+        self.org_palm_length = org_palm_length
+        self.rep_palm_length = rep_palm_length
+        self.start_bone_name = start_bone_name
+        self.effector_bone_name = effector_bone_name
+        self.effector_display_bone_name = effector_display_bone_name
+        self.distance = distance
+        self.tip_bone_name = tip_bone_name
+        self.priority = priority
+
+        if "床" in start_bone_name:
+            # 元と先の比率（床の場合、XZ比率で身体の大きさだけ検討する）
+            self.ratio = xz_ratio
+        else:
+            # エフェクタまでの長さ比率
+            org_effector_diff = (org_model.bones[effector_bone_name].position - org_model.bones[start_bone_name].position)
+            org_effector_diff.one()
+            rep_effector_diff = (rep_model.bones[effector_bone_name].position - rep_model.bones[start_bone_name].position)
+            rep_effector_diff.one()
+            effector_diff_ratio = rep_effector_diff.length() / org_effector_diff.length()
+
+            # 元と先の比率
+            self.ratio = effector_diff_ratio
+        # 元と先の比率（複数モーション時）
+        self.multi_ratio = xz_ratio
+
+
+cdef class ArmAlignmentService:
+    cdef public object options
+    cdef public list target_data_set_idxs
+    cdef public dict target_links
+
     def __init__(self, options: MOptions):
         self.options = options
 
@@ -71,7 +144,7 @@ class ArmAlignmentService():
 
             # 位置合わせ実行
             self.execute_alignment(fnos, all_alignment_group_list, all_messages, bone_names)
-
+            
             if self.options.now_process_ctrl:
                 self.options.now_process += 1
                 self.options.now_process_ctrl.write(str(self.options.now_process))
@@ -90,7 +163,24 @@ class ArmAlignmentService():
             raise e
 
     # 位置合わせ準備
-    def prepare_alignment(self, fnos: list):
+    cdef prepare_alignment(self, list fnos):           
+        cdef int from_data_set_idx, to_data_set_idx, alignment_idx, data_set_idx, fidx, from_alignment_idx
+        cdef int group_idx, to_alignment_idx, fno, priority, prev_block_fno
+        cdef double base_distance, distance, distance_ratio, org_palm_mean
+        cdef dict alignment_options, all_alignment_group, all_distances, all_is_alignment, all_messages, all_org_global_effector_matrixs, all_org_global_effector_vec
+        cdef dict all_org_global_neck_vec, all_org_global_tip_vec, all_org_global_trunk_matrixs, all_org_global_upper_vec, distances, org_global_3ds, org_global_matrixs
+        cdef dict all_alignment_idx
+        cdef list alignment_pairs, all_alignment_group_list, org_effector_pairs, target_pairs
+        cdef str link_name
+        cdef bint is_alignment, is_floor, is_sit, prev_from_alignment, prev_to_alignment
+        cdef VmdBoneFrame bf
+        cdef MOptionsDataSet data_set, from_data_set, to_data_set
+        cdef ArmAlignmentOption from_target_link, target_link, to_target_link
+        cdef BoneLinks ik_links
+        cdef MMatrix4x4 org_effector_matrix, org_origin_matrix, org_trunk_matrix
+        cdef MVector3D org_fno_mean_vec, org_from_global_effector_vec, org_global_effector, org_global_tip, org_local_tip, org_mean_vec, org_to_global_effector_vec
+        cdef MVector3D org_trunk_local_fno_effector, org_trunk_local_fno_origin
+
         all_org_global_effector_vec = {}
         all_org_global_trunk_matrixs = {}
         all_org_global_neck_vec = {}
@@ -99,7 +189,6 @@ class ArmAlignmentService():
         all_org_global_effector_matrixs = {}
 
         prev_block_fno = 0
-
         target_pairs = []
         for data_set_idx, alignment_options in self.target_links.items():
             for alignment_idx, target_link in alignment_options.items():
@@ -124,7 +213,7 @@ class ArmAlignmentService():
 
                     # 元モデルのそれぞれのグローバル位置
                     org_global_3ds, org_global_matrixs = \
-                        MServiceUtils.calc_global_pos(data_set.org_model, target_link.org_links, data_set.org_motion, fno, return_matrix=True, is_local_x=True)
+                        MServiceUtils.c_calc_global_pos(data_set.org_model, target_link.org_links, data_set.org_motion, fno, return_matrix=True, is_local_x=True, limit_links=None)
                    
                     all_org_global_effector_vec[fno][(data_set_idx, alignment_idx)] = org_global_3ds[target_link.effector_bone_name]
 
@@ -490,8 +579,23 @@ class ArmAlignmentService():
         return all_alignment_group_list, all_messages
     
     # 位置合わせ実行
-    def execute_alignment(self, fnos: list, all_alignment_group_list: list, all_messages: dict, bone_names: list):
-        
+    cdef execute_alignment(self, list fnos, list all_alignment_group_list, dict all_messages, list bone_names):
+        cdef int data_set_idx, alignment_idx, fidx, fno, ik_cnt, next_success_fno, now_ik_max_count, prev_block_fno, prev_fno, prev_success_fno
+        cdef str bone_name, link_name
+        cdef list group_data_set_idxs, next_fnos, next_success_fnos, overwrited, prev_success_fnos, is_success
+        cdef dict aligned_rep_global_3ds, all_alignment_group
+        cdef dict dot_far_limit_dict, dot_near_dict, dot_near_limit_dict, dot_start_dict, org_bfs, rep_global_3ds, rep_global_matrixs, results, start_org_bfs
+        cdef bint is_avoidance_x, is_floor, is_multi
+        cdef VmdBoneFrame bf, ik_bf, next_bf, prev_bf
+        cdef MQuaternion correct_qq
+        cdef MOptionsDataSet data_set
+        cdef BoneLinks ik_links, now_ik_links
+        cdef Bone link_bone
+        cdef MVector3D org_fno_global_effector, org_local_effector, org_local_tip, prev_rep_diff, rep_diff, rep_effector_vec, rep_fno_mean_vec, rep_global_effector, aligned_rep_effector_vec
+        cdef MVector3D rep_global_tip, rep_local_effector, rep_local_origin, rep_local_tip, rep_target_global_tip, rep_trunk_local_fno_effector, rep_trunk_local_fno_origin
+        cdef MMatrix4x4 org_origin_matrix, rep_effector_matrix, rep_origin_matrix, rep_trunk_matrix
+        cdef ArmAlignmentOption target_link
+
         fno = 0
         prev_block_fno = 0
         for all_alignment_group in all_alignment_group_list:
@@ -511,7 +615,7 @@ class ArmAlignmentService():
 
                     # 先モデルのそれぞれのグローバル位置
                     rep_global_3ds, rep_global_matrixs = \
-                        MServiceUtils.calc_global_pos(data_set.rep_model, target_link.rep_links, data_set.motion, fno, return_matrix=True, is_local_x=True)
+                        MServiceUtils.c_calc_global_pos(data_set.rep_model, target_link.rep_links, data_set.motion, fno, return_matrix=True, is_local_x=True, limit_links=None)
 
                     # キーフレ単位のエフェクタ位置情報
                     if fno not in all_alignment_group["rep_fno_global_effector"]:
@@ -565,8 +669,8 @@ class ArmAlignmentService():
                     # 首根先（体幹の最終的な向き）までの行列
                     rep_trunk_matrix = all_alignment_group["rep_fno_trunk_matrix"][fno][(data_set_idx, alignment_idx)].copy()
 
-                    # エフェクタのグローバル位置
-                    rep_global_effector = all_alignment_group["rep_fno_global_effector"]
+                    # # エフェクタのグローバル位置
+                    # rep_global_effector = all_alignment_group["rep_fno_global_effector"]
 
                     # 体幹から見たキーフレ中央値のローカル位置
                     rep_trunk_local_fno_origin = rep_trunk_matrix.inverted() * rep_fno_mean_vec
@@ -686,7 +790,7 @@ class ArmAlignmentService():
                                 is_avoidance_x = is_avoidance_x or (bf.avoidance == "x")
                     
                     if is_avoidance_x:
-                        logger.info("－X方向回避済みのため、位置合わせスキップ: f: %s(%s-%s)", fno, (data_set_idx + 1), target_link.effector_display_bone_name)
+                        logger.info("--X方向回避済みのため、位置合わせスキップ: f: %s(%s-%s)", fno, (data_set_idx + 1), target_link.effector_display_bone_name)
 
                     # IK処理実行
                     for ik_cnt, (ik_links, ik_max_count) in enumerate(zip(target_link.ik_links_list, target_link.ik_count_list)):
@@ -700,10 +804,10 @@ class ArmAlignmentService():
                                          list(now_ik_links.all().keys()), rep_effector_vec.to_log(), rep_global_effector.to_log())
                             
                             # IK計算実行
-                            MServiceUtils.calc_IK(data_set.rep_model, target_link.rep_links, data_set.motion, fno, rep_global_effector, now_ik_links, max_count=1)
+                            MServiceUtils.c_calc_IK(data_set.rep_model, target_link.rep_links, data_set.motion, fno, rep_global_effector, now_ik_links, max_count=1)
 
                             # 現在のエフェクタ位置
-                            aligned_rep_global_3ds = MServiceUtils.calc_global_pos(data_set.rep_model, target_link.rep_links, data_set.motion, fno)
+                            (aligned_rep_global_3ds, _) = MServiceUtils.c_calc_global_pos(data_set.rep_model, target_link.rep_links, data_set.motion, fno, return_matrix=False, is_local_x=False, limit_links=None)
                             aligned_rep_effector_vec = aligned_rep_global_3ds[target_link.effector_bone_name]
 
                             # 現在のエフェクタ位置との差分(エフェクタ位置が指定されている場合のみ)
@@ -997,7 +1101,7 @@ class ArmAlignmentService():
 
                         # 先モデルのそれぞれのグローバル位置最新データ
                         rep_global_3ds, rep_global_matrixs = \
-                            MServiceUtils.calc_global_pos(data_set.rep_model, target_link.rep_links, data_set.motion, fno, return_matrix=True, is_local_x=True)
+                            MServiceUtils.c_calc_global_pos(data_set.rep_model, target_link.rep_links, data_set.motion, fno, return_matrix=True, is_local_x=True, limit_links=None)
 
                         # 指先のローカル位置
                         org_local_tip = MVector3D(all_alignment_group["org_local_tip"][(fno, data_set_idx, alignment_idx)])
@@ -1036,10 +1140,10 @@ class ArmAlignmentService():
                                          list(now_ik_links.all().keys()), rep_global_tip.to_log(), rep_target_global_tip.to_log())
                             
                             # IK計算実行
-                            MServiceUtils.calc_IK(data_set.rep_model, target_link.rep_links, data_set.motion, fno, rep_target_global_tip, now_ik_links, max_count=1)
+                            MServiceUtils.c_calc_IK(data_set.rep_model, target_link.rep_links, data_set.motion, fno, rep_target_global_tip, now_ik_links, max_count=1)
 
                             # 現在のエフェクタ位置
-                            aligned_rep_global_3ds = MServiceUtils.calc_global_pos(data_set.rep_model, target_link.rep_links, data_set.motion, fno)
+                            aligned_rep_global_3ds, _ = MServiceUtils.c_calc_global_pos(data_set.rep_model, target_link.rep_links, data_set.motion, fno, return_matrix=False, is_local_x=False, limit_links=None)
                             aligned_rep_effector_vec = aligned_rep_global_3ds[target_link.tip_bone_name]
 
                             # 現在のエフェクタ位置との差分(エフェクタ位置が指定されている場合のみ)
@@ -1374,45 +1478,3 @@ class ArmAlignmentService():
                 target_data_set_idxs.append(data_set_idx)
             
         return target_data_set_idxs
-
-
-# 位置合わせ用オプション
-class ArmAlignmentOption():
-
-    def __init__(self, org_links: BoneLinks, rep_links: BoneLinks, ik_links_list: list, ik_count_list: list, tip_ik_links: BoneLinks, \
-                 org_palm_length: float, rep_palm_length: float, org_model: PmxModel, rep_model: PmxModel, start_bone_name: str, \
-                 effector_bone_name: str, effector_display_bone_name: str, tip_bone_name: str, distance: float, xz_ratio: float, priority: int):
-        super().__init__()
-
-        self.org_links = org_links
-        self.rep_links = rep_links
-        self.ik_links_list = ik_links_list
-        self.ik_count_list = ik_count_list
-        self.tip_ik_links = tip_ik_links
-        self.org_palm_length = org_palm_length
-        self.rep_palm_length = rep_palm_length
-        self.start_bone_name = start_bone_name
-        self.effector_bone_name = effector_bone_name
-        self.effector_display_bone_name = effector_display_bone_name
-        self.distance = distance
-        self.tip_bone_name = tip_bone_name
-        self.priority = priority
-
-        if "床" in start_bone_name:
-            # 元と先の比率（床の場合、XZ比率で身体の大きさだけ検討する）
-            self.ratio = xz_ratio
-        else:
-            # エフェクタまでの長さ比率
-            org_effector_diff = (org_model.bones[effector_bone_name].position - org_model.bones[start_bone_name].position)
-            org_effector_diff.one()
-            rep_effector_diff = (rep_model.bones[effector_bone_name].position - rep_model.bones[start_bone_name].position)
-            rep_effector_diff.one()
-            effector_diff_ratio = rep_effector_diff.length() / org_effector_diff.length()
-
-            # 元と先の比率
-            self.ratio = effector_diff_ratio
-        # 元と先の比率（複数モーション時）
-        self.multi_ratio = xz_ratio
-        
-
-
