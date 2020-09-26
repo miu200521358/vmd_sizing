@@ -8,8 +8,8 @@ kwargs = {"output_dir": "./build/output", "build_dir": "./build/"}
 
 def get_ext():
     ext = []
-    sources = ["module\\MMath.pyx", "module\\MParams.py", \
-               "utils\\MBezierUtils.pyx", \
+    sources = ["module\\MMath.pyx", "module\\MOptions.pyx", "module\\MParams.pyx", \
+               "utils\\MLogger.py", "utils\\MBezierUtils.pyx", "utils\\MServiceUtils.pyx", \
                "mmd\\VmdData.pyx", "mmd\\VmdReader.py", "mmd\\PmxData.pyx", "mmd\\PmxReader.py"]
     # for path in glob.glob("*/**/*.pyx", recursive=True):
     #     if os.path.isfile(path):

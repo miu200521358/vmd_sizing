@@ -1463,13 +1463,19 @@ cdef class MMatrix4x4:
 
     # 平行移動行列
     cpdef translate(self, MVector3D vec3):
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] vec_mat = np.tile(np.array([vec3.x(), vec3.y(), vec3.z()]), (4, 1))
+        cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] vec_mat = np.array([[vec3.x(), vec3.y(), vec3.z()], 
+                                                                   [vec3.x(), vec3.y(), vec3.z()], 
+                                                                   [vec3.x(), vec3.y(), vec3.z()], 
+                                                                   [vec3.x(), vec3.y(), vec3.z()]], dtype=np.float64)
         cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] data_mat = self.__data[:, :3] * vec_mat
         self.__data[:, 3] += np.sum(data_mat, axis=1)
 
     # 縮尺行列
     cpdef scale(self, MVector3D vec3):
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] vec_mat = np.tile(np.array([vec3.x(), vec3.y(), vec3.z()]), (4, 1))
+        cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] vec_mat = np.array([[vec3.x(), vec3.y(), vec3.z()], 
+                                                                   [vec3.x(), vec3.y(), vec3.z()], 
+                                                                   [vec3.x(), vec3.y(), vec3.z()], 
+                                                                   [vec3.x(), vec3.y(), vec3.z()]], dtype=np.float64)
         self.__data[:, :3] *= vec_mat
         
     # 単位行列
@@ -1643,7 +1649,10 @@ cdef class MMatrix4x4:
         return v2
     
     cpdef MVector3D mul_MVector3D(self, MVector3D other):
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] vec_mat = np.tile(np.array([other.x(), other.y(), other.z()]), (4, 1))
+        cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] vec_mat = np.array([[other.x(), other.y(), other.z()], 
+                                                                   [other.x(), other.y(), other.z()], 
+                                                                   [other.x(), other.y(), other.z()], 
+                                                                   [other.x(), other.y(), other.z()]], dtype=np.float64)
         cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] data_sum = np.sum(vec_mat * self.__data[:, :3], axis=1) + self.__data[:, 3]
 
         cdef DTYPE_FLOAT_t x = data_sum[0]
@@ -1659,7 +1668,10 @@ cdef class MMatrix4x4:
             return MVector3D(x / w, y / w, z / w)
 
     cpdef MVector4D mul_MVector4D(self, MVector4D other):
-        cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] vec_mat = np.tile(np.array([other.x(), other.y(), other.z(), other.w()]), (4, 1))
+        cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] vec_mat = np.array([[other.x(), other.y(), other.z(), other.w()], 
+                                                                   [other.x(), other.y(), other.z(), other.w()], 
+                                                                   [other.x(), other.y(), other.z(), other.w()], 
+                                                                   [other.x(), other.y(), other.z(), other.w()]], dtype=np.float64)
         cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] data_sum = np.sum(vec_mat * self.__data, axis=1)
 
         cdef DTYPE_FLOAT_t x = data_sum[0]
