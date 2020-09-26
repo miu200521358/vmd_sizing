@@ -91,6 +91,11 @@ class ConvertVmdService():
 
                         # フレーム
                         bf.fno = int(float(row[1]))
+
+                        if bf.fno < 0:
+                            logger.error("%s行目のフレーム番号（2列目）に負数が設定されています", rno, decoration=MLogger.DECORATION_BOX)
+                            return False
+
                     except Exception as e:
                         logger.error("%s行目のフレーム番号の読み取りに失敗しました\nフレーム番号は半角数字のみ入力可能です。\n%s", rno, e, decoration=MLogger.DECORATION_BOX)
                         return False
@@ -139,6 +144,12 @@ class ConvertVmdService():
                                             int(float(row[56])), int(float(row[57])), int(float(row[58])), int(float(row[59])), int(float(row[60])), int(float(row[61])), \
                                             int(float(row[62])), int(float(row[63])), int(float(row[64])), int(float(row[65])), int(float(row[66])), int(float(row[67])), \
                                             int(float(row[68])), int(float(row[69])), int(float(row[70])), int(float(row[71]))]
+                        
+                        for bidx, bi in enumerate(bf.interpolation):
+                            if 0 > bi:
+                                logger.error("%s行目の補間曲線（%s列目）に負数が設定されています", rno, bidx + 9, decoration=MLogger.DECORATION_BOX)
+                                return False
+
                     except Exception as e:
                         logger.error("%s行目の補間曲線の読み取りに失敗しました\n位置は半角数字のみ入力可能です。\n%s", rno, e, decoration=MLogger.DECORATION_BOX)
                         return False
@@ -193,19 +204,23 @@ class ConvertVmdService():
 
                         # フレーム
                         mf.fno = int(float(row[1]))
+
+                        if mf.fno < 0:
+                            logger.error("%s行目のフレーム番号（2列目）に負数が設定されています", rno, decoration=MLogger.DECORATION_BOX)
+                            return False
                     except Exception as e:
                         logger.error("%s行目のフレーム番号の読み取りに失敗しました\nフレーム番号は半角数字のみ入力可能です。\n%s", rno, e, decoration=MLogger.DECORATION_BOX)
                         return False
 
                     try:
-                        if len(row) < 1 or not row[2]:
-                            logger.error("%s行目のモーフ値（3列目）が設定されていません", rno, decoration=MLogger.DECORATION_BOX)
+                        if len(row) < 2 or not row[2]:
+                            logger.error("%s行目の大きさ（3列目）が設定されていません", rno, decoration=MLogger.DECORATION_BOX)
                             return False
 
                         # 値
                         mf.ratio = float(row[2])
                     except Exception as e:
-                        logger.error("%s行目のモーフ値の読み取りに失敗しました\nフレーム番号は半角数字のみ入力可能です。\n%s", rno, e, decoration=MLogger.DECORATION_BOX)
+                        logger.error("%s行目の大きさの読み取りに失敗しました\n大きさは半角数字・符号・小数点のみ入力可能です。\n%s", rno, e, decoration=MLogger.DECORATION_BOX)
                         return False
 
                     if mf.name not in bone_motion.morphs:
@@ -255,6 +270,10 @@ class ConvertVmdService():
 
                         # フレーム
                         cf.fno = int(row[0])
+
+                        if cf.fno < 0:
+                            logger.error("%s行目のフレーム番号（1列目）に負数が設定されています", rno, decoration=MLogger.DECORATION_BOX)
+                            return False
                     except Exception as e:
                         logger.error("%s行目のフレーム番号の読み取りに失敗しました\nフレーム番号は半角数字のみ入力可能です。\n%s", rno, e, decoration=MLogger.DECORATION_BOX)
                         return False
@@ -299,6 +318,11 @@ class ConvertVmdService():
 
                         # 視野角
                         cf.angle = int(row[8])
+
+                        if cf.angle < 0:
+                            logger.error("%s行目の視野角（9列目）に負数が設定されています", rno, decoration=MLogger.DECORATION_BOX)
+                            return False
+
                     except Exception as e:
                         logger.error("%s行目の視野角の読み取りに失敗しました\n視野角は半角数字のみ入力可能です。\n%s", rno, e, decoration=MLogger.DECORATION_BOX)
                         return False
@@ -310,6 +334,10 @@ class ConvertVmdService():
 
                         # パース
                         cf.perspective = int(row[9])
+
+                        if cf.perspective not in [0, 1]:
+                            logger.error("%s行目のパース（10列目）に0, 1以外の値が設定されています", rno, decoration=MLogger.DECORATION_BOX)
+                            return False
                     except Exception as e:
                         logger.error("%s行目のパースの読み取りに失敗しました\nパースは0, 1のみ入力可能です。\n%s", rno, e, decoration=MLogger.DECORATION_BOX)
                         return False
@@ -329,6 +357,12 @@ class ConvertVmdService():
                                             int(float(row[16])), int(float(row[17])), int(float(row[18])), int(float(row[19])), int(float(row[20])), int(float(row[21])), \
                                             int(float(row[22])), int(float(row[23])), int(float(row[24])), int(float(row[25])), int(float(row[26])), int(float(row[27])), \
                                             int(float(row[28])), int(float(row[29])), int(float(row[30])), int(float(row[31])), int(float(row[32])), int(float(row[33]))]
+
+                        for cidx, ci in enumerate(cf.interpolation):
+                            if 0 > ci:
+                                logger.error("%s行目の補間曲線（%s列目）に負数が設定されています", rno, cidx + 11, decoration=MLogger.DECORATION_BOX)
+                                return False
+
                     except Exception as e:
                         logger.error("%s行目の補間曲線の読み取りに失敗しました\n位置は半角数字のみ入力可能です。\n%s", rno, e, decoration=MLogger.DECORATION_BOX)
                         return False
