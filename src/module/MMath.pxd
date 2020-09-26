@@ -104,11 +104,11 @@ cdef class MVector3D:
 
     cpdef normalize(self)
 
-    cpdef double distanceToPoint(self, v)
+    cpdef double distanceToPoint(self, MVector3D v)
 
-    cpdef MVector3D project(self, modelView, projection, viewport)
+    cpdef MVector3D project(self, MMatrix4x4 modelView, MMatrix4x4 projection, MRect viewport)
 
-    cpdef MVector3D unproject(self, modelView, projection, viewport)
+    cpdef MVector3D unproject(self, MMatrix4x4 modelView, MMatrix4x4 projection, MRect viewport)
 
     cpdef MVector4D toVector4D(self)
 
@@ -174,9 +174,9 @@ cdef class MVector3D:
 
     cpdef setZ(self, z)
 
-cdef MVector3D crossProduct_MVector3D(v1, v2)
+cdef MVector3D crossProduct_MVector3D(MVector3D v1, MVector3D v2)
 
-cdef double dotProduct_MVector3D(v1, v2)
+cdef double dotProduct_MVector3D(MVector3D v1, MVector3D v2)
 
 
 cdef class MVector4D:
@@ -250,7 +250,7 @@ cdef class MVector4D:
 
     cpdef setW(self, w)
 
-cdef double dotProduct_MVector4D(v1, v2)
+cdef double dotProduct_MVector4D(MVector4D v1, MVector4D v2)
 
 cdef class MQuaternion:
     cdef np.ndarray __data
@@ -279,7 +279,7 @@ cdef class MQuaternion:
 
     cpdef double toDegree(self)
 
-    cpdef double calcTheata(self, v)
+    cpdef double calcTheata(self, MQuaternion v)
 
     cpdef data(self)
 
@@ -301,25 +301,25 @@ cdef class MQuaternion:
 
     cpdef setScalar(self, w)
 
-cdef dotProduct_MQuaternion(v1, v2)
+cdef double dotProduct_MQuaternion(MQuaternion v1, MQuaternion v2)
 
-cdef MQuaternion fromAxisAndAngle(vec3, angle)
+cdef MQuaternion fromAxisAndAngle(MVector3D vec3, double angle)
 
-cdef MQuaternion fromAxisAndQuaternion(vec3, qq)
+cdef MQuaternion fromAxisAndQuaternion(MVector3D vec3, MQuaternion qq)
 
-cdef MQuaternion fromDirection(direction, up)
+cdef MQuaternion fromDirection(MVector3D direction, MVector3D up)
 
-cdef MQuaternion fromAxes(xAxis, yAxis, zAxis)
+cdef MQuaternion fromAxes(MVector3D xAxis, MVector3D yAxis, MVector3D zAxis)
 
-cdef MQuaternion fromRotationMatrix(rot3x3)
+cdef MQuaternion fromRotationMatrix(np.ndarray[DTYPE_FLOAT_t, ndim=2] rot3x3)
 
-cdef MQuaternion rotationTo(fromv, tov)
+cdef MQuaternion rotationTo(MVector3D fromv, MVector3D tov)
 
-cdef MQuaternion fromEulerAngles(pitch, yaw, roll)
+cdef MQuaternion fromEulerAngles(double pitch, double yaw, double roll)
 
-cdef MQuaternion nlerp(q1, q2, t)
+cdef MQuaternion nlerp(MQuaternion q1, MQuaternion q2, double t)
 
-cdef MQuaternion slerp(q1, q2, t)
+cdef MQuaternion slerp(MQuaternion q1, MQuaternion q2, double t)
 
 
 cdef class MMatrix4x4:
@@ -333,17 +333,17 @@ cdef class MMatrix4x4:
 
     cpdef rotate(self, qq)
 
-    cpdef translate(self, vec3)
+    cpdef translate(self, MVector3D vec3)
 
-    cpdef scale(self, vec3)
+    cpdef scale(self, MVector3D vec3)
 
     cpdef setToIdentity(self)
 
-    cpdef lookAt(self, eye, center, up)
+    cpdef lookAt(self, MVector3D eye, MVector3D center, MVector3D up)
 
-    cpdef perspective(self, verticalAngle, aspectRatio, nearPlane, farPlane)
+    cpdef perspective(self, double verticalAngle, double aspectRatio, double nearPlane, double farPlane)
     
-    cpdef MVector3D mapVector(self, vector)
+    cpdef MVector3D mapVector(self, MVector3D vector)
 
     cpdef MQuaternion toQuaternion(self)
     
