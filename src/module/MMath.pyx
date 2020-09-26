@@ -1283,7 +1283,7 @@ cdef MQuaternion fromAxisAndQuaternion(vec3, qq):
     return MQuaternion(c, x * s, y * s, z * s).normalized()
 
 cdef MQuaternion fromDirection(direction, up):
-    if direction.is_almost_null:
+    if direction.is_almost_null():
         return MQuaternion()
 
     zAxis = direction.normalized()
