@@ -4,20 +4,117 @@ import math
 import numpy as np
 import struct
 import _pickle as cPickle
+from libc.math cimport pi, fabs
 
-from module.OneEuroFilter import OneEuroFilter
-from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from utils import MBezierUtils # noqa
 from utils.MLogger import MLogger
+
+from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 
 logger = MLogger(__name__, level=1)
 
 
-class VmdBoneFrame():
+# OneEuroFilter
+# オリジナル：https://www.cristal.univ-lille.fr/~casiez/1euro/
+# ----------------------------------------------------------------------------
+
+cdef class LowPassFilter:
+
+    def __init__(self, alpha):
+        self.__setAlpha(alpha)
+        self.__y = -1
+        self.__s = -1
+
+    cdef __setAlpha(self, double alpha):
+        alpha = max(0.000001, min(1, alpha))
+        if alpha <= 0 or alpha > 1.0:
+            raise ValueError("alpha (%s) should be in (0.0, 1.0]" % alpha)
+        self.__alpha = alpha
+
+    def __call__(self, value: double, timestamp=-1, alpha=-1):
+        return self.c__call__(value, timestamp, alpha)
+
+    cdef double c__call__(self, double value, double timestamp, double alpha):
+        cdef double s = 0
+        if alpha >= 0:
+            self.__setAlpha(alpha)
+        if self.__y < 0:
+            s = value
+        else:
+            s = self.__alpha * value + (1.0 - self.__alpha) * self.__s
+        self.__y = value
+        self.__s = s
+        return s
+
+    cdef double lastValue(self):
+        return self.__y
+
+    # IK用処理スキップ
+    cdef double skip(self, double value):
+        self.__y = value
+        self.__s = value
+
+        return value
+
+
+cdef class OneEuroFilter:
+
+    def __init__(self, freq, mincutoff=1.0, beta=0.0, dcutoff=1.0):
+        if freq <= 0:
+            raise ValueError("freq should be >0")
+        if mincutoff <= 0:
+            raise ValueError("mincutoff should be >0")
+        if dcutoff <= 0:
+            raise ValueError("dcutoff should be >0")
+        self.__freq = freq
+        self.__mincutoff = mincutoff
+        self.__beta = beta
+        self.__dcutoff = dcutoff
+        self.__x = LowPassFilter(self.__alpha(self.__mincutoff))
+        self.__dx = LowPassFilter(self.__alpha(self.__dcutoff))
+        self.__lasttime = -1
+
+    cdef double __alpha(self, double cutoff):
+        cdef double te = 1.0 / self.__freq
+        cdef double tau = 1.0 / (2 * pi * cutoff)
+        return 1.0 / (1.0 + tau / te)
+
+    def __call__(self, x: double, timestamp=-1):
+        return self.c__call__(x, timestamp)
+
+    cdef double c__call__(self, double x, double timestamp):
+        # ---- update the sampling frequency based on timestamps
+        if self.__lasttime and timestamp:
+            self.__freq = 1.0 / (timestamp - self.__lasttime)
+        self.__lasttime = timestamp
+        # ---- estimate the current variation per second
+        cdef double prev_x = self.__x.lastValue()
+        cdef double dx = 0.0 if prev_x < 0 else (x - prev_x) * self.__freq  # FIXME: 0.0 or value?
+        cdef double edx = self.__dx(dx, timestamp, alpha=self.__alpha(self.__dcutoff))
+        # ---- use it to update the cutoff frequency
+        cdef double cutoff = self.__mincutoff + self.__beta * fabs(edx)
+        # ---- filter the given value
+        return self.__x(x, timestamp, alpha=self.__alpha(cutoff))
+
+    def skip(self, double x, timestamp=-1):
+        self.c_skip(x, timestamp)
+
+    # IK用処理スキップ
+    cdef c_skip(self, double x, str timestamp):
+        # ---- update the sampling frequency based on timestamps
+        if self.__lasttime and timestamp and self.__lasttime != timestamp:
+            self.__freq = 1.0 / (timestamp - self.__lasttime)
+        self.__lasttime = timestamp
+        cdef double prev_x = self.__x.lastValue()
+        self.__dx.skip(prev_x)
+        self.__x.skip(x)
+
+
+cdef class VmdBoneFrame:
 
     def __init__(self, fno=0):
         self.name = ''
-        self.bname = ''
+        self.bname = b''
         self.fno = fno
         self.position = MVector3D()
         self.rotation = MQuaternion()
@@ -34,7 +131,7 @@ class VmdBoneFrame():
     
     def set_name(self, name):
         self.name = name
-        self.bname = '' if not name else name.encode('cp932').decode('shift_jis').encode('shift_jis')[:15].ljust(15, b'\x00')
+        self.bname = b'' if not name else name.encode('cp932').decode('shift_jis').encode('shift_jis')[:15].ljust(15, b'\x00')
     
     def copy(self):
         bf = VmdBoneFrame(self.fno)
@@ -70,7 +167,7 @@ class VmdBoneFrame():
         fout.write(bytearray([int(min(127, max(0, x))) for x in self.interpolation]))
 
 
-class VmdMorphFrame():
+class VmdMorphFrame:
     def __init__(self, fno=0):
         self.name = ''
         self.bname = ''
@@ -92,7 +189,7 @@ class VmdMorphFrame():
         return "<VmdMorphFrame name:{0}, fno:{1}, ratio:{2}".format(self.name, self.fno, self.ratio)
 
 
-class VmdCameraFrame():
+class VmdCameraFrame:
     def __init__(self):
         self.fno = 0
         self.length = 0
@@ -118,7 +215,7 @@ class VmdCameraFrame():
         fout.write(struct.pack('b', self.perspective))
 
 
-class VmdLightFrame():
+class VmdLightFrame:
     def __init__(self):
         self.fno = 0
         self.color = MVector3D(0, 0, 0)
@@ -134,7 +231,7 @@ class VmdLightFrame():
         fout.write(struct.pack('<f', self.position.z()))
 
 
-class VmdShadowFrame():
+class VmdShadowFrame:
     def __init__(self):
         self.fno = 0
         self.type = 0
@@ -147,13 +244,14 @@ class VmdShadowFrame():
 
 
 # VmdShowIkFrame のikの中の要素
-class VmdInfoIk():
+class VmdInfoIk:
     def __init__(self, name='', onoff=0):
+        self.bname = b''
         self.name = name
         self.onoff = onoff
 
 
-class VmdShowIkFrame():
+class VmdShowIkFrame:
     def __init__(self):
         self.fno = 0
         self.show = 0
@@ -165,14 +263,15 @@ class VmdShowIkFrame():
         fout.write(struct.pack('b', self.show))
         fout.write(struct.pack('<L', len(self.ik)))
         for k in (self.ik):
-            fout.write(k.name)
-            fout.write(bytearray([0 for i in range(len(k.name), 20)]))  # IKボーン名20Byteの残りを\0で埋める
+            if not k.bname:
+                k.bname = k.name.encode('cp932').decode('shift_jis').encode('shift_jis')[:20].ljust(20, b'\x00')   # 20文字制限
+            fout.write(k.bname)
             fout.write(struct.pack('b', k.onoff))
         
 
 # https://blog.goo.ne.jp/torisu_tetosuki/e/bc9f1c4d597341b394bd02b64597499d
 # https://w.atwiki.jp/kumiho_k/pages/15.html
-class VmdMotion():
+cdef class VmdMotion:
     def __init__(self):
         self.path = ''
         self.signature = ''
@@ -219,7 +318,7 @@ class VmdMotion():
                     logger.info("-- %sフレーム目:終了(%s％)【No.%s - 全打ち - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
                     prev_sep_fno = fno // 500
     
-    def get_differ_fnos(self, data_set_no: int, bone_name_list: str, limit_degrees: float, limit_length: float):
+    def get_differ_fnos(self, data_set_no: int, bone_name_list: list, limit_degrees: float, limit_length: float):
         limit_radians = math.cos(math.radians(limit_degrees))
         fnos = [0]
         for bone_name in bone_name_list:
@@ -455,7 +554,7 @@ class VmdMotion():
                                   + [bf.rotation.toDegree() * np.sign(bf.rotation.x()) for bf in fill_bfs] \
                                   + [next_bf.rotation.toDegree() * np.sign(next_bf.rotation.x())]) - (prev_bf.rotation.toDegree() * np.sign(next_bf.rotation.x()))
             
-            logger.test("f: %s, %s, rot_values: %s", prev_bf.fno, prev_bf.name, rot_values)
+            logger.test("f: %s, %s, rot_values(): %s", prev_bf.fno, prev_bf.name, rot_values)
 
         if is_mov:
             # X ------------
@@ -467,9 +566,9 @@ class VmdMotion():
             # Z -----------
             z_values = np.array([prev_bf.position.z()] + [bf.position.z() for bf in fill_bfs] + [next_bf.position.z()]) - prev_bf.position.z()
 
-            logger.test("f: %s, %s, x_values: %s", prev_bf.fno, prev_bf.name, x_values)
-            logger.test("f: %s, %s, y_values: %s", prev_bf.fno, prev_bf.name, y_values)
-            logger.test("f: %s, %s, z_values: %s", prev_bf.fno, prev_bf.name, z_values)
+            logger.test("f: %s, %s, x_values(): %s", prev_bf.fno, prev_bf.name, x_values)
+            logger.test("f: %s, %s, y_values(): %s", prev_bf.fno, prev_bf.name, y_values)
+            logger.test("f: %s, %s, z_values(): %s", prev_bf.fno, prev_bf.name, z_values)
 
         # 結合したベジェ曲線
         joined_rot_bzs = MBezierUtils.join_value_2_bezier(fill_bfs[-1].fno, next_bf.name, rot_values, offset=offset, diff_limit=0.1) if is_rot else True

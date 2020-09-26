@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
+# 
+# cython: boundscheck=False
+# cython: wraparound=False
 #
-import math
-import numpy as np
 import quaternion # noqa
+import numpy as np
 cimport numpy as np
 cimport cython
 from libc.math cimport sin, cos, acos, atan2, asin, pi, sqrt
@@ -79,7 +81,7 @@ cdef class MVector2D:
         return self.__data
 
     def __str__(self):
-        return "MVector2D({0}, {1})".format(self.__data[0], self.__data[1])
+        return "MVector2D({0}, {1})".format(self.x(), self.y())
 
     def __lt__(self, other):
         return np.all(np.less(self.data(), other.data()))
@@ -1054,11 +1056,11 @@ cdef class MQuaternion:
             roll = 0.0
             yaw = atan2(-2.0 * (xy - zw), 1.0 - 2.0 * (yy + zz))
 
-        return MVector3D(math.degrees(pitch), math.degrees(yaw), math.degrees(roll))
+        return MVector3D(degrees(pitch), degrees(yaw), degrees(roll))
     
     # 角度に変換
     cpdef double toDegree(self):
-        return math.degrees(2 * acos(min(1, max(-1, self.scalar()))))
+        return degrees(2 * acos(min(1, max(-1, self.scalar()))))
 
     # 自分ともうひとつの値vとのtheta（変位量）を返す
     cpdef double calcTheata(self, MQuaternion v):
@@ -1250,7 +1252,7 @@ cdef MQuaternion fromAxisAndAngle(MVector3D vec3, double angle):
         y /= length
         z /= length
 
-    cdef DTYPE_FLOAT_t a = math.radians(angle / 2.0)
+    cdef DTYPE_FLOAT_t a = radians(angle / 2.0)
     cdef DTYPE_FLOAT_t s = sin(a)
     cdef DTYPE_FLOAT_t c = cos(a)
     return MQuaternion(c, x * s, y * s, z * s).normalized()
@@ -1272,7 +1274,7 @@ cdef MQuaternion fromAxisAndQuaternion(MVector3D vec3, MQuaternion qq):
     cdef DTYPE_FLOAT_t s = sin(a)
     cdef DTYPE_FLOAT_t c = cos(a)
 
-    # logger.test("scalar: %s, a: %s, c: %s, degree: %s", qq.scalar(), a, c, math.degrees(2 * math.acos(min(1, max(-1, qq.scalar())))))
+    # logger.test("scalar: %s, a: %s, c: %s, degree: %s", qq.scalar(), a, c, degrees(2 * math.acos(min(1, max(-1, qq.scalar())))))
 
     return MQuaternion(c, x * s, y * s, z * s).normalized()
 
@@ -1350,9 +1352,9 @@ cdef MQuaternion rotationTo(MVector3D fromv, MVector3D tov):
     return MQuaternion(d * 0.5, axis.x(), axis.y(), axis.z()).normalized()
 
 cdef MQuaternion fromEulerAngles(double pitch, double yaw, double roll):
-    pitch = math.radians(pitch)
-    yaw = math.radians(yaw)
-    roll = math.radians(roll)
+    pitch = radians(pitch)
+    yaw = radians(yaw)
+    roll = radians(roll)
 
     pitch *= 0.5
     yaw *= 0.5
@@ -1469,7 +1471,7 @@ cdef class MMatrix4x4:
         
     # 単位行列
     cpdef setToIdentity(self):
-        self.__data = np.eye(4)
+        self.__data = np.eye(4, dtype=np.float64)
     
     cpdef lookAt(self, MVector3D eye, MVector3D center, MVector3D up):
         cdef MVector3D forward = center - eye
@@ -1494,13 +1496,13 @@ cdef class MMatrix4x4:
         if nearPlane == farPlane or aspectRatio == 0:
             return
 
-        cdef double radians = math.radians(verticalAngle / 2)
-        cdef double sine = sin(radians)
+        cdef double rad = radians(verticalAngle / 2)
+        cdef double sine = sin(rad)
 
         if sine == 0:
             return
         
-        cdef double cotan = cos(radians) / sine
+        cdef double cotan = cos(rad) / sine
         cdef double clip = farPlane - nearPlane
 
         cdef MMatrix4x4 m = MMatrix4x4()
