@@ -39,10 +39,13 @@ cdef class MRect:
 
 cdef class MVector2D:
 
-    def __init__(self, x=0, y=0):
-        if isinstance(x, MVector2D):
+    def __init__(self, x=0.0, y=0.0):
+        if isinstance(x, float):
+            # 実数の場合
+            self.__data = np.array([x, y], dtype=np.float64)
+        elif isinstance(x, MVector2D):
             # クラスの場合
-            self.__data = x.data()
+            self.__data = np.array([x.x(), x.y()], dtype=np.float64)
         elif isinstance(x, np.ndarray):
             # arrayそのものの場合
             self.__data = np.array([x[0], x[1]], dtype=np.float64)
@@ -212,9 +215,12 @@ cdef class MVector2D:
 cdef class MVector3D:
 
     def __init__(self, x=0.0, y=0.0, z=0.0):
-        if isinstance(x, MVector3D):
+        if isinstance(x, float):
+            # 実数の場合
+            self.__data = np.array([x, y, z], dtype=np.float64)
+        elif isinstance(x, MVector3D):
             # クラスの場合
-            self.__data = x.data()
+            self.__data = np.array([x.x(), x.y(), x.z()], dtype=np.float64)
         elif isinstance(x, np.ndarray):
             # arrayそのものの場合
             self.__data = np.array([x[0], x[1], x[2]], dtype=np.float64)
@@ -475,10 +481,12 @@ cdef class MVector3D:
 
 cdef class MVector4D:
 
-    def __init__(self, x=0, y=0, z=0, w=0):
-        if isinstance(x, MVector4D):
+    def __init__(self, x=0.0, y=0.0, z=0.0, w=0.0):
+        if isinstance(x, float):
+            self.__data = np.array([x, y, z, w], dtype=np.float64)
+        elif isinstance(x, MVector4D):
             # クラスの場合
-            self.__data = x.data()
+            self.__data = np.array([x.x(), x.y(), x.z(), x.w()], dtype=np.float64)
         elif isinstance(x, np.ndarray):
             # 行列そのものの場合
             self.__data = np.array([x[0], x[1], x[2], x[3]], dtype=np.float64)
@@ -668,16 +676,18 @@ cdef class MVector4D:
 
 cdef class MQuaternion:
 
-    def __init__(self, w=1, x=0, y=0, z=0):
-        if isinstance(w, MQuaternion):
+    def __init__(self, w=1.0, x=0.0, y=0.0, z=0.0):
+        if isinstance(w, float):
+            self.__data = np.array([w, x, y, z], dtype=np.float64)
+        elif isinstance(w, MQuaternion):
             # クラスの場合
-            self.__data = w.data().components
+            self.__data = np.array([w.data().components.w, w.data().components.x, w.data().components.y, w.data().components.z], dtype=np.float64)
         elif isinstance(w, np.quaternion):
             # quaternionの場合
             self.__data = w.components
         elif isinstance(w, np.ndarray):
             # arrayそのものの場合
-            self.__data = w
+            self.__data = np.array([w[0], w[1], w[2], w[3]], dtype=np.float64)
         else:
             self.__data = np.array([w, x, y, z], dtype=np.float64)
 
@@ -685,7 +695,7 @@ cdef class MQuaternion:
         return MQuaternion(self.scalar(), self.x(), self.y(), self.z())
     
     def __str__(self):
-        return "MQuaternion({0}, {1}, {2}, {3})".format(self.data().w, self.data().x, self.data().y, self.data().z)
+        return "MQuaternion({0}, {1}, {2}, {3})".format(self.scalar(), self.x(), self.y(), self.z())
 
     def inverted(self):
         v = self.data().inverse()
@@ -1131,8 +1141,10 @@ cdef class MQuaternion:
 
 cdef class MMatrix4x4:
     
-    def __init__(self, m11=1, m12=0, m13=0, m14=0, m21=0, m22=1, m23=0, m24=0, m31=0, m32=0, m33=1, m34=0, m41=0, m42=0, m43=0, m44=1):
-        if isinstance(m11, MMatrix4x4):
+    def __init__(self, m11=1.0, m12=0.0, m13=0.0, m14=0.0, m21=0.0, m22=1.0, m23=0.0, m24=0.0, m31=0.0, m32=0.0, m33=1.0, m34=0.0, m41=0.0, m42=0.0, m43=0.0, m44=1.0):
+        if isinstance(m11, float):
+            self.__data = np.array([[m11, m12, m13, m14], [m21, m22, m23, m24], [m31, m32, m33, m34], [m41, m42, m43, m44]], dtype=np.float64)
+        elif isinstance(m11, MMatrix4x4):
             # 行列クラスの場合
             self.__data = np.array([[m11.data()[0, 0], m11.data()[0, 1], m11.data()[0, 2], m11.data()[0, 3]], \
                                     [m11.data()[1, 0], m11.data()[1, 1], m11.data()[1, 2], m11.data()[1, 3]], \
