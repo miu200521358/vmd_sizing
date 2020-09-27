@@ -72,35 +72,34 @@ cdef class ArmAvoidanceService:
         self.avoidance_options = {}
 
         for data_set_idx, data_set in enumerate(self.options.data_set_list):
-            logger.info("接触回避　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
+            if data_set_idx in self.target_data_set_idxs:
+                logger.info("接触回避　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
 
-            # 接触回避用準備
-            self.avoidance_options[(data_set_idx, "左")] = self.prepare_avoidance(data_set_idx, "左")
-            self.avoidance_options[(data_set_idx, "右")] = self.prepare_avoidance(data_set_idx, "右")
+                # 接触回避用準備
+                self.avoidance_options[(data_set_idx, "左")] = self.prepare_avoidance(data_set_idx, "左")
+                self.avoidance_options[(data_set_idx, "右")] = self.prepare_avoidance(data_set_idx, "右")
+
+        futures = []
+        with ThreadPoolExecutor(thread_name_prefix="avoidance", max_workers=self.options.max_workers) as executor:
+            for data_set_idx, data_set in enumerate(self.options.data_set_list):
+                if data_set_idx in self.target_data_set_idxs:
+                    futures.append(executor.submit(self.execute_avoidance_pool, data_set_idx, "右"))
+                    futures.append(executor.submit(self.execute_avoidance_pool, data_set_idx, "左"))
+
+        concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
+
+        for f in futures:
+            if not f.result():
+                return False
 
         for data_set_idx, data_set in enumerate(self.options.data_set_list):
-            self.execute_avoidance_pool(data_set_idx, "右")
-            self.execute_avoidance_pool(data_set_idx, "左")
-
-            if self.options.now_process_ctrl:
+            if data_set_idx in self.target_data_set_idxs and self.options.now_process_ctrl:
                 self.options.now_process += 1
                 self.options.now_process_ctrl.write(str(self.options.now_process))
 
                 proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
                 self.options.tree_process_dict[proccess_key]["接触回避"] = True
 
-        # futures = []
-        # with ThreadPoolExecutor(thread_name_prefix="avoidance", max_workers=self.options.max_workers) as executor:
-        #     for data_set_idx, data_set in enumerate(self.options.data_set_list):
-        #         futures.append(executor.submit(self.execute_avoidance_pool, data_set_idx, "右"))
-        #         futures.append(executor.submit(self.execute_avoidance_pool, data_set_idx, "左"))
-
-        # concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
-
-        # for f in futures:
-        #     if not f.result():
-        #         return False
-    
         return True
     
     # 接触回避
@@ -796,6 +795,6 @@ cdef class ArmAvoidanceService:
                     and data_set_idx not in target_data_set_idxs and data_set_idx in self.options.arm_options.avoidance_target_list:
                 # ボーンセットがあり、腕系サイジング可能で、かつまだ登録されていない場合
                 target_data_set_idxs.append(data_set_idx)
-            
+        
         return target_data_set_idxs
 

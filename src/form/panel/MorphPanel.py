@@ -51,13 +51,19 @@ class MorphPanel(BasePanel):
         self.fit()
     
     # モーフタブからモーフ置換リスト生成
-    def get_morph_list(self, set_no: int):
+    def get_morph_list(self, set_no: int, vmd_digest: str, org_model_digest: str, rep_model_digest: str):
         if set_no not in self.morph_set_dict:
             # そもそも登録がなければ何もなし
-            return []
+            return [], False
         else:
-            # あれば、そのNoのモーフ置換リスト
-            return self.morph_set_dict[set_no].get_morph_list()
+            morph_set = self.morph_set_dict[set_no]
+            if morph_set.vmd_digest == vmd_digest and morph_set.org_model_digest == org_model_digest and morph_set.rep_model_digest == rep_model_digest:
+                # あれば、そのNoのモーフ置換リスト
+                return morph_set.get_morph_list(), True
+            else:
+                logger.warning("【No.%s】モーフ置換設定後、ファイルセットが変更されたため、モーフ置換をクリアします", set_no, decoration=MLogger.DECORATION_BOX)
+                # ハッシュが一致してない場合空(設定されていた事だけ返す)
+                return [], True
 
     # モーフタブ初期化処理
     def initialize(self, event: wx.Event):

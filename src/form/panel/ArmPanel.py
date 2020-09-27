@@ -199,11 +199,20 @@ class ArmPanel(BasePanel):
         if self.arm_process_flg_avoidance.GetValue() == 0:
             return target
         
-        # 選択された剛体リストを入力欄に設定
-        for set_no, set_data in self.avoidance_set_dict.items():
-            if set_data.rep_choices:
-                target[set_no - 1] = [set_data.rep_avoidance_names[n] for n in set_data.rep_choices.GetSelections()]
-        
+        # 選択された剛体リストを入力欄に設定(ハッシュが同じ場合のみ)
+        if 1 in self.avoidance_set_dict and self.avoidance_set_dict[1].rep_choices:
+            if self.avoidance_set_dict[1].equal_hashdigest(self.frame.file_panel_ctrl.file_set):
+                target[0] = [self.avoidance_set_dict[1].rep_avoidance_names[n] for n in self.avoidance_set_dict[1].rep_choices.GetSelections()]
+            else:
+                logger.warning("【No.%s】接触回避設定後、ファイルセットが変更されたため、接触回避をクリアします", 1, decoration=MLogger.DECORATION_BOX)
+
+        for set_no in list(self.avoidance_set_dict.keys())[1:]:
+            if set_no in self.avoidance_set_dict and self.avoidance_set_dict[set_no].rep_choices:
+                if len(self.frame.multi_panel_ctrl.file_set_list) >= set_no - 1 and self.avoidance_set_dict[set_no].equal_hashdigest(self.frame.multi_panel_ctrl.file_set_list[set_no - 2]):
+                    target[set_no - 1] = [self.avoidance_set_dict[set_no].rep_avoidance_names[n] for n in self.avoidance_set_dict[set_no].rep_choices.GetSelections()]
+                else:
+                    logger.warning("【No.%s】接触回避設定後、ファイルセットが変更されたため、接触回避をクリアします", set_no, decoration=MLogger.DECORATION_BOX)
+
         return target
     
     def on_click_avoidance_target(self, event: wx.Event):

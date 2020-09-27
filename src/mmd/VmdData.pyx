@@ -1111,7 +1111,7 @@ cdef class VmdMotion:
         self.reset_interpolation_parts(target_bone_name, next_bf, after_bz, x1_idxs, y1_idxs, x2_idxs, y2_idxs)
     
     # 補間曲線のコピー
-    cdef copy_interpolation(self, VmdBoneFrame org_bf, VmdBoneFrame rep_bf, str bz_type):
+    cpdef copy_interpolation(self, VmdBoneFrame org_bf, VmdBoneFrame rep_bf, str bz_type):
         cdef list bz_x1_idxs, bz_y1_idxs, bz_x2_idxs, bz_y2_idxs
         cdef list org_interpolation = cPickle.loads(cPickle.dumps(org_bf.interpolation, -1))
 

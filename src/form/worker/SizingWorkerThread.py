@@ -45,7 +45,7 @@ class SizingWorkerThread(BaseWorkerThread):
                 now_camera_data = self.frame.camera_panel_ctrl.camera_vmd_file_ctrl.data.copy()
                 now_camera_output_vmd_path = self.frame.camera_panel_ctrl.output_camera_vmd_file_ctrl.file_ctrl.GetPath()
 
-            if self.frame.file_panel_ctrl.file_set.motion_vmd_file_ctrl.load():
+            if self.frame.file_panel_ctrl.file_set.is_loaded():
                 
                 proccess_key = "【No.1】{0}({1})".format( \
                     os.path.basename(self.frame.file_panel_ctrl.file_set.motion_vmd_file_ctrl.data.path), \
@@ -81,8 +81,10 @@ class SizingWorkerThread(BaseWorkerThread):
                 if self.frame.arm_panel_ctrl.arm_process_flg_avoidance.GetValue() > 0:
                     self.frame.file_panel_ctrl.tree_process_dict[proccess_key]["接触回避"] = False
 
-                total_process += min(1, len(self.frame.morph_panel_ctrl.get_morph_list(1)))                             # モーフ置換
-                if len(self.frame.morph_panel_ctrl.get_morph_list(1)) > 0:
+                morph_list, morph_seted = self.frame.morph_panel_ctrl.get_morph_list(1, self.frame.file_panel_ctrl.file_set.motion_vmd_file_ctrl.data.digest, \
+                    self.frame.file_panel_ctrl.file_set.org_model_file_ctrl.data.digest, self.frame.file_panel_ctrl.file_set.rep_model_file_ctrl.data.digest)   # noqa
+                if morph_seted:
+                    total_process += 1  # モーフ置換
                     self.frame.file_panel_ctrl.tree_process_dict[proccess_key]["モーフ置換"] = False
 
                 # 1件目は必ず読み込む
@@ -93,7 +95,7 @@ class SizingWorkerThread(BaseWorkerThread):
                     output_vmd_path=self.frame.file_panel_ctrl.file_set.output_vmd_file_ctrl.file_ctrl.GetPath(), \
                     detail_stance_flg=self.frame.file_panel_ctrl.file_set.org_model_file_ctrl.title_parts_ctrl.GetValue(), \
                     twist_flg=self.frame.file_panel_ctrl.file_set.rep_model_file_ctrl.title_parts_ctrl.GetValue(), \
-                    morph_list=self.frame.morph_panel_ctrl.get_morph_list(1), \
+                    morph_list=morph_list, \
                     camera_org_model=camera_org_model, \
                     camera_offset_y=camera_offset_y, \
                     selected_stance_details=self.frame.file_panel_ctrl.file_set.get_selected_stance_details()
@@ -129,11 +131,12 @@ class SizingWorkerThread(BaseWorkerThread):
                     if self.frame.arm_panel_ctrl.arm_process_flg_avoidance.GetValue() > 0:
                         self.frame.file_panel_ctrl.tree_process_dict[proccess_key]["接触回避"] = False
 
-                    total_process += min(1, len(self.frame.morph_panel_ctrl.get_morph_list(file_set.set_no)))   # モーフ置換
-
-                    if len(self.frame.morph_panel_ctrl.get_morph_list(file_set.set_no)) > 0:
+                    morph_list, morph_seted = self.frame.morph_panel_ctrl.get_morph_list(file_set.set_no, self.frame.file_panel_ctrl.file_set.motion_vmd_file_ctrl.data.digest, \
+                        self.frame.file_panel_ctrl.file_set.org_model_file_ctrl.data.digest, self.frame.file_panel_ctrl.file_set.rep_model_file_ctrl.data.digest)   # noqa
+                    if morph_seted:
+                        total_process += 1  # モーフ置換
                         self.frame.file_panel_ctrl.tree_process_dict[proccess_key]["モーフ置換"] = False
-                    
+
                     camera_offset_y = 0
                     camera_org_model = file_set.org_model_file_ctrl.data
                     if multi_idx + 2 in self.frame.camera_panel_ctrl.camera_set_dict:
@@ -149,7 +152,7 @@ class SizingWorkerThread(BaseWorkerThread):
                         output_vmd_path=file_set.output_vmd_file_ctrl.file_ctrl.GetPath(), \
                         detail_stance_flg=file_set.org_model_file_ctrl.title_parts_ctrl.GetValue(), \
                         twist_flg=file_set.rep_model_file_ctrl.title_parts_ctrl.GetValue(), \
-                        morph_list=self.frame.morph_panel_ctrl.get_morph_list(file_set.set_no), \
+                        morph_list=morph_list, \
                         camera_org_model=camera_org_model, \
                         camera_offset_y=camera_offset_y, \
                         selected_stance_details=file_set.get_selected_stance_details()
