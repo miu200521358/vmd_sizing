@@ -92,19 +92,6 @@ class ConvertSmoothService():
         for f in futures:
             if not f.result():
                 return False
-
-        # 処理回数が3回以上の場合、フィルタをかける
-        if self.options.loop_cnt >= 3:
-            futures = []
-            with ThreadPoolExecutor(thread_name_prefix="filter", max_workers=self.options.max_workers) as executor:
-                for bone_name in self.options.motion.bones.keys():
-                    if bone_name in self.options.model.bones and bone_name in self.options.bone_list:
-                        futures.append(executor.submit(self.fitering, bone_name))
-            concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
-
-            for f in futures:
-                if not f.result():
-                    return False
         
         # 処理回数が2回以上の場合、不要キー削除
         if self.options.loop_cnt >= 2:
@@ -112,7 +99,7 @@ class ConvertSmoothService():
             with ThreadPoolExecutor(thread_name_prefix="remove", max_workers=self.options.max_workers) as executor:
                 for bone_name in self.options.motion.bones.keys():
                     if bone_name in self.options.model.bones and bone_name in self.options.bone_list:
-                        futures.append(executor.submit(self.remove_unnecessary_bf, bone_name))
+                        futures.append(executor.submit(self.remove_filterd_bf, bone_name))
             concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
             for f in futures:
@@ -122,14 +109,23 @@ class ConvertSmoothService():
         return True
     
     # 不要キー削除処理
-    def remove_unnecessary_bf(self, bone_name: str):
+    def remove_filterd_bf(self, bone_name: str):
         try:
             logger.copy(self.options)
 
-            logger.info("【不要キー削除】%s 開始", bone_name)
-            self.options.motion.remove_unnecessary_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
-                                                      self.options.model.bones[bone_name].getTranslatable(), offset=(self.options.loop_cnt - 2))
-            logger.info("【不要キー削除】%s 終了", bone_name)
+            for n in range(1, self.options.loop_cnt):
+                # 処理回数が3回以上の場合、フィルタをかける
+                if self.options.loop_cnt > 2:
+                    logger.info("【フィルタリング%s回目】%s 開始", n - 1, bone_name)
+                    self.options.motion.smooth_filter_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
+                                                         self.options.model.bones[bone_name].getTranslatable(), \
+                                                         config={"freq": 30, "mincutoff": 0.1, "beta": 0.1, "dcutoff": 1})
+                    logger.info("【フィルタリング%s回目】%s 終了", n - 1, bone_name)
+                  
+                logger.info("【不要キー削除%s回目】%s 開始", n, bone_name)
+                self.options.motion.remove_unnecessary_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
+                                                          self.options.model.bones[bone_name].getTranslatable(), offset=0)
+                logger.info("【不要キー削除%s回目】%s 終了", n, bone_name)
 
             return True
         except SizingException as se:
@@ -139,27 +135,6 @@ class ConvertSmoothService():
             logger.error("スムージング処理が意図せぬエラーで終了しました。", e)
             return False
     
-    # フィルタリング処理
-    def fitering(self, bone_name: str):
-        try:
-            logger.copy(self.options)
-
-            for n in range(1, self.options.loop_cnt - 1):
-                logger.info("【フィルタリング%s回目】%s 開始", n, bone_name)
-                self.options.motion.smooth_filter_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
-                                                     self.options.model.bones[bone_name].getTranslatable(), \
-                                                     config={"freq": 30, "mincutoff": 0.1, "beta": 0.1, "dcutoff": 1})
-
-            logger.info("【フィルタリング】%s 終了", bone_name)
-
-            return True
-        except SizingException as se:
-            logger.error("スムージング処理が処理できないデータで終了しました。\n\n%s", se.message)
-            return False
-        except Exception as e:
-            logger.error("スムージング処理が意図せぬエラーで終了しました。", e)
-            return False
-        
     # 線形補間で全打ち
     def prepare_linear(self, bone_name: str):
         try:

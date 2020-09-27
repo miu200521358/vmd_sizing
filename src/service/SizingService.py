@@ -130,7 +130,6 @@ class SizingService():
                     Path(data_set.output_vmd_path).resolve(True)
 
                     logger.info("【No.%s】 出力終了: %s", (data_set_idx + 1), os.path.basename(data_set.output_vmd_path), decoration=MLogger.DECORATION_BOX, title="サイジング成功")
-
                 except FileNotFoundError as fe:
                     logger.error("【No.%s】出力VMDファイルが正常に作成されなかったようです。\nパスを確認してください。%s\n\n%s", (data_set_idx + 1), data_set.output_vmd_path, fe, decoration=MLogger.DECORATION_BOX)
             
@@ -147,6 +146,9 @@ class SizingService():
                     logger.info("カメラ出力終了: %s", os.path.basename(data_set.output_vmd_path), decoration=MLogger.DECORATION_BOX, title="サイジング成功")
                 except FileNotFoundError as fe:
                     logger.error("カメラ出力VMDファイルが正常に作成されなかったようです。\nパスを確認してください。%s\n\n%s", self.options.camera_output_vmd_path, fe, decoration=MLogger.DECORATION_BOX)
+
+            if int(self.options.total_process) != int(self.options.now_process):
+                logger.warning("一部処理がスキップされました。\n画面左下の進捗数をクリックすると、スキップされた処理がグレーで表示されています。", decoration=MLogger.DECORATION_BOX)
 
             return True
         except MKilledException:

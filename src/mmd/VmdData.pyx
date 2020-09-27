@@ -785,7 +785,6 @@ cdef class VmdMotion:
             else:
                 # キーの結合に失敗して、かつ変曲点がない場合、前回結合できたキーフレの次に置き換える
                 logger.debug("キーの結合に失敗して、かつ変曲点がない場合")
-                last_fno += 1
                 is_inflection = True
 
             if fno // 100 > prev_sep_fno and fnos[-1] > 0:
@@ -817,6 +816,8 @@ cdef class VmdMotion:
 
                 # 開始キーフレは、変曲点までずらす
                 start_fno = last_fno + (0 if last_fno > start_fno else 1)
+                # 最終結合キーフレを変曲点までずらす
+                last_fno = start_fno
                 # fnoを変曲点まで戻す
                 fno = start_fno
 
@@ -842,7 +843,7 @@ cdef class VmdMotion:
             for f in range(1, fnos[-1] + 1):
                 if f in self.bones[bone_name]:
                     del self.bones[bone_name][f]
-        
+
         if r_start_fno < 0 and r_end_fno < 0:
             # 範囲指定がない場合、全範囲
             active_fnos = self.get_bone_fnos(bone_name, is_key=True)
@@ -850,8 +851,13 @@ cdef class VmdMotion:
             # 範囲指定がある場合はその範囲内だけ
             active_fnos = self.get_bone_fnos(bone_name, start_fno=r_start_fno, end_fno=r_end_fno, is_key=True)
 
+        for fno in range(fnos[-1]):
+            if fno in self.bones[bone_name] and fno not in active_fnos:
+                # 最後に物理削除
+                del self.bones[bone_name][fno]
+            
         logger.debug("remove_unnecessary_bf after: %s, %s, all: %s", bone_name, active_fnos, len(fnos))
-    
+
     # 補間曲線分割ありで登録
     def regist_bf(self, bf: VmdBoneFrame, bone_name: str, fno: int, copy_interpolation=False):
         self.c_regist_bf(bf, bone_name, fno, copy_interpolation)
