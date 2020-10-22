@@ -227,6 +227,19 @@
             ]
         },
         {
+            "name": "exec_supporter_gui",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/../motion_supporter/src/executor.py",
+            "console": "integratedTerminal",
+            "pythonPath": "${command:python.interpreterPath}",
+            "stopOnEntry": false,
+            "args": [
+                "--verbose", "10",
+                "--out_log", "1",
+            ]
+        },
+        {
             "name": "exec_thread",
             "type": "python",
             "request": "launch",

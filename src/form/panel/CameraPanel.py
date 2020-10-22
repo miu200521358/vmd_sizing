@@ -7,6 +7,7 @@ from form.panel.BasePanel import BasePanel
 from form.parts.SizingFileSet import SizingFileSet
 from form.parts.BaseFilePickerCtrl import BaseFilePickerCtrl
 from form.parts.HistoryFilePickerCtrl import HistoryFilePickerCtrl
+from form.parts.FloatSliderCtrl import FloatSliderCtrl
 from utils import MFileUtils
 from utils.MLogger import MLogger # noqa
 
@@ -41,6 +42,26 @@ class CameraPanel(BasePanel):
                                                               is_aster=False, is_save=True, set_no=1)
         self.header_sizer.Add(self.output_camera_vmd_file_ctrl.sizer, 1, wx.EXPAND, 0)
 
+        # カメラ距離調整スライダー
+        self.camera_length_sizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.camera_length_txt = wx.StaticText(self.header_panel, wx.ID_ANY, u"距離調整可動範囲", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.camera_length_txt.SetToolTip(u"カメラの距離の調整範囲を限定したい場合、指定して下さい。\n例えば「2」の場合、オリジナルカメラの「1/2」倍から「2」倍の範囲内でのみ距離を調整します。" \
+                                          + "\nデフォルトの「5」だと、可動範囲無制限で「モデルの映り具合が同じになるように」最大限調整します。")
+        self.camera_length_txt.Wrap(-1)
+        self.camera_length_sizer.Add(self.camera_length_txt, 0, wx.ALL, 5)
+
+        self.camera_length_label = wx.StaticText(self.header_panel, wx.ID_ANY, u"（5）", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.camera_length_label.SetToolTip(u"現在指定されているカメラ距離の可動範囲です。")
+        self.camera_length_label.Wrap(-1)
+        self.camera_length_sizer.Add(self.camera_length_label, 0, wx.ALL, 5)
+
+        self.camera_length_slider = FloatSliderCtrl(self.header_panel, wx.ID_ANY, 5, 1, 5, 0.01, self.camera_length_label, wx.DefaultPosition, wx.DefaultSize, wx.SL_HORIZONTAL)
+        self.camera_length_slider.Bind(wx.EVT_SCROLL_CHANGED, self.set_output_vmd_path)
+        self.camera_length_sizer.Add(self.camera_length_slider, 1, wx.ALL | wx.EXPAND, 5)
+
+        self.header_sizer.Add(self.camera_length_sizer, 0, wx.ALL | wx.EXPAND, 5)
+
         self.header_panel.SetSizer(self.header_sizer)
         self.header_panel.Layout()
         self.sizer.Add(self.header_panel, 0, wx.EXPAND | wx.ALL, 5)
@@ -60,6 +81,10 @@ class CameraPanel(BasePanel):
         self.sizer.Add(self.scrolled_window, 1, wx.ALL | wx.EXPAND | wx.FIXED_MINSIZE, 5)
         self.sizer.Layout()
         self.fit()
+
+    def set_output_vmd_path(self, event, is_force=False):
+        # カメラ出力パスを強制的に変更する
+        self.header_panel.set_output_vmd_path(event, True)
     
     # カメラタブからカメラリスト生成
     def get_camera_list(self, set_no: int):
@@ -139,7 +164,8 @@ class CameraHeaderPanel(wx.Panel):
         output_camera_vmd_path = MFileUtils.get_output_camera_vmd_path(
             self.parent.camera_vmd_file_ctrl.file_ctrl.GetPath(),
             self.frame.file_panel_ctrl.file_set.rep_model_file_ctrl.file_ctrl.GetPath(),
-            self.parent.output_camera_vmd_file_ctrl.file_ctrl.GetPath(), is_force)
+            self.parent.output_camera_vmd_file_ctrl.file_ctrl.GetPath(),
+            self.parent.camera_length_slider.GetValue(), is_force)
 
         self.parent.output_camera_vmd_file_ctrl.file_ctrl.SetPath(output_camera_vmd_path)
 

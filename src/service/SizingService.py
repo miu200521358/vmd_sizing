@@ -75,8 +75,8 @@ class SizingService():
                                         arm_check_skip=self.options.arm_options.arm_check_skip_flg) # noqa
 
             if self.options.camera_motion:
-                service_data_txt = "{service_data_txt}カメラ: {camera}\n".format(service_data_txt=service_data_txt,
-                                        camera=os.path.basename(self.options.camera_motion.path)) # noqa
+                service_data_txt = "{service_data_txt}カメラ: {camera}({camera_length})\n".format(service_data_txt=service_data_txt,
+                                        camera=os.path.basename(self.options.camera_motion.path), camera_length=self.options.camera_length) # noqa
 
             service_data_txt = "{service_data_txt}------------------------".format(service_data_txt=service_data_txt) # noqa
 

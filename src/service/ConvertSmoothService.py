@@ -115,11 +115,11 @@ class ConvertSmoothService():
 
             for n in range(1, self.options.loop_cnt):
                 # 処理回数が3回以上の場合、フィルタをかける
-                if self.options.loop_cnt > 2:
+                if self.options.loop_cnt > 2 and n > 2:
                     logger.info("【フィルタリング%s回目】%s 開始", n - 1, bone_name)
                     self.options.motion.smooth_filter_bf(0, bone_name, self.options.model.bones[bone_name].getRotatable(), \
                                                          self.options.model.bones[bone_name].getTranslatable(), \
-                                                         config={"freq": 30, "mincutoff": 0.1, "beta": 0.1, "dcutoff": 1})
+                                                         config={"freq": 30, "mincutoff": 1, "beta": 1, "dcutoff": 1})
                     logger.info("【フィルタリング%s回目】%s 終了", n - 1, bone_name)
                   
                 logger.info("【不要キー削除%s回目】%s 開始", n, bone_name)
@@ -142,8 +142,8 @@ class ConvertSmoothService():
 
             logger.info("【スムージング1回目】%s 開始", bone_name)
 
-            # 各ボーンのbfを全打ち
-            self.options.motion.regist_full_bf(1, [bone_name], offset=1)
+            # 各ボーンのbfを全打ち(スムージングが複数回数の場合、キー自体は無効のまま)
+            self.options.motion.regist_full_bf(1, [bone_name], offset=1, is_key=(self.options.loop_cnt <= 1))
             
             logger.info("【スムージング1回目】%s 終了", bone_name)
 

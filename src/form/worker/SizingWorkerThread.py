@@ -185,6 +185,7 @@ class SizingWorkerThread(BaseWorkerThread):
                 ), \
                 camera_motion=now_camera_data, \
                 camera_output_vmd_path=now_camera_output_vmd_path, \
+                camera_length=self.frame.camera_panel_ctrl.camera_length_slider.GetValue(), \
                 monitor=self.frame.file_panel_ctrl.console_ctrl, \
                 is_file=False, \
                 outout_datetime=logger.outout_datetime, \

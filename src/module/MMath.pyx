@@ -1067,10 +1067,12 @@ cdef class MQuaternion:
 
     # 自分ともうひとつの値vとのtheta（変位量）を返す
     cpdef double calcTheata(self, MQuaternion v):
-        cdef double dot = MQuaternion.dotProduct(self.normalized(), v.normalized())
-        cdef double theta = acos(min(1, max(-1, dot)))
-        return theta
-    
+        return (1 - MQuaternion.dotProduct(self.normalized(), v.normalized()))
+        # cdef double dot = MQuaternion.dotProduct(self.normalized(), v.normalized())
+        # cdef double angle = acos(min(1, max(-1, dot)))
+        # cdef double sinOfAngle = sin(angle)
+        # return sinOfAngle
+
     @classmethod
     def dotProduct(cls, v1, v2):
         return dotProduct_MQuaternion(v1, v2)

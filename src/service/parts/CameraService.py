@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 import numpy as np
+import math
 
 from mmd.PmxData import PmxModel, Bone # noqa
 from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
@@ -63,7 +64,8 @@ class CameraService():
                 
                 # カメラサイジング実行
                 self.execute_rep_camera(fno, cf, org_inner_global_poses, org_inner_square_poses, rep_inner_global_poses, ratio, nearest_data_set_idx, nearest_bone_name, \
-                                        left_data_set_idx, left_bone_name, right_data_set_idx, right_bone_name, top_data_set_idx, top_bone_name, bottom_data_set_idx, bottom_bone_name)
+                                        left_data_set_idx, left_bone_name, right_data_set_idx, right_bone_name, top_data_set_idx, top_bone_name, bottom_data_set_idx, bottom_bone_name, \
+                                        self.options.camera_length)
 
                 prev_fno = fno
 
@@ -87,7 +89,7 @@ class CameraService():
     # 変換先モデル用カメラ作成
     def execute_rep_camera(self, fno: int, cf: VmdCameraFrame, org_inner_global_poses: dict, org_inner_square_poses: dict, rep_inner_global_poses: dict, \
                            ratio: float, nearest_data_set_idx: int, nearest_bone_name: str, left_data_set_idx: int, left_bone_name: str, right_data_set_idx: int, right_bone_name: str, \
-                           top_data_set_idx: int, top_bone_name: str, bottom_data_set_idx: int, bottom_bone_name: str):
+                           top_data_set_idx: int, top_bone_name: str, bottom_data_set_idx: int, bottom_bone_name: str, camera_length: float):
 
         # ----------------
         # 画面内に映ってるボーンINDEXの中央値を仮の中央座標とする
@@ -131,7 +133,9 @@ class CameraService():
         cf.position = camera_length_origin
 
         # カメラの距離を再設定
-        cf.length = cf.length * ratio
+        # 可動範囲内に収める（2020/10/22）
+        limit_ratio = min(camera_length, max(1 / camera_length, ratio)) if camera_length < 5 else ratio
+        cf.length = cf.length * limit_ratio
 
         offset_length = 0
         offset_angle = 0
@@ -179,7 +183,7 @@ class CameraService():
                 cnt += 1
 
         logger.info("%sフレーム目 縮尺比率: %s, 注視点: %s-%s, 上辺: %s-%s, 下辺: %s-%s, 座標: %s, 距離: %s, 視野角: %s", \
-                    cf.fno, round(ratio, 5), (nearest_data_set_idx + 1), nearest_bone_name.replace("実体", ""), \
+                    cf.fno, round(limit_ratio, 5), (nearest_data_set_idx + 1), nearest_bone_name.replace("実体", ""), \
                     (top_data_set_idx + 1), top_bone_name.replace("実体", ""), (bottom_data_set_idx + 1), bottom_bone_name.replace("実体", ""), \
                     org_nearest_relative_vec.to_log(), round(offset_length, 5), offset_angle)
     

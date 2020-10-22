@@ -7,7 +7,7 @@ from module.MMath cimport MRect, MVector2D, MVector3D, MVector4D, MQuaternion, M
 
 cdef double calc_catmull_rom_one_point(double x, double v0, double v1, double v2, double v3) except? -1
 
-cdef np.ndarray calc_value_from_catmullrom(str bone_name, list fnos, list values)
+cpdef np.ndarray calc_value_from_catmullrom(str bone_name, list fnos, list values)
 
 cdef bint fit_bezier_mmd(list bzs)
 

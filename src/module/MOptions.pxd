@@ -31,6 +31,7 @@ cdef class MOptions():
     cdef public MArmProcessOptions arm_options
     cdef public VmdMotion camera_motion
     cdef public str camera_output_vmd_path
+    cdef public float camera_length
     cdef public object monitor
     cdef public bint is_file
     cdef public str outout_datetime

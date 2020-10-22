@@ -57,7 +57,7 @@ cdef class VmdMotion:
     cdef public list showiks
     cdef public str digest
 
-    cdef c_regist_full_bf(self, int data_set_no, list bone_name_list, int offset)
+    cdef c_regist_full_bf(self, int data_set_no, list bone_name_list, int offset, bint is_key)
 
     cdef list c_get_differ_fnos(self, int data_set_no, list bone_name_list, double limit_degrees, double limit_length)
 

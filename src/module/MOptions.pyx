@@ -21,7 +21,7 @@ logger = MLogger(__name__)
 cdef class MOptions():
 
     def __init__(self, version_name, logging_level, max_workers, data_set_list, arm_options, \
-                 camera_motion, camera_output_vmd_path, monitor, is_file, outout_datetime, total_process, now_process, total_process_ctrl, now_process_ctrl, tree_process_dict):
+                 camera_motion, camera_output_vmd_path, camera_length, monitor, is_file, outout_datetime, total_process, now_process, total_process_ctrl, now_process_ctrl, tree_process_dict):
         self.version_name = version_name
         self.logging_level = logging_level
         self.max_workers = max_workers
@@ -29,6 +29,7 @@ cdef class MOptions():
         self.arm_options = arm_options
         self.camera_motion = camera_motion
         self.camera_output_vmd_path = camera_output_vmd_path
+        self.camera_length = camera_length
         self.monitor = monitor
         self.is_file = is_file
         self.outout_datetime = outout_datetime
