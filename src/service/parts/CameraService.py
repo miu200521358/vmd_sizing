@@ -241,11 +241,11 @@ class CameraService():
 
         # 画面端ボーンを計算する（体幹が取れている場合、体幹ベースで画面端を取る。体幹ベースは少し離れていても対象とする）
         if len(org_trunk_inner_square_poses.keys()) > 0:
-            (top_data_set_idx, top_bone_name), (bottom_data_set_idx, bottom_bone_name) = self.calc_top_botom_index(fno, cf, org_trunk_inner_square_poses, 0, 0.1)
+            (top_data_set_idx, top_bone_name), (bottom_data_set_idx, bottom_bone_name) = self.calc_top_botom_index(fno, cf, org_trunk_inner_square_poses, org_inner_global_poses, 0, 0.1)
         else:
-            (top_data_set_idx, top_bone_name), (bottom_data_set_idx, bottom_bone_name) = self.calc_top_botom_index(fno, cf, org_inner_square_poses, 0, 0.1)
+            (top_data_set_idx, top_bone_name), (bottom_data_set_idx, bottom_bone_name) = self.calc_top_botom_index(fno, cf, org_inner_square_poses, org_inner_global_poses, 0, 0.1)
 
-        (left_data_set_idx, left_bone_name), (right_data_set_idx, right_bone_name) = self.calc_left_right_index(fno, cf, org_inner_square_poses, 0, 0.1)
+        (left_data_set_idx, left_bone_name), (right_data_set_idx, right_bone_name) = self.calc_left_right_index(fno, cf, org_inner_square_poses, org_inner_global_poses, 0, 0.1)
         
         org_top_diff = rep_top_diff = org_bottom_diff = rep_bottom_diff = 0
 
@@ -327,7 +327,8 @@ class CameraService():
         return inner_global_poses, inner_square_poses
 
     # 画面端に最も近いINDEXを返す
-    def calc_top_botom_index(self, fno: int, cf: VmdCameraFrame, all_square_poses: dict, x_offset: float, y_offset: float):
+    def calc_top_botom_index(self, fno: int, cf: VmdCameraFrame, all_square_poses: dict, org_inner_global_poses: dict, x_offset: float, y_offset: float):
+        square_keys = list(all_square_poses.keys())
         square_poses = np.array(list(all_square_poses.values()))
 
         if len(square_poses) == 0:
@@ -344,35 +345,61 @@ class CameraService():
             return (-1, ""), (-1, "")
         
         y_indexes = np.argsort(square_poses[refrected_indexes][:, 1])
+        logger.debug("f: %s, y_indexes: %s", fno, y_indexes)
+
         # 画面上端(Y最小)
         top_edge_index = refrected_indexes[0][y_indexes[0]]
         top_edge_pos = square_poses[top_edge_index]
-        for yi in y_indexes:
-            if square_poses[yi][1] > square_poses[refrected_indexes[0][y_indexes[0]]][1] + 0.2:
-                # 上端から画面0.2の距離までなめたら終了
-                break
-
-            if square_poses[yi][2] < top_edge_pos[2]:
-                # より前にある場合、そちらを採用
-                top_edge_pos = square_poses[yi]
-                top_edge_index = yi
+        top_edge_key = square_keys[top_edge_index]
+        top_edge_global_pos = org_inner_global_poses[top_edge_key]
 
         # 画面下端(Y最大)
         bottom_edge_index = refrected_indexes[0][y_indexes[-1]]
         bottom_edge_pos = square_poses[bottom_edge_index]
+        bottom_edge_key = square_keys[bottom_edge_index]
+        bottom_edge_global_pos = org_inner_global_poses[bottom_edge_key]
+
+        # 上下のグローバル距離
+        global_distance = MVector3D(top_edge_global_pos).distanceToPoint(MVector3D(bottom_edge_global_pos)) / 10
+
+        for yi in y_indexes:
+            if square_poses[yi][1] > square_poses[refrected_indexes[0][y_indexes[0]]][1] + 0.1:
+                # 上端から画面0.2の距離までなめたら終了
+                logger.debug("f: %s, 画面上端 break: yi: %s, top: %s", fno, yi, square_poses[refrected_indexes[0][y_indexes[0]]][1])
+                break
+
+            logger.debug("f: %s, 画面 check: square_poses[yi][1]: %s, square_poses[yi][2]: %s, top_edge_pos[1]: %s, top_edge_pos[2]: %s", \
+                fno, square_poses[yi][1], square_poses[yi][2], top_edge_pos[1], top_edge_pos[2])
+
+            top_target_key = (int(square_keys[yi][0]), str(square_keys[yi][1]))
+            top_target_global_pos = org_inner_global_poses[top_target_key]
+
+            if top_target_global_pos[2] + global_distance < top_edge_global_pos[2]:
+                # より前にある場合、そちらを採用
+                top_edge_pos = square_poses[yi]
+                top_edge_index = yi
+
         for yi in reversed(y_indexes):
             if square_poses[yi][1] < square_poses[refrected_indexes[0][y_indexes[-1]]][1] - 0.2:
                 # 下端から画面0.2の距離までなめたら終了
+                logger.debug("f: %s, 画面下端 break: yi: %s, top: %s", fno, yi, square_poses[refrected_indexes[0][y_indexes[-1]]][1])
                 break
 
-            if square_poses[yi][2] < bottom_edge_pos[2]:
+            logger.debug("f: %s, 画面 check: square_poses[yi][1]: %s, square_poses[yi][2]: %s, top_edge_pos[1]: %s, top_edge_pos[2]: %s", \
+                fno, square_poses[yi][1], square_poses[yi][2], bottom_edge_pos[1], bottom_edge_pos[2])
+
+            bottom_target_key = (int(square_keys[yi][0]), str(square_keys[yi][1]))
+            bottom_target_global_pos = org_inner_global_poses[bottom_target_key]
+
+            if bottom_target_global_pos[2] + global_distance < bottom_edge_global_pos[2]:
                 # より前にある場合、そちらを採用
                 bottom_edge_pos = square_poses[yi]
                 bottom_edge_index = yi
 
         return list(all_square_poses.keys())[top_edge_index], list(all_square_poses.keys())[bottom_edge_index]
 
-    def calc_left_right_index(self, fno: int, cf: VmdCameraFrame, all_square_poses: dict, x_offset: float, y_offset: float):
+    def calc_left_right_index(self, fno: int, cf: VmdCameraFrame, all_square_poses: dict, org_inner_global_poses: dict, x_offset: float, y_offset: float):
+        square_keys = list(all_square_poses.keys())
         square_poses = np.array(list(all_square_poses.values()))
 
         if len(square_poses) == 0:
@@ -389,28 +416,38 @@ class CameraService():
             return (-1, None), (-1, None)
         
         x_indexes = np.argsort(square_poses[refrected_indexes][:, 0])
+        
         # 画面左端(X最小)
         left_edge_index = refrected_indexes[0][x_indexes[0]]
         left_edge_pos = square_poses[left_edge_index]
+        left_edge_key = square_keys[left_edge_index]
+        left_edge_global_pos = org_inner_global_poses[left_edge_key]
+
+        # 画面右端(X最大)
+        right_edge_index = refrected_indexes[0][x_indexes[-1]]
+        right_edge_pos = square_poses[right_edge_index]
+        right_edge_key = square_keys[right_edge_index]
+        right_edge_global_pos = org_inner_global_poses[right_edge_key]
+
+        # 左右のグローバル距離
+        global_distance = MVector3D(left_edge_global_pos).distanceToPoint(MVector3D(right_edge_global_pos)) / 10
+
         for xi in x_indexes:
             if square_poses[xi][0] > square_poses[refrected_indexes[0][x_indexes[0]]][0] + 0.1:
                 # 左端から画面1/10の距離までなめたら終了
                 break
 
-            if square_poses[xi][2] < left_edge_pos[2]:
+            if square_poses[xi][2] + global_distance < left_edge_pos[2]:
                 # より前にある場合、そちらを採用
                 left_edge_pos = square_poses[xi]
                 left_edge_index = xi
 
-        # 画面右端(X最大)
-        right_edge_index = refrected_indexes[0][x_indexes[-1]]
-        right_edge_pos = square_poses[right_edge_index]
         for xi in reversed(x_indexes):
             if square_poses[xi][0] < square_poses[refrected_indexes[0][x_indexes[-1]]][0] - 0.1:
                 # 右端から画面1/10の距離までなめたら終了
                 break
 
-            if square_poses[xi][2] < right_edge_pos[2]:
+            if square_poses[xi][2] + global_distance < right_edge_pos[2]:
                 # より前にある場合、そちらを採用
                 right_edge_pos = square_poses[xi]
                 right_edge_index = xi
