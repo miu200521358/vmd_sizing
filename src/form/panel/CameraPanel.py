@@ -206,7 +206,9 @@ class CameraSet():
 
         # オフセットYコントロール
         self.camera_offset_y_ctrl = wx.SpinCtrlDouble(self.window, id=wx.ID_ANY, size=wx.Size(100, -1), value="0.0", min=-1000, max=1000, initial=0.0, inc=0.1)
-        self.camera_offset_y_ctrl.SetToolTip(u"カメラに映す変換先モデルの全長を調整するオフセット値を指定できます。")
+        self.camera_offset_y_ctrl.SetToolTip(u"カメラに映す変換先モデルの全長を調整するオフセット値を指定できます。\n" \
+                                             + "髪飾り等、「頭頂部より上にあるオブジェクトを除外したい」場合、マイナス値を指定して下さい。\n" \
+                                             + "アホ毛等、「頭頂部より上にあるオブジェクトを含めたい」場合、プラス値を指定して下さい。")
         self.camera_offset_y_ctrl.Bind(wx.EVT_MOUSEWHEEL, lambda event: self.frame.on_wheel_spin_ctrl(event, 0.2))
         self.offset_sizer.Add(self.camera_offset_y_ctrl, 0, wx.ALL, 5)
 

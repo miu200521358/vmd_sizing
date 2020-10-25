@@ -46,6 +46,7 @@ class CameraService():
             
             prev_fno = -1
             for fno in sorted(self.options.camera_motion.cameras.keys()):
+                past_cf = VmdCameraFrame()
                 cf = self.options.camera_motion.cameras[fno]
                 # 1キーフレごとに見ていく（同一キーフレの可能性があるので、並列化不可）
                 if prev_fno >= 0:
@@ -63,7 +64,7 @@ class CameraService():
                     = self.calc_camera_ratio(fno, cf)
                 
                 # カメラサイジング実行
-                self.execute_rep_camera(fno, cf, org_inner_global_poses, org_inner_square_poses, rep_inner_global_poses, ratio, nearest_data_set_idx, nearest_bone_name, \
+                self.execute_rep_camera(fno, cf, past_cf, org_inner_global_poses, org_inner_square_poses, rep_inner_global_poses, ratio, nearest_data_set_idx, nearest_bone_name, \
                                         left_data_set_idx, left_bone_name, right_data_set_idx, right_bone_name, top_data_set_idx, top_bone_name, bottom_data_set_idx, bottom_bone_name, \
                                         self.options.camera_length)
 
@@ -87,15 +88,14 @@ class CameraService():
             raise e
     
     # 変換先モデル用カメラ作成
-    def execute_rep_camera(self, fno: int, cf: VmdCameraFrame, org_inner_global_poses: dict, org_inner_square_poses: dict, rep_inner_global_poses: dict, \
+    def execute_rep_camera(self, fno: int, cf: VmdCameraFrame, past_cf: VmdCameraFrame, org_inner_global_poses: dict, org_inner_square_poses: dict, rep_inner_global_poses: dict, \
                            ratio: float, nearest_data_set_idx: int, nearest_bone_name: str, left_data_set_idx: int, left_bone_name: str, right_data_set_idx: int, right_bone_name: str, \
                            top_data_set_idx: int, top_bone_name: str, bottom_data_set_idx: int, bottom_bone_name: str, camera_length: float):
 
-        # ----------------
-        # 画面内に映ってるボーンINDEXの中央値を仮の中央座標とする
-        org_mean_vec = MVector3D(np.mean(np.array(list(org_inner_global_poses.values())), axis=0))
+        # ------------------------
 
         # 画面内に映ってるボーンINDEXの中央値を仮の中央座標とする
+        org_mean_vec = MVector3D(np.mean(np.array(list(org_inner_global_poses.values())), axis=0))
         rep_mean_vec = MVector3D(np.mean(np.array(list(rep_inner_global_poses.values())), axis=0))
 
         # カメラ角度
@@ -111,13 +111,13 @@ class CameraService():
         camera_origin = mat_origin * MVector3D()
         logger.test("camera_origin: %s", camera_origin)
 
-        # 最も近いボーンの相対位置
-        org_nearest_relative_vec = (camera_origin - org_mean_vec) * ratio
+        # ボーンの相対位置
+        org_nearest_relative_vec = (camera_origin - org_mean_vec)
         logger.debug("org_mean_vec: %s", org_mean_vec.to_log())
         logger.debug("org_nearest_relative_vec: %s", org_nearest_relative_vec.to_log())
 
         # 距離0の場合のカメラの位置を算出
-        cf_pos = rep_mean_vec + org_nearest_relative_vec
+        cf_pos = rep_mean_vec + (org_nearest_relative_vec * ratio)
         logger.debug("cf_pos: %s", cf_pos)
 
         mat_len = MMatrix4x4()
@@ -137,9 +137,12 @@ class CameraService():
         limit_ratio = min(camera_length, max(1 / camera_length, ratio)) if camera_length < 5 else ratio
         cf.length = cf.length * limit_ratio
 
+        # 比率を保持
+        cf.ratio = limit_ratio
+
         offset_length = 0
         offset_angle = 0
-
+    
         # ------------------------
         rep_inner_square_poses = {}
 
@@ -150,8 +153,8 @@ class CameraService():
             rep_bottom_pos = rep_inner_global_poses[(bottom_data_set_idx, bottom_bone_name)]
 
             # 先モデル上下プロジェクション正規位置
-            rep_inner_square_poses[(top_data_set_idx, top_bone_name)] = self.calc_project_square_pos(cf, MVector3D(rep_top_pos)).data()
-            rep_inner_square_poses[(bottom_data_set_idx, bottom_bone_name)] = self.calc_project_square_pos(cf, MVector3D(rep_bottom_pos)).data()
+            rep_inner_square_poses[(top_data_set_idx, top_bone_name)] = self.calc_project_square_vec(cf, MVector3D(rep_top_pos)).data()
+            rep_inner_square_poses[(bottom_data_set_idx, bottom_bone_name)] = self.calc_project_square_vec(cf, MVector3D(rep_bottom_pos)).data()
 
             # 上下のY差
             org_diff = org_inner_square_poses[(bottom_data_set_idx, bottom_bone_name)][1] - org_inner_square_poses[(top_data_set_idx, top_bone_name)][1]
@@ -174,18 +177,18 @@ class CameraService():
                     offset_angle += 1
 
                 # 先モデル上下プロジェクション正規位置
-                rep_inner_square_poses[(top_data_set_idx, top_bone_name)] = self.calc_project_square_pos(cf, MVector3D(rep_top_pos)).data()
-                rep_inner_square_poses[(bottom_data_set_idx, bottom_bone_name)] = self.calc_project_square_pos(cf, MVector3D(rep_bottom_pos)).data()
+                rep_inner_square_poses[(top_data_set_idx, top_bone_name)] = self.calc_project_square_vec(cf, MVector3D(rep_top_pos)).data()
+                rep_inner_square_poses[(bottom_data_set_idx, bottom_bone_name)] = self.calc_project_square_vec(cf, MVector3D(rep_bottom_pos)).data()
 
                 # 上下のY差
                 rep_diff = rep_inner_square_poses[(bottom_data_set_idx, bottom_bone_name)][1] - rep_inner_square_poses[(top_data_set_idx, top_bone_name)][1]
 
                 cnt += 1
 
-        logger.info("%sフレーム目 縮尺比率: %s, 注視点: %s-%s, 上辺: %s-%s, 下辺: %s-%s, 座標: %s, 距離: %s, 視野角: %s", \
+        logger.info("%sフレーム目 縮尺比率: %s, 注視点: %s-%s, 上辺: %s-%s, 下辺: %s-%s, 距離オフセット: %s, 視野角オフセット: %s", \
                     cf.fno, round(limit_ratio, 5), (nearest_data_set_idx + 1), nearest_bone_name.replace("実体", ""), \
                     (top_data_set_idx + 1), top_bone_name.replace("実体", ""), (bottom_data_set_idx + 1), bottom_bone_name.replace("実体", ""), \
-                    org_nearest_relative_vec.to_log(), round(offset_length, 5), offset_angle)
+                    round(offset_length, 5), offset_angle)
     
     # カメラ倍率計算
     def calc_camera_ratio(self, fno: int, cf: VmdCameraFrame):
@@ -488,10 +491,10 @@ class CameraService():
                 # 元モデルのそれぞれのグローバル位置
                 org_global_3ds = MServiceUtils.calc_global_pos(data_set.camera_org_model, org_link, data_set.org_motion, fno)
                 for bone_name, org_vec in org_global_3ds.items():
-                    if bone_name in camera_option.org_link_target.keys():
+                    if bone_name in camera_option.org_link_target.keys() and (data_set_idx, bone_name) not in all_org_project_square_poses:
                         # 処理対象ボーンである場合、データを保持
                         all_org_global_poses[(data_set_idx, bone_name)] = org_vec.data()
-                        all_org_project_square_poses[(data_set_idx, bone_name)] = self.calc_project_square_pos(cf, org_vec).data()
+                        all_org_project_square_poses[(data_set_idx, bone_name)] = self.calc_project_square_vec(cf, org_vec).data()
 
         [logger.test("f: %s, k: %s, v: %s, s: %s", fno, k, v, sv) for (k, v), (sk, sv) in zip(all_org_global_poses.items(), all_org_project_square_poses.items())]
 
@@ -523,8 +526,43 @@ class CameraService():
 
         return rep_global_poses
 
+    # プロジェクション座標からグローバル座標の位置際算出
+    def calc_unproject_vec_from_square(self, cf: VmdCameraFrame, square_vec: MVector3D):
+        # モデル座標系
+        model_view = self.create_model_view(cf)
+
+        # プロジェクション座標系
+        projection_view = self.create_projection_view(cf)
+
+        # viewport
+        viewport_rect = MRect(0, 0, 16, 9)
+
+        # 画面サイズに広げる
+        project_vec = square_vec * MVector3D(16, 9, 1)
+
+        # グローバル座標位置
+        grobal_vec = project_vec.unproject(model_view, projection_view, viewport_rect)
+
+        return grobal_vec
+
     # プロジェクション座標正規位置算出
-    def calc_project_square_pos(self, cf: VmdCameraFrame, global_vec: MVector3D):
+    def calc_project_vec(self, cf: VmdCameraFrame, global_vec: MVector3D):
+        # モデル座標系
+        model_view = self.create_model_view(cf)
+
+        # プロジェクション座標系
+        projection_view = self.create_projection_view(cf)
+
+        # viewport
+        viewport_rect = MRect(0, 0, 16, 9)
+
+        # プロジェクション座標位置
+        project_vec = global_vec.project(model_view, projection_view, viewport_rect)
+
+        return project_vec
+
+    # プロジェクション座標正規位置算出
+    def calc_project_square_vec(self, cf: VmdCameraFrame, global_vec: MVector3D):
         # モデル座標系
         model_view = self.create_model_view(cf)
 
@@ -562,7 +600,7 @@ class CameraService():
 
     def calc_camera_qq(self, cf: VmdCameraFrame):
         # カメラ角度
-        camera_qq = MQuaternion.fromEulerAngles(-cf.euler.x(), cf.euler.y(), cf.euler.z())
+        camera_qq = MQuaternion.fromEulerAngles(-math.degrees(cf.euler.x()), math.degrees(cf.euler.y()), math.degrees(cf.euler.z()))
         camera_qq.setX(-camera_qq.x())
         camera_qq.setScalar(-camera_qq.scalar())
 
@@ -611,19 +649,17 @@ class CameraService():
         rep_links = {}
 
         # 体幹系はループ外で定義する
-        self.prepare_link(data_set.camera_org_model, data_set.rep_model, org_links, org_link_target, rep_links, ["頭頂実体", "頭"], ["頭頂実体", "頭", "首", "首根元", "上半身2", "上半身"])
-        self.prepare_link(data_set.camera_org_model, data_set.rep_model, org_links, org_link_target, rep_links, ["左目", "頭"], ["左目"])
-        self.prepare_link(data_set.camera_org_model, data_set.rep_model, org_links, org_link_target, rep_links, ["右目", "頭"], ["右目"])
+        self.prepare_link(data_set.camera_org_model, data_set.rep_model, data_set.camera_offset_y, org_links, org_link_target, rep_links, ["頭頂実体", "頭"], ["頭頂実体", "頭", "首", "首根元", "上半身2", "上半身"])
+        self.prepare_link(data_set.camera_org_model, data_set.rep_model, data_set.camera_offset_y, org_links, org_link_target, rep_links, ["左目", "頭"], ["左目"])
+        self.prepare_link(data_set.camera_org_model, data_set.rep_model, data_set.camera_offset_y, org_links, org_link_target, rep_links, ["右目", "頭"], ["右目"])
         
         for direction in ["左", "右"]:
-            self.prepare_link(data_set.camera_org_model, data_set.rep_model, org_links, org_link_target, rep_links, ["{0}手首".format(direction), "{0}手首".format(direction)], \
-                              ["{0}手首".format(direction)])
-            self.prepare_link(data_set.camera_org_model, data_set.rep_model, org_links, org_link_target, rep_links, ["{0}つま先実体".format(direction), "{0}足ＩＫ".format(direction)], \
-                              ["{0}つま先実体".format(direction), "{0}足底実体".format(direction), "{0}足ＩＫ".format(direction)])
-            self.prepare_link(data_set.camera_org_model, data_set.rep_model, org_links, org_link_target, rep_links, ["{0}足".format(direction), "下半身"], ["{0}足".format(direction)])
-
-        # 頭頂実体をオフセット調整
-        rep_links["頭頂実体"].get("頭頂実体").position.setY(float(rep_links["頭頂実体"].get("頭頂実体").position.y()) + float(data_set.camera_offset_y))
+            self.prepare_link(data_set.camera_org_model, data_set.rep_model, data_set.camera_offset_y, org_links, org_link_target, rep_links, \
+                              ["{0}手首".format(direction), "{0}手首".format(direction)], ["{0}手首".format(direction)])
+            self.prepare_link(data_set.camera_org_model, data_set.rep_model, data_set.camera_offset_y, org_links, org_link_target, rep_links, \
+                              ["{0}つま先実体".format(direction), "{0}足ＩＫ".format(direction)], ["{0}つま先実体".format(direction), "{0}足底実体".format(direction), "{0}足ＩＫ".format(direction)])
+            self.prepare_link(data_set.camera_org_model, data_set.rep_model, data_set.camera_offset_y, org_links, org_link_target, rep_links, \
+                              ["{0}足".format(direction), "下半身"], ["{0}足".format(direction)])
 
         self.camera_options[data_set_idx] = CameraOption(org_links, org_link_target, rep_links, org_total_height, org_face_length, org_heads, \
                                                          rep_total_height, rep_face_length, rep_heads, body_ratio, head_ratio)
@@ -670,11 +706,16 @@ class CameraService():
         # 顔の大きさ / 全身の高さ　で頭身算出
         return total_height, face_length, total_height / face_length
 
-    def prepare_link(self, org_model: PmxModel, rep_model: PmxModel, org_links: list, org_link_target: dict, rep_links: dict, link_bone_name_list: list, target_bone_name_list: list):
+    def prepare_link(self, org_model: PmxModel, rep_model: PmxModel, camera_offset_y: float, org_links: list, org_link_target: dict, rep_links: dict, link_bone_name_list: list, target_bone_name_list: list):
         if (link_bone_name_list[0] in org_model.bones and link_bone_name_list[0] in rep_model.bones) or \
                 (link_bone_name_list[1] in org_model.bones and link_bone_name_list[1] in rep_model.bones):
             # 元と先の両方に末端があればリンク作成
             org_link = org_model.create_link_2_top_one(*link_bone_name_list)
+
+            # 頭頂実体がある場合、Yオフセット加味
+            if "頭頂実体" in list(org_link.all().keys()):
+                org_link.get("頭頂実体").position.setY(float(org_link.get("頭頂実体").position.y()) + float(camera_offset_y))
+
             # 先は、判定対象ボーンとそのボーンを生成するリンクのペアを登録する
             rep_target_bone_name_list = []
             for target_bone_name in target_bone_name_list:

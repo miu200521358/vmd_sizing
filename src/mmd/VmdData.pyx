@@ -204,6 +204,7 @@ class VmdCameraFrame:
         self.perspective = 0
         self.org_length = 0
         self.org_position = MVector3D(0, 0, 0)
+        self.ratio = 0
 
     def write(self, fout):
         fout.write(struct.pack('<L', int(self.fno)))
@@ -217,6 +218,21 @@ class VmdCameraFrame:
         fout.write(bytearray([int(min(127, max(0, x))) for x in self.interpolation]))
         fout.write(struct.pack('<L', int(self.angle)))
         fout.write(struct.pack('b', self.perspective))
+
+    def copy(self):
+        cf = VmdCameraFrame()
+        cf.fno = self.fno
+        cf.length = self.length
+        cf.position = self.position.copy()
+        cf.euler = self.euler.copy()
+        cf.interpolation = cPickle.loads(cPickle.dumps(self.interpolation, -1))
+        cf.angle = self.angle
+        cf.perspective = self.perspective
+        cf.org_length = self.org_length
+        cf.org_position = self.org_position.copy()
+        cf.ratio = self.ratio
+
+        return cf
 
 
 class VmdLightFrame:

@@ -4,6 +4,7 @@
 import logging
 import os
 import traceback
+import math
 from datetime import datetime
 
 from module.MOptions import MCsvOptions
@@ -112,8 +113,8 @@ class ConvertCsvService():
                 for fno in self.options.motion.get_camera_fnos():
                     cf = self.options.motion.cameras[fno]
                     s = "{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10}" \
-                        .format(cf.fno, cf.position.x(), cf.position.y(), cf.position.z(), \
-                                cf.euler.x(), cf.euler.y(), cf.euler.z(), -cf.length, cf.angle, cf.perspective, ','.join([str(i) for i in cf.interpolation]))
+                        .format(cf.fno, cf.position.x(), cf.position.y(), cf.position.z(), -math.degrees(cf.euler.x()), math.degrees(cf.euler.y()), math.degrees(cf.euler.z()), \
+                                -cf.length, cf.angle, cf.perspective, ','.join([str(i) for i in cf.interpolation]))
                     f.write(s)
                     f.write("\n")
 
