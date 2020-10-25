@@ -15,9 +15,9 @@ from utils.MException import SizingException, MKilledException
 logger = MLogger(__name__, level=1)
 
 # 顔系ボーン名
-HEAD_BONE_NAMES = ["頭頂実体", "頭", "首", "左目", "右目"]
+HEAD_BONE_NAMES = ["頭頂実体", "頭", "首", "左目", "右目", "首根元"]
 # 体幹ボーン名
-TRUNK_BONE_NAMES = ["上半身2", "上半身", "首根元"]
+TRUNK_BONE_NAMES = ["上半身2", "上半身"]
 # 足底ボーン名
 LEG_BOTTOM_BONE_NAMES = ["右足底実体", "左足底実体"]
 
@@ -95,8 +95,9 @@ class CameraService():
         # ------------------------
 
         # 画面内に映ってるボーンINDEXの中央値を仮の中央座標とする
-        org_mean_vec = MVector3D(np.mean(np.array(list(org_inner_global_poses.values())), axis=0))
-        rep_mean_vec = MVector3D(np.mean(np.array(list(rep_inner_global_poses.values())), axis=0))
+        # 複数人モーションのカメラの場合を想定して、上下端は見ない
+        org_target_vec = MVector3D(np.mean(np.array(list(org_inner_global_poses.values())), axis=0))
+        rep_target_vec = MVector3D(np.mean(np.array(list(rep_inner_global_poses.values())), axis=0))
 
         # カメラ角度
         camera_qq = self.calc_camera_qq(cf)
@@ -112,19 +113,30 @@ class CameraService():
         logger.test("camera_origin: %s", camera_origin)
 
         # ボーンの相対位置
-        org_nearest_relative_vec = (camera_origin - org_mean_vec)
-        logger.debug("org_mean_vec: %s", org_mean_vec.to_log())
+        org_nearest_relative_vec = (camera_origin - org_target_vec)
+        logger.debug("org_target_vec: %s", org_target_vec.to_log())
         logger.debug("org_nearest_relative_vec: %s", org_nearest_relative_vec.to_log())
 
         # 距離0の場合のカメラの位置を算出
-        cf_pos = rep_mean_vec + (org_nearest_relative_vec * ratio)
+        cf_pos = rep_target_vec + (org_nearest_relative_vec * ratio)
         logger.debug("cf_pos: %s", cf_pos)
+
+        length_ratio = ratio
+        pos_ratio = ratio
+
+        if camera_length < 5:
+            # カメラの距離を再設定
+            # 可動範囲内に収める（2020/10/22）
+            length_ratio = min(camera_length, max(1 / camera_length, ratio))
+            # 原点用比率は、距離が可動範囲内ならば比率そのまま、範囲外ならば体格比率まで
+            pos_ratio = ratio if length_ratio == ratio else \
+                min(self.camera_options[nearest_data_set_idx].body_ratio, max(1 / self.camera_options[nearest_data_set_idx].body_ratio, ratio))
 
         mat_len = MMatrix4x4()
         mat_len.setToIdentity()
         mat_len.translate(cf_pos)
         mat_len.rotate(camera_qq)
-        mat_len.translate(MVector3D(0, 0, -cf.length * ratio))
+        mat_len.translate(MVector3D(0, 0, -cf.length * pos_ratio))
         # 距離を除いたカメラの原点に合わせる
         camera_length_origin = mat_len * MVector3D()
         logger.test("camera_length_origin: %s", camera_length_origin)
@@ -132,13 +144,10 @@ class CameraService():
         # 距離を除いたカメラの原点を再設定
         cf.position = camera_length_origin
 
-        # カメラの距離を再設定
-        # 可動範囲内に収める（2020/10/22）
-        limit_ratio = min(camera_length, max(1 / camera_length, ratio)) if camera_length < 5 else ratio
-        cf.length = cf.length * limit_ratio
+        cf.length = cf.length * length_ratio
 
         # 比率を保持
-        cf.ratio = limit_ratio
+        cf.ratio = length_ratio
 
         offset_length = 0
         offset_angle = 0
@@ -147,7 +156,8 @@ class CameraService():
         rep_inner_square_poses = {}
 
         # この時点の距離と位置で変換先モデルの体幹＋目の映り具合をチェック（上下が分かってないと大きさ取れない）
-        if top_data_set_idx >= 0 and top_bone_name and bottom_data_set_idx >= 0 and bottom_bone_name:
+        # 距離制限が掛かっている場合、スルー
+        if top_data_set_idx >= 0 and top_bone_name and bottom_data_set_idx >= 0 and bottom_bone_name and camera_length == 5:
             # 先モデル上下グローバル位置
             rep_top_pos = rep_inner_global_poses[(top_data_set_idx, top_bone_name)]
             rep_bottom_pos = rep_inner_global_poses[(bottom_data_set_idx, bottom_bone_name)]
@@ -185,8 +195,8 @@ class CameraService():
 
                 cnt += 1
 
-        logger.info("%sフレーム目 縮尺比率: %s, 注視点: %s-%s, 上辺: %s-%s, 下辺: %s-%s, 距離オフセット: %s, 視野角オフセット: %s", \
-                    cf.fno, round(limit_ratio, 5), (nearest_data_set_idx + 1), nearest_bone_name.replace("実体", ""), \
+        logger.info("%sフレーム目 原点比率: %s, 距離比率: %s, 注視点: %s-%s, 上辺: %s-%s, 下辺: %s-%s, 距離オフセット: %s, 視野角オフセット: %s", \
+                    cf.fno, round(pos_ratio, 5), round(length_ratio, 5), (nearest_data_set_idx + 1), nearest_bone_name.replace("実体", ""), \
                     (top_data_set_idx + 1), top_bone_name.replace("実体", ""), (bottom_data_set_idx + 1), bottom_bone_name.replace("実体", ""), \
                     round(offset_length, 5), offset_angle)
     
@@ -205,14 +215,14 @@ class CameraService():
         # まず全体のグローバル位置とプロジェクション座標正規位置を算出
         self.calc_org_project_square_poses(fno, cf, 0, -1, all_org_global_poses, all_org_project_square_poses)
         # 画面内に映っているINDEXリスト
-        org_inner_global_poses, org_inner_square_poses = self.calc_inner_index(fno, all_org_global_poses, all_org_project_square_poses, None, 0, 0)
+        org_inner_global_poses, org_inner_square_poses = self.calc_inner_index(fno, all_org_global_poses, all_org_project_square_poses, None, 0, 0.1)
         logger.debug("f: %s, inner: %s", fno, org_inner_global_poses.keys())
 
         # 画面内に映っている顔系INDEX(注視点直近算出のためなので、ちょっと範囲広め)
         org_face_inner_global_poses, org_face_inner_square_poses = self.calc_inner_index(fno, org_inner_global_poses, org_inner_square_poses, HEAD_BONE_NAMES, 0, 0.1)
         # 画面内に映っている体幹系INDEX
         org_trunk_inner_global_poses, org_trunk_inner_square_poses = self.calc_inner_index(fno, org_inner_global_poses, org_inner_square_poses, \
-                                                                                           HEAD_BONE_NAMES + TRUNK_BONE_NAMES + LEG_BOTTOM_BONE_NAMES, 0, 0.1)
+                                                                                           TRUNK_BONE_NAMES + LEG_BOTTOM_BONE_NAMES, 0, 0.1)
 
         if len(org_face_inner_square_poses.keys()) > 0:
             # 顔系が画面内に映っている場合、その時点で注視点直近を取得する
@@ -242,12 +252,8 @@ class CameraService():
         logger.debug("f: %s, nearest d: %s, k: %s, v: %s, s: %s", fno, nearest_data_set_idx, nearest_bone_name, \
                      all_org_global_poses[(nearest_data_set_idx, nearest_bone_name)], all_org_project_square_poses[(nearest_data_set_idx, nearest_bone_name)])
 
-        # 画面端ボーンを計算する（体幹が取れている場合、体幹ベースで画面端を取る。体幹ベースは少し離れていても対象とする）
-        if len(org_trunk_inner_square_poses.keys()) > 0:
-            (top_data_set_idx, top_bone_name), (bottom_data_set_idx, bottom_bone_name) = self.calc_top_botom_index(fno, cf, org_trunk_inner_square_poses, org_inner_global_poses, 0, 0.1)
-        else:
-            (top_data_set_idx, top_bone_name), (bottom_data_set_idx, bottom_bone_name) = self.calc_top_botom_index(fno, cf, org_inner_square_poses, org_inner_global_poses, 0, 0.1)
-
+        # 画面端ボーンを計算する
+        (top_data_set_idx, top_bone_name), (bottom_data_set_idx, bottom_bone_name) = self.calc_top_botom_index(fno, cf, org_inner_square_poses, org_inner_global_poses, 0, 0.1)
         (left_data_set_idx, left_bone_name), (right_data_set_idx, right_bone_name) = self.calc_left_right_index(fno, cf, org_inner_square_poses, org_inner_global_poses, 0, 0.1)
         
         org_top_diff = rep_top_diff = org_bottom_diff = rep_bottom_diff = 0
@@ -372,7 +378,7 @@ class CameraService():
                 break
 
             logger.debug("f: %s, 画面 check: square_poses[yi][1]: %s, square_poses[yi][2]: %s, top_edge_pos[1]: %s, top_edge_pos[2]: %s", \
-                fno, square_poses[yi][1], square_poses[yi][2], top_edge_pos[1], top_edge_pos[2])
+                         fno, square_poses[yi][1], square_poses[yi][2], top_edge_pos[1], top_edge_pos[2])
 
             top_target_key = (int(square_keys[yi][0]), str(square_keys[yi][1]))
             top_target_global_pos = org_inner_global_poses[top_target_key]
@@ -389,7 +395,7 @@ class CameraService():
                 break
 
             logger.debug("f: %s, 画面 check: square_poses[yi][1]: %s, square_poses[yi][2]: %s, top_edge_pos[1]: %s, top_edge_pos[2]: %s", \
-                fno, square_poses[yi][1], square_poses[yi][2], bottom_edge_pos[1], bottom_edge_pos[2])
+                         fno, square_poses[yi][1], square_poses[yi][2], bottom_edge_pos[1], bottom_edge_pos[2])
 
             bottom_target_key = (int(square_keys[yi][0]), str(square_keys[yi][1]))
             bottom_target_global_pos = org_inner_global_poses[bottom_target_key]
@@ -688,6 +694,7 @@ class CameraService():
             logger.info("【No.%s】%sモデルの頭頂頂点INDEX: %s (%s)", (data_set_idx + 1), model_type, model.head_top_vertex.index, \
                         model.head_top_vertex.position.to_log())
         
+        face_length = 1
         if "頭" in model.bones:
             # 顔の大きさ
             face_length = model.bones["頭頂実体"].position.y() - model.bones["頭"].position.y()
@@ -706,7 +713,8 @@ class CameraService():
         # 顔の大きさ / 全身の高さ　で頭身算出
         return total_height, face_length, total_height / face_length
 
-    def prepare_link(self, org_model: PmxModel, rep_model: PmxModel, camera_offset_y: float, org_links: list, org_link_target: dict, rep_links: dict, link_bone_name_list: list, target_bone_name_list: list):
+    def prepare_link(self, org_model: PmxModel, rep_model: PmxModel, camera_offset_y: float, org_links: list, org_link_target: dict, \
+                     rep_links: dict, link_bone_name_list: list, target_bone_name_list: list):
         if (link_bone_name_list[0] in org_model.bones and link_bone_name_list[0] in rep_model.bones) or \
                 (link_bone_name_list[1] in org_model.bones and link_bone_name_list[1] in rep_model.bones):
             # 元と先の両方に末端があればリンク作成

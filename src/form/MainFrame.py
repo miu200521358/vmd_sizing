@@ -10,11 +10,8 @@ from form.panel.MorphPanel import MorphPanel
 from form.panel.MultiPanel import MultiPanel
 from form.panel.ArmPanel import ArmPanel
 from form.panel.CameraPanel import CameraPanel
-from form.panel.BlendPanel import BlendPanel
 from form.panel.CsvPanel import CsvPanel
 from form.panel.VmdPanel import VmdPanel
-from form.panel.BezierPanel import BezierPanel
-from form.panel.SmoothPanel import SmoothPanel
 from form.worker.SizingWorkerThread import SizingWorkerThread
 from form.worker.LoadWorkerThread import LoadWorkerThread
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
@@ -99,14 +96,6 @@ class MainFrame(wx.Frame):
         self.camera_panel_ctrl = CameraPanel(self, self.note_ctrl, 4)
         self.note_ctrl.AddPage(self.camera_panel_ctrl, u"カメラ", False)
 
-        # スムーズタブ
-        self.smooth_panel_ctrl = SmoothPanel(self, self.note_ctrl, 5)
-        self.note_ctrl.AddPage(self.smooth_panel_ctrl, u"スムーズ", False)
-
-        # ブレンドタブ
-        self.blend_panel_ctrl = BlendPanel(self, self.note_ctrl, 6)
-        self.note_ctrl.AddPage(self.blend_panel_ctrl, u"ブレンド", False)
-
         # CSVタブ
         self.csv_panel_ctrl = CsvPanel(self, self.note_ctrl, 7)
         self.note_ctrl.AddPage(self.csv_panel_ctrl, u"CSV", False)
@@ -114,10 +103,6 @@ class MainFrame(wx.Frame):
         # VMDタブ
         self.vmd_panel_ctrl = VmdPanel(self, self.note_ctrl, 8)
         self.note_ctrl.AddPage(self.vmd_panel_ctrl, u"VMD", False)
-        
-        # 補間タブ
-        self.bezier_panel_ctrl = BezierPanel(self, self.note_ctrl, 9)
-        self.note_ctrl.AddPage(self.bezier_panel_ctrl, u"補間", False)
         
         # ---------------------------------------------
 
@@ -163,16 +148,6 @@ class MainFrame(wx.Frame):
         elif self.arm_panel_ctrl.is_fix_tab:
             # 腕タブの固定が指定されている場合、固定はファイルタブ
             self.note_ctrl.ChangeSelection(self.file_panel_ctrl.tab_idx)
-            event.Skip()
-            return
-
-        elif self.smooth_panel_ctrl.is_fix_tab:
-            self.note_ctrl.ChangeSelection(self.smooth_panel_ctrl.tab_idx)
-            event.Skip()
-            return
-
-        elif self.blend_panel_ctrl.is_fix_tab:
-            self.note_ctrl.ChangeSelection(self.blend_panel_ctrl.tab_idx)
             event.Skip()
             return
 
