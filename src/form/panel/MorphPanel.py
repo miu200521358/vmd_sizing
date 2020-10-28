@@ -34,6 +34,8 @@ class MorphPanel(BasePanel):
 
         # モーフセット(key: ファイルセット番号, value: モーフセット)
         self.morph_set_dict = {}
+        # Bulk用モーフセット(key: ファイルセット番号, value: モーフlist)
+        self.bulk_morph_set_dict = {}
         # モーフセット用基本Sizer
         self.set_list_sizer = wx.BoxSizer(wx.VERTICAL)
         
@@ -52,7 +54,10 @@ class MorphPanel(BasePanel):
     
     # モーフタブからモーフ置換リスト生成
     def get_morph_list(self, set_no: int, vmd_digest: str, org_model_digest: str, rep_model_digest: str):
-        if set_no not in self.morph_set_dict:
+        if set_no in self.bulk_morph_set_dict:
+            # Bulk用のデータがある場合、優先取得
+            return self.bulk_morph_set_dict[set_no], (len(self.bulk_morph_set_dict[set_no]) > 0)
+        elif set_no not in self.morph_set_dict:
             # そもそも登録がなければ何もなし
             return [], False
         else:
@@ -67,6 +72,8 @@ class MorphPanel(BasePanel):
 
     # モーフタブ初期化処理
     def initialize(self, event: wx.Event):
+        self.bulk_morph_set_dict = {}
+        
         if 1 in self.morph_set_dict:
             # ファイルタブ用モーフのファイルセットがある場合
             if self.frame.file_panel_ctrl.file_set.is_loaded():

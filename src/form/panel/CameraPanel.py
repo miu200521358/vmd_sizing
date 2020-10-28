@@ -45,18 +45,18 @@ class CameraPanel(BasePanel):
         # カメラ距離調整スライダー
         self.camera_length_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.camera_length_txt = wx.StaticText(self.header_panel, wx.ID_ANY, u"距離調整可動範囲", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.camera_length_txt = wx.StaticText(self.header_panel, wx.ID_ANY, u"距離可動範囲", wx.DefaultPosition, wx.DefaultSize, 0)
         self.camera_length_txt.SetToolTip(u"ステージの大きさなどにより、カメラの距離の調整範囲を限定したい場合に\n" \
                                           + "カメラの距離可動範囲を限定することができます。\n" \
                                           + "可動範囲は手動で調整する事も可能です。")
         self.camera_length_txt.Wrap(-1)
         self.camera_length_sizer.Add(self.camera_length_txt, 0, wx.ALL, 5)
 
-        self.camera_length_type_ctrl = wx.Choice(self.header_panel, id=wx.ID_ANY, choices=["近距離", "中距離", "距離制限なし"])
+        self.camera_length_type_ctrl = wx.Choice(self.header_panel, id=wx.ID_ANY, choices=["距離制限強", "距離制限弱", "距離制限なし"])
         self.camera_length_type_ctrl.SetSelection(2)
         self.camera_length_type_ctrl.Bind(wx.EVT_CHOICE, self.on_camera_length_type)
-        self.camera_length_type_ctrl.SetToolTip(u"「近距離」　…　小さめのステージ用。距離可動範囲を厳しめに制限します。\n" \
-                                                + "「中距離」　…　中くらいのステージ用。距離可動範囲を多少制限します。\n" \
+        self.camera_length_type_ctrl.SetToolTip(u"「距離制限強」　…　小さめのステージ用。距離可動範囲を厳しめに制限します。\n" \
+                                                + "「距離制限弱」　…　中くらいのステージ用。距離可動範囲を多少制限します。\n" \
                                                 + "「距離制限なし」　…　距離可動範囲を無制限とし、元モデルと同じ映り具合になるよう、最大限調整します。")
         self.camera_length_sizer.Add(self.camera_length_type_ctrl, 0, wx.ALL, 5)
 
@@ -77,6 +77,8 @@ class CameraPanel(BasePanel):
 
         # カメラセット(key: ファイルセット番号, value: カメラセット)
         self.camera_set_dict = {}
+        # Bulk用カメラセット
+        self.bulk_camera_set_dict = {}
         # カメラセット用基本Sizer
         self.set_list_sizer = wx.BoxSizer(wx.VERTICAL)
         
@@ -105,17 +107,10 @@ class CameraPanel(BasePanel):
         # カメラ出力パスを強制的に変更する
         self.header_panel.set_output_vmd_path(event, True)
     
-    # カメラタブからカメラリスト生成
-    def get_camera_list(self, set_no: int):
-        if set_no not in self.camera_set_dict:
-            # そもそも登録がなければ何もなし
-            return []
-        else:
-            # あれば、そのNoのカメラリスト
-            return self.camera_set_dict[set_no].get_camera_list()
-
     # カメラタブ初期化処理
     def initialize(self, event: wx.Event):
+        self.bulk_camera_set_dict = {}
+        
         if 1 not in self.camera_set_dict:
             # 空から作る場合、ファイルタブのファイルセット参照
             self.add_set(1, self.frame.file_panel_ctrl.file_set)

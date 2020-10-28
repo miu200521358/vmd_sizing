@@ -654,9 +654,9 @@ cdef class ArmAvoidanceService:
         if data_set_idx in self.options.arm_options.avoidance_target_list and "頭接触回避" in self.options.arm_options.avoidance_target_list[data_set_idx]:
             # 頭接触回避用剛体取得
             head_rigidbody = data_set.rep_model.get_head_rigidbody()
-            head_rigidbody.is_small = (face_length <= 3)
 
             if head_rigidbody:
+                head_rigidbody.is_small = (face_length <= 3)
                 logger.info("【No.%s - %s】頭接触回避用剛体: 半径: %s, 位置: %s", (data_set_idx + 1), direction, head_rigidbody.shape_size.x(), head_rigidbody.shape_position.to_log())
                 avoidance_links[head_rigidbody.name] = data_set.rep_model.create_link_2_top_one(data_set.rep_model.bone_indexes[head_rigidbody.bone_index])
                 avoidances[head_rigidbody.name] = head_rigidbody

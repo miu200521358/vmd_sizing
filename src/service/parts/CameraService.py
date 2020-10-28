@@ -681,8 +681,8 @@ class CameraService():
         # 顔の大きさ比率
         head_ratio = rep_face_length / org_face_length
 
-        logger.info("【No.%s】作成元モデル 全長: %s, 頭身: %s, 顔の大きさ: %s", (data_set_idx + 1), org_total_height, org_heads, org_face_length)
-        logger.info("【No.%s】変換先モデル 全長: %s, 頭身: %s, 顔の大きさ: %s, Yオフセット: %s", (data_set_idx + 1), rep_total_height, rep_heads, rep_face_length, data_set.camera_offset_y)
+        logger.info("【No.%s】作成元モデル 全長: %s, 頭身: %s, 顔の大きさ: %s, Yオフセット: %s", (data_set_idx + 1), round(org_total_height, 5), round(org_heads, 5), round(org_face_length, 5), data_set.camera_offset_y)
+        logger.info("【No.%s】変換先モデル 全長: %s, 頭身: %s, 顔の大きさ: %s", (data_set_idx + 1), round(rep_total_height, 5), round(rep_heads, 5), round(rep_face_length, 5))
 
         return org_total_height, org_face_length, org_heads, rep_total_height, rep_face_length, rep_heads, body_ratio, head_ratio
         

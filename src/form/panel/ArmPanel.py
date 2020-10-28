@@ -27,6 +27,9 @@ class ArmPanel(BasePanel):
                             + "「頭接触回避」は頭を中心とした球体剛体を自動で計算します。"
         alignment_tooltip = "変換先モデルの手首位置が、作成元モデルの手首とほぼ同じ位置になるよう、手首位置を調整します。"
 
+        # Bulk用接触回避データ
+        self.bulk_avoidance_set_dict = {}
+
         # 同じグループなので、とりあえず宣言だけしておく
         self.arm_process_flg_avoidance = wx.CheckBox(self, wx.ID_ANY, u"", wx.DefaultPosition, wx.DefaultSize)
         self.arm_process_flg_avoidance.SetToolTip(avoidance_tooltip)
@@ -195,6 +198,10 @@ class ArmPanel(BasePanel):
         self.fit()
     
     def get_avoidance_target(self):
+        if len(self.bulk_avoidance_set_dict.keys()) > 0:
+            # Bulk用データがある場合、優先返還
+            return self.bulk_avoidance_set_dict
+        
         target = {}
         if self.arm_process_flg_avoidance.GetValue() == 0:
             return target

@@ -40,8 +40,8 @@ class SizingService():
                 service_data_txt = "{service_data_txt}　　変換先モデル: {replace_model} ({model_name})\n".format(service_data_txt=service_data_txt,
                                         replace_model=os.path.basename(data_set.rep_model.path), model_name=data_set.rep_model.name) # noqa
                 if data_set.camera_org_model:
-                    service_data_txt = "{service_data_txt}　　カメラ作成元モデル: {trace_model} ({model_name})({offset_y})\n".format(service_data_txt=service_data_txt,
-                                            trace_model=os.path.basename(data_set.camera_org_model.path), model_name=data_set.camera_org_model.name, offset_y=data_set.camera_offset_y) # noqa
+                    service_data_txt = "{service_data_txt}　　カメラ作成元モデル: {trace_model} ({model_name})\n".format(service_data_txt=service_data_txt,
+                                            trace_model=os.path.basename(data_set.camera_org_model.path), model_name=data_set.camera_org_model.name) # noqa
                     service_data_txt = "{service_data_txt}　　Yオフセット: {camera_offset_y}\n".format(service_data_txt=service_data_txt,
                                             camera_offset_y=data_set.camera_offset_y) # noqa
                 service_data_txt = "{service_data_txt}　　スタンス追加補正有無: {detail_stance_flg}\n".format(service_data_txt=service_data_txt,

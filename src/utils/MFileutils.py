@@ -25,20 +25,20 @@ def resource_path(relative):
 # ファイル履歴読み込み
 def read_history(mydir_path):
     # ファイル履歴
-    file_hitories = {"vmd": [], "org_pmx": [], "rep_pmx": [], "camera_vmd": [], "camera_pmx": [], "smooth_vmd": [], "smooth_pmx": [], "max": 50}
+    file_hitories = {"vmd": [], "org_pmx": [], "rep_pmx": [], "camera_vmd": [], "camera_pmx": [], "smooth_vmd": [], "smooth_pmx": [], "bulk_csv": [], "max": 50}
 
     # 履歴JSONファイルがあれば読み込み
     try:
         with open(os.path.join(mydir_path, 'history.json'), 'r') as f:
             file_hitories = json.load(f)
             # キーが揃っているかチェック
-            for key in ["vmd", "org_pmx", "rep_pmx", "camera_vmd", "camera_pmx", "smooth_pmx", "smooth_vmd"]:
+            for key in ["vmd", "org_pmx", "rep_pmx", "camera_vmd", "camera_pmx", "smooth_pmx", "smooth_vmd", "bulk_csv"]:
                 if key not in file_hitories:
                     file_hitories[key] = []
             # 最大件数は常に上書き
             file_hitories["max"] = 50
     except Exception:
-        file_hitories = {"vmd": [], "org_pmx": [], "rep_pmx": [], "camera_vmd": [], "camera_pmx": [], "smooth_vmd": [], "smooth_pmx": [], "max": 50}
+        file_hitories = {"vmd": [], "org_pmx": [], "rep_pmx": [], "camera_vmd": [], "camera_pmx": [], "smooth_vmd": [], "smooth_pmx": [], "bulk_csv": [], "max": 50}
 
     return file_hitories
 

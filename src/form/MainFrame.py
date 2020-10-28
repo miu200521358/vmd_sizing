@@ -12,6 +12,7 @@ from form.panel.ArmPanel import ArmPanel
 from form.panel.CameraPanel import CameraPanel
 from form.panel.CsvPanel import CsvPanel
 from form.panel.VmdPanel import VmdPanel
+from form.panel.BulkPanel import BulkPanel
 from form.worker.SizingWorkerThread import SizingWorkerThread
 from form.worker.LoadWorkerThread import LoadWorkerThread
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
@@ -96,12 +97,16 @@ class MainFrame(wx.Frame):
         self.camera_panel_ctrl = CameraPanel(self, self.note_ctrl, 4)
         self.note_ctrl.AddPage(self.camera_panel_ctrl, u"カメラ", False)
 
+        # 一括タブ
+        self.bulk_panel_ctrl = BulkPanel(self, self.note_ctrl, 5)
+        self.note_ctrl.AddPage(self.bulk_panel_ctrl, u"一括", False)
+
         # CSVタブ
-        self.csv_panel_ctrl = CsvPanel(self, self.note_ctrl, 7)
+        self.csv_panel_ctrl = CsvPanel(self, self.note_ctrl, 6)
         self.note_ctrl.AddPage(self.csv_panel_ctrl, u"CSV", False)
 
         # VMDタブ
-        self.vmd_panel_ctrl = VmdPanel(self, self.note_ctrl, 8)
+        self.vmd_panel_ctrl = VmdPanel(self, self.note_ctrl, 7)
         self.note_ctrl.AddPage(self.vmd_panel_ctrl, u"VMD", False)
         
         # ---------------------------------------------
@@ -161,6 +166,11 @@ class MainFrame(wx.Frame):
             event.Skip()
             return
 
+        elif self.bulk_panel_ctrl.is_fix_tab:
+            self.note_ctrl.ChangeSelection(self.bulk_panel_ctrl.tab_idx)
+            event.Skip()
+            return
+
         if self.note_ctrl.GetSelection() == self.multi_panel_ctrl.tab_idx:
             # 複数タブ移動時に保存
             self.file_panel_ctrl.save()
@@ -203,11 +213,13 @@ class MainFrame(wx.Frame):
         self.file_panel_ctrl.release_tab()
         self.morph_panel_ctrl.release_tab()
         self.arm_panel_ctrl.release_tab()
+        self.multi_panel_ctrl.release_tab()
+        self.bulk_panel_ctrl.release_tab()
 
     # フォーム入力可
     def enable(self):
         self.file_panel_ctrl.enable()
-        # self.morph_panel_ctrl.enable()
+        self.bulk_panel_ctrl.enable()
     
     # ファイルセットの入力可否チェック
     def is_valid(self):
