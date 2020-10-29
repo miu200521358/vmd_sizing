@@ -559,6 +559,7 @@ class PmxReader:
                     pmx.bone_indexes[leg_center_bone.index] = leg_center_bone.name
 
                 logger.test("len(bones): %s", len(pmx.bones))
+                logger.test("bone_indexes: %s", pmx.bone_indexes.items())
 
                 logger.info("-- PMX ボーン読み込み完了")
 

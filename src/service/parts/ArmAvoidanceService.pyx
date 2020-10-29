@@ -501,12 +501,14 @@ cdef class ArmAvoidanceService:
                                     # 全部成功している場合、成功ログ
                                     logger.info("○接触回避成功: f: %s(%s-%s)", fno, (data_set_idx + 1), arm_link.last_display_name())
 
-            if fno // 500 > prev_block_fno and fnos[-1] > 0:
-                logger.info("-- %sフレーム目:終了(%s％)【No.%s - 接触回避 - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1, direction)
+            if fno // 500 > prev_block_fno:
+                logger.count("【No.{0} - 接触回避 - {1}】".format(data_set_idx + 1, direction), fno, fnos)
                 prev_block_fno = fno // 500
             
             # キーの登録が増えているかもなので、ここで取り直す
             fnos = data_set.motion.get_bone_fnos(*target_bone_names, start_fno=(fno + 1))
+
+        logger.count("【No.{0} - 接触回避 - {1}】".format(data_set_idx + 1, direction), fno, fnos)
 
         for bone_name in target_bone_names:
             # 非活性キー削除
@@ -583,9 +585,11 @@ cdef class ArmAvoidanceService:
                     prev_collisions.append(collision)
                     prev_collisions.append(near_collision)
 
-            if fno // 500 > prev_block_fno and fnos[-1] > 0:
-                logger.info("-- %sフレーム目:終了(%s％)【No.%s - 接触回避準備① - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1, direction)
+            if fno // 500 > prev_block_fno:
+                logger.count("【No.{0} - 接触回避準備① - {1}】".format(data_set_idx + 1, direction), fno, fnos)
                 prev_block_fno = fno // 500
+
+        logger.count("【No.{0} - 接触回避準備① - {1}】".format(data_set_idx + 1, direction), fno, fnos)
 
         prev_block_fno = 0
         all_avoidance_axis = {}
@@ -615,9 +619,11 @@ cdef class ArmAvoidanceService:
                 logger.debug("aidx: %s, d: %s, from: %s, to: %s, axis: %s, xd: %s, zd: %s", aidx, direction, from_fno, to_fno, all_avoidance_axis[from_fno], block_x_distance, block_z_distance)
                 
             if fno // 1000 > prev_block_fno and fnos[-1] > 0:
-                logger.info("-- %sフレーム目:終了(%s％)【No.%s - 接触回避準備② - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1, direction)
+                logger.count("【No.{0} - 接触回避準備② - {1}】".format(data_set_idx + 1, direction), fno, fnos)
                 prev_block_fno = fno // 1000
-            
+
+        logger.count("【No.{0} - 接触回避準備② - {1}】".format(data_set_idx + 1, direction), fno, fnos)
+
         return all_avoidance_axis
 
     def calc_face_length(self, model: PmxModel):
@@ -661,7 +667,8 @@ cdef class ArmAvoidanceService:
                 avoidance_links[head_rigidbody.name] = data_set.rep_model.create_link_2_top_one(data_set.rep_model.bone_indexes[head_rigidbody.bone_index])
                 avoidances[head_rigidbody.name] = head_rigidbody
             else:
-                logger.info("【No.%s - %s】頭にウェイトが乗っている頂点が見つからなかった為、接触回避用剛体が作れませんでした。", (data_set_idx + 1), direction)
+                logger.warning("【No.%s - %s】\n「%s」で頭にウェイトが乗っている頂点が見つからなかった為、\n「頭接触回避」用剛体が作れませんでした。手動で剛体を設定してください。", \
+                               (data_set_idx + 1), direction, data_set.rep_model.name, decoration=MLogger.DECORATION_BOX)
 
         # self.calc_wrist_entity_vertex(data_set_idx, data_set.rep_model, "変換先", direction)
         # self.calc_elbow_entity_vertex(data_set_idx, data_set.rep_model, "変換先", direction)

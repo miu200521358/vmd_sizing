@@ -469,9 +469,11 @@ cdef class StanceService():
                 bf = data_set.motion.calc_bf(bone_name, fno)
                 data_set.motion.regist_bf(bf, bone_name, fno)
 
-                if fno // 2000 > prev_sep_fno and fnos[-1] > 0:
-                    logger.info("-- %sフレーム目:終了(%s％)【No.%s - キーフレ追加 - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1, bone_name)
+                if fno // 2000 > prev_sep_fno:
+                    logger.count("【No.{0} - キーフレ追加 - {1}】".format(data_set_idx + 1, bone_name), fno, fnos)
                     prev_sep_fno = fno // 2000
+
+            logger.count("【No.{0} - キーフレ追加 - {1}】".format(data_set_idx + 1, bone_name), fno, fnos)
 
             if is_target_copy:
                 prev_sep_fno = 0
@@ -484,9 +486,11 @@ cdef class StanceService():
                         data_set.motion.copy_interpolation(parent_bf, bf, MBezierUtils.BZ_TYPE_R)
                         data_set.motion.regist_bf(bf, bone_name, fno, copy_interpolation=True)
 
-                    if fno // 2000 > prev_sep_fno and fnos[-1] > 0:
-                        logger.info("-- %sフレーム目:終了(%s％)【No.%s - 補間曲線設定 - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1, bone_name)
+                    if fno // 2000 > prev_sep_fno:
+                        logger.count("【No.{0} - 補間曲線設定 - {1}】".format(data_set_idx + 1, bone_name), fno, fnos)
                         prev_sep_fno = fno // 2000
+
+                logger.count("【No.{0} - 補間曲線設定 - {1}】".format(data_set_idx + 1, bone_name), fno, fnos)
 
             return True
         except MKilledException as ke:
@@ -647,8 +651,8 @@ cdef class StanceService():
             else:
                 logger.debug("○中間一致 f: %s, %s, twist_test_dot: %s, twist_test_x_dot: %s, twist_test_y_dot: %s", fno, arm_twist_bone_name, twist_test_dot, twist_test_x_dot, twist_test_y_dot)
 
-            if fno in log_target_idxs and last_fno > 0:
-                logger.info("-- %sフレーム目【No.%s - 中間捩り分散%s - %s】", fno, data_set_idx + 1, count, arm_twist_bone_name)
+            if fno in log_target_idxs:
+                logger.count("【No.{0} - 中間捩り分散{1} - {2}】".format(data_set_idx + 1, count, arm_twist_bone_name), fno, None, last_fno=last_fno)
 
             return True
         except MKilledException as ke:
@@ -759,7 +763,7 @@ cdef class StanceService():
             data_set.motion.bones[wrist_bone_name][fno] = wrist_bf
 
             if fno in log_target_idxs and last_fno > 0:
-                logger.info("-- %sフレーム目:終了(%s％)【No.%s - 捩り分散 - %s】", fno, round((fno / last_fno) * 100, 3), data_set_idx + 1, arm_twist_bone_name)
+                logger.count("【No.{0} - 捩り分散 - {1}】".format(data_set_idx + 1, arm_twist_bone_name), fno, None, last_fno=last_fno)
 
             return True
         except MKilledException as ke:
@@ -1619,9 +1623,10 @@ cdef class StanceService():
 
                         data_set.motion.regist_bf(ik_bf, target_bone_name, fno)
                         
-                        if fno // 500 > prev_sep_fno and fnos[-1] > 0:
-                            logger.info("-- %sフレーム目:終了(%s％)【No.%s - %s補正】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1, target_bone_name)
+                        if fno // 500 > prev_sep_fno:
+                            logger.count("【No.{0} - {1}補正】".format(data_set_idx + 1, target_bone_name), fno, fnos)
                             prev_sep_fno = fno // 500
+
                     logger.info("%s足ＩＫ補正:終了【No.%s】", direction, (data_set_idx + 1))
 
                 else:
@@ -1833,8 +1838,8 @@ cdef class StanceService():
                         data_set.motion.regist_bf(toe_ik_bf, toe_ik_bone_name, fno)
                         data_set.motion.regist_bf(leg_ik_bf, leg_ik_bone_name, fno)
                         
-                        if fno // 500 > prev_sep_fno and fnos[-1] > 0:
-                            logger.info("-- %sフレーム目:終了(%s％)【No.%s - %s補正】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1, toe_ik_bone_name)
+                        if fno // 500 > prev_sep_fno:
+                            logger.count("【No.{0} - {1}補正】".format(data_set_idx + 1, toe_ik_bone_name), fno, fnos)
                             prev_sep_fno = fno // 500
 
                 # if is_execed_toe_ik:
@@ -1970,8 +1975,8 @@ cdef class StanceService():
                         # つま先補正なし
                         pass
                 
-                    if fno // 500 > prev_sep_fno and fnos[-1] > 0:
-                        logger.info("-- %sフレーム目:終了(%s％)【No.%s - %sつま先補正】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1, direction)
+                    if fno // 500 > prev_sep_fno:
+                        logger.count("【No.{0} - {1}つま先補正】".format(data_set_idx + 1, direction), fno, fnos)
                         prev_sep_fno = fno // 500
 
                 logger.info("%sつま先補正:終了【No.%s】", direction, (data_set_idx + 1))
@@ -2059,8 +2064,8 @@ cdef class StanceService():
                                                                     org_center_bone_name, rep_center_bone_name)
                     logger.debug("f: %s, 体幹オフセット後: %s", bf.fno, bf.position)
 
-                if fno // 500 > prev_fno and fnos[-1] > 0:
-                    logger.info("-- %sフレーム目:終了(%s％)【No.%s - センターXZ補正】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1)
+                if fno // 500 > prev_fno:
+                    logger.count("【No.{0} - センターXZ補正】".format(data_set_idx + 1), fno, fnos)
                     prev_fno = fno // 500
 
             logger.info("センターXZ補正: 終了【No.%s】", (data_set_idx + 1))
@@ -2156,7 +2161,7 @@ cdef class StanceService():
                     data_set.motion.regist_bf(bf, bf.name, fno)
 
                 if fno // 500 > prev_fno and fnos[-1] > 0:
-                    logger.info("-- %sフレーム目:終了(%s％)【No.%s - センターY補正】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1)
+                    logger.count("【No.{0} - センターY補正】".format(data_set_idx + 1), fno, fnos)
                     prev_fno = fno // 500
                 
             logger.info("センターY補正: 終了【No.%s】", (data_set_idx + 1))
@@ -2548,8 +2553,8 @@ cdef class StanceService():
                 # bf登録
                 data_set.motion.regist_bf(upper_bf, "上半身", fno)
                     
-                if fno // 500 > prev_fno and fnos[-1] > 0:
-                    logger.info("-- %sフレーム目:終了(%s％)【No.%s - 上半身補正】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1)
+                if fno // 500 > prev_fno:
+                    logger.count("【No.{0} - 上半身補正】".format(data_set_idx + 1), fno, fnos)
                     prev_fno = fno // 500
 
             # 子の角度調整
@@ -2638,8 +2643,8 @@ cdef class StanceService():
                     # bf登録
                     data_set.motion.regist_bf(upper2_bf, "上半身2", fno)
 
-                    if fno // 500 > prev_fno and fnos[-1] > 0:
-                        logger.info("-- %sフレーム目:終了(%s％)【No.%s - 上半身2補正】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1)
+                    if fno // 500 > prev_fno:
+                        logger.count("【No.{0} - 上半身2補正】".format(data_set_idx + 1), fno, fnos)
                         prev_fno = fno // 500
 
                 # 子の角度調整
@@ -2772,8 +2777,8 @@ cdef class StanceService():
                 # bf登録
                 data_set.motion.regist_bf(lower_bf, "下半身", fno)
 
-                if fno // 500 > prev_fno and fnos[-1] > 0:
-                    logger.info("-- %sフレーム目:終了(%s％)【No.%s - 下半身補正】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1)
+                if fno // 500 > prev_fno:
+                    logger.count("【No.{0} - 下半身補正】".format(data_set_idx + 1), fno, fnos)
                     prev_fno = fno // 500
 
             # 子の角度調整
@@ -3136,8 +3141,8 @@ cdef class StanceService():
             # bf登録
             data_set.motion.regist_bf(bf, shoulder_name, bf.fno)
                 
-            if fno // 500 > prev_fno and fnos[-1] > 0:
-                logger.info("-- %sフレーム目:終了(%s％)【No.%s - %sスタンス補正】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1, shoulder_name)
+            if fno // 500 > prev_fno:
+                logger.count("【No.{0} - {1}スタンス補正】".format(data_set_idx + 1, shoulder_name), fno, fnos)
                 prev_fno = fno // 500
 
         # 子の角度調整
@@ -3253,8 +3258,8 @@ cdef class StanceService():
             # bf登録
             data_set.motion.regist_bf(shoulder_bf, shoulder_name, fno)
                 
-            if fno // 500 > prev_fno and fnos[-1] > 0:
-                logger.info("-- %sフレーム目:終了(%s％)【No.%s - %sスタンス補正】", fno, round((fno / fnos[-1]) * 100, 3), data_set_idx + 1, shoulder_name)
+            if fno // 500 > prev_fno:
+                logger.count("【No.{0} - {1}スタンス補正】".format(data_set_idx + 1, shoulder_name), fno, fnos)
                 prev_fno = fno // 500
 
         # 子の角度調整

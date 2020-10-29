@@ -231,10 +231,10 @@ cdef class ArmAlignmentService:
                         all_org_global_effector_matrixs[fno][(data_set_idx, alignment_idx)] = org_global_matrixs[target_link.effector_bone_name]
 
             if fno // 200 > prev_block_fno:
-                logger.info("-- %sフレーム目:終了(%s％)【位置合わせ準備①】", fno, round((fno / fnos[-1]) * 100, 3))
+                logger.count("位置合わせ準備①", fno, fnos)
                 prev_block_fno = fno // 200
 
-        logger.info("-- %sフレーム目:終了(%s％)【位置合わせ準備①】", fno, round((fno / fnos[-1]) * 100, 3))
+        logger.count("位置合わせ準備①", fno, fnos)
                     
         all_messages = {}
         all_is_alignment = {}
@@ -314,10 +314,10 @@ cdef class ArmAlignmentService:
                         all_is_alignment[(to_data_set_idx, to_alignment_idx)][fno] = is_alignment or all_is_alignment[(to_data_set_idx, to_alignment_idx)][fno]
 
             if fno // 500 > prev_block_fno:
-                logger.info("-- %sフレーム目:終了(%s％)【位置合わせ準備②】", fno, round((fno / fnos[-1]) * 100, 3))
+                logger.count("位置合わせ準備②", fno, fnos)
                 prev_block_fno = fno // 500
 
-        logger.info("-- %sフレーム目:終了(%s％)【位置合わせ準備②】", fno, round((fno / fnos[-1]) * 100, 3))
+        logger.count("位置合わせ準備②", fno, fnos)
 
         all_alignment_group_list = []
         prev_block_fno = 0
@@ -466,10 +466,10 @@ cdef class ArmAlignmentService:
                     break
 
             if fno // 500 > prev_block_fno:
-                logger.info("-- %sフレーム目:終了(%s％)【位置合わせ準備③】", fno, round((fno / fnos[-1]) * 100, 3))
+                logger.count("位置合わせ準備③", fno, fnos)
                 prev_block_fno = fno // 500
-
-        logger.info("-- %sフレーム目:終了(%s％)【位置合わせ準備③】", fno, round((fno / fnos[-1]) * 100, 3))
+        
+        logger.count("位置合わせ準備③", fno, fnos)
 
         prev_block_fno = 0
 
@@ -571,10 +571,10 @@ cdef class ArmAlignmentService:
                     # data_set.motion.bones[debug_bone_name][fno] = debug_bf
 
             if fno // 500 > prev_block_fno:
-                logger.info("-- %sフレーム目:終了(%s％)【位置合わせ準備④】", fno, round((fno / fnos[-1]) * 100, 3))
+                logger.count("位置合わせ準備④", fno, fnos)
                 prev_block_fno = fno // 500
 
-        logger.info("-- %sフレーム目:終了(%s％)【位置合わせ準備④】", fno, round((fno / fnos[-1]) * 100, 3))
+        logger.count("位置合わせ準備④", fno, fnos)
 
         return all_alignment_group_list, all_messages
     
@@ -1259,10 +1259,10 @@ cdef class ArmAlignmentService:
                                     logger.info("○先端位置合わせ成功: f: %s(%s-%s)", fno, (data_set_idx + 1), target_link.effector_display_bone_name)
 
             if fno // 500 > prev_block_fno:
-                logger.info("-- %sフレーム目:終了(%s％)【位置合わせ】", fno, round((fno / fnos[-1]) * 100, 3))
+                logger.count("位置合わせ", fno, fnos)
                 prev_block_fno = fno // 500
-
-        logger.info("-- %sフレーム目:終了(%s％)【位置合わせ】", fno, round((fno / fnos[-1]) * 100, 3))
+        
+        logger.count("位置合わせ", fno, fnos)
 
     # 手首位置合わせの準備
     def prepare_wrist(self, data_set_idx: int):

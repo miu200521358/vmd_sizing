@@ -99,6 +99,24 @@ class MLogger():
         kwargs["level"] = logging.INFO
         self.print_logger(msg, *args, **kwargs)
 
+    # ログレベルカウント
+    def count(self, msg, fno, fnos, *args, **kwargs):
+        last_fno = 0
+
+        if fnos and len(fnos) > 0 and fnos[-1] > 0:
+            last_fno = fnos[-1]
+        
+        if not fnos and kwargs and "last_fno" in kwargs and kwargs["last_fno"] > 0:
+            last_fno = kwargs["last_fno"]
+
+        if last_fno > 0:
+            if not kwargs:
+                kwargs = {}
+                
+            kwargs["level"] = logging.INFO
+            log_msg = "-- {0}フレーム目:終了({1}％){2}".format(fno, round((fno / last_fno) * 100, 3), msg)
+            self.print_logger(log_msg, *args, **kwargs)
+
     def warning(self, msg, *args, **kwargs):
         if not kwargs:
             kwargs = {}
