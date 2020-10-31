@@ -179,6 +179,12 @@ class BulkPanel(BasePanel):
         # タブ固定
         self.fix_tab()
 
+        if not self.bulk_csv_file_ctrl.is_valid():
+            # CSVパスが無効な場合、終了
+            self.enable()
+            self.release_tab()
+            return
+
         result = True
         with open(self.bulk_csv_file_ctrl.path(), encoding='cp932', mode='r') as f:
             reader = csv.reader(f)
@@ -296,7 +302,7 @@ class BulkPanel(BasePanel):
                     arm_avoidance_name_list = []
                     for avoidance_data in avoidance_name_datas:
                         m = re.findall(r"([^\:]+)\;", avoidance_data)
-                        arm_avoidance_name_list.append(m[0][0])
+                        arm_avoidance_name_list.append(m[0])
                     arm_avoidance_name_txt = ", ".join(arm_avoidance_name_list)
                     service_data_txt = f"{service_data_txt}　　対象剛体名: {arm_avoidance_name_txt}\n"
 
@@ -316,6 +322,7 @@ class BulkPanel(BasePanel):
                 logger.info("CSVデータの確認が成功しました。", decoration=MLogger.DECORATION_BOX, title="OK")
 
                 self.enable()
+                self.release_tab()
                 return
         else:
             logger.error("CSVデータに不整合があるため、処理を中断します", decoration=MLogger.DECORATION_BOX)

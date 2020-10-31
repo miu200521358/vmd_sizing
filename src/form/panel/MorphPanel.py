@@ -200,6 +200,12 @@ class MorphSet():
 
             self.btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
+            # 一括用コピーボタン
+            self.copy_btn_ctrl = wx.Button(self.window, wx.ID_ANY, u"一括用コピー", wx.DefaultPosition, wx.DefaultSize, 0)
+            self.copy_btn_ctrl.SetToolTip(u"モーフ置換データを一括CSVの形式に合わせてクリップボードにコピーします")
+            self.copy_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_copy)
+            self.btn_sizer.Add(self.copy_btn_ctrl, 0, wx.ALL, 5)
+
             # インポートボタン
             self.import_btn_ctrl = wx.Button(self.window, wx.ID_ANY, u"インポート ...", wx.DefaultPosition, wx.DefaultSize, 0)
             self.import_btn_ctrl.SetToolTip(u"モーフ置換データをCSVファイルから読み込みます。\nファイル選択ダイアログが開きます。")
@@ -338,6 +344,25 @@ class MorphSet():
         return self.vmd_digest == now_file_set.motion_vmd_file_ctrl.data.digest \
             and self.org_model_digest == now_file_set.org_model_file_ctrl.data.digest \
             and self.rep_model_digest == now_file_set.rep_model_file_ctrl.data.digest
+    
+    def on_copy(self, event: wx.Event):
+        # 一括CSV用モーフテキスト生成
+        morph_txt_list = []
+        morph_list = self.get_morph_list()
+        for (om, rm, r) in morph_list:
+            morph_txt_list.append(f"{om}:{rm}:{r}")
+        # 文末セミコロン
+        morph_txt_list.append("")
+
+        if wx.TheClipboard.Open():
+            wx.TheClipboard.SetData(wx.TextDataObject(";".join(morph_txt_list)))
+            wx.TheClipboard.Close()
+
+        with wx.TextEntryDialog(self.frame, u"一括CSV用のモーフデータを出力します。\n" \
+                                + "ダイアログを表示した時点で、下記モーフデータがクリップボードにコピーされています。\n" \
+                                + "コピーできてなかった場合、ボックス内の文字列を選択して、CSVに貼り付けてください。", caption=u"一括CSV用モーフデータ",
+                                value=";".join(morph_txt_list), style=wx.TextEntryDialogStyle, pos=wx.DefaultPosition) as dialog:
+            dialog.ShowModal()
 
     def on_import(self, event: wx.Event):
         input_morph_path = MFileUtils.get_output_morph_path(

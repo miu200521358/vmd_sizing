@@ -399,7 +399,7 @@ class AvoidanceSet():
         self.file_set = file_set
         self.rep_model_digest = 0 if not file_set.rep_model_file_ctrl.data else file_set.rep_model_file_ctrl.data.digest
         self.rep_avoidances = ["頭接触回避 (頭)"]   # 選択肢文言
-        self.rep_avoidance_names = ["頭接触回避"]   # 選択肢文言に紐付くモーフ名
+        self.rep_avoidance_names = ["頭接触回避"]   # 選択肢文言に紐付く剛体名
         self.rep_choices = None
 
         self.set_sizer = wx.StaticBoxSizer(wx.StaticBox(self.window, wx.ID_ANY, "【No.{0}】".format(set_idx)), orient=wx.VERTICAL)
@@ -420,10 +420,34 @@ class AvoidanceSet():
             # 頭接触回避はデフォルトで選択
             self.rep_choices.SetSelection(0)
             self.set_sizer.Add(self.rep_choices, 0, wx.ALL, 5)
+
+            # 一括用コピーボタン
+            self.copy_btn_ctrl = wx.Button(self.window, wx.ID_ANY, u"一括用コピー", wx.DefaultPosition, wx.DefaultSize, 0)
+            self.copy_btn_ctrl.SetToolTip(u"接触回避データを一括CSVの形式に合わせてクリップボードにコピーします")
+            self.copy_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_copy)
+            self.set_sizer.Add(self.copy_btn_ctrl, 0, wx.ALL, 5)
         else:
             self.no_data_txt = wx.StaticText(self.window, wx.ID_ANY, u"データなし", wx.DefaultPosition, wx.DefaultSize, 0)
             self.no_data_txt.Wrap(-1)
             self.set_sizer.Add(self.no_data_txt, 0, wx.ALL, 5)
+
+    def on_copy(self, event: wx.Event):
+        # 一括CSV用モーフテキスト生成
+        avoidance_txt_list = []
+        for idx in self.rep_choices.GetSelections():
+            avoidance_txt_list.append(f"{self.rep_avoidance_names[idx]}")
+        # 文末セミコロン
+        avoidance_txt_list.append("")
+
+        if wx.TheClipboard.Open():
+            wx.TheClipboard.SetData(wx.TextDataObject(";".join(avoidance_txt_list)))
+            wx.TheClipboard.Close()
+
+        with wx.TextEntryDialog(self.frame, u"一括CSV用の接触回避データを出力します。\n" \
+                                + "ダイアログを表示した時点で、下記接触回避データがクリップボードにコピーされています。\n" \
+                                + "コピーできてなかった場合、ボックス内の文字列を選択して、CSVに貼り付けてください。", caption=u"一括CSV用接触回避データ",
+                                value=";".join(avoidance_txt_list), style=wx.TextEntryDialogStyle, pos=wx.DefaultPosition) as dialog:
+            dialog.ShowModal()
 
     # 現在のファイルセットのハッシュと同じであるかチェック
     def equal_hashdigest(self, now_file_set: SizingFileSet):
@@ -433,7 +457,7 @@ class AvoidanceSet():
 class AvoidanceDialog(wx.Dialog):
 
     def __init__(self, parent):
-        super().__init__(parent, id=wx.ID_ANY, title="接触回避剛体選択", pos=(-1, -1), size=(700, 450), style=wx.DEFAULT_DIALOG_STYLE, name="AvoidanceDialog")
+        super().__init__(parent, id=wx.ID_ANY, title="接触回避剛体選択", pos=(-1, -1), size=(800, 500), style=wx.DEFAULT_DIALOG_STYLE, name="AvoidanceDialog")
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
 
