@@ -569,12 +569,14 @@ cdef class VmdMotion:
         prev_sep_fno = 0
 
         # キーフレを取得する
+        suffix = ""
         if start_fno < 0 and end_fno < 0:
             # 範囲指定がない場合、全範囲
             fnos = self.get_bone_fnos(bone_name)
         else:
             # 範囲指定がある場合はその範囲内だけ
             fnos = self.get_bone_fnos(bone_name, start_fno=start_fno, end_fno=end_fno)
+            suffix = f"({start_fno}-{end_fno})"
         logger.debug("remove_unnecessary_bf prev: %s, %s", bone_name, len(fnos))
 
         if len(fnos) > 2:
@@ -625,9 +627,9 @@ cdef class VmdMotion:
 
                 if fno // 100 > prev_sep_fno:
                     if data_set_no == 0:
-                        logger.info("-- %sフレーム目:終了(%s％)【不要キー削除 - %s】", fno, round((fno / fnos[-1]) * 100, 3), bone_name)
+                        logger.info("-- %sフレーム目:終了(%s％)【不要キー削除%s - %s】", fno, round((fno / fnos[-1]) * 100, 3), suffix, bone_name)
                     else:
-                        logger.info("-- %sフレーム目:終了(%s％)【No.%s - 不要キー削除 - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, bone_name)
+                        logger.info("-- %sフレーム目:終了(%s％)【No.%s - 不要キー削除%s - %s】", fno, round((fno / fnos[-1]) * 100, 3), data_set_no, suffix, bone_name)
 
                     prev_sep_fno = fno // 100
 

@@ -54,6 +54,13 @@ class SizingService():
                 service_data_txt = "{service_data_txt}　　捩り分散有無: {twist_flg}\n".format(service_data_txt=service_data_txt,
                                         twist_flg=data_set.twist_flg) # noqa
 
+                morph_list = []
+                for (org_morph_name, rep_morph_name, morph_ratio) in data_set.morph_list:
+                    morph_list.append(f"{org_morph_name} → {rep_morph_name} ({morph_ratio})")
+                morph_txt = ", ".join(morph_list)
+                service_data_txt = "{service_data_txt}　　モーフ置換: {morph_txt}\n".format(service_data_txt=service_data_txt,
+                                        morph_txt=morph_txt) # noqa
+
                 if data_set_idx in self.options.arm_options.avoidance_target_list:
                     service_data_txt = "{service_data_txt}　　対象剛体名: {avoidance_target}\n".format(service_data_txt=service_data_txt,
                                             avoidance_target=", ".join(self.options.arm_options.avoidance_target_list[data_set_idx])) # noqa
