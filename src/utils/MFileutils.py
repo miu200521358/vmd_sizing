@@ -9,6 +9,7 @@ import glob
 import traceback
 from pathlib import Path
 import re
+import _pickle as cPickle
 
 from utils.MLogger import MLogger # noqa
 
@@ -25,20 +26,38 @@ def resource_path(relative):
 # ファイル履歴読み込み
 def read_history(mydir_path):
     # ファイル履歴
-    file_hitories = {"vmd": [], "org_pmx": [], "rep_pmx": [], "camera_vmd": [], "camera_pmx": [], "smooth_vmd": [], "smooth_pmx": [], "bulk_csv": [], "max": 50}
+    base_file_hitories = {"vmd": [], "org_pmx": [], "rep_pmx": [], "camera_vmd": [], "camera_pmx": [], "smooth_vmd": [], "smooth_pmx": [], "bulk_csv": [], "max": 50}
+    file_hitories = cPickle.loads(cPickle.dumps(base_file_hitories, -1))
 
     # 履歴JSONファイルがあれば読み込み
     try:
-        with open(os.path.join(mydir_path, 'history.json'), 'r') as f:
+        with open(os.path.join(mydir_path, 'history.json'), 'r', encoding="utf-8") as f:
             file_hitories = json.load(f)
             # キーが揃っているかチェック
-            for key in ["vmd", "org_pmx", "rep_pmx", "camera_vmd", "camera_pmx", "smooth_pmx", "smooth_vmd", "bulk_csv"]:
+            for key in base_file_hitories.keys():
                 if key not in file_hitories:
                     file_hitories[key] = []
             # 最大件数は常に上書き
             file_hitories["max"] = 50
     except Exception:
-        file_hitories = {"vmd": [], "org_pmx": [], "rep_pmx": [], "camera_vmd": [], "camera_pmx": [], "smooth_vmd": [], "smooth_pmx": [], "bulk_csv": [], "max": 50}
+        # UTF-8で読み込めなかった場合、デフォルトで読み込んでUTF-8変換
+        try:
+            with open(os.path.join(mydir_path, 'history.json'), 'r') as f:
+                file_hitories = json.load(f)
+                # キーが揃っているかチェック
+                for key in base_file_hitories.keys():
+                    if key not in file_hitories:
+                        file_hitories[key] = []
+                # 最大件数は常に上書き
+                file_hitories["max"] = 50
+            
+            # 一旦UTF-8で出力
+            save_history(mydir_path, file_hitories)
+
+            # UTF-8で読み込みし直し
+            return read_history(mydir_path)
+        except Exception:
+            file_hitories = cPickle.loads(cPickle.dumps(base_file_hitories, -1))
 
     return file_hitories
 
@@ -46,10 +65,10 @@ def read_history(mydir_path):
 def save_history(mydir_path, file_hitories):
     # 入力履歴を保存
     try:
-        with open(os.path.join(mydir_path, 'history.json'), 'w') as f:
+        with open(os.path.join(mydir_path, 'history.json'), 'w', encoding="utf-8") as f:
             json.dump(file_hitories, f, ensure_ascii=False)
-    except Exception:
-        logger.error("履歴ファイル保存失敗", traceback.format_exc())
+    except Exception as e:
+        logger.error("履歴ファイルの保存に失敗しました", e, decoration=MLogger.DECORATION_BOX)
 
 
 # パス解決
