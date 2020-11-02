@@ -452,7 +452,11 @@ cpdef MQuaternion deform_rotation(PmxModel model, VmdMotion motion, VmdBoneFrame
             effect_bf = motion.c_calc_bf(effect_bone.name, bf.fno, is_key=False, is_read=False, is_reset_interpolation=False)
 
             # 自身の回転量に付与親の回転量を付与率を加味して付与する
-            if effect_parent_bone.effect_factor < 0:
+            if effect_parent_bone.effect_factor == 0:
+                # ゼロの場合、とりあえず初期化
+                logger.debug(f"モデル「{model.name}」ボーン「{effect_parent_bone.name}」の付与率がゼロ")
+                rot = MQuaternion()
+            elif effect_parent_bone.effect_factor < 0:
                 # マイナス付与の場合、逆回転
                 rot = rot * (effect_bf.rotation * abs(effect_parent_bone.effect_factor)).inverted()
             else:

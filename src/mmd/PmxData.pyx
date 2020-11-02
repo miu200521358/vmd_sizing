@@ -1096,7 +1096,7 @@ cdef class PmxModel:
             start_type_bone = target_bone_name[1:]
 
         # 自分をリンクに登録
-        links.append(self.bones[target_bone_name])
+        links.append(self.bones[target_bone_name].copy())
 
         parent_name = None
         if is_defined:

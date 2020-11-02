@@ -681,8 +681,8 @@ class CameraService():
         # 顔の大きさ比率
         head_ratio = rep_face_length / org_face_length
 
-        logger.info("【No.%s】作成元モデル 全長: %s, 頭身: %s, 顔の大きさ: %s, Yオフセット: %s", (data_set_idx + 1), round(org_total_height, 5), round(org_heads, 5), round(org_face_length, 5), data_set.camera_offset_y)
-        logger.info("【No.%s】変換先モデル 全長: %s, 頭身: %s, 顔の大きさ: %s", (data_set_idx + 1), round(rep_total_height, 5), round(rep_heads, 5), round(rep_face_length, 5))
+        logger.info("【No.%s】作成元モデル 全長: %s, 頭身: %s, 顔の大きさ: %s", (data_set_idx + 1), round(org_total_height, 5), round(org_heads, 5), round(org_face_length, 5))
+        logger.info("【No.%s】変換先モデル 全長: %s, 頭身: %s, 顔の大きさ: %s, Yオフセット: %s", (data_set_idx + 1), round(rep_total_height, 5), round(rep_heads, 5), round(rep_face_length, 5), data_set.camera_offset_y)
 
         return org_total_height, org_face_length, org_heads, rep_total_height, rep_face_length, rep_heads, body_ratio, head_ratio
         
@@ -720,16 +720,18 @@ class CameraService():
             # 元と先の両方に末端があればリンク作成
             org_link = org_model.create_link_2_top_one(*link_bone_name_list)
 
-            # 頭頂実体がある場合、Yオフセット加味
-            if "頭頂実体" in list(org_link.all().keys()):
-                org_link.get("頭頂実体").position.setY(float(org_link.get("頭頂実体").position.y()) + float(camera_offset_y))
-
             # 先は、判定対象ボーンとそのボーンを生成するリンクのペアを登録する
             rep_target_bone_name_list = []
             for target_bone_name in target_bone_name_list:
                 if target_bone_name in org_link.all().keys() and target_bone_name in rep_model.bones:
                     # 元リンクの中にあり、かつ先ボーンの中にある場合のみ登録
-                    rep_links[target_bone_name] = rep_model.create_link_2_top_one(target_bone_name)
+                    rep_link = rep_model.create_link_2_top_one(target_bone_name)
+
+                    # 頭頂実体がある場合、Yオフセット加味
+                    if "頭頂実体" == target_bone_name:
+                        rep_link.get("頭頂実体").position.setY(float(rep_link.get("頭頂実体").position.y()) + float(camera_offset_y))
+
+                    rep_links[target_bone_name] = rep_link
                     rep_target_bone_name_list.append(target_bone_name)
 
             if len(rep_target_bone_name_list) > 0:
