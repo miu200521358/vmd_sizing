@@ -40,6 +40,10 @@ cdef double RADIANS_8 = cos(math.radians(8))
 cdef double RADIANS_12 = cos(math.radians(12))
 cdef double RADIANS_15 = cos(math.radians(15))
 
+cdef int PROCESS_FINISH = 1
+cdef int PROCESS_SKIP = -1
+cdef int PROCESS_ERROR = 0
+
 cdef class StanceService():
 
     cdef public object options
@@ -63,7 +67,7 @@ cdef class StanceService():
         concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
         for f in futures:
-            if not f.result():
+            if f.result() == PROCESS_ERROR:
                 return False
 
         return True
@@ -153,17 +157,23 @@ cdef class StanceService():
         # for direction in ["左", "右"]:
         #     self.spread_twist_lr(data_set_idx, direction)
         
+        total_cnt = 0
+        process_cnt = 0
         futures = []
         with ThreadPoolExecutor(thread_name_prefix="twist{0}".format(data_set_idx), max_workers=min(5, self.options.max_workers)) as executor:
             for direction in ["左", "右"]:
+                total_cnt += 1
                 futures.append(executor.submit(self.spread_twist_lr, self, data_set_idx, direction, True))
         concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
         for f in futures:
-            if not f.result():
+            if f.result() == PROCESS_ERROR:
                 return False
+                
+            if f.result() == PROCESS_FINISH:
+                process_cnt += 1
         
-        if self.options.now_process_ctrl:
+        if self.options.now_process_ctrl and process_cnt == total_cnt:
             self.options.now_process += 1
             self.options.now_process_ctrl.write(str(self.options.now_process))
 
@@ -173,7 +183,7 @@ cdef class StanceService():
         return True
 
     # 捩り分散左右
-    cdef bint spread_twist_lr(self, int data_set_idx, str direction, bint dummy):
+    cdef int spread_twist_lr(self, int data_set_idx, str direction, bint dummy):
         cdef str arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name, bone_name
         cdef MVector3D local_z_axis, arm_local_x_axis, arm_twist_local_x_axis, elbow_local_x_axis, elbow_local_y_axis, arm_local_z2y_axis, arm_local_y_axis
         cdef MVector3D wrist_twist_local_x_axis, wrist_local_x_axis, wrist_local_y_axis
@@ -244,7 +254,7 @@ cdef class StanceService():
                 concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
                 for f in futures:
                     if not f.result():
-                        return False
+                        return PROCESS_ERROR
                 
                 # 捩り前のを保持
                 prev_twist_motion = data_set.motion.copy()
@@ -257,7 +267,7 @@ cdef class StanceService():
                 concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
                 for f in futures:
                     if not f.result():
-                        return False
+                        return PROCESS_ERROR
 
                 logger.info("-- %s捩り分散準備:終了【No.%s】", direction, (data_set_idx + 1))
 
@@ -287,7 +297,7 @@ cdef class StanceService():
 
                 for f in futures:
                     if not f.result():
-                        return False
+                        return PROCESS_ERROR
                 
                 logger.info("%s捩り分散後処理 - 分散中間チェック①【No.%s】", arm_bone_name, (data_set_idx + 1))
 
@@ -321,7 +331,7 @@ cdef class StanceService():
 
                 for f in futures:
                     if not f.result():
-                        return False
+                        return PROCESS_ERROR
 
                 # # 腕系ボーンのfnos再取得
                 # new_fnos = data_set.motion.get_bone_fnos(arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name)
@@ -363,7 +373,7 @@ cdef class StanceService():
                 #     concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
                 #     for f in futures:
-                #         if not f.result():
+                #         if f.result() == PROCESS_ERROR:
                 #             return False
 
                 # logger.info("%s捩り分散後処理 - 円滑化【No.%s】", arm_bone_name, (data_set_idx + 1))
@@ -376,7 +386,7 @@ cdef class StanceService():
 
                 # concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
                 # for f in futures:
-                #     if not f.result():
+                #     if f.result() == PROCESS_ERROR:
                 #         return False
 
                 # logger.info("%s捩り分散後処理 - フィルタリング【No.%s】", arm_bone_name, (data_set_idx + 1))
@@ -390,7 +400,7 @@ cdef class StanceService():
 
                 # concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
                 # for f in futures:
-                #     if not f.result():
+                #     if f.result() == PROCESS_ERROR:
                 #         return False
 
                 # # 捩りボーンのbfにフィルターをかける
@@ -402,7 +412,7 @@ cdef class StanceService():
 
                 # concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
                 # for f in futures:
-                #     if not f.result():
+                #     if f.result() == PROCESS_ERROR:
                 #         return False
 
                 # # 各ボーンのbfにフィルターをかける
@@ -414,14 +424,16 @@ cdef class StanceService():
 
                 # concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
                 # for f in futures:
-                #     if not f.result():
+                #     if f.result() == PROCESS_ERROR:
                 #         return False
 
                 logger.info("%s捩り分散:終了【No.%s】", direction, (data_set_idx + 1))
+                return PROCESS_FINISH
+
             else:
                 logger.info("%s捩り分散: 【No.%s】[%s]のボーン群が、作成元もしくは変換先のいずれかで足りないため、処理をスキップします。", direction, (data_set_idx + 1), ", ".join(twist_target_bones))
 
-            return True
+            return PROCESS_SKIP
         except MKilledException as ke:
             raise ke
         except SizingException as se:
@@ -1427,19 +1439,24 @@ cdef class StanceService():
     # 足ＩＫ補正
     cdef bint adjust_leg_ik_stance(self, int data_set_idx, MOptionsDataSet data_set):
         logger.info("足ＩＫ補正　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
-
+        
+        total_cnt = 0
+        process_cnt = 0
         futures = []
-        with ThreadPoolExecutor(thread_name_prefix="leg_ik{0}".format(data_set_idx), max_workers=min(2, self.options.max_workers)) as executor:
+        with ThreadPoolExecutor(thread_name_prefix="leg_ik{0}".format(data_set_idx), max_workers=min(5, self.options.max_workers)) as executor:
             for direction in ["左", "右"]:
+                total_cnt += 1
                 futures.append(executor.submit(self.adjust_leg_ik_stance_lr, self, data_set_idx, direction, 0))
-
         concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
         for f in futures:
             if not f.result():
                 return False
-
-        if self.options.now_process_ctrl:
+            
+            if f.result() == PROCESS_FINISH:
+                process_cnt += 1
+        
+        if self.options.now_process_ctrl and process_cnt == total_cnt:
             self.options.now_process += 1
             self.options.now_process_ctrl.write(str(self.options.now_process))
 
@@ -1449,7 +1466,7 @@ cdef class StanceService():
         return True
                  
     # 足ＩＫ補正
-    cdef bint adjust_leg_ik_stance_lr(self, int data_set_idx, str direction, int dummy):
+    cdef int adjust_leg_ik_stance_lr(self, int data_set_idx, str direction, int dummy):
         cdef MOptionsDataSet data_set
         cdef str target_bone_name, org_ik_root_bone_name, rep_ik_root_bone_name, d_bone_name
         cdef int prev_sep_fno, fno, fno_idx
@@ -1471,6 +1488,11 @@ cdef class StanceService():
             target_bone_name = "{0}足ＩＫ".format(direction)
 
             if set(leg_ik_target_bones).issubset(data_set.org_model.bones) and set(leg_ik_target_bones).issubset(data_set.rep_model.bones):
+
+                # 足IK親がモーションにあって、かつモデルにない場合、元の位置がおかしいのでスキップ
+                if data_set.motion.is_active_bones("{0}足IK親".format(direction)) and ("{0}足IK親".format(direction) not in data_set.org_model.bones or "{0}足IK親".format(direction) not in data_set.rep_model.bones):
+                    logger.info("%s足ＩＫ補正: 【No.%s】%s足IK親が、作成元もしくは変換先のいずれかで足りないため、処理をスキップします。", direction, (data_set_idx + 1), direction)
+                    return PROCESS_SKIP
 
                 # 足ＩＫのそれぞれでフレーム番号をチェックする
                 prev_sep_fno = 0
@@ -1628,13 +1650,14 @@ cdef class StanceService():
                             prev_sep_fno = fno // 500
 
                     logger.info("%s足ＩＫ補正:終了【No.%s】", direction, (data_set_idx + 1))
+                    return PROCESS_FINISH
 
                 else:
                     logger.info("%s足ＩＫ補正: 【No.%s】作成元もしくは変換先の%s足ＩＫのＩＫルートボーンが、「%s足」ボーンではないため、処理をスキップします。", direction, (data_set_idx + 1), direction, direction)
             else:
                 logger.info("%s足ＩＫ補正: 【No.%s】[%s]のボーン群が、作成元もしくは変換先のいずれかで足りないため、処理をスキップします。", direction, (data_set_idx + 1), ", ".join(leg_ik_target_bones))
 
-            return True
+            return PROCESS_SKIP
         except MKilledException as ke:
             raise ke
         except SizingException as se:
@@ -1649,18 +1672,23 @@ cdef class StanceService():
     cdef bint adjust_toe_ik_stance(self, int data_set_idx, MOptionsDataSet data_set):
         logger.info("つま先ＩＫ補正　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
 
+        total_cnt = 0
+        process_cnt = 0
         futures = []
         with ThreadPoolExecutor(thread_name_prefix="toe_ik{0}".format(data_set_idx), max_workers=min(2, self.options.max_workers)) as executor:
             for direction in ["左", "右"]:
+                total_cnt += 1
                 futures.append(executor.submit(self.adjust_toe_ik_stance_lr, self, data_set_idx, direction, 0.0))
-
         concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
         for f in futures:
             if not f.result():
                 return False
-
-        if self.options.now_process_ctrl:
+            
+            if f.result() == PROCESS_FINISH:
+                process_cnt += 1
+        
+        if self.options.now_process_ctrl and process_cnt == total_cnt:
             self.options.now_process += 1
             self.options.now_process_ctrl.write(str(self.options.now_process))
 
@@ -1670,7 +1698,7 @@ cdef class StanceService():
         return True
                  
     # つま先ＩＫ補正
-    cdef bint adjust_toe_ik_stance_lr(self, int data_set_idx, str direction, double dummy):
+    cdef int adjust_toe_ik_stance_lr(self, int data_set_idx, str direction, double dummy):
         cdef MOptionsDataSet data_set
         cdef str toe_ik_bone_name , leg_ik_bone_name , ankle_bone_name , leg_bone_name , leg_ik_parent_name
         cdef list toe_ik_target_bones , fnos , ik_on_fnos , d_on_fnos , org_initial_toe_trans_vs
@@ -1702,10 +1730,10 @@ cdef class StanceService():
                         and toe_ik_bone_name in data_set.motion.bones and data_set.motion.is_active_bones(toe_ik_bone_name):
                     # ボーンとモーションが揃ってある場合のみ補正
 
-                    if len(data_set.motion.get_bone_fnos(toe_ik_bone_name)) <= 1:
+                    if not data_set.motion.is_active_bones(toe_ik_bone_name):
                         # 0Fキーはあっても無視
                         logger.info("%sつま先ＩＫ補正: 【No.%s】処理対象キーフレがないため、処理を終了します。", direction, (data_set_idx + 1))
-                        return True
+                        return PROCESS_SKIP
 
                     logger.info("%s補正【No.%s】", toe_ik_bone_name, (data_set_idx + 1))
 
@@ -1720,7 +1748,7 @@ cdef class StanceService():
 
                     if len(fnos) <= 1:
                         logger.info("%sつま先ＩＫ補正: 【No.%s】処理対象キーフレがないため、処理を終了します。", direction, (data_set_idx + 1))
-                        return True
+                        return PROCESS_SKIP
 
                     ik_on_fnos = []
                     d_on_fnos = []
@@ -1847,10 +1875,11 @@ cdef class StanceService():
                 #     self.remove_unnecessary_bf_pool_parts(data_set_idx, toe_ik_bone_name, 0)
 
                 logger.info("%sつま先ＩＫ補正:終了【No.%s】", direction, (data_set_idx + 1))
+                return PROCESS_FINISH
             else:
                 logger.info("%sつま先ＩＫ補正: 【No.%s】[%s]のボーン群が、作成元もしくは変換先のいずれかで足りないため、処理をスキップします。", direction, (data_set_idx + 1), ", ".join(toe_ik_target_bones))
 
-            return True
+            return PROCESS_SKIP
         except MKilledException as ke:
             raise ke
         except SizingException as se:
@@ -1865,18 +1894,23 @@ cdef class StanceService():
     cdef bint adjust_toe_stance(self, int data_set_idx, MOptionsDataSet data_set):
         logger.info("つま先補正　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
 
+        total_cnt = 0
+        process_cnt = 0
         futures = []
         with ThreadPoolExecutor(thread_name_prefix="toe{0}".format(data_set_idx), max_workers=min(2, self.options.max_workers)) as executor:
             for direction in ["左", "右"]:
+                total_cnt += 1
                 futures.append(executor.submit(self.adjust_toe_stance_lr, self, data_set_idx, direction, ""))
-
         concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
         for f in futures:
             if not f.result():
                 return False
-
-        if self.options.now_process_ctrl:
+            
+            if f.result() == PROCESS_FINISH:
+                process_cnt += 1
+        
+        if self.options.now_process_ctrl and process_cnt == total_cnt:
             self.options.now_process += 1
             self.options.now_process_ctrl.write(str(self.options.now_process))
 
@@ -1886,7 +1920,7 @@ cdef class StanceService():
         return True
                  
     # つま先補正
-    cdef bint adjust_toe_stance_lr(self, int data_set_idx, str direction, str dummy):
+    cdef int adjust_toe_stance_lr(self, int data_set_idx, str direction, str dummy):
         cdef double adjust_sole_y, adjust_toe_y, org_sole_diff, org_toe_diff, org_toe_limit, rep_sole_diff, rep_toe_diff, rep_toe_limit, sole_diff, toe_diff, toe_limit_ratio
         cdef MOptionsDataSet data_set
         cdef list fnos, toe_target_bones
@@ -1902,6 +1936,11 @@ cdef class StanceService():
 
             # つま先調整に必要なボーン群
             toe_target_bones = ["{0}足ＩＫ".format(direction), "{0}つま先ＩＫ".format(direction), "{0}足首".format(direction), "{0}つま先実体".format(direction), "{0}足底実体".format(direction)]
+
+            # 足IK親がモーションにあって、かつモデルにない場合、元の位置がおかしいのでスキップ
+            if data_set.motion.is_active_bones("{0}足IK親".format(direction)) and ("{0}足IK親".format(direction) not in data_set.org_model.bones or "{0}足IK親".format(direction) not in data_set.rep_model.bones):
+                logger.info("%sつま先補正: 【No.%s】%s足IK親が、作成元もしくは変換先のいずれかで足りないため、処理をスキップします。", direction, (data_set_idx + 1), direction)
+                return PROCESS_SKIP
 
             if set(toe_target_bones).issubset(data_set.org_model.bones) and set(toe_target_bones).issubset(data_set.rep_model.bones):
                 org_toe_links = data_set.org_model.create_link_2_top_one("{0}つま先実体".format(direction))
@@ -1980,10 +2019,11 @@ cdef class StanceService():
                         prev_sep_fno = fno // 500
 
                 logger.info("%sつま先補正:終了【No.%s】", direction, (data_set_idx + 1))
+                return PROCESS_FINISH
             else:
                 logger.info("%sつま先補正: 【No.%s】[%s]のボーン群が、作成元もしくは変換先のいずれかで足りないため、処理をスキップします。", direction, (data_set_idx + 1), ", ".join(toe_target_bones))
 
-            return True
+            return PROCESS_SKIP
         except MKilledException as ke:
             raise ke
         except SizingException as se:
@@ -2069,15 +2109,16 @@ cdef class StanceService():
                     prev_fno = fno // 500
 
             logger.info("センターXZ補正: 終了【No.%s】", (data_set_idx + 1))
+
+            if self.options.now_process_ctrl:
+                self.options.now_process += 1
+                self.options.now_process_ctrl.write(str(self.options.now_process))
+
+                proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
+                self.options.tree_process_dict[proccess_key]["スタンス追加補正"]["センターXZ補正"] = True
+
         else:
             logger.info("センターXZ補正: 【No.%s】[%s]のボーン群が、作成元もしくは変換先のいずれかで足りないため、処理をスキップします。", (data_set_idx + 1), ", ".join(center_target_bones))
-
-        if self.options.now_process_ctrl:
-            self.options.now_process += 1
-            self.options.now_process_ctrl.write(str(self.options.now_process))
-
-            proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
-            self.options.tree_process_dict[proccess_key]["スタンス追加補正"]["センターXZ補正"] = True
                         
         return True
 
@@ -2165,15 +2206,16 @@ cdef class StanceService():
                     prev_fno = fno // 500
                 
             logger.info("センターY補正: 終了【No.%s】", (data_set_idx + 1))
+
+            if self.options.now_process_ctrl:
+                self.options.now_process += 1
+                self.options.now_process_ctrl.write(str(self.options.now_process))
+
+                proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
+                self.options.tree_process_dict[proccess_key]["スタンス追加補正"]["センターY補正"] = True
+
         else:
             logger.info("センターY補正: 【No.%s】[%s]のボーン群が、作成元もしくは変換先のいずれかで足りないため、処理をスキップします。", (data_set_idx + 1), ", ".join(center_target_bones))
-
-        if self.options.now_process_ctrl:
-            self.options.now_process += 1
-            self.options.now_process_ctrl.write(str(self.options.now_process))
-
-            proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
-            self.options.tree_process_dict[proccess_key]["スタンス追加補正"]["センターY補正"] = True
 
         return True
 
@@ -2653,15 +2695,16 @@ cdef class StanceService():
                 self.adjust_rotation_by_parent(data_set_idx, data_set, "右腕", "上半身2")
 
                 logger.info("上半身2補正: 終了【No.%s】", (data_set_idx + 1))
+
+            if self.options.now_process_ctrl:
+                self.options.now_process += 1
+                self.options.now_process_ctrl.write(str(self.options.now_process))
+
+                proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
+                self.options.tree_process_dict[proccess_key]["スタンス追加補正"]["上半身補正"] = True
+
         else:
             logger.info("上半身補正: 【No.%s】[%s]のボーン群が、作成元もしくは変換先のいずれかで足りないため、処理をスキップします。", (data_set_idx + 1), ", ".join(upper_target_bones))
-
-        if self.options.now_process_ctrl:
-            self.options.now_process += 1
-            self.options.now_process_ctrl.write(str(self.options.now_process))
-
-            proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
-            self.options.tree_process_dict[proccess_key]["スタンス追加補正"]["上半身補正"] = True
 
         return True
 
@@ -2786,15 +2829,15 @@ cdef class StanceService():
             self.adjust_rotation_by_parent_ik(data_set_idx, data_set, "右足", "下半身", "右足ＩＫ")
 
             logger.info("下半身補正: 終了【No.%s】", (data_set_idx + 1))
+
+            if self.options.now_process_ctrl:
+                self.options.now_process += 1
+                self.options.now_process_ctrl.write(str(self.options.now_process))
+            
+                proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
+                self.options.tree_process_dict[proccess_key]["スタンス追加補正"]["下半身補正"] = True
         else:
             logger.info("下半身補正: 【No.%s】[%s]のボーン群が、作成元もしくは変換先のいずれかで足りないため、処理をスキップします。", (data_set_idx + 1), ", ".join(lower_target_bones))
-
-        if self.options.now_process_ctrl:
-            self.options.now_process += 1
-            self.options.now_process_ctrl.write(str(self.options.now_process))
-        
-            proccess_key = "【No.{0}】{1}({2})".format(data_set_idx + 1, os.path.basename(data_set.motion.path), data_set.rep_model.name)
-            self.options.tree_process_dict[proccess_key]["スタンス追加補正"]["下半身補正"] = True
 
         return True
 
@@ -2926,18 +2969,23 @@ cdef class StanceService():
     cdef bint adjust_shoulder_stance(self, int data_set_idx, MOptionsDataSet data_set):
         logger.info("肩補正　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
 
+        total_cnt = 0
+        process_cnt = 0
         futures = []
         with ThreadPoolExecutor(thread_name_prefix="shoulder{0}".format(data_set_idx), max_workers=min(2, self.options.max_workers)) as executor:
             for direction in ["左", "右"]:
+                total_cnt += 1
                 futures.append(executor.submit(self.adjust_shoulder_stance_lr, self, data_set_idx, "{0}肩P".format(direction), "{0}肩".format(direction), "{0}腕".format(direction)))
-
         concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
         for f in futures:
             if not f.result():
                 return False
-
-        if self.options.now_process_ctrl:
+            
+            if f.result() == PROCESS_FINISH:
+                process_cnt += 1
+        
+        if self.options.now_process_ctrl and process_cnt == total_cnt:
             self.options.now_process += 1
             self.options.now_process_ctrl.write(str(self.options.now_process))
 
@@ -2947,7 +2995,7 @@ cdef class StanceService():
         return True
 
     # 肩補正左右
-    cdef bint adjust_shoulder_stance_lr(self, int data_set_idx, str shoulder_p_name, str shoulder_name, str arm_name):
+    cdef int adjust_shoulder_stance_lr(self, int data_set_idx, str shoulder_p_name, str shoulder_name, str arm_name):
         cdef MOptionsDataSet data_set
         cdef double dot
         cdef list shoulder_target_bones
@@ -2990,10 +3038,12 @@ cdef class StanceService():
                 else:
                     logger.warning("%sの初期スタンスの角度が大きく違うため、肩補正の結果がおかしくなる可能性があります【No.%s】", shoulder_name, (data_set_idx + 1))
                     self.adjust_shoulder_stance_far(data_set_idx, shoulder_p_name, shoulder_name, arm_name, 0, is_shoulder_p)
+                
+                return PROCESS_FINISH
             else:
                 logger.info("%s補正: 【No.%s】[%s]のボーン群が、作成元もしくは変換先のいずれかで足りないため、処理をスキップします。", shoulder_name, (data_set_idx + 1), ", ".join(shoulder_target_bones))
             
-            return True
+            return PROCESS_SKIP
         except MKilledException as ke:
             raise ke
         except SizingException as se:
