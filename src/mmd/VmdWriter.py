@@ -54,8 +54,10 @@ class VmdWriter():
         fout.write(struct.pack('<L', len(self.data_set.motion.shadows)))  # セルフ影キーフレーム数
         for cf in self.data_set.motion.shadows:
             cf.write(fout)
-        fout.write(struct.pack('<L', len(self.data_set.motion.showiks)))  # モデル表示・IK on/offキーフレーム数
-        for sf in self.data_set.motion.showiks:
-            sf.write(fout)
+            
+        if len(camera_frames) == 0:
+            fout.write(struct.pack('<L', len(self.data_set.motion.showiks)))  # モデル表示・IK on/offキーフレーム数
+            for sf in self.data_set.motion.showiks:
+                sf.write(fout)
         
         fout.close()
