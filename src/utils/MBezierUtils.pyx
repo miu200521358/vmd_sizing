@@ -6,7 +6,6 @@ import numpy as np
 cimport numpy as np
 import bezier
 cimport bezier._curve
-cimport bezier._helpers
 
 logger = MLogger(__name__, level=1)
 
@@ -78,7 +77,7 @@ cdef double calc_catmull_rom_one_point(double x, double v0, double v1, double v2
 
 
 # 指定したすべての値をカトマル曲線として計算する
-cpdef np.ndarray calc_value_from_catmullrom(str bone_name, list fnos, list values):
+cdef np.ndarray calc_value_from_catmullrom(str bone_name, list fnos, list values):
     cdef np.ndarray[np.float_t, ndim=1] y_intpol
     cdef list prev_list, next_list
     cdef int fidx, sfno, efno, res
@@ -137,140 +136,15 @@ cpdef np.ndarray calc_value_from_catmullrom(str bone_name, list fnos, list value
 
 # 指定したすべての値を通るカトマル曲線からベジェ曲線を計算し、MMD補間曲線範囲内に収められた場合、そのベジェ曲線を返す
 def join_value_2_bezier(fno: int, bone_name: str, values: list, offset=0, diff_limit=0.01):
-    # return_tuple = c_join_value_2_bezier(fno, bone_name, values, offset, diff_limit)
-    # return return_tuple[0], return_tuple[1]
-
-    if np.isclose(np.max(np.array(values)), np.min(np.array(values)), atol=1e-3) or len(values) <= 2:
-        # すべてがだいたい同じ値（最小と最大が同じ値)か次数が1の場合、線形補間
-        return LINEAR_MMD_INTERPOLATION
-
-    try:
-        # Xは次数（フレーム数）分移動
-        xs = np.arange(0, len(values))
-        # YはXの移動分を許容範囲とする
-        ys = values + xs[-1]
-
-        # カトマル曲線をベジェ曲線に変換する
-        bz_x, bz_y = convert_catmullrom_2_bezier(np.concatenate([[None], xs, [None]]), np.concatenate([[None], ys, [None]]))
-        logger.test("bz_x: %s", bz_x)
-        logger.test("bz_y: %s", bz_y)
-
-        if len(bz_x) == 0:
-            # 始点と終点が指定されていて、カトマル曲線が描けなかった場合、線形補間
-            return LINEAR_MMD_INTERPOLATION
-
-        # 次数
-        degree = len(bz_x) - 1
-        logger.test("degree: %s", degree)
-
-        # すべての制御点を加味したベジェ曲線
-        full_curve = bezier.Curve(np.asfortranarray([bz_x, bz_y]), degree=degree)
-
-        if degree < 3:
-            # 3次未満の場合、3次まで次数を増やす
-            joined_curve = full_curve.elevate()
-            for _ in range(1, 3 - degree):
-                joined_curve = joined_curve.elevate()
-        elif degree == 3:
-            # 3次の場合、そのままベジェ曲線をMMD用に補間
-            joined_curve = full_curve
-        elif degree > 3:
-            # 3次より多い場合、次数を減らす
-
-            reduced_curve_list = []
-            bz_x = full_curve.nodes[0]
-            bz_y = full_curve.nodes[1]
-            logger.test("START bz_x: %s, bz_y: %s", bz_x, bz_y)
-            
-            # 3次になるまでベジェ曲線を繋いで減らしていく
-            while len(bz_x) > 4:
-                reduced_curve_list = []
-
-                for n in range(0, degree + 1, 5):
-                    reduce_bz_x = bz_x[n:n + 5]
-                    reduce_bz_y = bz_y[n:n + 5]
-                    logger.test("n: %s, reduce_bz_x: %s, reduce_bz_y: %s", n, reduce_bz_x, reduce_bz_y)
-                    reduced_curve = bezier.Curve(np.asfortranarray([reduce_bz_x, reduce_bz_y]), degree=(len(reduce_bz_x) - 1))
-
-                    # 次数がある場合、減らす
-                    if (len(reduce_bz_x) - 1) > 1:
-                        reduced_curve = reduced_curve.reduce_()
-
-                    logger.test("n: %s, nodes: %s", n, reduced_curve.nodes)
-                    
-                    # リストに追加
-                    reduced_curve_list.append(reduced_curve)
-
-                bz_x = []
-                bz_y = []
-
-                for reduced_curve in reduced_curve_list:
-                    bz_x = np.append(bz_x, reduced_curve.nodes[0])
-                    bz_y = np.append(bz_y, reduced_curve.nodes[1])
-
-                logger.test("NEXT bz_x: %s, bz_y: %s", bz_x, bz_y)
-
-            logger.test("FINISH bz_x: %s, bz_y: %s", bz_x, bz_y)
-
-            # bz_x = [full_curve.nodes[0][0]] + list(bz_x) + [full_curve.nodes[0][-1]]
-            # bz_y = [full_curve.nodes[0][0]] + list(bz_y) + [full_curve.nodes[0][-1]]
-
-            joined_curve = bezier.Curve(np.asfortranarray([bz_x, bz_y]), degree=(len(bz_x) - 1))
-
-        logger.test("joined_curve: %s", joined_curve.nodes)
-
-        # 全体のキーフレ
-        bezier_x = np.arange(0, len(values))[1:-1]
-
-        # 元の2つのベジェ曲線との交点を取得する
-        full_ys = intersect_by_x(full_curve, bezier_x)
-        logger.test("f: %s, %s, full_ys: %s", fno, bone_name, full_ys)
-
-        # 次数を減らしたベジェ曲線との交点を取得する
-        reduced_ys = intersect_by_x(joined_curve, bezier_x)
-        logger.test("f: %s, %s, reduced_ys: %s", fno, bone_name, reduced_ys)
-
-        # 交点の差を取得する
-        diff_ys = np.array(full_ys) - np.array(reduced_ys)
-
-        # 差が大きい箇所をピックアップする
-        diff_large = np.where(np.abs(diff_ys) > (diff_limit * (offset + 1)), 1, 0)
-        
-        # 差が一定未満である場合、ベジェ曲線をMMD補間曲線に合わせる
-        nodes = joined_curve.nodes
-
-        # MMD用補間曲線に変換
-        joined_bz = scale_bezier(MVector2D(nodes[0, 0], nodes[1, 0]), MVector2D(nodes[0, 1], nodes[1, 1]), \
-                                 MVector2D(nodes[0, 2], nodes[1, 2]), MVector2D(nodes[0, 3], nodes[1, 3]))
-        logger.debug("f: %s, %s, values: %s, nodes: %s, full_ys: %s, reduced_ys: %s, diff_ys: %s, diff_limit: %s, diff_large: %s, joined_bz: %s, %s, fit: %s", \
-                     fno, bone_name, values, joined_curve.nodes, full_ys, reduced_ys, diff_ys, diff_limit, np.count_nonzero(diff_large) > 0, joined_bz[1], joined_bz[2], \
-                     is_fit_bezier_mmd(joined_bz, offset))
-
-        if np.count_nonzero(diff_large) > 0:
-            # 差が大きい箇所がある場合、分割不可
-            return None
-
-        if not is_fit_bezier_mmd(joined_bz, offset):
-            # 補間曲線がMMD補間曲線内に収まらない場合、NG
-            return None
-        
-        # オフセット込みの場合、MMD用補間曲線枠内に収める
-        fit_bezier_mmd(joined_bz)
-        
-        # すべてクリアした場合、補間曲線採用
-        return joined_bz
-    except Exception as e:
-        # エラーレベルは落として表に出さない
-        logger.debug("ベジェ曲線生成失敗", e)
-        return None
-
+    return_tuple = c_join_value_2_bezier(fno, bone_name, values, offset, diff_limit)
+    return return_tuple[0], return_tuple[1]
 
 cdef tuple c_join_value_2_bezier(int fno, str bone_name, list values, double offset, double diff_limit):
     if len(values) <= 2:
         # 次数が1の場合、線形補間
         logger.debug("次数1: values: %s", values)
         return (LINEAR_MMD_INTERPOLATION, [])
-
+    
     cdef np.ndarray[np.double_t, ndim=1] xs, yx
     cdef np.ndarray[np.float_t, ndim=1] bz_x, bz_y, reduce_bz_x, reduce_bz_y, bezier_x, diff_ys, full_ys, reduced_ys, diff_large
     cdef np.ndarray[np.float_t, ndim=2] nodes
@@ -286,7 +160,7 @@ cdef tuple c_join_value_2_bezier(int fno, str bone_name, list values, double off
 
         # カトマル曲線をベジェ曲線に変換する
         (bz_x, bz_y) = convert_catmullrom_2_bezier(np.concatenate([[None], xs, [None]]), np.concatenate([[None], ys, [None]]))
-        logger.debug("bz_x: %s, bz_y: %s", list(bz_x), list(bz_y))
+        logger.debug("bz_x: %s, bz_y: %s", bz_x, bz_y)
 
         if len(bz_x) == 0:
             # 始点と終点が指定されていて、カトマル曲線が描けなかった場合、線形補間
@@ -315,14 +189,12 @@ cdef tuple c_join_value_2_bezier(int fno, str bone_name, list values, double off
             bz_x = full_curve.nodes[0]
             bz_y = full_curve.nodes[1]
             logger.test("START bz_x: %s, bz_y: %s", bz_x, bz_y)
-
-            reduced_nodes = bezier.hazmat.curve_helpers.full_reduce(full_curve.nodes)
             
             # 3次になるまでベジェ曲線を繋いで減らしていく
-            while len(bz_x) > 5:
+            while len(bz_x) > 4:
                 reduced_curve_list = []
 
-                for n in range(0, degree + 1, 4):
+                for n in range(0, degree + 1, 5):
                     reduce_bz_x = bz_x[n:n + 5]
                     reduce_bz_y = bz_y[n:n + 5]
                     logger.test("n: %s, reduce_bz_x: %s, reduce_bz_y: %s", n, reduce_bz_x, reduce_bz_y)
@@ -341,20 +213,17 @@ cdef tuple c_join_value_2_bezier(int fno, str bone_name, list values, double off
                 bz_y = np.empty(0)
 
                 for reduced_curve in reduced_curve_list:
-                    bz_x = np.append(bz_x, reduced_curve.nodes[0, -1])
-                    bz_y = np.append(bz_y, reduced_curve.nodes[1, -1])
+                    bz_x = np.append(bz_x, reduced_curve.nodes[0])
+                    bz_y = np.append(bz_y, reduced_curve.nodes[1])
 
                 logger.test("NEXT bz_x: %s, bz_y: %s", bz_x, bz_y)
-            
-            reduced_curve = bezier.Curve(np.asfortranarray([bz_x, bz_y]), degree=(len(bz_x) - 1))
-            joined_curve = reduced_curve.reduce_()
 
             logger.test("FINISH bz_x: %s, bz_y: %s", bz_x, bz_y)
 
             # bz_x = [full_curve.nodes[0][0]] + list(bz_x) + [full_curve.nodes[0][-1]]
             # bz_y = [full_curve.nodes[0][0]] + list(bz_y) + [full_curve.nodes[0][-1]]
 
-            # joined_curve = bezier.Curve(np.asfortranarray([bz_x, bz_y]), degree=(len(bz_x) - 1))
+            joined_curve = bezier.Curve(np.asfortranarray([bz_x, bz_y]), degree=(len(bz_x) - 1))
 
         logger.test("joined_curve: %s", joined_curve.nodes)
 
@@ -378,22 +247,9 @@ cdef tuple c_join_value_2_bezier(int fno, str bone_name, list values, double off
         # 差が一定未満である場合、ベジェ曲線をMMD補間曲線に合わせる
         nodes = joined_curve.nodes
 
-        # 標準化
-        x_min = np.min(nodes[0])
-        x_max = np.max(nodes[0])
-        y_min = np.min(nodes[1])
-        y_max = np.max(nodes[1])
-
-        x_diff = x_max - x_min
-        y_diff = y_max - y_min
-
-        p1 = MVector2D((nodes[0, 0] - x_min) / x_diff, (nodes[1, 0] - y_min) / y_diff)
-        p2 = MVector2D((nodes[0, 1] - x_min) / x_diff, (nodes[1, 1] - y_min) / y_diff)
-        p3 = MVector2D((nodes[0, 2] - x_min) / x_diff, (nodes[1, 2] - y_min) / y_diff)
-        p4 = MVector2D((nodes[0, 3] - x_min) / x_diff, (nodes[1, 3] - y_min) / y_diff)
-
         # MMD用補間曲線に変換
-        joined_bz = scale_bezier(p1, p2, p3, p4)
+        joined_bz = scale_bezier(MVector2D(nodes[0, 0], nodes[1, 0]), MVector2D(nodes[0, 1], nodes[1, 1]), \
+                                 MVector2D(nodes[0, 2], nodes[1, 2]), MVector2D(nodes[0, 3], nodes[1, 3]))
         logger.debug("f: %s, %s, values: %s, nodes: %s, full_ys: %s, reduced_ys: %s, diff_ys: %s, diff_limit: %s, diff_large: %s, joined_bz: %s, %s, fit: %s", \
                      fno, bone_name, values, joined_curve.nodes, full_ys, reduced_ys, diff_ys, diff_limit, np.count_nonzero(diff_large) > 0, joined_bz[1], joined_bz[2], \
                      is_fit_bezier_mmd(joined_bz, offset))
@@ -404,16 +260,18 @@ cdef tuple c_join_value_2_bezier(int fno, str bone_name, list values, double off
 
         if not is_fit_bezier_mmd(joined_bz, offset):
             # 補間曲線がMMD補間曲線内に収まらない場合、NG
-            f_prime = np.gradient(values)
-            sign = np.concatenate([[0], np.diff(np.sign(np.diff(f_prime))), [0]])
-            np_indices = np.where(np.abs(sign) > 1)[0]
-            
-            logger.debug("%s: f: %s, values: %s", bone_name, fno, values)
-            logger.debug("%s: f: %s, f_prime: %s", bone_name, fno, f_prime)
-            logger.debug("%s: f: %s, sign: %s", bone_name, fno, sign)
-            logger.debug("%s: f: %s, np_indices: %s", bone_name, fno, np_indices)
 
-            return (None, np_indices)
+            # 差分の大きなところを返す
+            diff_large = np.where(np.abs(diff_ys) > (diff_limit * 0.5 * (offset + 1)), 1, 0).astype(np.float)            
+            if np.count_nonzero(diff_large) > 0:
+                return (None, np.where(diff_large)[0].tolist())
+
+            # 差分の大きなところを返す
+            diff_large = np.where(np.abs(diff_ys) > 0, 1, 0).astype(np.float)
+            if np.count_nonzero(diff_large) > 0:
+                return (None, np.where(diff_large)[0].tolist())
+
+            return (None, [])
         
         # オフセット込みの場合、MMD用補間曲線枠内に収める
         fit_bezier_mmd(joined_bz)
@@ -456,8 +314,8 @@ cdef tuple convert_catmullrom_2_bezier(np.ndarray xs, np.ndarray ys):
             continue
 
         if not p0 and p3:
-            # bz_x.append(p1.x())
-            # bz_y.append(p1.y())
+            bz_x.append(p1.x())
+            bz_y.append(p1.y())
 
             # p0が空の場合、始点
             B = (p1 * (1 / 2)) - p2 + (p3 * (1 / 2))
@@ -486,8 +344,8 @@ cdef tuple convert_catmullrom_2_bezier(np.ndarray xs, np.ndarray ys):
         bz_y.append(s1.y())
         bz_y.append(s2.y())
 
-    # bz_x.append(xs[-2])
-    # bz_y.append(ys[-2])
+    bz_x.append(xs[-2])
+    bz_y.append(ys[-2])
 
     return (np.array(bz_x, dtype=np.float64), np.array(bz_y, dtype=np.float64))
 
@@ -707,4 +565,3 @@ cdef int round_integer(double t):
     
     # pythonは偶数丸めなので、整数部で丸めた後、元に戻す
     return round(round(t2, -6) / 1000000)
-
