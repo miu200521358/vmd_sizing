@@ -77,7 +77,7 @@ cdef double calc_catmull_rom_one_point(double x, double v0, double v1, double v2
 
 
 # 指定したすべての値をカトマル曲線として計算する
-cdef np.ndarray calc_value_from_catmullrom(str bone_name, list fnos, list values):
+cpdef np.ndarray calc_value_from_catmullrom(str bone_name, list fnos, list values):
     cdef np.ndarray[np.float_t, ndim=1] y_intpol
     cdef list prev_list, next_list
     cdef int fidx, sfno, efno, res
