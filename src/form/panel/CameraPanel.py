@@ -7,6 +7,7 @@ from form.panel.BasePanel import BasePanel
 from form.parts.SizingFileSet import SizingFileSet
 from form.parts.BaseFilePickerCtrl import BaseFilePickerCtrl
 from form.parts.HistoryFilePickerCtrl import HistoryFilePickerCtrl
+from form.parts.FloatSliderCtrl import FloatSliderCtrl
 from utils import MFileUtils
 from utils.MLogger import MLogger # noqa
 
@@ -41,12 +42,43 @@ class CameraPanel(BasePanel):
                                                               is_aster=False, is_save=True, set_no=1)
         self.header_sizer.Add(self.output_camera_vmd_file_ctrl.sizer, 1, wx.EXPAND, 0)
 
+        # カメラ距離調整スライダー
+        self.camera_length_sizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.camera_length_txt = wx.StaticText(self.header_panel, wx.ID_ANY, u"距離可動範囲", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.camera_length_txt.SetToolTip(u"ステージの大きさなどにより、カメラの距離の調整範囲を限定したい場合に\n" \
+                                          + "カメラの距離可動範囲を限定することができます。\n" \
+                                          + "可動範囲は手動で調整する事も可能です。")
+        self.camera_length_txt.Wrap(-1)
+        self.camera_length_sizer.Add(self.camera_length_txt, 0, wx.ALL, 5)
+
+        self.camera_length_type_ctrl = wx.Choice(self.header_panel, id=wx.ID_ANY, choices=["距離制限強", "距離制限弱", "距離制限なし"])
+        self.camera_length_type_ctrl.SetSelection(2)
+        self.camera_length_type_ctrl.Bind(wx.EVT_CHOICE, self.on_camera_length_type)
+        self.camera_length_type_ctrl.SetToolTip(u"「距離制限強」　…　小さめのステージ用。距離可動範囲を厳しめに制限します。\n" \
+                                                + "「距離制限弱」　…　中くらいのステージ用。距離可動範囲を多少制限します。\n" \
+                                                + "「距離制限なし」　…　距離可動範囲を無制限とし、元モデルと同じ映り具合になるよう、最大限調整します。")
+        self.camera_length_sizer.Add(self.camera_length_type_ctrl, 0, wx.ALL, 5)
+
+        self.camera_length_label = wx.StaticText(self.header_panel, wx.ID_ANY, u"（5）", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.camera_length_label.SetToolTip(u"現在指定されているカメラ距離の可動範囲です。")
+        self.camera_length_label.Wrap(-1)
+        self.camera_length_sizer.Add(self.camera_length_label, 0, wx.ALL, 5)
+
+        self.camera_length_slider = FloatSliderCtrl(self.header_panel, wx.ID_ANY, 5, 1, 5, 0.01, self.camera_length_label, wx.DefaultPosition, wx.DefaultSize, wx.SL_HORIZONTAL)
+        self.camera_length_slider.Bind(wx.EVT_SCROLL_CHANGED, self.set_output_vmd_path)
+        self.camera_length_sizer.Add(self.camera_length_slider, 1, wx.ALL | wx.EXPAND, 5)
+
+        self.header_sizer.Add(self.camera_length_sizer, 0, wx.ALL | wx.EXPAND, 5)
+
         self.header_panel.SetSizer(self.header_sizer)
         self.header_panel.Layout()
         self.sizer.Add(self.header_panel, 0, wx.EXPAND | wx.ALL, 5)
 
         # カメラセット(key: ファイルセット番号, value: カメラセット)
         self.camera_set_dict = {}
+        # Bulk用カメラセット
+        self.bulk_camera_set_dict = {}
         # カメラセット用基本Sizer
         self.set_list_sizer = wx.BoxSizer(wx.VERTICAL)
         
@@ -60,18 +92,25 @@ class CameraPanel(BasePanel):
         self.sizer.Add(self.scrolled_window, 1, wx.ALL | wx.EXPAND | wx.FIXED_MINSIZE, 5)
         self.sizer.Layout()
         self.fit()
-    
-    # カメラタブからカメラリスト生成
-    def get_camera_list(self, set_no: int):
-        if set_no not in self.camera_set_dict:
-            # そもそも登録がなければ何もなし
-            return []
-        else:
-            # あれば、そのNoのカメラリスト
-            return self.camera_set_dict[set_no].get_camera_list()
 
+    def on_camera_length_type(self, event):
+        if self.camera_length_type_ctrl.GetSelection() == 0:
+            self.camera_length_slider.SetValue(1.05)
+        elif self.camera_length_type_ctrl.GetSelection() == 1:
+            self.camera_length_slider.SetValue(1.3)
+        else:
+            self.camera_length_slider.SetValue(5)
+        
+        self.set_output_vmd_path(event)
+
+    def set_output_vmd_path(self, event, is_force=False):
+        # カメラ出力パスを強制的に変更する
+        self.header_panel.set_output_vmd_path(event, True)
+    
     # カメラタブ初期化処理
     def initialize(self, event: wx.Event):
+        self.bulk_camera_set_dict = {}
+        
         if 1 not in self.camera_set_dict:
             # 空から作る場合、ファイルタブのファイルセット参照
             self.add_set(1, self.frame.file_panel_ctrl.file_set)
@@ -139,7 +178,8 @@ class CameraHeaderPanel(wx.Panel):
         output_camera_vmd_path = MFileUtils.get_output_camera_vmd_path(
             self.parent.camera_vmd_file_ctrl.file_ctrl.GetPath(),
             self.frame.file_panel_ctrl.file_set.rep_model_file_ctrl.file_ctrl.GetPath(),
-            self.parent.output_camera_vmd_file_ctrl.file_ctrl.GetPath(), is_force)
+            self.parent.output_camera_vmd_file_ctrl.file_ctrl.GetPath(),
+            self.parent.camera_length_slider.GetValue(), is_force)
 
         self.parent.output_camera_vmd_file_ctrl.file_ctrl.SetPath(output_camera_vmd_path)
 
@@ -180,7 +220,9 @@ class CameraSet():
 
         # オフセットYコントロール
         self.camera_offset_y_ctrl = wx.SpinCtrlDouble(self.window, id=wx.ID_ANY, size=wx.Size(100, -1), value="0.0", min=-1000, max=1000, initial=0.0, inc=0.1)
-        self.camera_offset_y_ctrl.SetToolTip(u"カメラに映す変換先モデルの全長を調整するオフセット値を指定できます。")
+        self.camera_offset_y_ctrl.SetToolTip(u"カメラに映す変換先モデルの全長を調整するオフセット値を指定できます。\n" \
+                                             + "髪飾り等、「頭頂部より上にあるオブジェクトを除外したい」場合、マイナス値を指定して下さい。\n" \
+                                             + "アホ毛等、「頭頂部より上にあるオブジェクトを含めたい」場合、プラス値を指定して下さい。")
         self.camera_offset_y_ctrl.Bind(wx.EVT_MOUSEWHEEL, lambda event: self.frame.on_wheel_spin_ctrl(event, 0.2))
         self.offset_sizer.Add(self.camera_offset_y_ctrl, 0, wx.ALL, 5)
 

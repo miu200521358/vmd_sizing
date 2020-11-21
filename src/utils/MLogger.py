@@ -4,6 +4,9 @@ from datetime import datetime
 import logging
 import traceback
 import threading
+import sys
+
+import cython
 
 from utils.MException import MKilledException
 
@@ -96,6 +99,24 @@ class MLogger():
         kwargs["level"] = logging.INFO
         self.print_logger(msg, *args, **kwargs)
 
+    # ログレベルカウント
+    def count(self, msg, fno, fnos, *args, **kwargs):
+        last_fno = 0
+
+        if fnos and len(fnos) > 0 and fnos[-1] > 0:
+            last_fno = fnos[-1]
+        
+        if not fnos and kwargs and "last_fno" in kwargs and kwargs["last_fno"] > 0:
+            last_fno = kwargs["last_fno"]
+
+        if last_fno > 0:
+            if not kwargs:
+                kwargs = {}
+                
+            kwargs["level"] = logging.INFO
+            log_msg = "-- {0}フレーム目:終了({1}％){2}".format(fno, round((fno / last_fno) * 100, 3), msg)
+            self.print_logger(log_msg, *args, **kwargs)
+
     def warning(self, msg, *args, **kwargs):
         if not kwargs:
             kwargs = {}
@@ -146,7 +167,7 @@ class MLogger():
             extra_args["module_name"] = self.module_name
 
             # ログレコード生成
-            if args and isinstance(args[0], Exception):
+            if args and isinstance(args[0], Exception) or (args and len(args) > 1 and isinstance(args[0], Exception)):
                 log_record = self.logger.makeRecord('name', target_level, "(unknown file)", 0, "{0}\n\n{1}".format(msg, traceback.format_exc()), None, None, self.module_name)
             else:
                 log_record = self.logger.makeRecord('name', target_level, "(unknown file)", 0, msg, args, None, self.module_name)
@@ -181,7 +202,7 @@ class MLogger():
                     self.logger.handle(log_record)
                 else:
                     # サイジングスレッドは、printとloggerで分けて出力
-                    print(output_msg)
+                    print_message(output_msg, target_level)
                     self.logger.handle(log_record)
             except Exception as e:
                 raise e
@@ -241,3 +262,10 @@ class MLogger():
         cls.total_level = level
         cls.is_file = is_file
         cls.outout_datetime = "{0:%Y%m%d_%H%M%S}".format(datetime.now())
+
+
+@cython.ccall
+def print_message(msg: str, target_level: int):
+    sys.stdout.write(msg + "\n", (target_level < MLogger.INFO))
+
+

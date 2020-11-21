@@ -34,6 +34,8 @@ class MorphPanel(BasePanel):
 
         # モーフセット(key: ファイルセット番号, value: モーフセット)
         self.morph_set_dict = {}
+        # Bulk用モーフセット(key: ファイルセット番号, value: モーフlist)
+        self.bulk_morph_set_dict = {}
         # モーフセット用基本Sizer
         self.set_list_sizer = wx.BoxSizer(wx.VERTICAL)
         
@@ -51,16 +53,27 @@ class MorphPanel(BasePanel):
         self.fit()
     
     # モーフタブからモーフ置換リスト生成
-    def get_morph_list(self, set_no: int):
-        if set_no not in self.morph_set_dict:
+    def get_morph_list(self, set_no: int, vmd_digest: str, org_model_digest: str, rep_model_digest: str):
+        if set_no in self.bulk_morph_set_dict:
+            # Bulk用のデータがある場合、優先取得
+            return self.bulk_morph_set_dict[set_no], (len(self.bulk_morph_set_dict[set_no]) > 0)
+        elif set_no not in self.morph_set_dict:
             # そもそも登録がなければ何もなし
-            return []
+            return [], False
         else:
-            # あれば、そのNoのモーフ置換リスト
-            return self.morph_set_dict[set_no].get_morph_list()
+            morph_set = self.morph_set_dict[set_no]
+            if morph_set.vmd_digest == vmd_digest and morph_set.org_model_digest == org_model_digest and morph_set.rep_model_digest == rep_model_digest:
+                # あれば、そのNoのモーフ置換リスト
+                return morph_set.get_morph_list(), True
+            else:
+                logger.warning("【No.%s】モーフ置換設定後、ファイルセットが変更されたため、モーフ置換をクリアします", set_no, decoration=MLogger.DECORATION_BOX)
+                # ハッシュが一致してない場合空(設定されていた事だけ返す)
+                return [], True
 
     # モーフタブ初期化処理
     def initialize(self, event: wx.Event):
+        self.bulk_morph_set_dict = {}
+        
         if 1 in self.morph_set_dict:
             # ファイルタブ用モーフのファイルセットがある場合
             if self.frame.file_panel_ctrl.file_set.is_loaded():
@@ -186,6 +199,12 @@ class MorphSet():
                     self.rep_morph_names[txt] = rmk
 
             self.btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+
+            # 一括用コピーボタン
+            self.copy_btn_ctrl = wx.Button(self.window, wx.ID_ANY, u"一括用コピー", wx.DefaultPosition, wx.DefaultSize, 0)
+            self.copy_btn_ctrl.SetToolTip(u"モーフ置換データを一括CSVの形式に合わせてクリップボードにコピーします")
+            self.copy_btn_ctrl.Bind(wx.EVT_BUTTON, self.on_copy)
+            self.btn_sizer.Add(self.copy_btn_ctrl, 0, wx.ALL, 5)
 
             # インポートボタン
             self.import_btn_ctrl = wx.Button(self.window, wx.ID_ANY, u"インポート ...", wx.DefaultPosition, wx.DefaultSize, 0)
@@ -325,6 +344,25 @@ class MorphSet():
         return self.vmd_digest == now_file_set.motion_vmd_file_ctrl.data.digest \
             and self.org_model_digest == now_file_set.org_model_file_ctrl.data.digest \
             and self.rep_model_digest == now_file_set.rep_model_file_ctrl.data.digest
+    
+    def on_copy(self, event: wx.Event):
+        # 一括CSV用モーフテキスト生成
+        morph_txt_list = []
+        morph_list = self.get_morph_list()
+        for (om, rm, r) in morph_list:
+            morph_txt_list.append(f"{om}:{rm}:{r}")
+        # 文末セミコロン
+        morph_txt_list.append("")
+
+        if wx.TheClipboard.Open():
+            wx.TheClipboard.SetData(wx.TextDataObject(";".join(morph_txt_list)))
+            wx.TheClipboard.Close()
+
+        with wx.TextEntryDialog(self.frame, u"一括CSV用のモーフデータを出力します。\n" \
+                                + "ダイアログを表示した時点で、下記モーフデータがクリップボードにコピーされています。\n" \
+                                + "コピーできてなかった場合、ボックス内の文字列を選択して、CSVに貼り付けてください。", caption=u"一括CSV用モーフデータ",
+                                value=";".join(morph_txt_list), style=wx.TextEntryDialogStyle, pos=wx.DefaultPosition) as dialog:
+            dialog.ShowModal()
 
     def on_import(self, event: wx.Event):
         input_morph_path = MFileUtils.get_output_morph_path(

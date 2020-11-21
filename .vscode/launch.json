@@ -1,11 +1,8 @@
 {
-    // IntelliSense を使用して利用可能な属性を学べます。
-    // 既存の属性の説明をホバーして表示します。
-    // 詳細情報は次を確認してください: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: debug_exec",
+            "name": "exec_sizing",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/src/executor.py",
@@ -164,7 +161,7 @@
             }
         },
         {
-            "name": "Python: debug_exec_smooth",
+            "name": "exec_smooth",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/src/executor_smooth.py",
@@ -201,7 +198,7 @@
             }
         },
         {
-            "name": "Python: debug_exec_brend",
+            "name": "exec_brend",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/src/blend_pmx.py",
@@ -217,7 +214,7 @@
             ]
         },
         {
-            "name": "Python: debug_exec_gui",
+            "name": "exec_gui",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/src/executor.py",
@@ -230,7 +227,20 @@
             ]
         },
         {
-            "name": "Python: debug_exec_thread",
+            "name": "exec_supporter_gui",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/../motion_supporter/src/executor.py",
+            "console": "integratedTerminal",
+            "pythonPath": "${command:python.interpreterPath}",
+            "stopOnEntry": false,
+            "args": [
+                "--verbose", "10",
+                "--out_log", "1",
+            ]
+        },
+        {
+            "name": "exec_thread",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/src/thread.py",
@@ -243,7 +253,7 @@
             ]
         },
         {
-            "name": "Python: debug_exec_test",
+            "name": "exec_test",
             "type": "python",
             "request": "launch",
             "program": "${file}",

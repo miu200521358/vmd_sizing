@@ -61,6 +61,9 @@ class FloatSliderCtrl(wx.Slider):
         self._islider.SetValue(round(value / self._res))
         self._value = value
 
+        # logger.debug('OnScroll: value=%f, ival=%d', self._value, ival)
+        self._label.SetLabel(u"（{0}）".format(round(self._value, 3)))
+
     def SetMin(self, minval):
         self._islider.SetMin(round(minval / self._res))
         self._min = minval

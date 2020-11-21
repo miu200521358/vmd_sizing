@@ -3,17 +3,16 @@
 import os
 import sys
 import wx
+import threading
 
 from form.panel.FilePanel import FilePanel
 from form.panel.MorphPanel import MorphPanel
 from form.panel.MultiPanel import MultiPanel
 from form.panel.ArmPanel import ArmPanel
 from form.panel.CameraPanel import CameraPanel
-from form.panel.BlendPanel import BlendPanel
 from form.panel.CsvPanel import CsvPanel
 from form.panel.VmdPanel import VmdPanel
-from form.panel.BezierPanel import BezierPanel
-from form.panel.SmoothPanel import SmoothPanel
+from form.panel.BulkPanel import BulkPanel
 from form.worker.SizingWorkerThread import SizingWorkerThread
 from form.worker.LoadWorkerThread import LoadWorkerThread
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
@@ -98,25 +97,17 @@ class MainFrame(wx.Frame):
         self.camera_panel_ctrl = CameraPanel(self, self.note_ctrl, 4)
         self.note_ctrl.AddPage(self.camera_panel_ctrl, u"カメラ", False)
 
-        # スムーズタブ
-        self.smooth_panel_ctrl = SmoothPanel(self, self.note_ctrl, 5)
-        self.note_ctrl.AddPage(self.smooth_panel_ctrl, u"スムーズ", False)
-
-        # ブレンドタブ
-        self.blend_panel_ctrl = BlendPanel(self, self.note_ctrl, 6)
-        self.note_ctrl.AddPage(self.blend_panel_ctrl, u"ブレンド", False)
+        # 一括タブ
+        self.bulk_panel_ctrl = BulkPanel(self, self.note_ctrl, 5)
+        self.note_ctrl.AddPage(self.bulk_panel_ctrl, u"一括", False)
 
         # CSVタブ
-        self.csv_panel_ctrl = CsvPanel(self, self.note_ctrl, 7)
+        self.csv_panel_ctrl = CsvPanel(self, self.note_ctrl, 6)
         self.note_ctrl.AddPage(self.csv_panel_ctrl, u"CSV", False)
 
         # VMDタブ
-        self.vmd_panel_ctrl = VmdPanel(self, self.note_ctrl, 8)
+        self.vmd_panel_ctrl = VmdPanel(self, self.note_ctrl, 7)
         self.note_ctrl.AddPage(self.vmd_panel_ctrl, u"VMD", False)
-        
-        # 補間タブ
-        self.bezier_panel_ctrl = BezierPanel(self, self.note_ctrl, 9)
-        self.note_ctrl.AddPage(self.bezier_panel_ctrl, u"補間", False)
         
         # ---------------------------------------------
 
@@ -165,16 +156,6 @@ class MainFrame(wx.Frame):
             event.Skip()
             return
 
-        elif self.smooth_panel_ctrl.is_fix_tab:
-            self.note_ctrl.ChangeSelection(self.smooth_panel_ctrl.tab_idx)
-            event.Skip()
-            return
-
-        elif self.blend_panel_ctrl.is_fix_tab:
-            self.note_ctrl.ChangeSelection(self.blend_panel_ctrl.tab_idx)
-            event.Skip()
-            return
-
         elif self.csv_panel_ctrl.is_fix_tab:
             self.note_ctrl.ChangeSelection(self.csv_panel_ctrl.tab_idx)
             event.Skip()
@@ -182,6 +163,11 @@ class MainFrame(wx.Frame):
 
         elif self.vmd_panel_ctrl.is_fix_tab:
             self.note_ctrl.ChangeSelection(self.vmd_panel_ctrl.tab_idx)
+            event.Skip()
+            return
+
+        elif self.bulk_panel_ctrl.is_fix_tab:
+            self.note_ctrl.ChangeSelection(self.bulk_panel_ctrl.tab_idx)
             event.Skip()
             return
 
@@ -227,11 +213,13 @@ class MainFrame(wx.Frame):
         self.file_panel_ctrl.release_tab()
         self.morph_panel_ctrl.release_tab()
         self.arm_panel_ctrl.release_tab()
+        self.multi_panel_ctrl.release_tab()
+        self.bulk_panel_ctrl.release_tab()
 
     # フォーム入力可
     def enable(self):
         self.file_panel_ctrl.enable()
-        # self.morph_panel_ctrl.enable()
+        self.bulk_panel_ctrl.enable()
     
     # ファイルセットの入力可否チェック
     def is_valid(self):
@@ -369,11 +357,13 @@ class MainFrame(wx.Frame):
             # そのまま実行する場合、サイジング実行処理に遷移
 
             # 念のため出力ファイルパス自動生成（空の場合設定）
-            self.file_panel_ctrl.file_set.set_output_vmd_path(event)
+            if not self.file_panel_ctrl.file_set.output_vmd_file_ctrl.file_ctrl.GetPath():
+                self.file_panel_ctrl.file_set.set_output_vmd_path(event)
 
             # multiのも出力ファイルパス自動生成（空の場合設定）
             for file_set in self.multi_panel_ctrl.file_set_list:
-                file_set.set_output_vmd_path(event)
+                if not file_set.output_vmd_file_ctrl.file_ctrl.GetPath():
+                    file_set.set_output_vmd_path(event)
 
             # フォーム無効化
             self.file_panel_ctrl.disable()
@@ -424,7 +414,15 @@ class MainFrame(wx.Frame):
             return False
         
         self.elapsed_time += event.elapsed_time
-        logger.info("\n処理時間: %s", self.show_worked_time())
+        worked_time = "\n処理時間: {0}".format(self.show_worked_time())
+        logger.info(worked_time)
+
+        if self.is_out_log and event.output_log_path and os.path.exists(event.output_log_path):
+            # ログ出力対象である場合、追記
+            with open(event.output_log_path, mode='a', encoding='utf-8') as f:
+                f.write(worked_time)
+
+        logger.debug("self.worker = None")
 
         # ワーカー終了
         self.worker = None
@@ -441,6 +439,10 @@ class MainFrame(wx.Frame):
         # 終了音を鳴らす
         self.sound_finish()
 
+        # ファイルタブのコンソール
+        if sys.stdout != self.file_panel_ctrl.console_ctrl:
+            sys.stdout = self.file_panel_ctrl.console_ctrl
+
         # タブ移動可
         self.release_tab()
         # フォーム有効化
@@ -449,6 +451,9 @@ class MainFrame(wx.Frame):
         self.file_panel_ctrl.gauge_ctrl.SetValue(0)
 
     def sound_finish(self):
+        threading.Thread(target=self.sound_finish_thread).start()
+
+    def sound_finish_thread(self):
         # 終了音を鳴らす
         if os.name == "nt":
             # Windows

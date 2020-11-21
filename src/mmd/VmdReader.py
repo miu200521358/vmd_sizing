@@ -6,14 +6,13 @@ import re
 
 from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
-from utils.MException import MParseException # noqa
 from utils.MLogger import MLogger # noqa
-from utils.MException import SizingException, MKilledException
+from utils.MException import SizingException, MKilledException, MParseException
 
 logger = MLogger(__name__)
 
 
-class VmdReader():
+class VmdReader:
     def __init__(self, file_path):
         self.offset = 0
         self.buffer = None
@@ -83,8 +82,6 @@ class VmdReader():
                     # 位置X,Y,Z
                     frame.position = self.read_Vector3D()
                     logger.test("frame.position %s", frame.position)
-                    # オリジナルを保持
-                    frame.org_position = frame.position.copy()
 
                     # 回転X,Y,Z,scalar
                     frame.rotation = self.read_Quaternion()
@@ -96,9 +93,6 @@ class VmdReader():
                     # 補間曲線
                     frame.interpolation = list(self.unpack(64, "64B", True))
                     logger.test("interpolation %s", frame.interpolation)
-                    # オリジナルの補間曲線を保持しておく
-                    # frame.org_interpolation = copy.deepcopy(frame.interpolation)
-                    # logger.test("org_interpolation %s", frame.org_interpolation)
 
                     if bone_name not in motion.bones:
                         # まだ辞書にない場合、配列追加
@@ -192,8 +186,8 @@ class VmdReader():
                         logger.test("camera.perspective %s", camera.perspective)
 
                         # オリジナルを保持
-                        camera.org_length = camera.org_length
-                        camera.org_position = camera.org_position.copy()
+                        camera.org_length = camera.length
+                        camera.org_position = camera.position.copy()
 
                         # カメラを追加
                         motion.cameras[camera.fno] = camera
@@ -288,7 +282,8 @@ class VmdReader():
 
                             # IK名
                             ik_bname, ik_name = self.read_text(20)
-                            ik_info.name = ik_bname
+                            ik_info.name = ik_name
+                            ik_info.bname = ik_bname
                             logger.test("ik_info.name %s", ik_name)
 
                             # モデル表示, 0:OFF, 1:ON

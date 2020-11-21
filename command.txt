@@ -37,3 +37,159 @@ pip install pyinstaller
 C:\Development\Anaconda3\envs\vmdsizing_np64\Lib\site-packages\bezier\extra-dllの中身のdllを親ディレクトリに配置（下階層だと見つからないため）
 
 --------------------------
+
+[cypthon版]
+
+conda create -n vmdsizing_cython python=3.8
+
+pip install cython
+pip install numpy
+pip install wxpython
+pip install numpy-quaternion
+pip install bezier
+pip install pprofile
+pip install pypiwin32
+
+conda install pyinstaller
+
+C:\Development\Anaconda3\envs\vmdsizing_cython\Lib\site-packages\bezier\extra-dll の中身のdllを親ディレクトリに配置（下階層だと見つからないため）
+
+lessさんとこで捩り分散あり
+40分47秒
+
+--------------------------
+
+[cypthon + numba版]
+
+pip install cython
+pip install numpy
+pip install wxpython
+pip install numpy-quaternion
+pip install bezier
+conda install numba
+
+conda create -n vmdsizing_numba python=3.8
+
+pip install pprofile
+
+conda create -n vmdsizing_numba_exe python=3.8
+
+conda install pyinstaller
+
+C:\Development\Anaconda3\envs\vmdsizing_cython\Lib\site-packages\bezier\extra-dll の中身のdllを親ディレクトリに配置（下階層だと見つからないため）
+
+"C:\Development\Anaconda3\Lib\site-packages\win32\pythoncom38.dll"
+"C:\Development\Anaconda3\Lib\site-packages\win32\pywintypes38.dll"
+
+to
+
+C:\Development\Anaconda3\Lib\site-packages\win32\lib
+
+
+
+
+
+
+
+
+
+
+
+--------------------------
+
+pypy版
+
+conda remove -n vmdsizing_np64_pypy2 --all
+
+set CONDA_FORCE_32BIT=1
+
+conda create -n vmdsizing_np64_pypy2 python=3.6.9
+
+conda activate vmdsizing_np64_pypy1
+
+python -m ensurepip
+
+pip install numpy
+pip install numpy-quaternion
+
+pip install wheel
+pip install wxPython 
+
+https://pypi.org/project/wxPython/#files
+からtar.gzをDL
+build.pyを修正
+
+pip install "E:\WebDownload\wxPython-4.1.0.zip"
+
+
+pip install bezier
+pip install pyinstaller
+
+
+
+
+
+conda create -n vmdsizing_np64_pypy8 pypy cudatoolkit=9.0
+
+
+conda activate vmdsizing_np64_pypy7
+
+
+conda install -c conda-forge pypy 
+
+
+
+
+
+
+python -m pip
+python -m ensurepip
+pip install wheel
+
+
+conda config --append channels conda-forge
+
+conda install numpy
+
+pip install numpy-quaternion
+
+pip install wxPython 
+pip install bezier==2020.1.14
+pip install pypiwin32
+conda install pyinstaller
+
+
+
+
+unlink python
+ln -s pypy3 python
+
+pypyをまるっと上書き
+
+apt-get update
+apt-get install build-essential
+
+sudo apt install libsdl2-2.0-0 libsdl2-dev
+conda install wxPython 
+pip install pep517
+pip install numpy-quaternion
+
+sudo apt-get install python3-dev
+
+$ BEZIER_NO_EXTENSION=true \
+>   python  -m pip install --upgrade bezier --no-binary=bezier
+pip install bezier==2020.1.14
+
+pip install pypiwin32
+pip install pyinstaller
+
+sudo apt install cifs-utils
+
+python -m pip
+python -m ensurepip
+python -m pip install -U pip
+pip install --upgrade pip
+
+pip install wheel
+python -m pip install -U pip
+pip install --upgrade pip

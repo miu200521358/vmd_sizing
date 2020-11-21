@@ -9,6 +9,7 @@ import glob
 import traceback
 from pathlib import Path
 import re
+import _pickle as cPickle
 
 from utils.MLogger import MLogger # noqa
 
@@ -25,20 +26,38 @@ def resource_path(relative):
 # ファイル履歴読み込み
 def read_history(mydir_path):
     # ファイル履歴
-    file_hitories = {"vmd": [], "org_pmx": [], "rep_pmx": [], "camera_vmd": [], "camera_pmx": [], "smooth_vmd": [], "smooth_pmx": [], "max": 50}
+    base_file_hitories = {"vmd": [], "org_pmx": [], "rep_pmx": [], "camera_vmd": [], "camera_pmx": [], "smooth_vmd": [], "smooth_pmx": [], "bulk_csv": [], "max": 50}
+    file_hitories = cPickle.loads(cPickle.dumps(base_file_hitories, -1))
 
     # 履歴JSONファイルがあれば読み込み
     try:
-        with open(os.path.join(mydir_path, 'history.json'), 'r') as f:
+        with open(os.path.join(mydir_path, 'history.json'), 'r', encoding="utf-8") as f:
             file_hitories = json.load(f)
             # キーが揃っているかチェック
-            for key in ["vmd", "org_pmx", "rep_pmx", "camera_vmd", "camera_pmx", "smooth_pmx", "smooth_vmd"]:
+            for key in base_file_hitories.keys():
                 if key not in file_hitories:
                     file_hitories[key] = []
             # 最大件数は常に上書き
             file_hitories["max"] = 50
     except Exception:
-        file_hitories = {"vmd": [], "org_pmx": [], "rep_pmx": [], "camera_vmd": [], "camera_pmx": [], "smooth_vmd": [], "smooth_pmx": [], "max": 50}
+        # UTF-8で読み込めなかった場合、デフォルトで読み込んでUTF-8変換
+        try:
+            with open(os.path.join(mydir_path, 'history.json'), 'r') as f:
+                file_hitories = json.load(f)
+                # キーが揃っているかチェック
+                for key in base_file_hitories.keys():
+                    if key not in file_hitories:
+                        file_hitories[key] = []
+                # 最大件数は常に上書き
+                file_hitories["max"] = 50
+            
+            # 一旦UTF-8で出力
+            save_history(mydir_path, file_hitories)
+
+            # UTF-8で読み込みし直し
+            return read_history(mydir_path)
+        except Exception:
+            file_hitories = cPickle.loads(cPickle.dumps(base_file_hitories, -1))
 
     return file_hitories
 
@@ -46,10 +65,10 @@ def read_history(mydir_path):
 def save_history(mydir_path, file_hitories):
     # 入力履歴を保存
     try:
-        with open(os.path.join(mydir_path, 'history.json'), 'w') as f:
+        with open(os.path.join(mydir_path, 'history.json'), 'w', encoding="utf-8") as f:
             json.dump(file_hitories, f, ensure_ascii=False)
-    except Exception:
-        logger.error("履歴ファイル保存失敗", traceback.format_exc())
+    except Exception as e:
+        logger.error("履歴ファイルの保存に失敗しました", e, decoration=MLogger.DECORATION_BOX)
 
 
 # パス解決
@@ -194,7 +213,7 @@ def is_auto_vmd_output_path(output_vmd_path: str, motion_vmd_dir_path: str, moti
 # base_file_path: モーションカメラVMDパス
 # rep_pmx_path: 変換先モデルPMXパス
 # output_camera_vmd_path: 出力ファイルパス
-def get_output_camera_vmd_path(base_file_path: str, rep_pmx_path: str, output_camera_vmd_path: str, is_force=False):
+def get_output_camera_vmd_path(base_file_path: str, rep_pmx_path: str, output_camera_vmd_path: str, camera_length: float, is_force=False):
     # モーションカメラVMDパスの拡張子リスト
     if not os.path.exists(base_file_path) or not os.path.exists(rep_pmx_path):
         return ""
@@ -207,7 +226,8 @@ def get_output_camera_vmd_path(base_file_path: str, rep_pmx_path: str, output_ca
     rep_pmx_file_name, _ = os.path.splitext(os.path.basename(rep_pmx_path))
 
     # 出力ファイルパス生成
-    new_output_camera_vmd_path = os.path.join(motion_camera_vmd_dir_path, "{0}_{1}_{2:%Y%m%d_%H%M%S}{3}".format(motion_camera_vmd_file_name, rep_pmx_file_name, datetime.now(), ".vmd"))
+    new_output_camera_vmd_path = os.path.join(motion_camera_vmd_dir_path, "{0}_{1}({2})_{3:%Y%m%d_%H%M%S}{4}".format( \
+        motion_camera_vmd_file_name, rep_pmx_file_name, camera_length, datetime.now(), ".vmd"))
 
     # ファイルパス自体が変更されたか、自動生成ルールに則っている場合、ファイルパス変更
     if is_force or is_auto_camera_vmd_output_path(output_camera_vmd_path, motion_camera_vmd_dir_path, motion_camera_vmd_file_name, ".vmd", rep_pmx_file_name):
@@ -238,78 +258,11 @@ def is_auto_camera_vmd_output_path(output_camera_vmd_path: str, motion_camera_vm
     escaped_rep_pmx_file_name = escape_filepath(rep_pmx_file_name)
     escaped_motion_camera_vmd_ext = escape_filepath(motion_camera_vmd_ext)
 
-    new_output_camera_vmd_pattern = re.compile(r'^%s_%s%s%s$' % (escaped_motion_camera_vmd_file_name, \
+    new_output_camera_vmd_pattern = re.compile(r'^%s_%s(\d+)_%s%s$' % (escaped_motion_camera_vmd_file_name, \
                                                escaped_rep_pmx_file_name, r"_\d{8}_\d{6}", escaped_motion_camera_vmd_ext))
     
     # 自動生成ルールに則ったファイルパスである場合、合致あり
     return re.match(new_output_camera_vmd_pattern, output_camera_vmd_path) is not None
-
-
-# スムージングVMD出力ファイルパス生成
-# base_file_path: モーションスムージングVMDパス
-# pmx_path: 変換先モデルPMXパス
-# output_smooth_vmd_path: 出力ファイルパス
-def get_output_smooth_vmd_path(base_file_path: str, pmx_path: str, output_smooth_vmd_path: str, interpolation: int, loop_cnt: int, is_force=False):
-    # モーションスムージングVMDパスの拡張子リスト
-    if not os.path.exists(base_file_path) or not os.path.exists(pmx_path):
-        return ""
-
-    # モーションスムージングVMDディレクトリパス
-    motion_smooth_vmd_dir_path = get_dir_path(base_file_path)
-    # モーションスムージングVMDファイル名・拡張子
-    motion_smooth_vmd_file_name, motion_smooth_vmd_ext = os.path.splitext(os.path.basename(base_file_path))
-    # 変換先モデルファイル名・拡張子
-    rep_pmx_file_name, _ = os.path.splitext(os.path.basename(pmx_path))
-
-    # 補間方法
-    suffix = "{0}{1}{2}".format(
-        ("F" if interpolation == 0 else ""),
-        ("C" if interpolation == 1 else ""),
-        ("V" if interpolation == 2 else ""),
-    )
-
-    if len(suffix) > 0:
-        suffix = "_{0}".format(suffix)
-    
-    suffix = "{0}_L{1}".format(suffix, loop_cnt)
-
-    # 出力ファイルパス生成
-    new_output_smooth_vmd_path = os.path.join(motion_smooth_vmd_dir_path, "{0}_{1}{2}_{3:%Y%m%d_%H%M%S}{4}".format(motion_smooth_vmd_file_name, rep_pmx_file_name, suffix, datetime.now(), ".vmd"))
-
-    # ファイルパス自体が変更されたか、自動生成ルールに則っている場合、ファイルパス変更
-    if is_force or is_auto_smooth_vmd_output_path(output_smooth_vmd_path, motion_smooth_vmd_dir_path, motion_smooth_vmd_file_name, ".vmd", rep_pmx_file_name):
-
-        try:
-            open(new_output_smooth_vmd_path, 'w')
-            os.remove(new_output_smooth_vmd_path)
-        except Exception:
-            logger.warning("出力ファイルパスの生成に失敗しました。以下の原因が考えられます。\n" \
-                           + "・ファイルパスが255文字を超えている\n" \
-                           + "・ファイルパスに使えない文字列が含まれている（例) \\　/　:　*　?　\"　<　>　|）" \
-                           + "・出力ファイルパスの親フォルダに書き込み権限がない" \
-                           + "・出力ファイルパスに書き込み権限がない")
-
-        return new_output_smooth_vmd_path
-
-    return output_smooth_vmd_path
-
-
-# 自動生成ルールに則ったパスか
-def is_auto_smooth_vmd_output_path(output_smooth_vmd_path: str, motion_smooth_vmd_dir_path: str, motion_smooth_vmd_file_name: str, motion_smooth_vmd_ext: str, rep_pmx_file_name: str):
-    if not output_smooth_vmd_path:
-        # 出力パスがない場合、置き換え対象
-        return True
-
-    # 新しく設定しようとしている出力ファイルパスの正規表現
-    escaped_motion_smooth_vmd_file_name = escape_filepath(os.path.join(motion_smooth_vmd_dir_path, motion_smooth_vmd_file_name))
-    escaped_rep_pmx_file_name = escape_filepath(rep_pmx_file_name)
-    escaped_motion_smooth_vmd_ext = escape_filepath(motion_smooth_vmd_ext)
-
-    new_output_smooth_vmd_pattern = re.compile(r'^%s_%s%s%s$' % (escaped_motion_smooth_vmd_file_name, \
-                                               escaped_rep_pmx_file_name, r"_?\w*_L\d+_\d{8}_\d{6}", escaped_motion_smooth_vmd_ext))
-    
-    # 自動生成ルールに則ったファイルパスである場合、合致あり
-    return re.match(new_output_smooth_vmd_pattern, output_smooth_vmd_path) is not None
 
 
 def escape_filepath(path: str):
