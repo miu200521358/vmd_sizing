@@ -559,7 +559,6 @@ class PmxReader:
                     pmx.bone_indexes[leg_center_bone.index] = leg_center_bone.name
 
                 logger.test("len(bones): %s", len(pmx.bones))
-                logger.test("bone_indexes: %s", pmx.bone_indexes.items())
 
                 logger.info("-- PMX ボーン読み込み完了")
 
@@ -617,6 +616,8 @@ class PmxReader:
 
                     # モーフのINDEXは、先頭から順番に設定
                     morph.index = morph_idx
+                    # インデックス逆引きも登録
+                    pmx.morph_indexes[morph.index] = morph.name
 
                     if morph.panel not in morphs_by_panel.keys():
                         # ないと思うが念のためパネル情報がなければ追加

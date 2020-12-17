@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 import numpy as np
+import glob
 import _pickle as cPickle
 from datetime import datetime
 import unittest
@@ -15,7 +16,7 @@ sys.path.append(str(current_dir) + '/../src/')
 from mmd.PmxReader import PmxReader # noqa
 from mmd.VmdReader import VmdReader # noqa
 from mmd.VmdWriter import VmdWriter # noqa
-from mmd.PmxData import PmxModel, Vertex, Material, Bone, Morph, DisplaySlot, RigidBody, Joint # noqa
+from mmd.PmxData import PmxModel, Vertex, Material, Bone, Morph, DisplaySlot, RigidBody, Joint, Sdef # noqa
 from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame # noqa
 from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from module.MOptions import MOptionsDataSet # noqa
@@ -25,6 +26,27 @@ from utils.MException import SizingException # noqa
 from utils.MLogger import MLogger # noqa
 
 logger = MLogger(__name__, level=1)
+
+
+class SdefDataTest(unittest.TestCase):
+
+    def test_sdef_check(self):
+        MLogger.initialize(level=MLogger.WARNING, is_file=True)
+        logger = MLogger(__name__, level=MLogger.WARNING)
+
+        for pmx_path in glob.glob("D:\\MMD\\MikuMikuDance_v926x64\\UserFile\\Model\\VOCALOID\\**\\*.pmx", recursive=True):
+            reader = PmxReader(pmx_path, is_check=False)
+            model = reader.read_data()
+            is_sdef = False
+            for bone_idx, vertices in model.vertices.items():
+                for vertex in vertices:
+                    if type(vertex.deform) is Sdef:
+                        logger.warning("SDEFありモデル: %s, idx: %s, bone: %s", pmx_path, vertex.index, model.bone_indexes[bone_idx])
+                        is_sdef = True
+                        break
+                logger.debug("SDEFなし: %s", pmx_path)
+
+        self.assertTrue(True)
 
 
 class PmxDataTest(unittest.TestCase):

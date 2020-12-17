@@ -38,6 +38,14 @@ cdef class VmdBoneFrame:
     cdef public bint read
     cdef public str avoidance
 
+cdef class VmdMorphFrame:
+    cdef public str name
+    cdef public bytes bname
+    cdef public int fno
+    cdef public float ratio
+    cdef public bint key
+    cdef public bint read
+
 cdef class VmdMotion:
     cdef public str path
     cdef public str signature
@@ -89,6 +97,18 @@ cdef class VmdMotion:
     cpdef copy_interpolation(self, VmdBoneFrame org_bf, VmdBoneFrame rep_bf, str bz_type)
 
     cdef reset_interpolation_parts(self, str target_bone_name, VmdBoneFrame bf, list bzs, list x1_idxs, list y1_idxs, list x2_idxs, list y2_idxs)
+
+    cdef c_regist_full_mf(self, int data_set_no, list morph_name_list, int offset, bint is_key)
+
+    cdef c_regist_mf(self, VmdMorphFrame mf, str morph_name, int fno)
+
+    cdef VmdMorphFrame c_calc_mf(self, str morph_name, int fno, bint is_key, bint is_read)
+
+    cdef c_smooth_filter_mf(self, int data_set_no, str morph_name, int loop, dict config, int start_fno, int end_fno, bint is_show_log)
+
+    cdef c_remove_unnecessary_mf(self, int data_set_no, str morph_name, double offset, double diff_limit, int r_start_fno, int r_end_fno, bint is_show_log, bint is_force)
+    
+    cdef reduce_morph_frame(self, str morph_name, list fnos, int head, int tail, float threshold)
 
     cpdef bint is_active_bones(self, str bone_name)
 

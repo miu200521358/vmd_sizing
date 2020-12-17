@@ -131,8 +131,8 @@ class SizingWorkerThread(BaseWorkerThread):
                     if self.frame.arm_panel_ctrl.arm_process_flg_avoidance.GetValue() > 0:
                         self.frame.file_panel_ctrl.tree_process_dict[proccess_key]["接触回避"] = False
 
-                    morph_list, morph_seted = self.frame.morph_panel_ctrl.get_morph_list(file_set.set_no, self.frame.file_panel_ctrl.file_set.motion_vmd_file_ctrl.data.digest, \
-                        self.frame.file_panel_ctrl.file_set.org_model_file_ctrl.data.digest, self.frame.file_panel_ctrl.file_set.rep_model_file_ctrl.data.digest)   # noqa
+                    morph_list, morph_seted = self.frame.morph_panel_ctrl.get_morph_list(file_set.set_no, file_set.motion_vmd_file_ctrl.data.digest, \
+                        file_set.org_model_file_ctrl.data.digest, file_set.rep_model_file_ctrl.data.digest)   # noqa
                     if morph_seted:
                         total_process += 1  # モーフ置換
                         self.frame.file_panel_ctrl.tree_process_dict[proccess_key]["モーフ置換"] = False
