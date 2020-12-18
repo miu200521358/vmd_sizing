@@ -118,6 +118,8 @@ class VmdReader:
                 prev_n = 0
                 for n in range(motion.morph_cnt):
                     morph = VmdMorphFrame()
+                    morph.key = True
+                    morph.read = True
 
                     # モーフ ----------------------
                     # モーフ名
@@ -186,8 +188,8 @@ class VmdReader:
                         logger.test("camera.perspective %s", camera.perspective)
 
                         # オリジナルを保持
-                        camera.org_length = camera.length
-                        camera.org_position = camera.position.copy()
+                        camera.org_length = camera.org_length
+                        camera.org_position = camera.org_position.copy()
 
                         # カメラを追加
                         motion.cameras[camera.fno] = camera

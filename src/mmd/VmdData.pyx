@@ -12,7 +12,7 @@ from libc.math cimport pi, fabs
 from utils import MBezierUtils # noqa
 from utils.MLogger import MLogger
 
-from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
+from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4, get_effective_value # noqa
 
 logger = MLogger(__name__, level=1)
 
@@ -193,7 +193,7 @@ cdef class VmdMorphFrame:
         mf = VmdMorphFrame(self.fno)
         mf.name = self.name
         mf.bname = self.bname
-        mf.ratio = cPickle.loads(cPickle.dumps(self.ratio, -1))
+        mf.ratio = self.ratio
         mf.key = self.key
         mf.read = self.read
 
@@ -1299,7 +1299,11 @@ cdef class VmdMotion:
 
             for fno in fnos:
                 mf = self.c_calc_mf(morph_name, fno, is_key=False, is_read=False)
-                self.c_regist_mf(mf, morph_name, fno)
+
+                if math.isnan(mf.ratio) or math.isinf(mf.ratio):
+                    logger.debug("** regist mf: (%s)%s", mf.fno, mf.ratio)
+
+                self.c_regist_mf(mf.copy(), morph_name, fno)
 
                 if not is_key and not mf.read:
                     # 無効化のままの場合、キーをOFFにしておく
@@ -1338,13 +1342,23 @@ cdef class VmdMotion:
 
     # モーフ登録
     def regist_mf(self, mf: VmdMorphFrame, morph_name: str, fno: int):
+        if math.isnan(mf.ratio) or math.isinf(mf.ratio):
+            logger.debug("** regist_mf: (%s)%s", mf.fno, mf.ratio)
+
         self.c_regist_mf(mf, morph_name, fno)
 
     # モーフ登録
     cdef c_regist_mf(self, VmdMorphFrame mf, str morph_name, int fno):
-        cdef VmdMorphFrame regist_mf = self.c_calc_mf(morph_name, fno, is_key=False, is_read=False)
-        regist_mf.ratio = mf.ratio
-            
+        cdef VmdMorphFrame regist_mf = VmdMorphFrame(mf.fno)
+        regist_mf.set_name(mf.name)
+        regist_mf.ratio = get_effective_value(mf.ratio)
+
+        if morph_name not in self.morphs:
+            self.morphs[morph_name] = {}
+
+        if math.isnan(regist_mf.ratio) or math.isinf(regist_mf.ratio):
+            logger.debug("*** c_regist_mf: (%s)%s", regist_mf.fno, regist_mf.ratio)
+
         # キーを登録
         regist_mf.key = True
         self.morphs[morph_name][fno] = regist_mf
@@ -1359,8 +1373,8 @@ cdef class VmdMotion:
         cdef VmdMorphFrame fill_mf = VmdMorphFrame(fno)
 
         if morph_name not in self.morphs:
-            self.morphs[morph_name] = {fno: fill_mf}
             fill_mf.set_name(morph_name)
+            self.morphs[morph_name] = {fno: fill_mf}
             return fill_mf
         
         # 条件に合致するフレーム番号を探す
@@ -1368,6 +1382,7 @@ cdef class VmdMotion:
         # is_read: データ読み込み時のキーを探す
         if fno in self.morphs[morph_name] and (not is_key or (is_key and self.morphs[morph_name][fno].key)) and (not is_read or (is_read and self.morphs[morph_name][fno].read)):
             # 合致するキーが見つかった場合、それを返す
+            logger.debug("** find: fill: (%s)%s", fill_mf.fno, self.morphs[morph_name][fno].ratio)
             return self.morphs[morph_name][fno]
         else:
             # 合致するキーが見つからなかった場合
@@ -1385,25 +1400,29 @@ cdef class VmdMotion:
             return fill_mf
 
         if len(after_fnos) == 0:
-            logger.info("not after")
             # 番号より前があって、後のがない場合、前のをコピーして返す
             fill_mf = self.morphs[morph_name][before_fnos[-1]].copy()
             fill_mf.fno = fno
             fill_mf.key = False
             fill_mf.read = False
+            logger.debug("** not after: fill: (%s)%s", fill_mf.fno, fill_mf.ratio)
             return fill_mf
         
         if len(before_fnos) == 0:
-            logger.info("not before")
             # 番号より後があって、前がない場合、後のをコピーして返す
             fill_mf = self.morphs[morph_name][after_fnos[0]].copy()
             fill_mf.fno = fno
             fill_mf.key = False
             fill_mf.read = False
+            logger.debug("** not before: fill: (%s)%s", fill_mf.fno, fill_mf.ratio)
             return fill_mf
 
         cdef VmdMorphFrame prev_mf = self.morphs[morph_name][before_fnos[-1]]
         cdef VmdMorphFrame next_mf = self.morphs[morph_name][after_fnos[0]]
+        if math.isnan(prev_mf.ratio) or math.isinf(prev_mf.ratio):
+            logger.debug("** prev_mf: (%s)%s", prev_mf.fno, prev_mf.ratio)
+        if math.isnan(next_mf.ratio) or math.isinf(next_mf.ratio):
+            logger.debug("** next_mf: (%s)%s", next_mf.fno, next_mf.ratio)
 
         # 名前をコピー
         fill_mf.name = prev_mf.name
@@ -1413,8 +1432,11 @@ cdef class VmdMotion:
         # rx, ry, rt = MBezierUtils.evaluate(MBezierUtils.LINEAR_MMD_INTERPOLATION[1].x(), MBezierUtils.LINEAR_MMD_INTERPOLATION[1].y(), \
         #                                     MBezierUtils.LINEAR_MMD_INTERPOLATION[2].x(), MBezierUtils.LINEAR_MMD_INTERPOLATION[2].y(), \
         #                                     prev_mf.fno, fill_mf.fno, next_mf.fno)
+        # fill_mf.ratio = prev_mf.ratio + ((next_mf.ratio - prev_mf.ratio) * ry)
         fill_mf.ratio = prev_mf.ratio + ((next_mf.ratio - prev_mf.ratio) * ((fill_mf.fno - prev_mf.fno) / (next_mf.fno - prev_mf.fno)))
-        # logger.info("** fno: %s fill: %s, head: %s, tail: %s", fill_mf.fno, fill_mf.ratio, prev_mf.ratio, next_mf.ratio)
+        logger.debug("** fill: (%s)%s, head: (%s)%s, tail: (%s)%s", fill_mf.fno, fill_mf.ratio, prev_mf.fno, prev_mf.ratio, next_mf.fno, next_mf.ratio)
+        if math.isnan(fill_mf.ratio) or math.isinf(fill_mf.ratio):
+            logger.debug("** fill: (%s)%s, head_mf: %s, %s tail_mf: %s, %s", fill_mf.fno, fill_mf.ratio, prev_mf.fno, prev_mf.ratio, next_mf.fno, next_mf.ratio)
 
         return fill_mf
 
@@ -1486,18 +1508,18 @@ cdef class VmdMotion:
         if len(fnos) <= 1:
             return
         
-        cdef int f
-        cdef VmdMorphFrame mf = None
-        cdef VmdMorphFrame prev_mf = None
+        # cdef int f
+        # cdef VmdMorphFrame mf = None
+        # cdef VmdMorphFrame prev_mf = None
 
-        ratio_vs = []
-        prev_mf = self.c_calc_mf(morph_name, fnos[0], is_key=False, is_read=False)
+        # ratio_vs = []
+        # prev_mf = self.c_calc_mf(morph_name, fnos[0], is_key=False, is_read=False)
 
-        for f in fnos[1:]:
-            mf = self.c_calc_mf(morph_name, f, is_key=False, is_read=False)
-            ratio_vs.append(mf.ratio - prev_mf.ratio)
+        # for f in fnos[1:]:
+        #     mf = self.c_calc_mf(morph_name, f, is_key=False, is_read=False)
+        #     ratio_vs.append(mf.ratio - prev_mf.ratio)
 
-            prev_mf = mf
+        #     prev_mf = mf
         
         # # 差異がないキーを除去する
         # if sum(ratio_vs) < 0.0001:
@@ -1520,14 +1542,14 @@ cdef class VmdMotion:
         cdef float max_err = float(0.0)
         # ratio：エラー最大値のindex
         cdef int max_idx = 0
-        # 最初から最後までのフレーム数
-        cdef int total = tail - head
 
         # 開始のモーフ
         cdef VmdMorphFrame head_mf = self.c_calc_mf(morph_name, head, is_key=False, is_read=False)
         # 終了のモーフ
         cdef VmdMorphFrame tail_mf = self.c_calc_mf(morph_name, tail, is_key=False, is_read=False)
         logger.debug("head_mf: %s, %s tail_mf: %s, %s", head_mf.fno, head_mf.ratio, tail_mf.fno, tail_mf.ratio)
+        if math.isnan(head_mf.ratio) or math.isinf(head_mf.ratio):
+            logger.debug("head_mf: %s, %s tail_mf: %s, %s", head_mf.fno, head_mf.ratio, tail_mf.fno, tail_mf.ratio)
 
         cdef int i
 
@@ -1535,10 +1557,11 @@ cdef class VmdMotion:
             # rx, ry, rt = MBezierUtils.evaluate(MBezierUtils.LINEAR_MMD_INTERPOLATION[1].x(), MBezierUtils.LINEAR_MMD_INTERPOLATION[1].y(), \
             #                                     MBezierUtils.LINEAR_MMD_INTERPOLATION[2].x(), MBezierUtils.LINEAR_MMD_INTERPOLATION[2].y(), \
             #                                     head_mf.fno, i, tail_mf.fno)
+            # ip_ratio = head_mf.ratio + ((tail_mf.ratio - head_mf.ratio) * ry)
             ip_ratio = head_mf.ratio + ((tail_mf.ratio - head_mf.ratio) * ((i - head_mf.fno) / (tail_mf.fno - head_mf.fno)))
             # ip_ratio = head_mf.ratio + (tail_mf.ratio - head_mf.ratio) * (i - head) / total
             now_mf = self.c_calc_mf(morph_name, i, is_key=False, is_read=False)
-            logger.debug("morph_name: %s, i: %s ip_ratio: %s, now: %s, head: %s, tail: %s", morph_name, i, ip_ratio, now_mf.ratio, head_mf.ratio, tail_mf.ratio)
+            logger.debug("morph_name: %s, i: %s ip_ratio: %s, now: %s, head: (%s)%s, tail: (%s)%s", morph_name, i, ip_ratio, now_mf.ratio, head_mf.fno, head_mf.ratio, tail_mf.fno, tail_mf.ratio)
             pos_err = abs(ip_ratio - now_mf.ratio)
 
             if pos_err > max_err:
@@ -1612,13 +1635,6 @@ cdef class VmdMotion:
         next_fno = self.last_motion_frame + 1 if len(next_fnos) <= 0 else next_fnos[0]
 
         return prev_fno, next_fno
-
-    # モーフモーション：フレーム番号リスト
-    def get_morph_fnos(self, morph_name: str):
-        if not self.morphs or morph_name not in self.morphs:
-            return []
-        
-        return sorted([fno for fno in self.morphs[morph_name].keys()])
 
     # カメラモーション：フレーム番号リスト
     def get_camera_fnos(self):

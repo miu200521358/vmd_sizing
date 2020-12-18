@@ -21,7 +21,7 @@ class VmdWriter():
         bone_frames = self.data_set.motion.get_bone_frames()
         morph_frames = self.data_set.motion.get_morph_frames()
         camera_frames = self.data_set.motion.get_camera_frames()
-            
+
         if len(bone_frames) > 0 or len(morph_frames) > 0:
             try:
                 # モデル名を20byteで切る
