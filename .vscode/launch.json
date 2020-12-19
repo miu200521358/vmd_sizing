@@ -7,7 +7,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/src/executor.py",
             "console": "integratedTerminal",
-            "pythonPath": "${command:python.interpreterPath}",
+            "python": "${command:python.interpreterPath}",
             "stopOnEntry": false,
             "args": [
                 // "--motion_path", "E:/MMD/MikuMikuDance_v926x64/Work/202001_sizing/肩/折岸みつ肩2.vmd",
@@ -166,7 +166,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/src/executor_smooth.py",
             "console": "integratedTerminal",
-            "pythonPath": "${command:python.interpreterPath}",
+            "python": "${command:python.interpreterPath}",
             "stopOnEntry": false,
             "args": [
                 // "--motion_path", "E:/MMD/MikuMikuDance_v926x64/Work/201805_auto/misozi/kenbu/kenbu3_20190429_205936/kenbu3_json_20190429_205936_idx01/あにまさ式ミクボーン_20190429_210136_h0.0_z1.0_s1_p0.5_r3.0_reduce.vmd",
@@ -203,7 +203,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/src/blend_pmx.py",
             "console": "integratedTerminal",
-            "pythonPath": "${command:python.interpreterPath}",
+            "python": "${command:python.interpreterPath}",
             "stopOnEntry": false,
             "args": [
                 "--pmx_path", "D:/MMD/MikuMikuDance_v926x64/UserFile/Model/VOCALOID/初音ミク/Tda式デフォ服ミク_ver1.1 金子卵黄/Tda式初音ミク_デフォ服ver.pmx",
@@ -219,7 +219,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/src/executor.py",
             "console": "integratedTerminal",
-            "pythonPath": "${command:python.interpreterPath}",
+            "python": "${command:python.interpreterPath}",
             "stopOnEntry": false,
             "args": [
                 "--verbose", "20",
@@ -232,7 +232,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/../motion_supporter/src/executor.py",
             "console": "integratedTerminal",
-            "pythonPath": "${command:python.interpreterPath}",
+            "python": "${command:python.interpreterPath}",
             "stopOnEntry": false,
             "args": [
                 "--verbose", "10",
@@ -245,7 +245,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/src/thread.py",
             "console": "integratedTerminal",
-            "pythonPath": "${command:python.interpreterPath}",
+            "python": "${command:python.interpreterPath}",
             "stopOnEntry": false,
             "args": [
                 "--verbose", "20",
@@ -258,7 +258,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "pythonPath": "${command:python.interpreterPath}",
+            "python": "${command:python.interpreterPath}",
             "stopOnEntry": false,
             "args": [
             ]

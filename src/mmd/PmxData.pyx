@@ -918,6 +918,8 @@ cdef class PmxModel:
         self.bone_indexes = {}
         # モーフデータ(順番保持)
         self.morphs = {}
+        # モーフINDEXデータ（キー：モーフINDEX、値：モーフ名）
+        self.morph_indexes = {}
         # 表示枠データ
         self.display_slots = {}
         # 剛体データ
@@ -1096,7 +1098,7 @@ cdef class PmxModel:
             start_type_bone = target_bone_name[1:]
 
         # 自分をリンクに登録
-        links.append(self.bones[target_bone_name].copy())
+        links.append(self.bones[target_bone_name])
 
         parent_name = None
         if is_defined:
