@@ -39,8 +39,9 @@ cdef class ArmAvoidanceOption:
     cdef public dict avoidance_links
     cdef public dict avoidances
     cdef public double face_length
+    cdef public dict base_ratio_list
 
-    def __init__(self, arm_links: list, ik_links_list: dict, ik_count_list: dict, avoidance_links: dict, avoidances: dict, face_length: float):
+    def __init__(self, arm_links: list, ik_links_list: dict, ik_count_list: dict, avoidance_links: dict, avoidances: dict, face_length: float, base_ratio_list: dict):
         super().__init__()
 
         self.arm_links = arm_links
@@ -49,6 +50,7 @@ cdef class ArmAvoidanceOption:
         self.avoidance_links = avoidance_links
         self.avoidances = avoidances
         self.face_length = face_length
+        self.base_ratio_list = base_ratio_list
 
 
 cdef class ArmAvoidanceService:
@@ -251,7 +253,8 @@ cdef class ArmAvoidanceService:
                     # 衝突情報を取る
                     (collision, near_collision, x_distance, z_distance, rep_x_collision_vec, rep_z_collision_vec) \
                         = obb.get_collistion(rep_global_3ds[arm_link.last_name()], rep_global_3ds[arm_bone_name], \
-                                             data_set.rep_model.bones[arm_bone_name].position.distanceToPoint(data_set.rep_model.bones[arm_link.last_name()].position))
+                                             data_set.rep_model.bones[arm_bone_name].position.distanceToPoint(data_set.rep_model.bones[arm_link.last_name()].position), \
+                                             avoidance_options.base_ratio_list[arm_link.last_name()])
                     
                     if collision or near_collision:
                         logger.debug("f: %s(%s-%s:%s), c[%s], nc[%s], xd[%s], zd[%s], xv[%s], zv[%s]", \
@@ -367,7 +370,8 @@ cdef class ArmAvoidanceService:
                                         # 衝突を計り直す
                                         (collision, near_collision, x_distance, z_distance, rep_x_collision_vec, rep_z_collision_vec) \
                                             = obb.get_collistion(now_rep_global_3ds[arm_link.last_name()], now_rep_global_3ds[arm_link.first_name()], \
-                                                                 data_set.rep_model.bones[arm_bone_name].position.distanceToPoint(data_set.rep_model.bones[arm_link.last_name()].position))
+                                                                 data_set.rep_model.bones[arm_bone_name].position.distanceToPoint(data_set.rep_model.bones[arm_link.last_name()].position), \
+                                                                 avoidance_options.base_ratio_list[arm_link.last_name()])
 
                                         if (not collision and not near_collision) or prev_rep_diff == rep_diff or np.count_nonzero(np.where(np.abs(rep_diff.data()) > 0.05, 1, 0)) == 0:
                                             # 衝突していなければこのIKターンは終了
@@ -409,7 +413,8 @@ cdef class ArmAvoidanceService:
                                         # 衝突を計り直す
                                         (collision, near_collision, x_distance, z_distance, rep_x_collision_vec, rep_z_collision_vec) \
                                             = obb.get_collistion(now_rep_global_3ds[arm_link.last_name()], now_rep_global_3ds[arm_link.first_name()], \
-                                                                 data_set.rep_model.bones[arm_bone_name].position.distanceToPoint(data_set.rep_model.bones[arm_link.last_name()].position))
+                                                                 data_set.rep_model.bones[arm_bone_name].position.distanceToPoint(data_set.rep_model.bones[arm_link.last_name()].position), \
+                                                                 avoidance_options.base_ratio_list[arm_link.last_name()])
 
                                         if (not collision and not near_collision) or prev_rep_diff == rep_diff or np.count_nonzero(np.where(np.abs(rep_diff.data()) > 0.05, 1, 0)) == 0:
                                             # 衝突していなければこのIKターンは終了
@@ -570,7 +575,8 @@ cdef class ArmAvoidanceService:
                     # 衝突情報を取る
                     (collision, near_collision, x_distance, z_distance, rep_x_collision_vec, rep_z_collision_vec) \
                         = obb.get_collistion(rep_global_3ds[arm_link.last_name()], rep_global_3ds["{0}腕".format(direction)], \
-                                             data_set.rep_model.bones["{0}腕".format(direction)].position.distanceToPoint(data_set.rep_model.bones[arm_link.last_name()].position))
+                                             data_set.rep_model.bones["{0}腕".format(direction)].position.distanceToPoint(data_set.rep_model.bones[arm_link.last_name()].position), \
+                                             avoidance_options.base_ratio_list[arm_link.last_name()])
 
                     if collision or near_collision:
                         logger.debug("f: %s(%s-%s:%s), c[%s], nc[%s], xd[%s], zd[%s], xv[%s], zv[%s]", \
@@ -698,20 +704,22 @@ cdef class ArmAvoidanceService:
         # IK用リンク（エフェクタから追加していく）
         ik_links_list = {}
         ik_count_list = {}
+        base_ratio_list = {}
          
         effector_bone_name_list = []
 
-        effector_bone_name_list.append("{0}腕ひじ中間".format(direction))
-        effector_bone_name_list.append("{0}ひじ".format(direction))
+        effector_bone_name_list.append(("{0}腕ひじ中間".format(direction), 0.97))
+        effector_bone_name_list.append(("{0}ひじ".format(direction), 1))
 
         # 腕を動かすパターン
-        for effector_bone_name in effector_bone_name_list:
+        for effector_bone_name, base_ratio in effector_bone_name_list:
             # 末端までのリンク
             arm_link = data_set.rep_model.create_link_2_top_one(effector_bone_name)
             arm_links.append(arm_link)
 
             ik_links_list[effector_bone_name] = []
             ik_count_list[effector_bone_name] = []
+            base_ratio_list[effector_bone_name] = base_ratio
 
             effector_bone = arm_link.get(effector_bone_name)
 
@@ -727,19 +735,20 @@ cdef class ArmAvoidanceService:
 
         effector_bone_name_list = []
        
-        effector_bone_name_list.append("{0}ひじ手首中間".format(direction))
-        effector_bone_name_list.append("{0}手首".format(direction))
+        effector_bone_name_list.append(("{0}ひじ手首中間".format(direction), 1))
+        effector_bone_name_list.append(("{0}手首".format(direction), 1))
         if "{0}人指先実体".format(direction) in data_set.rep_model.bones:
-            effector_bone_name_list.append("{0}人指先実体".format(direction))
+            effector_bone_name_list.append(("{0}人指先実体".format(direction), 1))
 
         # ひじも動かすパターン
-        for effector_bone_name in effector_bone_name_list:
+        for effector_bone_name, base_ratio in effector_bone_name_list:
             # 末端までのリンク
             arm_link = data_set.rep_model.create_link_2_top_one(effector_bone_name)
             arm_links.append(arm_link)
 
             ik_links_list[effector_bone_name] = []
             ik_count_list[effector_bone_name] = []
+            base_ratio_list[effector_bone_name] = base_ratio
 
             effector_bone = arm_link.get(effector_bone_name)
 
@@ -771,7 +780,7 @@ cdef class ArmAvoidanceService:
             ik_count_list[effector_bone_name].append(30)
 
         # 手首リンク登録
-        return ArmAvoidanceOption(arm_links, ik_links_list, ik_count_list, avoidance_links, avoidances, face_length)
+        return ArmAvoidanceOption(arm_links, ik_links_list, ik_count_list, avoidance_links, avoidances, face_length, base_ratio_list)
 
     # 指定したモデル・方向の手のひら頂点
     def calc_wrist_entity_vertex(self, data_set_idx: int, model: PmxModel, target_model_type: str, direction: str):
@@ -801,7 +810,10 @@ cdef class ArmAvoidanceService:
             if (self.options.arm_options.arm_check_skip_flg or (data_set.rep_model.can_arm_sizing and data_set.org_model.can_arm_sizing)) \
                     and data_set_idx not in target_data_set_idxs and data_set_idx in self.options.arm_options.avoidance_target_list:
                 # ボーンセットがあり、腕系サイジング可能で、かつまだ登録されていない場合
-                target_data_set_idxs.append(data_set_idx)
-        
+                if "右手首" in data_set.org_model.bones and "左手首" in data_set.org_model.bones and "右手首" in data_set.rep_model.bones and "左手首" in data_set.rep_model.bones:
+                    target_data_set_idxs.append(data_set_idx)
+                else:
+                    logger.info("【No.%s】元モデルか先モデルに「手首」ボーンが不足しているため、処理対象外とします。", (data_set_idx + 1))
+
         return target_data_set_idxs
 

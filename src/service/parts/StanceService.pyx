@@ -1859,8 +1859,9 @@ cdef class StanceService():
                         # つま先の向きを足ＩＫの回転に置き換え
                         leg_ik_bf.rotation = org_leg_direction_qq * toe_qq
 
-                        # 計算後つま先ＩＫの移動をクリア
+                        # 計算後つま先ＩＫの移動と回転をクリア
                         toe_ik_bf.position = MVector3D()
+                        toe_ik_bf.rotation = MQuaternion()
 
                         # 登録
                         data_set.motion.regist_bf(toe_ik_bf, toe_ik_bone_name, fno)

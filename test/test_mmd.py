@@ -28,6 +28,139 @@ from utils.MLogger import MLogger # noqa
 logger = MLogger(__name__, level=1)
 
 
+class ModelNameTest(unittest.TestCase):
+
+    def test_model_name(self):
+        MLogger.initialize(level=MLogger.WARNING, is_file=True)
+        logger = MLogger(__name__, level=MLogger.WARNING)
+
+        for pmx_path in glob.glob("D:\\MMD\\MikuMikuDance_v926x64\\UserFile\\Model\\ヘタリア\\**\\*.pmx", recursive=True):
+            reader = PmxReader(pmx_path, is_check=False)
+            model = reader.read_data()
+            if "プロイセン" in model.name:
+                logger.warning("☆プロイセンモデル: %s, path: %s", model.name, pmx_path)
+
+        self.assertTrue(True)
+
+
+
+class MediapipeTest(unittest.TestCase):
+
+    def test_init(self):
+        MLogger.initialize(level=MLogger.WARNING, is_file=True)
+        logger = MLogger(__name__, level=MLogger.WARNING)
+
+        pmx_path = "D:\\MMD\\MikuMikuDance_v926x64\\UserFile\\Model\\初音ミクVer2 準標準.pmx"
+        reader = PmxReader(pmx_path, is_check=False)
+        model = reader.read_data()
+
+        reader = VmdReader("E:\\MMD\\MikuMikuDance_v926x64\\Work\\202101_hand\\init\\init_avi_20210125_060727\\motion\\output_20210125_060729_no000.vmd")
+        motion = reader.read_data()
+
+        for bone_name, bf_list in motion.bones.items():
+            for fno, bf in bf_list.items():
+                euler = bf.rotation.toEulerAngles()
+                logger.warning(f'{bf.name}: MQuaternion.fromEulerAngles({euler.x()}, {euler.y()}, {euler.z()})')
+                bf.rotation = bf.rotation.inverted()
+
+        data_set = MOptionsDataSet(motion, model, model, "E:\\MMD\\MikuMikuDance_v926x64\\Work\\202101_hand\\init\\init_avi_20210125_060727\\motion\\output_20210125_060729_no000_inverted.vmd")
+        writer = VmdWriter(data_set)
+        writer.write()
+
+        self.assertTrue(True)
+
+
+
+class HomeHarukaTest(unittest.TestCase):
+
+    def test_awaodori(self):
+        MLogger.initialize(level=MLogger.WARNING, is_file=True)
+        logger = MLogger(__name__, level=MLogger.WARNING)
+
+        pmx_path = "D:\\MMD\\MikuMikuDance_v926x64\\UserFile\\Model\\ゲーム\\アイドルマスター\\ほめ春香 マシシP\\ほめ春香さんver1_masisi_準標準.pmx"
+        reader = PmxReader(pmx_path, is_check=False)
+        model = reader.read_data()
+
+        reader = VmdReader("D:\\MMD\\MikuMikuDance_v926x64\\Work\\2021\\20210201_ホメ春香\\女踊りジグザグ右足始まり0000-1440f.vmd")
+        motion = reader.read_data()
+
+        for bone_name, bf_list in motion.bones.items():
+            for fno, bf in bf_list.items():
+                x_qq, y_qq, z_qq, _ = MServiceUtils.separate_local_qq(fno, bone_name, bf.rotation, model.get_local_x_axis(bone_name))
+                bf.rotation = y_qq.inverted() * x_qq.inverted() * z_qq.inverted()
+
+        data_set = MOptionsDataSet(motion, model, model, "D:\\MMD\\MikuMikuDance_v926x64\\Work\\2021\\20210201_ホメ春香\\女踊りジグザグ右足始まり0000-1440f_ホメ春香.vmd")
+        writer = VmdWriter(data_set)
+        writer.write()
+
+        self.assertTrue(True)
+
+
+class MorphDataTest(unittest.TestCase):
+
+    def test_bone_morph_check(self):
+        MLogger.initialize(level=MLogger.WARNING, is_file=True)
+        logger = MLogger(__name__, level=MLogger.WARNING)
+
+        for pmx_path in glob.glob("D:\\MMD\\MikuMikuDance_v926x64\\UserFile\\Model\\刀剣乱舞\\**\\*.pmx", recursive=True):
+            reader = PmxReader(pmx_path, is_check=False)
+            model = reader.read_data()
+            is_morph = False
+            for morph_name, morph in model.morphs.items():
+                if morph.morph_type == 2:
+                    logger.warning("☆ボーンモーフありモデル: %s, %s, path: %s", morph_name, morph.panel, pmx_path)
+                    is_morph = True
+                    break
+            if not is_morph:
+                logger.warning("ボーンモーフなし: %s", pmx_path)
+
+        self.assertTrue(True)
+
+
+class NormalTest(unittest.TestCase):
+    def test_normal_bone(self):
+        MLogger.initialize(level=MLogger.WARNING, is_file=True)
+        logger = MLogger(__name__, level=MLogger.WARNING)
+        
+        pmx_path = "D:\\MMD\\MikuMikuDance_v926x64\\UserFile\\Model\\ゲーム\\Neir\\eve_v100_pmx\\eve_足先EX.pmx"
+        reader = PmxReader(pmx_path, is_check=False)
+        model = reader.read_data()
+        print(';Bone,ボーン名,ボーン名(英),変形階層,物理後(0/1),位置_x,位置_y,位置_z,回転(0/1),移動(0/1),IK(0/1),表示(0/1),操作(0/1),親ボーン名,表示先(0:オフセット/1:ボーン),表示先ボーン名,オフセット_x,オフセット_y,オフセット_z,ローカル付与(0/1),回転付与(0/1),移動付与(0/1),付与率,付与親名,軸制限(0/1),制限軸_x,制限軸_y,制限軸_z,ローカル軸(0/1),ローカルX軸_x,ローカルX軸_y,ローカルX軸_z,ローカルZ軸_x,ローカルZ軸_y,ローカルZ軸_z,外部親(0/1),外部親Key,IKTarget名,IKLoop,IK単位角[deg]')
+
+        for bone_name in ["下半身","上半身","上半身2","首","頭"]:
+        # for bone_name in ["下半身","左足","左ひざ","左足首","右足","右ひざ","右足首","上半身","上半身2","左肩","左腕","左ひじ","左手首","右肩","右腕","右ひじ","右手首","首","頭"]:
+            bone = model.bones[bone_name]
+            
+            local_z_axis = model.get_local_x_axis(bone_name)
+            local_x_axis = MVector3D.crossProduct(MVector3D(0, 0, 1), local_z_axis).normalized()
+            local_y_axis = MVector3D.crossProduct(local_x_axis, local_z_axis).normalized()
+
+            x_bone = bone.copy()
+            x_bone.name = f'{bone_name}X'
+            x_bone.fixed_axis = local_x_axis
+            x_bone.local_x_vector = local_x_axis
+            x_bone.local_z_vector = MVector3D.crossProduct(MVector3D(0, 0, 1), local_x_axis).normalized()
+
+            y_bone = bone.copy()
+            y_bone.name = f'{bone_name}Y'
+            y_bone.fixed_axis = local_y_axis
+            y_bone.local_x_vector = local_y_axis
+            y_bone.local_z_vector = MVector3D.crossProduct(MVector3D(0, 0, 1), local_y_axis).normalized()
+
+            z_bone = bone.copy()
+            z_bone.name = f'{bone_name}Z'
+            z_bone.fixed_axis = local_z_axis
+            z_bone.local_x_vector = local_z_axis
+            z_bone.local_z_vector = MVector3D.crossProduct(MVector3D(0, 0, 1), local_z_axis).normalized()
+
+            print(f'Bone,"{x_bone.name}","",0,0,{x_bone.position.x()},{x_bone.position.y()},{x_bone.position.z()},1,0,0,1,1,{model.bone_indexes[bone.parent_index]},1,-1,0,0,0,0,0,0,1,,1,{x_bone.fixed_axis.x()},{x_bone.fixed_axis.y()},{x_bone.fixed_axis.z()},1,{bone.local_x_vector.x()},{bone.local_x_vector.y()},{bone.local_x_vector.z()},{bone.local_z_vector.x()},{bone.local_z_vector.y()},{bone.local_z_vector.z()},0,0,"",0,0')
+            print(f'Bone,"{y_bone.name}","",0,0,{y_bone.position.x()},{y_bone.position.y()},{y_bone.position.z()},1,0,0,1,1,{x_bone.name},1,-1,0,0,0,0,0,0,1,,1,{y_bone.fixed_axis.x()},{y_bone.fixed_axis.y()},{y_bone.fixed_axis.z()},1,{bone.local_x_vector.x()},{bone.local_x_vector.y()},{bone.local_x_vector.z()},{bone.local_z_vector.x()},{bone.local_z_vector.y()},{bone.local_z_vector.z()},0,0,"",0,0')
+            print(f'Bone,"{z_bone.name}","",0,0,{z_bone.position.x()},{z_bone.position.y()},{z_bone.position.z()},1,0,0,1,1,{y_bone.name},1,-1,0,0,0,0,0,0,1,,1,{z_bone.fixed_axis.x()},{z_bone.fixed_axis.y()},{z_bone.fixed_axis.z()},1,{bone.local_x_vector.x()},{bone.local_x_vector.y()},{bone.local_x_vector.z()},{bone.local_z_vector.x()},{bone.local_z_vector.y()},{bone.local_z_vector.z()},0,0,"",0,0')
+            print(f'Bone,"{bone.name}","",0,0,{bone.position.x()},{bone.position.y()},{bone.position.z()},1,0,0,1,1,{z_bone.name},1,-1,0,0,0,0,0,0,1,,0,{bone.fixed_axis.x()},{bone.fixed_axis.y()},{bone.fixed_axis.z()},1,{bone.local_x_vector.x()},{bone.local_x_vector.y()},{bone.local_x_vector.z()},{bone.local_z_vector.x()},{bone.local_z_vector.y()},{bone.local_z_vector.z()},0,0,"",0,0')
+
+        self.assertTrue(True)
+
+
 class SdefDataTest(unittest.TestCase):
 
     def test_sdef_check(self):

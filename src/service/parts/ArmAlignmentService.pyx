@@ -1475,6 +1475,9 @@ cdef class ArmAlignmentService:
             if (self.options.arm_options.arm_check_skip_flg or (data_set.rep_model.can_arm_sizing and data_set.org_model.can_arm_sizing)) \
                     and data_set_idx not in target_data_set_idxs:
                 # ボーンセットがあり、腕系サイジング可能で、かつまだ登録されていない場合
-                target_data_set_idxs.append(data_set_idx)
+                if "右手首" in data_set.org_model.bones and "左手首" in data_set.org_model.bones and "右手首" in data_set.rep_model.bones and "左手首" in data_set.rep_model.bones:
+                    target_data_set_idxs.append(data_set_idx)
+                else:
+                    logger.info("【No.%s】元モデルか先モデルに「手首」ボーンが不足しているため、処理対象外とします。", (data_set_idx + 1))
             
         return target_data_set_idxs
