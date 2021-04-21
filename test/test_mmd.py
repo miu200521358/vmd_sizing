@@ -24,8 +24,37 @@ from module.MParams import BoneLinks # noqa
 from utils import MBezierUtils, MServiceUtils # noqa
 from utils.MException import SizingException # noqa
 from utils.MLogger import MLogger # noqa
+import traceback
 
 logger = MLogger(__name__, level=1)
+
+
+class CameraLengthTest(unittest.TestCase):
+
+    def test_camera_length(self):
+        MLogger.initialize(level=MLogger.WARNING, is_file=True)
+        logger = MLogger(__name__, level=MLogger.WARNING)
+
+        for n, vmd_path in enumerate(glob.glob("D:\\MMD\\MikuMikuDance_v926x64\\UserFile\\Motion\\ダンス_1人\\**\\*.vmd", recursive=True)):
+            reader = VmdReader(vmd_path)
+            try:
+                motion = reader.read_data()
+                if motion.camera_cnt > 0:
+                    is_zero = False
+                    for fno, cdata in motion.cameras.items():
+                        if cdata.length == 0:
+                            logger.warning(f"☆０距離カメラ: fno: {fno}, path: {vmd_path}")
+                            is_zero = True
+                        # else:
+                        #     logger.warning(f"×ノーマルカメラ: fno: {fno}, path: {vmd_path}, length: {cdata.length}")
+            except Exception:
+                print(f"エラーpath: {vmd_path}")
+                # print(traceback.format_exc())
+                
+            if not is_zero and n % 100 == 0:
+                logger.warning(f"×ノーマルカメラ: path: {vmd_path}")
+
+        self.assertTrue(True)
 
 
 class ModelNameTest(unittest.TestCase):

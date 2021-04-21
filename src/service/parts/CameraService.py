@@ -672,8 +672,8 @@ class CameraService():
 
     def prepare_ratio(self, data_set_idx: int, org_model: PmxModel, rep_model: PmxModel):
         data_set = self.options.data_set_list[data_set_idx]
-        org_total_height, org_face_length, org_heads = self.calc_ratio(data_set_idx, org_model, "作成元")
-        rep_total_height, rep_face_length, rep_heads = self.calc_ratio(data_set_idx, rep_model, "変換先")
+        org_total_height, org_face_length, org_heads = self.calc_ratio(data_set_idx, org_model, "作成元", 0)
+        rep_total_height, rep_face_length, rep_heads = self.calc_ratio(data_set_idx, rep_model, "変換先", data_set.camera_offset_y)
 
         # 全身比率
         body_ratio = rep_total_height / org_total_height
@@ -686,7 +686,7 @@ class CameraService():
 
         return org_total_height, org_face_length, org_heads, rep_total_height, rep_face_length, rep_heads, body_ratio, head_ratio
         
-    def calc_ratio(self, data_set_idx: int, model: PmxModel, model_type: str):
+    def calc_ratio(self, data_set_idx: int, model: PmxModel, model_type: str, camera_offset_y: float):
         if model.head_top_vertex.index < 0:
             logger.warning("【No.%s】%sモデルの頭頂頂点INDEXが見つからなかったため、頭ボーンの位置で代用します。\n" \
                            + "全長Yオフセットで頭頂位置を調整すると、カメラの見切れ等が少なくなります。", (data_set_idx + 1), model_type)
@@ -709,6 +709,10 @@ class CameraService():
 
         # 全身の高さ
         total_height = model.bones["頭頂実体"].position.y()
+
+        # オフセットを加算する
+        total_height += camera_offset_y
+        face_length += camera_offset_y
             
         # 顔の大きさ / 全身の高さ　で頭身算出
         return total_height, face_length, total_height / face_length

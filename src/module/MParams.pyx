@@ -109,7 +109,21 @@ cdef class BoneLinks:
                     new_links.append(self.__links[lkey])
                 
         return new_links
-        
+
+    # 指定されたボーン名を省いたリンクを取得
+    def remove_links(self, bone_names: list):
+        new_links = BoneLinks()
+        for lidx, lkey in enumerate(self.__links.keys()):
+            if lidx == 0:
+                # 末端は常に登録
+                new_links.append(self.__links[lkey])
+            else:
+                if lkey not in bone_names:
+                    # それ以外はボーン名リストにないこと
+                    new_links.append(self.__links[lkey])
+                
+        return new_links
+
     def __str__(self):
         return "<BoneLinks links:{0}".format(self.__links)
 

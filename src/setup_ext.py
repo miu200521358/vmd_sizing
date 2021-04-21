@@ -1,7 +1,7 @@
 from setuptools import Extension
 from numpy import get_include   # cimport numpy を使うため
 
-bezier_path = 'C:/Development/Anaconda3/envs/vmdsizing_cython_exe1/Lib/site-packages/bezier/include'
+bezier_path = 'C:/Development/Anaconda3/envs/vmdsizing_cython/Lib/site-packages/bezier/include'
 
 kwargs = {"output_dir": "./build/output", "build_dir": "./build/"}
 
