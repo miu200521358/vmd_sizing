@@ -3026,12 +3026,19 @@ cdef class StanceService():
 
                 org_shoulder_diff = (data_set.org_model.bones[arm_name].position - data_set.org_model.bones[shoulder_name].position)
                 org_shoulder_diff.one()
+                if round(org_shoulder_diff.y(), 1) == 0:
+                    # ゼロに近い場合、分母なので比率が馬鹿でかくなるため、強制的に1を設定する
+                    org_shoulder_diff.setY(1)
                 rep_shoulder_diff = (data_set.rep_model.bones[arm_name].position - data_set.rep_model.bones[shoulder_name].position)
+                if round(rep_shoulder_diff.y(), 1) == 0:
+                    rep_shoulder_diff.setY(1)
                 shoulder_diff_ratio = rep_shoulder_diff / org_shoulder_diff
+
+                logger.debug("%s, org_shoulder_diff: %s, rep_shoulder_diff: %s", shoulder_name, org_shoulder_diff.to_log(), rep_shoulder_diff.to_log())
 
                 logger.info("【No.%s】%s - 長さ比率: %s", (data_set_idx + 1), shoulder_name, shoulder_diff_ratio.to_log())
 
-                if dot >= 0.8:
+                if dot >= 0.82:
                     self.adjust_shoulder_stance_near(data_set_idx, shoulder_p_name, shoulder_name, arm_name, 0.9, is_shoulder_p)
                 elif 0.5 <= dot:
                     # 肩の傾きが遠い場合
@@ -3084,12 +3091,16 @@ cdef class StanceService():
         # TOの長さ比率（いかり肩ボーンとかあるので、絶対値はとらない）
         org_to_diff = (org_arm_links[shoulder_name[int(0)]].get(arm_name).position - org_arm_links[shoulder_name[int(0)]].get("首根元2").position)
         org_to_diff.non_zero()
+        if round(org_to_diff.y(), 1) == 0:
+            # ゼロに近い場合、分母なので比率が馬鹿でかくなるため、強制的に1を設定する
+            org_to_diff.setY(1)
         rep_to_diff = (rep_arm_links[shoulder_name[int(0)]].get(arm_name).position - rep_arm_links[shoulder_name[int(0)]].get("首根元2").position)
         rep_to_diff.non_zero()
+        if round(rep_to_diff.y(), 1) == 0:
+            rep_to_diff.setY(1)
         to_diff_ratio = rep_to_diff / org_to_diff
         
-        logger.test("arm_diff_ratio: %s", arm_diff_ratio)
-        logger.test("to_diff_ratio: %s", to_diff_ratio)
+        logger.debug(f"[far] arm_diff_ratio: {arm_diff_ratio}, org_to_diff: {org_to_diff}, rep_to_diff: {rep_to_diff}, to_diff_ratio: {to_diff_ratio}")
 
         ratio = MVector3D(arm_diff_ratio.x(), to_diff_ratio.y(), arm_diff_ratio.x())
 
@@ -3254,11 +3265,15 @@ cdef class StanceService():
         # TOの長さ比率（いかり肩ボーンとかあるので、絶対値はとらない）
         org_to_diff = (org_arm_links[shoulder_name[int(0)]].get(arm_name).position - org_arm_links[shoulder_name[int(0)]].get("首根元").position)
         org_to_diff.one()
+        if round(org_to_diff.y(), 1) == 0:
+            # ゼロに近い場合、分母なので比率が馬鹿でかくなるため、強制的に1を設定する
+            org_to_diff.setY(1)
         rep_to_diff = (rep_arm_links[shoulder_name[int(0)]].get(arm_name).position - rep_arm_links[shoulder_name[int(0)]].get("首根元").position)
+        if round(rep_to_diff.y(), 1) == 0:
+            rep_to_diff.setY(1)
         to_diff_ratio = rep_to_diff / org_to_diff
         
-        logger.test("arm_diff_ratio: %s", arm_diff_ratio)
-        logger.test("to_diff_ratio: %s", to_diff_ratio)
+        logger.debug(f"near round(org_to_diff.y(), 1): {round(org_to_diff.y(), 1)}, org_to_diff: {org_to_diff}, rep_to_diff: {rep_to_diff}, to_diff_ratio: {to_diff_ratio}")
 
         ratio = MVector3D(arm_diff_ratio.x(), to_diff_ratio.y(), arm_diff_ratio.x())
 
