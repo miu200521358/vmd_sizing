@@ -159,7 +159,7 @@ cdef class ArmAlignmentService:
             return se
         except Exception as e:
             import traceback
-            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc())
             raise e
 
     # 位置合わせ準備
@@ -585,7 +585,7 @@ cdef class ArmAlignmentService:
         cdef list group_data_set_idxs, next_fnos, next_success_fnos, overwrited, prev_success_fnos, is_success
         cdef dict aligned_rep_global_3ds, all_alignment_group
         cdef dict dot_far_limit_dict, dot_near_dict, dot_near_limit_dict, dot_start_dict, org_bfs, rep_global_3ds, rep_global_matrixs, results, start_org_bfs
-        cdef bint is_avoidance_x, is_floor, is_multi
+        cdef bint is_avoidance_elbow_x, is_avoidance_arm_x, is_floor, is_multi
         cdef VmdBoneFrame bf, ik_bf, next_bf, prev_bf
         cdef MQuaternion correct_qq
         cdef MOptionsDataSet data_set
@@ -772,7 +772,9 @@ cdef class ArmAlignmentService:
                     prev_rep_diff = MVector3D()
 
                     # 位置合わせ前のbf情報
-                    is_avoidance_x = False
+                    is_avoidance_arm_x = False
+                    # ひじの回避有無
+                    is_avoidance_elbow_x = False
                     org_bfs = {}
                     start_org_bfs = {}
                     for ik_links in target_link.ik_links_list:
@@ -787,13 +789,25 @@ cdef class ArmAlignmentService:
                                 # 変位前の角度として保持
                                 org_bfs[link_name] = bf.copy()
                                 start_org_bfs[link_name] = bf.copy()
-                                is_avoidance_x = is_avoidance_x or (bf.avoidance == "x")
-                    
-                    if is_avoidance_x:
-                        logger.info("--X方向回避済みのため、位置合わせスキップ: f: %s(%s-%s)", fno, (data_set_idx + 1), target_link.effector_display_bone_name)
+
+                                # 腕の回避が入っているか
+                                is_avoidance_arm_x = is_avoidance_arm_x or (bf.avoidance == "x" and "腕" in link_name)
+                                # ひじの回避Xが入っているか
+                                is_avoidance_elbow_x = is_avoidance_elbow_x or (bf.avoidance == "x" and "ひじ" in link_name)
+                            
+                    if is_avoidance_elbow_x:
+                        logger.info("--ひじX方向回避済みのため、位置合わせスキップ: f: %s(%s-%s)", fno, (data_set_idx + 1), target_link.effector_display_bone_name)
+                        continue
+
+                    if is_avoidance_arm_x:
+                        logger.info("--腕X方向回避済みのため、ひじ以降のみ位置合わせ: f: %s(%s-%s)", fno, (data_set_idx + 1), target_link.effector_display_bone_name)
 
                     # IK処理実行
                     for ik_cnt, (ik_links, ik_max_count) in enumerate(zip(target_link.ik_links_list, target_link.ik_count_list)):
+                        if is_avoidance_arm_x:
+                            # 腕X回避済みのため、除去
+                            ik_links = ik_links.remove_links(["{0}腕".format(ik_links.first_name()[0])])
+
                         for now_ik_max_count in range(1, ik_max_count + 1):
                             now_ik_links = ik_links     # .from_links(target_bone_names[-1])
                             # if ik_cnt > 0:

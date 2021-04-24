@@ -747,7 +747,7 @@ class PmxReader:
             return se
         except Exception as e:
             import traceback
-            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc())
             raise e
 
     def hexdigest(self):

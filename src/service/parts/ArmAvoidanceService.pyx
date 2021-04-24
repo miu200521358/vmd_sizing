@@ -41,7 +41,8 @@ cdef class ArmAvoidanceOption:
     cdef public double face_length
     cdef public dict base_ratio_list
 
-    def __init__(self, arm_links: list, ik_links_list: dict, ik_count_list: dict, avoidance_links: dict, avoidances: dict, face_length: float, base_ratio_list: dict):
+    def __init__(self, arm_links: list, ik_links_list: dict, ik_count_list: dict, avoidance_links: dict, \
+                 avoidances: dict, face_length: float, base_ratio_list: dict):
         super().__init__()
 
         self.arm_links = arm_links
@@ -140,7 +141,7 @@ cdef class ArmAvoidanceService:
             return se
         except Exception as e:
             import traceback
-            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc())
             raise e
 
     # 接触回避処理
@@ -171,7 +172,7 @@ cdef class ArmAvoidanceService:
             return se
         except Exception as e:
             import traceback
-            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc())
             raise e
 
     # 接触回避処理
@@ -251,15 +252,15 @@ cdef class ArmAvoidanceService:
                     # [logger.test("f: %s, k: %s, v: %s", fno, k, v) for k, v in rep_global_3ds.items()]
 
                     # 衝突情報を取る
-                    (collision, near_collision, x_distance, z_distance, rep_x_collision_vec, rep_z_collision_vec) \
+                    (collision, near_collision, x_distance, z_plus_distance, z_minus_distance, rep_x_collision_vec, rep_z_plus_collision_vec, rep_z_minus_collision_vec) \
                         = obb.get_collistion(rep_global_3ds[arm_link.last_name()], rep_global_3ds[arm_bone_name], \
                                              data_set.rep_model.bones[arm_bone_name].position.distanceToPoint(data_set.rep_model.bones[arm_link.last_name()].position), \
                                              avoidance_options.base_ratio_list[arm_link.last_name()])
                     
                     if collision or near_collision:
-                        logger.debug("f: %s(%s-%s:%s), c[%s], nc[%s], xd[%s], zd[%s], xv[%s], zv[%s]", \
+                        logger.debug("f: %s(%s-%s:%s), c[%s], nc[%s], xd[%s], zdp[%s], zdm[%s], xv[%s], zvp[%s], zvm[%s]", \
                                      fno, (data_set_idx + 1), arm_link.last_name(), avoidance_name, collision, near_collision, \
-                                     x_distance, z_distance, rep_x_collision_vec.to_log(), rep_z_collision_vec.to_log())
+                                     x_distance, z_plus_distance, z_minus_distance, rep_x_collision_vec.to_log(), rep_z_plus_collision_vec.to_log(), rep_z_minus_collision_vec.to_log())
 
                         is_success = []
                         failured_last_names = []
@@ -275,10 +276,10 @@ cdef class ArmAvoidanceService:
                                         data_set.motion.regist_bf(bf, link_name, fno)
                                         org_bfs[link_name] = bf.copy()
 
-                        # 既定の回避方向（なければとりあえずZ）
-                        axis = "z" if "axis" not in avoidance_axis else avoidance_axis["axis"]
+                        # 既定の回避方向（なければとりあえずZ-(前方向)）
+                        axis = "z-" if "axis" not in avoidance_axis else avoidance_axis["axis"]
                         # 回避方向
-                        rep_collision_vec = rep_x_collision_vec if axis == "x" else rep_z_collision_vec
+                        rep_collision_vec = rep_x_collision_vec if axis == "x" else rep_z_plus_collision_vec if axis == "z+" else rep_z_minus_collision_vec
 
                         if collision:
                             logger.info("○接触あり: f: %s(%s-%s:%s:%s), 元: %s, 回避: %s", fno, \
@@ -286,6 +287,8 @@ cdef class ArmAvoidanceService:
                         else:
                             logger.info("－近接あり: f: %s(%s-%s:%s:%s), 元: %s, 回避: %s", fno, \
                                         (data_set_idx + 1), arm_link.last_display_name(), avoidance_name, axis, rep_global_3ds[arm_link.last_name()].to_log(), rep_collision_vec.to_log())
+                            # 近接はログのみ
+                            continue
 
                         # # 回避後の先端ボーン位置 -------------
                         # debug_bone_name = "{0}A".format(arm_link.last_name())
@@ -307,6 +310,10 @@ cdef class ArmAvoidanceService:
                             prev_rep_diff = MVector3D()
                             # ひじを含んでいるか
                             is_in_elbow = elbow_bone_name in list(ik_links.all().keys())
+
+                            # ひじの角度が浅い場合、ひじ対象外とする
+                            if elbow_bone_name in org_bfs and org_bfs[elbow_bone_name].org_rotation.toDegree() < 20:
+                                ik_links = ik_links.remove_links([elbow_bone_name])
                             
                             for now_ik_max_count in range(1, ik_max_count + 1):
                                 logger.debug("IK計算開始(%s): f: %s(%s:%s:%s), axis: %s, now[%s], new[%s]", now_ik_max_count, fno, (data_set_idx + 1), \
@@ -361,14 +368,19 @@ cdef class ArmAvoidanceService:
                                             org_bfs[link_name] = data_set.motion.calc_bf(link_name, fno).copy()
 
                                         # 回避方向保持
-                                        for link_name in list(ik_links.all().keys())[1:]:
-                                            data_set.motion.bones[link_name][fno].avoidance = axis
-                                
+                                        if wrist_bone_name in list(ik_links.all().keys()):
+                                            # 手首が含まれる場合、ひじがIK対象
+                                            data_set.motion.bones[elbow_bone_name][fno].avoidance = axis
+
+                                        if elbow_bone_name not in list(ik_links.all().keys()):
+                                            # ひじが含まれない場合、腕ボーンのみIK対象なので、IK対象
+                                            data_set.motion.bones[arm_bone_name][fno].avoidance = axis
+
                                         # 大体同じ位置にあって、角度もそう大きくズレてない場合、OK(全部上書き)
                                         is_success = [True]
                                         
                                         # 衝突を計り直す
-                                        (collision, near_collision, x_distance, z_distance, rep_x_collision_vec, rep_z_collision_vec) \
+                                        (collision, near_collision, x_distance, z_plus_distance, z_minus_distance, rep_x_collision_vec, rep_z_plus_collision_vec, rep_z_minus_collision_vec) \
                                             = obb.get_collistion(now_rep_global_3ds[arm_link.last_name()], now_rep_global_3ds[arm_link.first_name()], \
                                                                  data_set.rep_model.bones[arm_bone_name].position.distanceToPoint(data_set.rep_model.bones[arm_link.last_name()].position), \
                                                                  avoidance_options.base_ratio_list[arm_link.last_name()])
@@ -405,13 +417,18 @@ cdef class ArmAvoidanceService:
                                             org_bfs[link_name] = data_set.motion.calc_bf(link_name, fno).copy()
 
                                         # 回避方向保持
-                                        for link_name in list(ik_links.all().keys())[1:]:
-                                            data_set.motion.bones[link_name][fno].avoidance = axis
+                                        if wrist_bone_name in list(ik_links.all().keys()):
+                                            # 手首が含まれる場合、ひじがIK対象
+                                            data_set.motion.bones[elbow_bone_name][fno].avoidance = axis
+
+                                        if elbow_bone_name not in list(ik_links.all().keys()):
+                                            # ひじが含まれない場合、腕ボーンのみIK対象なので、IK対象
+                                            data_set.motion.bones[arm_bone_name][fno].avoidance = axis
 
                                         # 採用されたらOK
                                         is_success.append(True)
                                         # 衝突を計り直す
-                                        (collision, near_collision, x_distance, z_distance, rep_x_collision_vec, rep_z_collision_vec) \
+                                        (collision, near_collision, x_distance, z_plus_distance, z_minus_distance, rep_x_collision_vec, rep_z_plus_collision_vec, rep_z_minus_collision_vec) \
                                             = obb.get_collistion(now_rep_global_3ds[arm_link.last_name()], now_rep_global_3ds[arm_link.first_name()], \
                                                                  data_set.rep_model.bones[arm_bone_name].position.distanceToPoint(data_set.rep_model.bones[arm_link.last_name()].position), \
                                                                  avoidance_options.base_ratio_list[arm_link.last_name()])
@@ -485,19 +502,20 @@ cdef class ArmAvoidanceService:
                                         data_set.motion.regist_bf(org_bfs[link_name].copy(), link_name, fno)
 
                                 if not is_in_elbow:
-                                    # IKリストの中にひじが含まれていない場合、キャンセル
+                                    # IKリストの中にひじが含まれていない場合、かつ角度がそれなりにある場合、キャンセル
                                     arm_bf = data_set.motion.calc_bf(arm_bone_name, fno)
                                     elbow_bf = data_set.motion.calc_bf(elbow_bone_name, fno)
-                                    # 腕の変化量YZのみをひじに加算
-                                    elbow_adjust_qq = arm_bf.rotation.inverted() * arm_bf.org_rotation * elbow_bf.rotation
+                                    if elbow_bf.rotation.toDegree() > 20:
+                                        # 腕の変化量YZのみをひじに加算
+                                        elbow_adjust_qq = arm_bf.rotation.inverted() * arm_bf.org_rotation * elbow_bf.rotation
 
-                                    logger.debug("◆手首調整: f: %s(%s:%s), arm_bf.org_rotation [%s], arm_bf.rotation[%s], elbow_bf.rotation[%s], adjust_qq[%s]", \
-                                                 fno, (data_set_idx + 1), avoidance_name, arm_bf.org_rotation.toEulerAngles().to_log(), \
-                                                 arm_bf.rotation.toEulerAngles().to_log(), elbow_bf.rotation.toEulerAngles().to_log(), elbow_adjust_qq.toEulerAngles().to_log())
+                                        logger.debug("◆手首調整: f: %s(%s:%s), arm_bf.org_rotation [%s], arm_bf.rotation[%s], elbow_bf.rotation[%s], adjust_qq[%s]", \
+                                                    fno, (data_set_idx + 1), avoidance_name, arm_bf.org_rotation.toEulerAngles().to_log(), \
+                                                    arm_bf.rotation.toEulerAngles().to_log(), elbow_bf.rotation.toEulerAngles().to_log(), elbow_adjust_qq.toEulerAngles().to_log())
 
-                                    # 再設定
-                                    elbow_bf.rotation = elbow_adjust_qq
-                                    data_set.motion.regist_bf(elbow_bf, elbow_bone_name, fno)
+                                        # 再設定
+                                        elbow_bf.rotation = elbow_adjust_qq
+                                        data_set.motion.regist_bf(elbow_bf, elbow_bone_name, fno)
 
                                 if len(is_success) > 1 and is_success.count(False) > 0:
                                     # どこかのパターンで失敗している場合、一部成功ログ
@@ -526,7 +544,7 @@ cdef class ArmAvoidanceService:
         logger.info("接触回避準備【No.%s - %s】", (data_set_idx + 1), direction)
 
         cdef int aidx, fno, from_fno, prev_block_fno, to_fno
-        cdef double block_x_distance, block_z_distance, x_distance, z_distance
+        cdef double block_x_distance, block_z_plus_distance, x_distance, z_plus_distance, block_z_minus_distance, z_minus_distance
         cdef list all_avoidance_list, fnos, prev_collisions
         cdef dict all_avoidance_axis, rep_avbone_global_3ds, rep_avbone_global_mats, rep_global_3ds, rep_matrixs, avoidance_list
         cdef str avoidance_name, bone_name
@@ -536,7 +554,7 @@ cdef class ArmAvoidanceService:
         cdef MOptionsDataSet data_set
         cdef OBB obb
         cdef RigidBody avoidance
-        cdef MVector3D rep_x_collision_vec, rep_z_collision_vec
+        cdef MVector3D rep_x_collision_vec, rep_z_plus_collision_vec, rep_z_minus_collision_vec
 
         logger.copy(self.options)
         # 処理対象データセット
@@ -573,20 +591,21 @@ cdef class ArmAvoidanceService:
                     # [logger.debug("f: %s, k: %s, v: %s", fno, k, v) for k, v in rep_global_3ds.items()]
 
                     # 衝突情報を取る
-                    (collision, near_collision, x_distance, z_distance, rep_x_collision_vec, rep_z_collision_vec) \
+                    (collision, near_collision, x_distance, z_plus_distance, z_minus_distance, rep_x_collision_vec, rep_z_plus_collision_vec, rep_z_minus_collision_vec) \
                         = obb.get_collistion(rep_global_3ds[arm_link.last_name()], rep_global_3ds["{0}腕".format(direction)], \
                                              data_set.rep_model.bones["{0}腕".format(direction)].position.distanceToPoint(data_set.rep_model.bones[arm_link.last_name()].position), \
                                              avoidance_options.base_ratio_list[arm_link.last_name()])
 
                     if collision or near_collision:
-                        logger.debug("f: %s(%s-%s:%s), c[%s], nc[%s], xd[%s], zd[%s], xv[%s], zv[%s]", \
+                        logger.debug("f: %s(%s-%s:%s), c[%s], nc[%s], xd[%s], zdp[%s], zdm[%s], xv[%s], zvp[%s], zvm[%s]", \
                                      fno, (data_set_idx + 1), arm_link.last_name(), avoidance_name, collision, near_collision, \
-                                     x_distance, z_distance, rep_x_collision_vec.to_log(), rep_z_collision_vec.to_log())
+                                     x_distance, z_plus_distance, z_minus_distance, rep_x_collision_vec.to_log(), rep_z_plus_collision_vec.to_log(), rep_z_minus_collision_vec.to_log())
 
                         # 衝突していたら、その中にキーフレ/ボーン名で登録
                         all_avoidance_list[-1][(fno, avoidance_name, arm_link.last_name())] = \
                             {"fno": fno, "avoidance_name": avoidance_name, "bone_name": arm_link.last_name(), "collision": collision, "near_collision": near_collision, \
-                                "x_distance": x_distance, "z_distance": z_distance, "rep_x_collision_vec": rep_x_collision_vec, "rep_z_collision_vec": rep_z_collision_vec}
+                                "x_distance": x_distance, "z_plus_distance": z_plus_distance, "z_minus_distance": z_minus_distance, \
+                                "rep_x_collision_vec": rep_x_collision_vec, "rep_z_plus_collision_vec": rep_z_plus_collision_vec, "rep_z_minus_collision_vec": rep_z_minus_collision_vec}
 
                     prev_collisions.append(collision)
                     prev_collisions.append(near_collision)
@@ -602,18 +621,22 @@ cdef class ArmAvoidanceService:
         for aidx, avoidance_list in enumerate(all_avoidance_list):
             # 衝突ブロック単位で判定
             block_x_distance = 0
-            block_z_distance = 0
+            block_z_plus_distance = 0
+            block_z_minus_distance = 0
             for (fno, avoidance_name, bone_name), avf in avoidance_list.items():
                 collision = avf["collision"]
                 near_collision = avf["near_collision"]
                 x_distance = avf["x_distance"]
-                z_distance = avf["z_distance"]
+                z_plus_distance = avf["z_plus_distance"]
+                z_minus_distance = avf["z_minus_distance"]
                 rep_x_collision_vec = avf["rep_x_collision_vec"]
-                rep_z_collision_vec = avf["rep_z_collision_vec"]
+                rep_z_plus_collision_vec = avf["rep_z_plus_collision_vec"]
+                rep_z_minus_collision_vec = avf["rep_z_minus_collision_vec"]
 
                 # 距離を加算
                 block_x_distance += x_distance
-                block_z_distance += z_distance
+                block_z_plus_distance += z_plus_distance
+                block_z_minus_distance += z_minus_distance
             
             if len(avoidance_list.keys()) > 0:
                 # 範囲
@@ -621,8 +644,8 @@ cdef class ArmAvoidanceService:
                 to_fno = max([fno for (fno, avoidance_name, bone_name) in avoidance_list.keys()])
 
                 # トータルで近い方の軸に移動させる
-                all_avoidance_axis[from_fno] = {"from_fno": from_fno, "to_fno": to_fno, "axis": ("x" if block_x_distance * 1.5 < block_z_distance else "z")}
-                logger.debug("aidx: %s, d: %s, from: %s, to: %s, axis: %s, xd: %s, zd: %s", aidx, direction, from_fno, to_fno, all_avoidance_axis[from_fno], block_x_distance, block_z_distance)
+                all_avoidance_axis[from_fno] = {"from_fno": from_fno, "to_fno": to_fno, "axis": ("x" if block_x_distance < block_z_plus_distance and block_x_distance < block_z_minus_distance else "z+" if block_z_plus_distance < block_z_minus_distance else "z-")}
+                logger.debug("aidx: %s, d: %s, from: %s, to: %s, axis: %s, xd: %s, zdp: %s, zdm: %s", aidx, direction, from_fno, to_fno, all_avoidance_axis[from_fno], block_x_distance, block_z_plus_distance, block_z_minus_distance)
                 
             if fno // 1000 > prev_block_fno and fnos[-1] > 0:
                 logger.count("【No.{0} - 接触回避準備② - {1}】".format(data_set_idx + 1, direction), fno, fnos)
@@ -708,8 +731,8 @@ cdef class ArmAvoidanceService:
          
         effector_bone_name_list = []
 
-        effector_bone_name_list.append(("{0}腕ひじ中間".format(direction), 0.97))
-        effector_bone_name_list.append(("{0}ひじ".format(direction), 1))
+        effector_bone_name_list.append(("{0}腕ひじ中間".format(direction), 0.95))
+        effector_bone_name_list.append(("{0}ひじ".format(direction), 0.95))
 
         # 腕を動かすパターン
         for effector_bone_name, base_ratio in effector_bone_name_list:
@@ -735,10 +758,10 @@ cdef class ArmAvoidanceService:
 
         effector_bone_name_list = []
        
-        effector_bone_name_list.append(("{0}ひじ手首中間".format(direction), 1))
-        effector_bone_name_list.append(("{0}手首".format(direction), 1))
+        effector_bone_name_list.append(("{0}ひじ手首中間".format(direction), 0.95))
+        effector_bone_name_list.append(("{0}手首".format(direction), 0.95))
         if "{0}人指先実体".format(direction) in data_set.rep_model.bones:
-            effector_bone_name_list.append(("{0}人指先実体".format(direction), 1))
+            effector_bone_name_list.append(("{0}人指先実体".format(direction), 0.95))
 
         # ひじも動かすパターン
         for effector_bone_name, base_ratio in effector_bone_name_list:
