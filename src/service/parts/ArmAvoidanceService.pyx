@@ -205,7 +205,7 @@ cdef class ArmAvoidanceService:
         elbow_bone_name = "{0}ひじ".format(direction)
         wrist_bone_name = "{0}手首".format(direction)
 
-        target_bone_names = [arm_bone_name, "{0}腕捩".format(direction), elbow_bone_name, "{0}手捩".format(direction), wrist_bone_name]
+        target_bone_names = ["センター", "グルーブ", arm_bone_name, "{0}腕捩".format(direction), elbow_bone_name, "{0}手捩".format(direction), wrist_bone_name]
         avoidance_axis = {}
         prev_block_fno = 0
         fnos = data_set.motion.get_bone_fnos(*target_bone_names)
@@ -312,7 +312,7 @@ cdef class ArmAvoidanceService:
                             is_in_elbow = elbow_bone_name in list(ik_links.all().keys())
 
                             # ひじの角度が浅い場合、ひじ対象外とする
-                            if elbow_bone_name in org_bfs and org_bfs[elbow_bone_name].org_rotation.toDegree() < 20:
+                            if elbow_bone_name in org_bfs and org_bfs[elbow_bone_name].org_rotation.toDegree() < 30:
                                 ik_links = ik_links.remove_links([elbow_bone_name])
                             
                             for now_ik_max_count in range(1, ik_max_count + 1):
@@ -505,7 +505,7 @@ cdef class ArmAvoidanceService:
                                     # IKリストの中にひじが含まれていない場合、かつ角度がそれなりにある場合、キャンセル
                                     arm_bf = data_set.motion.calc_bf(arm_bone_name, fno)
                                     elbow_bf = data_set.motion.calc_bf(elbow_bone_name, fno)
-                                    if elbow_bf.rotation.toDegree() > 20:
+                                    if elbow_bf.rotation.toDegree() > 30:
                                         # 腕の変化量YZのみをひじに加算
                                         elbow_adjust_qq = arm_bf.rotation.inverted() * arm_bf.org_rotation * elbow_bf.rotation
 

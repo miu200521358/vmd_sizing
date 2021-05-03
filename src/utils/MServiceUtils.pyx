@@ -105,7 +105,7 @@ cdef c_calc_IK(PmxModel model, BoneLinks links, VmdMotion motion, int fno, MVect
 
                 # ジョイントに補正をかける
                 bf = motion.c_calc_bf(joint_name, fno, is_key=False, is_read=False, is_reset_interpolation=False)
-                new_ik_qq = correct_qq * bf.rotation
+                new_ik_qq = bf.rotation * correct_qq
 
                 # IK軸制限がある場合、上限下限をチェック
                 if ik_bone.ik_limit_min != MVector3D() and ik_bone.ik_limit_max != MVector3D():

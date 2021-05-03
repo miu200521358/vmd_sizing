@@ -111,7 +111,7 @@ cdef class ArmAlignmentService:
         # リンク辞書
         self.target_links = {}
         # 処理対象ボーン名リスト
-        bone_names = []
+        bone_names = ["センター", "グルーブ"]
 
         logger.info("位置合わせ　", decoration=MLogger.DECORATION_LINE)
 
