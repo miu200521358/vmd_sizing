@@ -806,9 +806,9 @@ cdef class ArmAlignmentService:
                     for ik_cnt, (ik_links, ik_max_count) in enumerate(zip(target_link.ik_links_list, target_link.ik_count_list)):
                         if is_avoidance_arm_x:
                             # 腕X回避済みのため、除去
-                            ik_links = ik_links.remove_links(["{0}腕".format(ik_links.first_name()[0])])
+                            ik_links = ik_links.remove_links(["{0}腕".format(ik_links.first_name()[0]), "{0}腕捩".format(ik_links.first_name()[0])])
 
-                        for now_ik_max_count in range(1, ik_max_count + 1):
+                        for now_ik_max_count in range(1):
                             now_ik_links = ik_links     # .from_links(target_bone_names[-1])
                             # if ik_cnt > 0:
                             #     for link_name, link_bone in now_ik_links.all().items():
@@ -818,7 +818,7 @@ cdef class ArmAlignmentService:
                                          list(now_ik_links.all().keys()), rep_effector_vec.to_log(), rep_global_effector.to_log())
                             
                             # IK計算実行
-                            MServiceUtils.c_calc_IK(data_set.rep_model, target_link.rep_links, data_set.motion, fno, rep_global_effector, now_ik_links, max_count=1)
+                            MServiceUtils.c_calc_IK(data_set.rep_model, target_link.rep_links, data_set.motion, fno, rep_global_effector, now_ik_links, max_count=(ik_max_count + 1))
 
                             # 現在のエフェクタ位置
                             (aligned_rep_global_3ds, _) = MServiceUtils.c_calc_global_pos(data_set.rep_model, target_link.rep_links, data_set.motion, fno, return_matrix=False, is_local_x=False, limit_links=None)
@@ -858,95 +858,85 @@ cdef class ArmAlignmentService:
                                             ik_bf.org_rotation.toEulerAngles().to_log())
                                 data_set.motion.regist_bf(ik_bf, link_name, fno)
 
-                            if np.count_nonzero(np.where(np.array(list(dot_near_dict.values())) < np.array(list(dot_near_limit_dict.values())), 1, 0)) == 0 and \
-                                    np.count_nonzero(np.where(np.array(list(dot_start_dict.values())) < np.array(list(dot_far_limit_dict.values())), 1, 0)) == 0:
-                                if (prev_rep_diff == MVector3D() or np.sum(np.abs(rep_diff.data())) < np.sum(np.abs(prev_rep_diff.data()))) and \
-                                        np.count_nonzero(np.where(np.abs(rep_diff.data()) > (0.2 if data_set.original_xz_ratio > 0.5 else 0.1), 1, 0)) == 0:
-                                    logger.debug("☆位置合わせ実行成功(%s): f: %s(%s:%s), 指定[%s], 結果[%s], diff[%s], dot_near_dict: [%s], dot_start_dict: [%s], org: [%s], now_vec: [%s]", \
-                                                 now_ik_max_count, fno, (data_set_idx + 1), list(now_ik_links.all().keys()), rep_global_effector.to_log(), \
-                                                 aligned_rep_effector_vec.to_log(), rep_diff.to_log(), list(dot_near_dict.values()), list(dot_start_dict.values()), \
-                                                 start_org_bfs[link_name].rotation.toEulerAngles().to_log(), bf.rotation.toEulerAngles().to_log())
+                            if (prev_rep_diff == MVector3D() or np.sum(np.abs(rep_diff.data())) < np.sum(np.abs(prev_rep_diff.data()))) and \
+                                    np.count_nonzero(np.where(np.abs(rep_diff.data()) > (0.2 if data_set.original_xz_ratio > 0.5 else 0.1), 1, 0)) == 0:
+                                logger.debug("☆位置合わせ実行成功(%s): f: %s(%s:%s), 指定[%s], 結果[%s], diff[%s], dot_near_dict: [%s], dot_start_dict: [%s], org: [%s], now_vec: [%s]", \
+                                                now_ik_max_count, fno, (data_set_idx + 1), list(now_ik_links.all().keys()), rep_global_effector.to_log(), \
+                                                aligned_rep_effector_vec.to_log(), rep_diff.to_log(), list(dot_near_dict.values()), list(dot_start_dict.values()), \
+                                                start_org_bfs[link_name].rotation.toEulerAngles().to_log(), bf.rotation.toEulerAngles().to_log())
 
-                                    # # 位置合わせ後のエフェクタボーン位置 -------------
-                                    # debug_bone_name = "{0}4".format(target_link.effector_bone_name[0])
+                                # # 位置合わせ後のエフェクタボーン位置 -------------
+                                # debug_bone_name = "{0}4".format(target_link.effector_bone_name[0])
 
-                                    # debug_bf = VmdBoneFrame(fno)
-                                    # debug_bf.key = True
-                                    # debug_bf.set_name(debug_bone_name)
-                                    # debug_bf.position = aligned_rep_effector_vec
-                                    
-                                    # if debug_bone_name not in data_set.motion.bones:
-                                    #     data_set.motion.bones[debug_bone_name] = {}
-                                    
-                                    # data_set.motion.bones[debug_bone_name][fno] = debug_bf
-                                    # # ----------
+                                # debug_bf = VmdBoneFrame(fno)
+                                # debug_bf.key = True
+                                # debug_bf.set_name(debug_bone_name)
+                                # debug_bf.position = aligned_rep_effector_vec
+                                
+                                # if debug_bone_name not in data_set.motion.bones:
+                                #     data_set.motion.bones[debug_bone_name] = {}
+                                
+                                # data_set.motion.bones[debug_bone_name][fno] = debug_bf
+                                # # ----------
 
-                                    # 大体同じ位置にあって、角度もそう大きくズレてない場合、OK(全部上書き)
-                                    is_success = [True]
+                                # 大体同じ位置にあって、角度もそう大きくズレてない場合、OK(全部上書き)
+                                is_success = [True]
 
-                                    # org保持し直す
-                                    for link_name in now_ik_links.all().keys():
-                                        org_bfs[link_name].rotation = data_set.motion.calc_bf(link_name, fno).rotation.copy()
+                                # org保持し直す
+                                for link_name in now_ik_links.all().keys():
+                                    org_bfs[link_name].rotation = data_set.motion.calc_bf(link_name, fno).rotation.copy()
 
-                                    # 前回とまったく同じ場合か、充分に近い場合、IK的に動きがないので終了
-                                    if prev_rep_diff == rep_diff or np.count_nonzero(np.where(np.abs(rep_diff.data()) > 0.05, 1, 0)) == 0:
-                                        break
+                                # 前回とまったく同じ場合か、充分に近い場合、IK的に動きがないので終了
+                                if prev_rep_diff == rep_diff or np.count_nonzero(np.where(np.abs(rep_diff.data()) > 0.05, 1, 0)) == 0:
+                                    break
 
-                                    prev_rep_diff = rep_diff
+                                prev_rep_diff = rep_diff
 
-                                elif (prev_rep_diff == MVector3D() or (prev_rep_diff != MVector3D() and np.sum(np.abs(rep_diff.data())) < np.sum(np.abs(prev_rep_diff.data())))) and \
-                                        (np.count_nonzero(np.where(np.abs(rep_diff.data()) > (0.7 if data_set.original_xz_ratio > 0.5 else 0.3), 1, 0)) == 0):
+                            elif (prev_rep_diff == MVector3D() or (prev_rep_diff != MVector3D() and np.sum(np.abs(rep_diff.data())) < np.sum(np.abs(prev_rep_diff.data())))) and \
+                                    (np.count_nonzero(np.where(np.abs(rep_diff.data()) > (0.7 if data_set.original_xz_ratio > 0.5 else 0.3), 1, 0)) == 0):
 
-                                    logger.debug("☆位置合わせ実行ちょっと失敗採用(%s): f: %s(%s:%s), 指定[%s], 結果[%s], diff[%s], dot_near_dict: [%s], dot_start_dict: [%s], org_vec: [%s], now_vec: [%s]", \
-                                                 now_ik_max_count, fno, (data_set_idx + 1), list(now_ik_links.all().keys()), rep_global_effector.to_log(), \
-                                                 aligned_rep_effector_vec.to_log(), rep_diff.to_log(), list(dot_near_dict.values()), list(dot_start_dict.values()), \
-                                                 start_org_bfs[link_name].rotation.toEulerAngles().to_log(), bf.rotation.toEulerAngles().to_log())
+                                logger.debug("☆位置合わせ実行ちょっと失敗採用(%s): f: %s(%s:%s), 指定[%s], 結果[%s], diff[%s], dot_near_dict: [%s], dot_start_dict: [%s], org_vec: [%s], now_vec: [%s]", \
+                                                now_ik_max_count, fno, (data_set_idx + 1), list(now_ik_links.all().keys()), rep_global_effector.to_log(), \
+                                                aligned_rep_effector_vec.to_log(), rep_diff.to_log(), list(dot_near_dict.values()), list(dot_start_dict.values()), \
+                                                start_org_bfs[link_name].rotation.toEulerAngles().to_log(), bf.rotation.toEulerAngles().to_log())
 
-                                    # 採用されたらOK
-                                    is_success.append(True)
+                                # 採用されたらOK
+                                is_success.append(True)
 
-                                    # # 位置合わせ後のエフェクタボーン位置 -------------
-                                    # debug_bone_name = "{0}4".format(target_link.effector_bone_name[0])
+                                # # 位置合わせ後のエフェクタボーン位置 -------------
+                                # debug_bone_name = "{0}4".format(target_link.effector_bone_name[0])
 
-                                    # debug_bf = VmdBoneFrame(fno)
-                                    # debug_bf.key = True
-                                    # debug_bf.set_name(debug_bone_name)
-                                    # debug_bf.position = aligned_rep_effector_vec
-                                    
-                                    # if debug_bone_name not in data_set.motion.bones:
-                                    #     data_set.motion.bones[debug_bone_name] = {}
-                                    
-                                    # data_set.motion.bones[debug_bone_name][fno] = debug_bf
-                                    # # ----------
+                                # debug_bf = VmdBoneFrame(fno)
+                                # debug_bf.key = True
+                                # debug_bf.set_name(debug_bone_name)
+                                # debug_bf.position = aligned_rep_effector_vec
+                                
+                                # if debug_bone_name not in data_set.motion.bones:
+                                #     data_set.motion.bones[debug_bone_name] = {}
+                                
+                                # data_set.motion.bones[debug_bone_name][fno] = debug_bf
+                                # # ----------
 
-                                    # ちょっと失敗初回か、前回より差が小さくなってる場合、org_bfを保持し直して、もう一周試す
-                                    for link_name in now_ik_links.all().keys():
-                                        org_bfs[link_name].rotation = data_set.motion.calc_bf(link_name, fno).rotation.copy()
+                                # ちょっと失敗初回か、前回より差が小さくなってる場合、org_bfを保持し直して、もう一周試す
+                                for link_name in now_ik_links.all().keys():
+                                    org_bfs[link_name].rotation = data_set.motion.calc_bf(link_name, fno).rotation.copy()
 
-                                    # 前回とまったく同じ場合か、充分に近い場合、IK的に動きがないので終了
-                                    if prev_rep_diff == rep_diff or np.count_nonzero(np.where(np.abs(rep_diff.data()) > 0.05, 1, 0)) == 0:
-                                        break
+                                # 前回とまったく同じ場合か、充分に近い場合、IK的に動きがないので終了
+                                if prev_rep_diff == rep_diff or np.count_nonzero(np.where(np.abs(rep_diff.data()) > 0.05, 1, 0)) == 0:
+                                    break
 
-                                    prev_rep_diff = rep_diff
-                                else:
-                                    logger.debug("★位置合わせ実行ちょっと失敗不採用(%s): f: %s(%s:%s), 指定[%s], 結果[%s], diff[%s], dot_near_dict: [%s], dot_start_dict: [%s], org_vec: [%s], now_vec: [%s]", \
-                                                 now_ik_max_count, fno, (data_set_idx + 1), list(now_ik_links.all().keys()), rep_global_effector.to_log(), \
-                                                 aligned_rep_effector_vec.to_log(), rep_diff.to_log(), list(dot_near_dict.values()), list(dot_start_dict.values()), \
-                                                 start_org_bfs[link_name].rotation.toEulerAngles().to_log(), bf.rotation.toEulerAngles().to_log())
-
-                                    is_success.append(False)
-
-                                    if prev_rep_diff == MVector3D():
-                                        # 初回失敗の場合、とりあえず設定
-                                        prev_rep_diff = rep_diff
-
+                                prev_rep_diff = rep_diff
                             else:
-                                logger.debug("★位置合わせ実行失敗(%s): f: %s(%s:%s), 指定[%s], 結果[%s], diff[%s], dot_near_dict: [%s], dot_start_dict: [%s], org_vec: [%s], now_vec: [%s]", \
-                                             now_ik_max_count, fno, (data_set_idx + 1), list(now_ik_links.all().keys()), rep_global_effector.to_log(), \
-                                             aligned_rep_effector_vec.to_log(), rep_diff.to_log(), list(dot_near_dict.values()), list(dot_start_dict.values()), \
-                                             start_org_bfs[link_name].rotation.toEulerAngles().to_log(), bf.rotation.toEulerAngles().to_log())
+                                logger.debug("★位置合わせ実行ちょっと失敗不採用(%s): f: %s(%s:%s), 指定[%s], 結果[%s], diff[%s], dot_near_dict: [%s], dot_start_dict: [%s], org_vec: [%s], now_vec: [%s]", \
+                                                now_ik_max_count, fno, (data_set_idx + 1), list(now_ik_links.all().keys()), rep_global_effector.to_log(), \
+                                                aligned_rep_effector_vec.to_log(), rep_diff.to_log(), list(dot_near_dict.values()), list(dot_start_dict.values()), \
+                                                start_org_bfs[link_name].rotation.toEulerAngles().to_log(), bf.rotation.toEulerAngles().to_log())
 
                                 is_success.append(False)
+
+                                if prev_rep_diff == MVector3D():
+                                    # 初回失敗の場合、とりあえず設定
+                                    prev_rep_diff = rep_diff
 
                         if is_success == [True]:
                             # 成功していたらそのまま終了
@@ -1243,7 +1233,6 @@ cdef class ArmAlignmentService:
                                     if prev_rep_diff == MVector3D():
                                         # 初回失敗の場合、とりあえず設定
                                         prev_rep_diff = rep_diff
-
                             else:
                                 logger.debug("★先端位置合わせ実行失敗(%s): f: %s(%s:%s), 指定[%s], 結果[%s], diff[%s], dot_near_dict: [%s], dot_start_dict: [%s], org_vec: [%s], now_vec: [%s]", \
                                              now_ik_max_count, fno, (data_set_idx + 1), list(now_ik_links.all().keys()), rep_target_global_tip.to_log(), \
@@ -1301,11 +1290,25 @@ cdef class ArmAlignmentService:
 
             wrist_bone = rep_wrist_links.get("{0}手首".format(direction))
 
+            # if f"{direction}手捩" in data_set.rep_model.bones and f"{direction}手捩" in data_set.motion.bones:
+            #     wrist_twist_bone = rep_wrist_links.get("{0}手捩".format(direction))
+            #     wrist_twist_bone.dot_near_limit = 0.97
+            #     wrist_twist_bone.dot_far_limit = 0.8
+            #     wrist_twist_bone.dot_single_limit = 0.9
+            #     wrist_twist_bone.degree_limit = 57.2957
+
             elbow_bone = rep_wrist_links.get("{0}ひじ".format(direction))
             elbow_bone.dot_near_limit = 0.97
             elbow_bone.dot_far_limit = 0.7
             elbow_bone.dot_single_limit = 0.9
             elbow_bone.degree_limit = 57.2957
+
+            # if f"{direction}腕捩" in data_set.rep_model.bones and f"{direction}腕捩" in data_set.motion.bones:
+            #     arm_twist_bone = rep_wrist_links.get("{0}腕捩".format(direction))
+            #     arm_twist_bone.dot_near_limit = 0.97
+            #     arm_twist_bone.dot_far_limit = 0.8
+            #     arm_twist_bone.dot_single_limit = 0.9
+            #     arm_twist_bone.degree_limit = 57.2957
 
             arm_bone = rep_wrist_links.get("{0}腕".format(direction))
             arm_bone.dot_near_limit = 0.97
@@ -1315,10 +1318,18 @@ cdef class ArmAlignmentService:
     
             ik_links = BoneLinks()
             ik_links.append(wrist_bone)
+
+            # if f"{direction}手捩" in data_set.rep_model.bones and f"{direction}手捩" in data_set.motion.bones:
+            #     ik_links.append(wrist_twist_bone)
+            
             ik_links.append(elbow_bone)
+
+            # if f"{direction}腕捩" in data_set.rep_model.bones and f"{direction}腕捩" in data_set.motion.bones:
+            #     ik_links.append(arm_twist_bone)
+
             ik_links.append(arm_bone)
             ik_links_list.append(ik_links)
-            ik_count_list.append(30)
+            ik_count_list.append(50)
 
             if tip_bone_name == "{0}手首".format(direction):
                 # 位置合わせが手首の場合、先端調整不要
@@ -1426,11 +1437,25 @@ cdef class ArmAlignmentService:
                 ik_links_list = []
                 ik_count_list = []
 
+                # if f"{direction}手捩" in data_set.rep_model.bones and f"{direction}手捩" in data_set.motion.bones:
+                #     wrist_twist_bone = rep_finger_links.get("{0}手捩".format(direction))
+                #     wrist_twist_bone.dot_near_limit = 0.97
+                #     wrist_twist_bone.dot_far_limit = 0.8
+                #     wrist_twist_bone.dot_single_limit = 0.9
+                #     wrist_twist_bone.degree_limit = 57.2957
+
                 elbow_bone = rep_finger_links.get("{0}ひじ".format(direction))
                 elbow_bone.dot_near_limit = 0.97
                 elbow_bone.dot_far_limit = 0.7
                 elbow_bone.dot_single_limit = 0.9
                 elbow_bone.degree_limit = 57.2957
+
+                # if f"{direction}腕捩" in data_set.rep_model.bones and f"{direction}腕捩" in data_set.motion.bones:
+                #     arm_twist_bone = rep_finger_links.get("{0}腕捩".format(direction))
+                #     arm_twist_bone.dot_near_limit = 0.97
+                #     arm_twist_bone.dot_far_limit = 0.8
+                #     arm_twist_bone.dot_single_limit = 0.9
+                #     arm_twist_bone.degree_limit = 57.2957
 
                 arm_bone = rep_finger_links.get("{0}腕".format(direction))
                 arm_bone.dot_near_limit = 0.97
@@ -1440,7 +1465,15 @@ cdef class ArmAlignmentService:
         
                 ik_links = BoneLinks()
                 ik_links.append(rep_finger_links.get(total_finger_name))
+
+                # if f"{direction}手捩" in data_set.rep_model.bones and f"{direction}手捩" in data_set.motion.bones:
+                #     ik_links.append(wrist_twist_bone)
+                
                 ik_links.append(elbow_bone)
+
+                # if f"{direction}腕捩" in data_set.rep_model.bones and f"{direction}腕捩" in data_set.motion.bones:
+                #     ik_links.append(arm_twist_bone)
+
                 ik_links.append(arm_bone)
                 ik_links_list.append(ik_links)
                 ik_count_list.append(30)

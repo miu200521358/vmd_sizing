@@ -315,12 +315,12 @@ cdef class ArmAvoidanceService:
                             if elbow_bone_name in org_bfs and org_bfs[elbow_bone_name].org_rotation.toDegree() < 30:
                                 ik_links = ik_links.remove_links([elbow_bone_name])
                             
-                            for now_ik_max_count in range(1, ik_max_count + 1):
+                            for now_ik_max_count in range(1):
                                 logger.debug("IK計算開始(%s): f: %s(%s:%s:%s), axis: %s, now[%s], new[%s]", now_ik_max_count, fno, (data_set_idx + 1), \
                                              list(ik_links.all().keys()), avoidance_name, axis, rep_global_3ds[arm_link.last_name()].to_log(), rep_collision_vec.to_log())
                                 
                                 # 修正角度がない場合、IK計算実行
-                                MServiceUtils.c_calc_IK(data_set.rep_model, arm_link, data_set.motion, fno, rep_collision_vec, ik_links, max_count=1)
+                                MServiceUtils.c_calc_IK(data_set.rep_model, arm_link, data_set.motion, fno, rep_collision_vec, ik_links, max_count=(ik_max_count + 1))
 
                                 # 現在のエフェクタ位置
                                 (now_rep_global_3ds, _) = \
@@ -342,132 +342,112 @@ cdef class ArmAvoidanceService:
                                     now_bf = data_set.motion.calc_bf(link_name, fno)
                                     data_set.motion.regist_bf(now_bf, link_name, fno)
                                 
-                                if np.count_nonzero(np.where(np.array(list(dot_dict.values())) < np.array(list(dot_limit_dict.values())), 1, 0)) == 0:
-                                    if (prev_rep_diff == MVector3D() or np.sum(np.abs(rep_diff.data())) < np.sum(np.abs(prev_rep_diff.data()))) and \
-                                            np.count_nonzero(np.where(np.abs(rep_diff.data()) > (0.2 if data_set.original_xz_ratio > 0.5 else 0.1), 1, 0)) == 0:
-                                        logger.debug("☆接触回避実行成功(%s): f: %s(%s:%s:%s), axis: %s, 指定 [%s], 現在[%s], 差異[%s], dot[%s]", now_ik_max_count, fno, (data_set_idx + 1), \
-                                                     list(ik_links.all().keys()), avoidance_name, axis, rep_collision_vec.to_log(), \
-                                                     now_rep_effector_pos.to_log(), rep_diff.to_log(), list(dot_dict.values()))
+                                if (prev_rep_diff == MVector3D() or np.sum(np.abs(rep_diff.data())) < np.sum(np.abs(prev_rep_diff.data()))) and \
+                                        np.count_nonzero(np.where(np.abs(rep_diff.data()) > (0.2 if data_set.original_xz_ratio > 0.5 else 0.1), 1, 0)) == 0:
+                                    logger.debug("☆接触回避実行成功(%s): f: %s(%s:%s:%s), axis: %s, 指定 [%s], 現在[%s], 差異[%s], dot[%s]", now_ik_max_count, fno, (data_set_idx + 1), \
+                                                    list(ik_links.all().keys()), avoidance_name, axis, rep_collision_vec.to_log(), \
+                                                    now_rep_effector_pos.to_log(), rep_diff.to_log(), list(dot_dict.values()))
 
-                                        # # 回避後の先端ボーン位置 -------------
-                                        # debug_bone_name = "{0}B".format(arm_link.last_name())
+                                    # # 回避後の先端ボーン位置 -------------
+                                    # debug_bone_name = "{0}B".format(arm_link.last_name())
 
-                                        # debug_bf = VmdBoneFrame(fno)
-                                        # debug_bf.key = True
-                                        # debug_bf.set_name(debug_bone_name)
-                                        # debug_bf.position = now_rep_effector_pos
-                                        
-                                        # if debug_bone_name not in data_set.motion.bones:
-                                        #     data_set.motion.bones[debug_bone_name] = {}
-                                        
-                                        # data_set.motion.bones[debug_bone_name][fno] = debug_bf
-                                        # # ----------
+                                    # debug_bf = VmdBoneFrame(fno)
+                                    # debug_bf.key = True
+                                    # debug_bf.set_name(debug_bone_name)
+                                    # debug_bf.position = now_rep_effector_pos
+                                    
+                                    # if debug_bone_name not in data_set.motion.bones:
+                                    #     data_set.motion.bones[debug_bone_name] = {}
+                                    
+                                    # data_set.motion.bones[debug_bone_name][fno] = debug_bf
+                                    # # ----------
 
-                                        # org_bfを保持し直し
-                                        for link_name in ik_links.all().keys():
-                                            org_bfs[link_name] = data_set.motion.calc_bf(link_name, fno).copy()
+                                    # org_bfを保持し直し
+                                    for link_name in ik_links.all().keys():
+                                        org_bfs[link_name] = data_set.motion.calc_bf(link_name, fno).copy()
 
-                                        # 回避方向保持
-                                        if wrist_bone_name in list(ik_links.all().keys()):
-                                            # 手首が含まれる場合、ひじがIK対象
-                                            data_set.motion.bones[elbow_bone_name][fno].avoidance = axis
+                                    # 回避方向保持
+                                    if wrist_bone_name in list(ik_links.all().keys()):
+                                        # 手首が含まれる場合、ひじがIK対象
+                                        data_set.motion.bones[elbow_bone_name][fno].avoidance = axis
 
-                                        if elbow_bone_name not in list(ik_links.all().keys()):
-                                            # ひじが含まれない場合、腕ボーンのみIK対象なので、IK対象
-                                            data_set.motion.bones[arm_bone_name][fno].avoidance = axis
+                                    if elbow_bone_name not in list(ik_links.all().keys()):
+                                        # ひじが含まれない場合、腕ボーンのみIK対象なので、IK対象
+                                        data_set.motion.bones[arm_bone_name][fno].avoidance = axis
 
-                                        # 大体同じ位置にあって、角度もそう大きくズレてない場合、OK(全部上書き)
-                                        is_success = [True]
-                                        
-                                        # 衝突を計り直す
-                                        (collision, near_collision, x_distance, z_plus_distance, z_minus_distance, rep_x_collision_vec, rep_z_plus_collision_vec, rep_z_minus_collision_vec) \
-                                            = obb.get_collistion(now_rep_global_3ds[arm_link.last_name()], now_rep_global_3ds[arm_link.first_name()], \
-                                                                 data_set.rep_model.bones[arm_bone_name].position.distanceToPoint(data_set.rep_model.bones[arm_link.last_name()].position), \
-                                                                 avoidance_options.base_ratio_list[arm_link.last_name()])
+                                    # 大体同じ位置にあって、角度もそう大きくズレてない場合、OK(全部上書き)
+                                    is_success = [True]
+                                    
+                                    # 衝突を計り直す
+                                    (collision, near_collision, x_distance, z_plus_distance, z_minus_distance, rep_x_collision_vec, rep_z_plus_collision_vec, rep_z_minus_collision_vec) \
+                                        = obb.get_collistion(now_rep_global_3ds[arm_link.last_name()], now_rep_global_3ds[arm_link.first_name()], \
+                                                                data_set.rep_model.bones[arm_bone_name].position.distanceToPoint(data_set.rep_model.bones[arm_link.last_name()].position), \
+                                                                avoidance_options.base_ratio_list[arm_link.last_name()])
 
-                                        if (not collision and not near_collision) or prev_rep_diff == rep_diff or np.count_nonzero(np.where(np.abs(rep_diff.data()) > 0.05, 1, 0)) == 0:
-                                            # 衝突していなければこのIKターンは終了
-                                            # 前回とまったく同じ場合か、充分に近い場合、IK的に動きがないので終了
-                                            break
-
-                                        prev_rep_diff = rep_diff
-
-                                    elif (prev_rep_diff == MVector3D() or (prev_rep_diff != MVector3D() and np.sum(np.abs(rep_diff.data())) < np.sum(np.abs(prev_rep_diff.data())))) and \
-                                            (np.count_nonzero(np.where(np.abs(rep_diff.data()) > (1 if data_set.original_xz_ratio > 0.5 else 0.5), 1, 0)) == 0):
-                                        logger.debug("☆接触回避実行ちょっと失敗採用(%s): f: %s(%s:%s:%s), axis: %s, 指定 [%s], 現在[%s], 差異[%s], dot[%s]", now_ik_max_count, fno, (data_set_idx + 1), \
-                                                     list(ik_links.all().keys()), avoidance_name, axis, rep_collision_vec.to_log(), \
-                                                     now_rep_effector_pos.to_log(), rep_diff.to_log(), list(dot_dict.values()))
-
-                                        # # 回避後の先端ボーン位置 -------------
-                                        # debug_bone_name = "{0}B".format(arm_link.last_name())
-
-                                        # debug_bf = VmdBoneFrame(fno)
-                                        # debug_bf.key = True
-                                        # debug_bf.set_name(debug_bone_name)
-                                        # debug_bf.position = now_rep_effector_pos
-                                        
-                                        # if debug_bone_name not in data_set.motion.bones:
-                                        #     data_set.motion.bones[debug_bone_name] = {}
-                                        
-                                        # data_set.motion.bones[debug_bone_name][fno] = debug_bf
-                                        # # ----------
-
-                                        # org_bfを保持し直し
-                                        for link_name in ik_links.all().keys():
-                                            org_bfs[link_name] = data_set.motion.calc_bf(link_name, fno).copy()
-
-                                        # 回避方向保持
-                                        if wrist_bone_name in list(ik_links.all().keys()):
-                                            # 手首が含まれる場合、ひじがIK対象
-                                            data_set.motion.bones[elbow_bone_name][fno].avoidance = axis
-
-                                        if elbow_bone_name not in list(ik_links.all().keys()):
-                                            # ひじが含まれない場合、腕ボーンのみIK対象なので、IK対象
-                                            data_set.motion.bones[arm_bone_name][fno].avoidance = axis
-
-                                        # 採用されたらOK
-                                        is_success.append(True)
-                                        # 衝突を計り直す
-                                        (collision, near_collision, x_distance, z_plus_distance, z_minus_distance, rep_x_collision_vec, rep_z_plus_collision_vec, rep_z_minus_collision_vec) \
-                                            = obb.get_collistion(now_rep_global_3ds[arm_link.last_name()], now_rep_global_3ds[arm_link.first_name()], \
-                                                                 data_set.rep_model.bones[arm_bone_name].position.distanceToPoint(data_set.rep_model.bones[arm_link.last_name()].position), \
-                                                                 avoidance_options.base_ratio_list[arm_link.last_name()])
-
-                                        if (not collision and not near_collision) or prev_rep_diff == rep_diff or np.count_nonzero(np.where(np.abs(rep_diff.data()) > 0.05, 1, 0)) == 0:
-                                            # 衝突していなければこのIKターンは終了
-                                            # 前回とまったく同じ場合か、充分に近い場合、IK的に動きがないので終了
-                                            break
-
-                                        # 再チェックしてまだ接触してて、かつ最後の場合は失敗とする
-                                        if now_ik_max_count == len(avoidance_options.ik_links_list[arm_link.last_name()]) - 1:
-                                            # 最後が失敗していたら失敗
-                                            is_success.append(False)
-                                            failured_last_names.append(arm_link.last_name())
-
-                                        prev_rep_diff = rep_diff
-                                    else:
-                                        logger.debug("★接触回避実行ちょっと失敗不採用(%s): f: %s(%s:%s:%s), axis: %s, 指定 [%s], 現在[%s], 差異[%s], dot[%s]", now_ik_max_count, fno, (data_set_idx + 1), \
-                                                     list(ik_links.all().keys()), avoidance_name, axis, rep_collision_vec.to_log(), \
-                                                     now_rep_effector_pos.to_log(), rep_diff.to_log(), list(dot_dict.values()))
-
-                                        is_success.append(False)
-
-                                        # 再チェックしてまだ接触してて、かつ最後の場合は失敗とする
-                                        if now_ik_max_count == len(avoidance_options.ik_links_list[arm_link.last_name()]) - 1:
-                                            # 最後が失敗していたら失敗
-                                            failured_last_names.append(arm_link.last_name())
-
+                                    if (not collision and not near_collision) or prev_rep_diff == rep_diff or np.count_nonzero(np.where(np.abs(rep_diff.data()) > 0.05, 1, 0)) == 0:
+                                        # 衝突していなければこのIKターンは終了
                                         # 前回とまったく同じ場合か、充分に近い場合、IK的に動きがないので終了
-                                        if prev_rep_diff == rep_diff or np.count_nonzero(np.where(np.abs(rep_diff.data()) > 0.05, 1, 0)) == 0:
-                                            break
+                                        break
 
-                                        if prev_rep_diff == MVector3D():
-                                            # 初回失敗の場合、とりあえず設定
-                                            prev_rep_diff = rep_diff
+                                    prev_rep_diff = rep_diff
+
+                                elif (prev_rep_diff == MVector3D() or (prev_rep_diff != MVector3D() and np.sum(np.abs(rep_diff.data())) < np.sum(np.abs(prev_rep_diff.data())))) and \
+                                        (np.count_nonzero(np.where(np.abs(rep_diff.data()) > (1 if data_set.original_xz_ratio > 0.5 else 0.5), 1, 0)) == 0):
+                                    logger.debug("☆接触回避実行ちょっと失敗採用(%s): f: %s(%s:%s:%s), axis: %s, 指定 [%s], 現在[%s], 差異[%s], dot[%s]", now_ik_max_count, fno, (data_set_idx + 1), \
+                                                    list(ik_links.all().keys()), avoidance_name, axis, rep_collision_vec.to_log(), \
+                                                    now_rep_effector_pos.to_log(), rep_diff.to_log(), list(dot_dict.values()))
+
+                                    # # 回避後の先端ボーン位置 -------------
+                                    # debug_bone_name = "{0}B".format(arm_link.last_name())
+
+                                    # debug_bf = VmdBoneFrame(fno)
+                                    # debug_bf.key = True
+                                    # debug_bf.set_name(debug_bone_name)
+                                    # debug_bf.position = now_rep_effector_pos
+                                    
+                                    # if debug_bone_name not in data_set.motion.bones:
+                                    #     data_set.motion.bones[debug_bone_name] = {}
+                                    
+                                    # data_set.motion.bones[debug_bone_name][fno] = debug_bf
+                                    # # ----------
+
+                                    # org_bfを保持し直し
+                                    for link_name in ik_links.all().keys():
+                                        org_bfs[link_name] = data_set.motion.calc_bf(link_name, fno).copy()
+
+                                    # 回避方向保持
+                                    if wrist_bone_name in list(ik_links.all().keys()):
+                                        # 手首が含まれる場合、ひじがIK対象
+                                        data_set.motion.bones[elbow_bone_name][fno].avoidance = axis
+
+                                    if elbow_bone_name not in list(ik_links.all().keys()):
+                                        # ひじが含まれない場合、腕ボーンのみIK対象なので、IK対象
+                                        data_set.motion.bones[arm_bone_name][fno].avoidance = axis
+
+                                    # 採用されたらOK
+                                    is_success.append(True)
+                                    # 衝突を計り直す
+                                    (collision, near_collision, x_distance, z_plus_distance, z_minus_distance, rep_x_collision_vec, rep_z_plus_collision_vec, rep_z_minus_collision_vec) \
+                                        = obb.get_collistion(now_rep_global_3ds[arm_link.last_name()], now_rep_global_3ds[arm_link.first_name()], \
+                                                                data_set.rep_model.bones[arm_bone_name].position.distanceToPoint(data_set.rep_model.bones[arm_link.last_name()].position), \
+                                                                avoidance_options.base_ratio_list[arm_link.last_name()])
+
+                                    if (not collision and not near_collision) or prev_rep_diff == rep_diff or np.count_nonzero(np.where(np.abs(rep_diff.data()) > 0.05, 1, 0)) == 0:
+                                        # 衝突していなければこのIKターンは終了
+                                        # 前回とまったく同じ場合か、充分に近い場合、IK的に動きがないので終了
+                                        break
+
+                                    # 再チェックしてまだ接触してて、かつ最後の場合は失敗とする
+                                    if now_ik_max_count == len(avoidance_options.ik_links_list[arm_link.last_name()]) - 1:
+                                        # 最後が失敗していたら失敗
+                                        is_success.append(False)
+                                        failured_last_names.append(arm_link.last_name())
+
+                                    prev_rep_diff = rep_diff
                                 else:
-                                    logger.debug("★接触回避実行失敗(%s): f: %s(%s:%s:%s), axis: %s, 指定 [%s], 現在[%s], 差異[%s], dot[%s]", now_ik_max_count, fno, (data_set_idx + 1), \
-                                                 list(ik_links.all().keys()), avoidance_name, axis, rep_collision_vec.to_log(), \
-                                                 now_rep_effector_pos.to_log(), rep_diff.to_log(), list(dot_dict.values()))
+                                    logger.debug("★接触回避実行ちょっと失敗不採用(%s): f: %s(%s:%s:%s), axis: %s, 指定 [%s], 現在[%s], 差異[%s], dot[%s]", now_ik_max_count, fno, (data_set_idx + 1), \
+                                                    list(ik_links.all().keys()), avoidance_name, axis, rep_collision_vec.to_log(), \
+                                                    now_rep_effector_pos.to_log(), rep_diff.to_log(), list(dot_dict.values()))
 
                                     is_success.append(False)
 
@@ -479,6 +459,10 @@ cdef class ArmAvoidanceService:
                                     # 前回とまったく同じ場合か、充分に近い場合、IK的に動きがないので終了
                                     if prev_rep_diff == rep_diff or np.count_nonzero(np.where(np.abs(rep_diff.data()) > 0.05, 1, 0)) == 0:
                                         break
+
+                                    if prev_rep_diff == MVector3D():
+                                        # 初回失敗の場合、とりあえず設定
+                                        prev_rep_diff = rep_diff
 
                             if is_success == [True]:
                                 # 成功していたらそのまま終了
@@ -775,9 +759,23 @@ cdef class ArmAvoidanceService:
 
             effector_bone = arm_link.get(effector_bone_name)
 
+            # if f"{direction}手捩" in data_set.rep_model.bones and f"{direction}手捩" in data_set.motion.bones:
+            #     wrist_twist_bone = arm_link.get("{0}手捩".format(direction))
+            #     wrist_twist_bone.dot_near_limit = 0.97
+            #     wrist_twist_bone.dot_far_limit = 0.8
+            #     wrist_twist_bone.dot_single_limit = 0.9
+            #     wrist_twist_bone.degree_limit = 57.2957
+
             elbow_bone = arm_link.get("{0}ひじ".format(direction))
             elbow_bone.dot_limit = 0.7
             elbow_bone.degree_limit = 57.2957
+
+            # if f"{direction}腕捩" in data_set.rep_model.bones and f"{direction}腕捩" in data_set.motion.bones:
+            #     arm_twist_bone = arm_link.get("{0}腕捩".format(direction))
+            #     arm_twist_bone.dot_near_limit = 0.97
+            #     arm_twist_bone.dot_far_limit = 0.8
+            #     arm_twist_bone.dot_single_limit = 0.9
+            #     arm_twist_bone.degree_limit = 57.2957
 
             arm_bone = arm_link.get("{0}腕".format(direction))
             arm_bone.dot_limit = 0.8
@@ -787,7 +785,7 @@ cdef class ArmAvoidanceService:
             ik_links.append(effector_bone)
             ik_links.append(arm_bone)
             ik_links_list[effector_bone_name].append(ik_links)
-            ik_count_list[effector_bone_name].append(30)
+            ik_count_list[effector_bone_name].append(50)
 
             # ik_links = BoneLinks()
             # ik_links.append(effector_bone)
@@ -797,7 +795,15 @@ cdef class ArmAvoidanceService:
             
             ik_links = BoneLinks()
             ik_links.append(effector_bone)
+
+            # if f"{direction}手捩" in data_set.rep_model.bones and f"{direction}手捩" in data_set.motion.bones:
+            #     ik_links.append(wrist_twist_bone)
+            
             ik_links.append(elbow_bone)
+
+            # if f"{direction}腕捩" in data_set.rep_model.bones and f"{direction}腕捩" in data_set.motion.bones:
+            #     ik_links.append(arm_twist_bone)
+            
             ik_links.append(arm_bone)
             ik_links_list[effector_bone_name].append(ik_links)
             ik_count_list[effector_bone_name].append(30)
