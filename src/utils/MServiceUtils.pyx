@@ -103,9 +103,17 @@ cdef c_calc_IK(PmxModel model, BoneLinks links, VmdMotion motion, int fno, MVect
                 # 関節回転量の補正(最大変位量を制限する)
                 correct_qq = MQuaternion.fromAxisAndAngle(rotation_axis, min(rotation_degree, ik_bone.degree_limit))
 
+                # 軸制限がある場合、軸制限上の角度に変換する
+                if ik_bone.fixed_axis != MVector3D():
+                    correct_qq = deform_fix_rotation(joint_name, ik_bone.fixed_axis, correct_qq)
+
                 # ジョイントに補正をかける
                 bf = motion.c_calc_bf(joint_name, fno, is_key=False, is_read=False, is_reset_interpolation=False)
-                new_ik_qq = correct_qq * bf.rotation
+                new_ik_qq = bf.rotation * correct_qq
+
+                # 軸制限がある場合、軸制限上の角度に変換する
+                if ik_bone.fixed_axis != MVector3D():
+                    new_ik_qq = deform_fix_rotation(joint_name, ik_bone.fixed_axis, new_ik_qq)
 
                 # IK軸制限がある場合、上限下限をチェック
                 if ik_bone.ik_limit_min != MVector3D() and ik_bone.ik_limit_max != MVector3D():

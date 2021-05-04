@@ -1,7 +1,7 @@
 from setuptools import Extension
 from numpy import get_include   # cimport numpy を使うため
 
-bezier_path = 'C:/Development/Anaconda3/envs/vmdsizing_cython_exe1/Lib/site-packages/bezier/include'
+bezier_path = 'C:/Development/Anaconda3/envs/vmdsizing_cython/Lib/site-packages/bezier/include'
 
 kwargs = {"output_dir": "./build/output", "build_dir": "./build/"}
 
@@ -11,7 +11,7 @@ def get_ext():
     sources = ["module\\MMath.pyx", "module\\MOptions.pyx", "module\\MParams.pyx", \
                "utils\\MLogger.py", "utils\\MBezierUtils.pyx", "utils\\MServiceUtils.pyx", \
                "mmd\\VmdData.pyx", "mmd\\VmdReader.py", "mmd\\PmxData.pyx", "mmd\\PmxReader.py", \
-               "service\\parts\\StanceService.pyx", "service\\parts\\ArmAvoidanceService.pyx", "service\\parts\\ArmAlignmentService.pyx"]
+               "service\\parts\\StanceService.pyx", "service\\parts\\ArmAvoidanceService.pyx", "service\\parts\\ArmAlignmentService.pyx", "service\\parts\\CameraService.py"]
     # for path in glob.glob("*/**/*.pyx", recursive=True):
     #     if os.path.isfile(path):
     #         print(path)

@@ -119,7 +119,7 @@ cdef class OBB:
     cdef public dict origin_xyz
     cdef public dict shape_size_xyz
 
-    cpdef tuple get_collistion(self, MVector3D point, MVector3D root_global_pos, float max_length)
+    cpdef tuple get_collistion(self, MVector3D point, MVector3D root_global_pos, float max_length, float base_size)
 
 cdef class PmxModel:
     cdef public str path

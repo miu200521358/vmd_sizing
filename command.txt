@@ -37,6 +37,22 @@ pip install pyinstaller
 C:\Development\Anaconda3\envs\vmdsizing_np64\Lib\site-packages\bezier\extra-dllの中身のdllを親ディレクトリに配置（下階層だと見つからないため）
 
 --------------------------
+[cypthon版 2021.04]
+
+conda create -n vmdsizing_cython python=3.8
+
+
+pip install bezier==2020.2.3
+pip install cython==0.29.21
+pip install numpy==1.19.1
+pip install wxpython==4.1.0
+pip install numpy-quaternion==2020.5.19.15.27.24
+pip install pypiwin32==223
+pip install pyinstaller==4.1
+
+pip install --upgrade setuptools
+
+--------------------------
 
 [cypthon版]
 
@@ -47,7 +63,6 @@ pip install numpy
 pip install wxpython
 pip install numpy-quaternion
 pip install bezier
-pip install pprofile
 pip install pypiwin32
 
 conda install pyinstaller

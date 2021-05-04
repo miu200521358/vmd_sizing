@@ -147,7 +147,7 @@ cdef class StanceService():
             return se
         except Exception as e:
             import traceback
-            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc())
             raise e
 
     # 捩り分散
@@ -441,7 +441,7 @@ cdef class StanceService():
             return se
         except Exception as e:
             import traceback
-            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc())
             raise e
     
     cdef bint remove_unnecessary_bf_pool_parts(self, int data_set_idx, str bone_name, int offset):
@@ -461,7 +461,7 @@ cdef class StanceService():
             return se
         except Exception as e:
             import traceback
-            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc())
             raise e
 
     cdef bint regist_twist_bf(self, int data_set_idx, str bone_name, list fnos, str parent_bone_name):
@@ -512,7 +512,7 @@ cdef class StanceService():
             return se
         except Exception as e:
             import traceback
-            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc())
             raise e
         
     cdef bint smooth_twist(self, int data_set_idx, str bone_name):
@@ -533,7 +533,7 @@ cdef class StanceService():
             return se
         except Exception as e:
             import traceback
-            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc())
             raise e
         
     cdef bint smooth_filter_twist(self, int data_set_idx, str bone_name, dict config):
@@ -554,7 +554,7 @@ cdef class StanceService():
             return se
         except Exception as e:
             import traceback
-            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc())
             raise e
 
     # 分散後のフリップチェック        
@@ -674,7 +674,7 @@ cdef class StanceService():
             return se
         except Exception as e:
             import traceback
-            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc())
             raise e
 
     # 捩り分散のPool内処理
@@ -785,7 +785,7 @@ cdef class StanceService():
             return se
         except Exception as e:
             import traceback
-            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc())
             raise e
 
     # 腕～腕捩り～ひじを求める        
@@ -1665,7 +1665,7 @@ cdef class StanceService():
             return se
         except Exception as e:
             import traceback
-            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc())
             raise e
 
     # つま先ＩＫ補正
@@ -1859,8 +1859,9 @@ cdef class StanceService():
                         # つま先の向きを足ＩＫの回転に置き換え
                         leg_ik_bf.rotation = org_leg_direction_qq * toe_qq
 
-                        # 計算後つま先ＩＫの移動をクリア
+                        # 計算後つま先ＩＫの移動と回転をクリア
                         toe_ik_bf.position = MVector3D()
+                        toe_ik_bf.rotation = MQuaternion()
 
                         # 登録
                         data_set.motion.regist_bf(toe_ik_bf, toe_ik_bone_name, fno)
@@ -1887,7 +1888,7 @@ cdef class StanceService():
             return se
         except Exception as e:
             import traceback
-            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc())
             raise e
 
     # つま先補正
@@ -2031,7 +2032,7 @@ cdef class StanceService():
             return se
         except Exception as e:
             import traceback
-            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc())
             raise e
 
     # つま先実体のグローバル位置を取得する
@@ -2134,6 +2135,7 @@ cdef class StanceService():
         cdef int fno, prev_sep_fno
         cdef list fnos
         cdef VmdBoneFrame center_bf, groove_bf, bf
+        cdef bint is_org_left_wrist_offset, is_org_right_wrist_offset, is_org_left_leg_offset, is_org_right_leg_offset
         
         logger.info("センターY補正　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
 
@@ -2190,16 +2192,35 @@ cdef class StanceService():
                 center_bf = data_set.motion.calc_bf("センター", fno)
                 groove_bf = data_set.motion.calc_bf("グルーブ", fno)
 
-                bf = center_bf if center_bf.position.y() != 0 else groove_bf
+                heights_bf = np.array([groove_bf, center_bf])
+                heights = np.array([groove_bf.position.y(), center_bf.position.y()])
+                heights = heights[np.nonzero(heights)]
+
+                if len(heights) == 0:
+                    continue
+                    
+                bf = heights_bf[np.argmax(np.abs(heights))]
+                target_bf = heights_bf[np.argmax(heights)]
 
                 if bf.position.y() < 0:
-                    logger.debug("f: %s, 調整前: %s", bf.fno, bf.position)
-                    bf.position += self.calc_center_offset_by_arm(bf, data_set_idx, data_set, org_center_links, org_arm_links, org_leg_links, \
-                                                                  rep_center_links, rep_arm_links, rep_leg_links, org_palm_length, rep_palm_length, \
-                                                                  org_center_bone_name, rep_center_bone_name, org_upper_length, rep_upper_length)
-                    logger.debug("f: %s, 腕オフセット後: %s", bf.fno, bf.position)
+                    logger.debug("f: %s, 調整前: %s", target_bf.fno, target_bf.position)
+                    height_offset_vec, is_org_left_wrist_offset, is_org_right_wrist_offset, is_org_left_leg_offset, is_org_right_leg_offset \
+                        = self.calc_center_offset_by_arm(bf, data_set_idx, data_set, org_center_links, org_arm_links, org_leg_links, \
+                                                         rep_center_links, rep_arm_links, rep_leg_links, org_palm_length, rep_palm_length, \
+                                                         org_center_bone_name, rep_center_bone_name, org_upper_length, rep_upper_length)
+                    target_bf.position += height_offset_vec
 
-                    data_set.motion.regist_bf(bf, bf.name, fno)
+                    logger.debug("f: %s, 腕オフセット後: %s", target_bf.fno, target_bf.position)
+                    data_set.motion.regist_bf(target_bf, target_bf.name, fno)
+
+                    # マイナス補正の場合、足も調整する
+                    if not is_org_left_leg_offset:
+                        left_leg_ik_bf = data_set.motion.calc_bf("左足ＩＫ", fno)
+                        data_set.motion.regist_bf(left_leg_ik_bf, left_leg_ik_bf.name, fno)
+
+                    if not is_org_right_leg_offset:
+                        right_leg_ik_bf = data_set.motion.calc_bf("右足ＩＫ", fno)
+                        data_set.motion.regist_bf(right_leg_ik_bf, right_leg_ik_bf.name, fno)
 
                 if fno // 500 > prev_fno and fnos[-1] > 0:
                     logger.count("【No.{0} - センターY補正】".format(data_set_idx + 1), fno, fnos)
@@ -2220,11 +2241,11 @@ cdef class StanceService():
         return True
 
     # 足IKによるセンターオフセット値
-    cdef MVector3D calc_center_offset_by_arm(self, VmdBoneFrame bf, int data_set_idx, MOptionsDataSet data_set, \
-                                             BoneLinks org_center_links, dict org_arm_links, dict org_leg_links, \
-                                             BoneLinks rep_center_links, dict rep_arm_links, dict rep_leg_links, \
-                                             double org_palm_length, double rep_palm_length, \
-                                             str org_center_bone_name, str rep_center_bone_name, double org_upper_length, double rep_upper_length):
+    cdef tuple calc_center_offset_by_arm(self, VmdBoneFrame bf, int data_set_idx, MOptionsDataSet data_set, \
+                                         BoneLinks org_center_links, dict org_arm_links, dict org_leg_links, \
+                                         BoneLinks rep_center_links, dict rep_arm_links, dict rep_leg_links, \
+                                         double org_palm_length, double rep_palm_length, \
+                                         str org_center_bone_name, str rep_center_bone_name, double org_upper_length, double rep_upper_length):
 
         cdef MVector3D org_left_wrist_pos, org_right_wrist_pos, org_neck_base_pos, org_left_leg_pos, org_right_leg_pos, org_lower_pos
         cdef MVector3D rep_left_wrist_pos, rep_right_wrist_pos, rep_neck_base_pos, rep_left_leg_pos, rep_right_leg_pos, rep_lower_pos, rep_center_arm_offset
@@ -2243,54 +2264,68 @@ cdef class StanceService():
         logger.test("f: %s, rep_left_wrist_pos: %s, rep_right_wrist_pos: %s", bf.fno, rep_left_wrist_pos, rep_right_wrist_pos)
         
         org_left_wrist_offset = 0
-        if org_left_wrist_pos.y() < org_palm_length * 1.5:
+        is_org_left_wrist_offset = org_left_wrist_pos.y() < org_palm_length * 1.5
+        if is_org_left_wrist_offset:
             # 左手首が手のひらの大きさ以下の場合、位置合わせ
             org_left_wrist_offset = org_left_wrist_pos.y() * data_set.original_y_ratio - rep_left_wrist_pos.y()
-            # if rep_left_wrist_pos.y() > org_left_wrist_pos.y() * data_set.original_y_ratio:
+            # if rep_left_wrist_pos.y() > org_left_wrist_pos.y():
             #     # 床上の場合、とりあえず半分だけ
             #     org_left_wrist_offset /= 2
-            logger.debug("センターY補正（左手首） f: %s, y: %s, org: %s, rep: %s", bf.fno, \
-                         org_left_wrist_offset, (org_left_wrist_pos.y() * data_set.original_y_ratio), rep_left_wrist_pos.y())
+            logger.debug("○センターY補正（左手首） f: %s, y: %s, org: %s, rep: %s", bf.fno, \
+                         org_left_wrist_offset, (org_left_wrist_pos.y()), rep_left_wrist_pos.y())
+        else:
+            logger.debug("×センターY補正なし（左手首） f: %s, org: %s", bf.fno, org_left_wrist_pos.y())
 
         org_right_wrist_offset = 0
-        if org_right_wrist_pos.y() < org_palm_length * 1.5:
+        is_org_right_wrist_offset = org_right_wrist_pos.y() < org_palm_length * 1.5
+        if is_org_right_wrist_offset:
             # 右手首が手のひらの大きさ以下の場合、位置合わせ
             org_right_wrist_offset = org_right_wrist_pos.y() * data_set.original_y_ratio - rep_right_wrist_pos.y()
-            # if rep_right_wrist_pos.y() > org_right_wrist_pos.y() * data_set.original_y_ratio:
+            # if rep_right_wrist_pos.y() > org_right_wrist_pos.y():
             #     # 床上の場合、とりあえず半分だけ
             #     org_right_wrist_offset /= 2
-            logger.debug("センターY補正（右手首） f: %s, y: %s, org: %s, rep: %s", bf.fno, \
-                         org_right_wrist_offset, (org_right_wrist_pos.y() * data_set.original_y_ratio), rep_right_wrist_pos.y())
+            logger.debug("○センターY補正（右手首） f: %s, y: %s, org: %s, rep: %s", bf.fno, \
+                         org_right_wrist_offset, (org_right_wrist_pos.y()), rep_right_wrist_pos.y())
+        else:
+            logger.debug("×センターY補正なし（右手首） f: %s, org: %s", bf.fno, org_left_wrist_pos.y())
         
         org_left_leg_offset = 0
-        if org_left_leg_pos.y() < org_palm_length * 1.5:
+        is_org_left_leg_offset = org_left_leg_pos.y() < org_palm_length * 1.5
+        if is_org_left_leg_offset:
             # 左足が手のひらの大きさ以下の場合、位置合わせ
             org_left_leg_offset = org_left_leg_pos.y() * data_set.original_y_ratio - rep_left_leg_pos.y()
-            # if rep_left_leg_pos.y() > org_left_leg_pos.y() * data_set.original_y_ratio:
+            # if rep_left_leg_pos.y() > org_left_leg_pos.y():
             #     # 床上の場合、とりあえず半分だけ
             #     org_left_leg_offset /= 2
-            logger.debug("センターY補正（左足） f: %s, y: %s, org: %s, rep: %s", bf.fno, \
-                         org_left_leg_offset, (org_left_leg_pos.y() * data_set.original_y_ratio), rep_left_leg_pos.y())
+            logger.debug("○センターY補正（左足） f: %s, y: %s, org: %s, rep: %s", bf.fno, \
+                         org_left_leg_offset, (org_left_leg_pos.y()), rep_left_leg_pos.y())
+        else:
+            logger.debug("×センターY補正なし（左足） f: %s, org: %s", bf.fno, org_left_wrist_pos.y())
 
         org_right_leg_offset = 0
-        if org_right_leg_pos.y() < org_palm_length * 1.5:
+        is_org_right_leg_offset = org_right_leg_pos.y() < org_palm_length * 1.5
+        if is_org_right_leg_offset:
             # 右足が手のひらの大きさ以下の場合、位置合わせ
             org_right_leg_offset = org_right_leg_pos.y() * data_set.original_y_ratio - rep_right_leg_pos.y()
-            # if rep_right_leg_pos.y() > org_right_leg_pos.y() * data_set.original_y_ratio:
+            # if rep_right_leg_pos.y() > org_right_leg_pos.y():
             #     # 床上の場合、とりあえず半分だけ
             #     org_right_leg_offset /= 2
-            logger.debug("センターY補正（右足） f: %s, y: %s, org: %s, rep: %s", bf.fno, \
-                         org_right_leg_offset, (org_right_leg_pos.y() * data_set.original_y_ratio), rep_right_leg_pos.y())
+            logger.debug("○センターY補正（右足） f: %s, y: %s, org: %s, rep: %s", bf.fno, \
+                         org_right_leg_offset, (org_right_leg_pos.y()), rep_right_leg_pos.y())
+        else:
+            logger.debug("×センターY補正なし（右足） f: %s, org: %s", bf.fno, org_left_wrist_pos.y())
         
         rep_center_arm_offset = MVector3D()
-        target_offsets = np.array([org_left_wrist_offset, org_right_wrist_offset, org_left_leg_offset, org_right_leg_offset])
-        if len(np.nonzero(target_offsets)[int(0)]) > 0:
-            # 床に潜るよりは浮いてる方がマシ
-            rep_center_arm_offset = MVector3D(0, target_offsets[np.argmin(np.abs(target_offsets[np.nonzero(target_offsets)[int(0)]]))], 0)
+        target_offsets = np.array([org_left_wrist_offset, org_right_wrist_offset])
+        target_offsets = target_offsets[np.nonzero(target_offsets)]
+        if len(target_offsets) > 0:
+            # 0以外のオフセットがある場合に、最も小さな差異を適用する（それ以上は床位置合わせで調整）
+            # rep_center_arm_offset = MVector3D(0, target_offsets[np.argmin(np.abs(target_offsets[np.nonzero(target_offsets)[int(0)]]))], 0)
+            rep_center_arm_offset = MVector3D(0, target_offsets[np.argmin(np.abs(target_offsets))], 0)
 
         logger.debug("センターY補正（結果） f: %s, y: %s", bf.fno, rep_center_arm_offset.y())
 
-        return rep_center_arm_offset
+        return rep_center_arm_offset, is_org_left_wrist_offset, is_org_right_wrist_offset, is_org_left_leg_offset, is_org_right_leg_offset
 
     # モデル別足IKによるセンターオフセット値
     cdef tuple calc_center_offset_by_arm_model(self, VmdBoneFrame bf, int data_set_idx, MOptionsDataSet data_set, \
@@ -2975,7 +3010,7 @@ cdef class StanceService():
         with ThreadPoolExecutor(thread_name_prefix="shoulder{0}".format(data_set_idx), max_workers=min(2, self.options.max_workers)) as executor:
             for direction in ["左", "右"]:
                 total_cnt += 1
-                futures.append(executor.submit(self.adjust_shoulder_stance_lr, self, data_set_idx, "{0}肩P".format(direction), "{0}肩".format(direction), "{0}腕".format(direction)))
+                futures.append(executor.submit(self.adjust_shoulder_stance_lr2, self, data_set_idx, "{0}肩P".format(direction), "{0}肩".format(direction), "{0}腕".format(direction)))
         concurrent.futures.wait(futures, timeout=None, return_when=concurrent.futures.FIRST_EXCEPTION)
 
         for f in futures:
@@ -2993,9 +3028,200 @@ cdef class StanceService():
             self.options.tree_process_dict[proccess_key]["スタンス追加補正"]["肩補正"] = True
 
         return True
+    
+    # 肩と腕の扇形
+    cdef tuple calc_shoulder_angle(self, MVector3D neck_pos, MVector3D arm_pos, MVector3D org_diff_pos):
+        cdef MVector3D diff_pos, hor_pos
+        cdef double diff_arc
+
+        # 差分
+        diff_pos = arm_pos - neck_pos
+        diff_pos.non_zero()
+        logger.debug(f"arm_pos: {arm_pos.to_log()}, neck_pos: {neck_pos.to_log()}")
+
+        if org_diff_pos != MVector3D():
+            # 元差分が既に指定されている場合、先モデルとみなして、Xを揃える
+            diff_ratio = org_diff_pos.x() / diff_pos.x()
+            # Xを揃えた大きさにする
+            diff_pos *= diff_ratio
+            logger.debug(f"rep diff_pos: {diff_pos.to_log()}, diff_ratio: {diff_ratio}")
+
+        # 水平の位置
+        hor_pos = MVector3D(1 * np.sign(diff_pos.x()), 0, 0)
+        logger.debug(f"diff_pos: {diff_pos.to_log()}, hor_pos: {hor_pos.to_log()}")
+
+        # 扇形の中心角
+        diff_rot = MQuaternion.rotationTo(hor_pos, diff_pos)
+        
+        # 弧の長さ
+        diff_arc = 2 * pi * diff_pos.x() * (diff_rot.toDegree() / 360)
+        
+        return (diff_pos, diff_rot, diff_arc)
 
     # 肩補正左右
     cdef int adjust_shoulder_stance_lr(self, int data_set_idx, str shoulder_p_name, str shoulder_name, str arm_name):
+        cdef MOptionsDataSet data_set
+        cdef double dot, dot_limit, ratio, org_arc, rep_arc
+        cdef list shoulder_target_bones
+        cdef bint is_shoulder_p
+        cdef MVector3D org_shoulder_diff, org_shoulder_slope, rep_shoulder_diff, rep_shoulder_slope, shoulder_diff_ratio
+        cdef MQuaternion org_rot, rep_rot
+        
+        try:
+            logger.copy(self.options)
+            data_set = self.options.data_set_list[data_set_idx]
+
+            # 肩調整に必要なボーン群(肩Pは含めない)
+            shoulder_target_bones = ["頭", "首", "首根元", shoulder_name, arm_name, "{0}下延長".format(shoulder_name), "上半身"]
+
+            if set(shoulder_target_bones).issubset(data_set.org_model.bones) and set(shoulder_target_bones).issubset(data_set.rep_model.bones) and shoulder_name in data_set.motion.bones:
+                # 肩Pを使うかどうか
+                is_shoulder_p = True if shoulder_p_name in data_set.motion.bones and shoulder_p_name in data_set.rep_model.bones and shoulder_p_name in data_set.org_model.bones else False
+
+                # 元モデルのリンク生成
+                org_arm_links = data_set.org_model.create_link_2_top_lr("腕")
+
+                # 変換先モデルのリンク生成
+                rep_arm_links = data_set.rep_model.create_link_2_top_lr("腕")
+
+                # 元モデルの中心角と弧
+                org_diff_pos, org_rot, org_arc = self.calc_shoulder_angle(org_arm_links[shoulder_name[int(0)]].get("首根元").position, org_arm_links[shoulder_name[int(0)]].get(arm_name).position, MVector3D())
+                logger.debug(f"org_diff_pos: {org_diff_pos.to_log()}, org_rot: {org_rot.toDegree()} ({org_rot.toEulerAngles4MMD().to_log()}), org_arc: {org_arc}")
+                
+                # 先モデルの中心角と弧
+                rep_diff_pos, rep_rot, rep_arc = self.calc_shoulder_angle(rep_arm_links[shoulder_name[int(0)]].get("首根元").position, rep_arm_links[shoulder_name[int(0)]].get(arm_name).position, org_diff_pos)
+                logger.debug(f"rep_diff_pos: {rep_diff_pos.to_log()}, rep_rot: {rep_rot.toDegree()} ({rep_rot.toEulerAngles4MMD().to_log()}), rep_arc: {rep_arc}")
+
+                # 先モデルの弧の長さを元モデルの弧の長さに合わせる比率
+                ratio = org_arc / rep_arc
+                logger.debug(f"ratio: {ratio}, ratio_rot: {org_rot.toDegree() * ratio}")
+
+                # -----------------------
+                # 準備（細分化）
+                self.prepare_split_stance(data_set_idx, data_set, shoulder_name)
+
+                if is_shoulder_p:
+                    # 肩Pがある場合、肩Pも細分化
+                    self.prepare_split_stance(data_set_idx, data_set, shoulder_p_name)
+
+                # 肩Pクリアして再登録
+                for fno in data_set.motion.get_bone_fnos(shoulder_p_name):
+                    shoulder_p_bf = data_set.motion.calc_bf(shoulder_p_name, fno)
+                    shoulder_p_bf.rotation = MQuaternion()
+                    data_set.motion.regist_bf(shoulder_p_bf, shoulder_p_name, fno)
+
+                # 子として肩の角度調整
+                self.adjust_rotation_by_parent(data_set_idx, data_set, shoulder_name, shoulder_p_name)
+
+                logger.info("%sスタンス補正: 準備終了【No.%s】", shoulder_name, (data_set_idx + 1))
+
+                prev_fno = 0
+                # 肩P、肩、腕の全てのキーフレリスト
+                fnos = data_set.motion.get_bone_fnos(shoulder_name, shoulder_p_name)
+                for fno_idx, fno in enumerate(fnos):
+                    # 肩のbf
+                    bf = data_set.motion.calc_bf(shoulder_name, fno)
+
+                    # 腕までのグローバル位置と行列
+                    org_arm_global_3ds, org_arm_matrixs = MServiceUtils.calc_global_pos(data_set.org_model, org_arm_links[shoulder_name[int(0)]], data_set.org_motion, fno, return_matrix=True)
+                    rep_arm_global_3ds, rep_arm_matrixs = MServiceUtils.calc_global_pos(data_set.rep_model, rep_arm_links[shoulder_name[int(0)]], data_set.motion, fno, return_matrix=True, \
+                                                                                        limit_links=rep_arm_links[shoulder_name[int(0)]].from_links("首根元"))
+
+                    # 元モデル
+                    # 肩のグローバル位置
+                    org_global_neck_base_pos = org_arm_global_3ds["首根元"]
+                    # 腕のグローバル位置
+                    org_global_arm_pos = org_arm_global_3ds[arm_name]
+                    
+                    # 首根元ボーンのローカル座標系
+                    org_neck_base_matrix = MMatrix4x4()
+                    org_neck_base_matrix.setToIdentity()
+                    org_neck_base_matrix.translate(org_global_neck_base_pos)
+
+                    # 首根元ボーンから見た腕のローカル位置
+                    org_local_arm_pos = org_neck_base_matrix.inverted() * org_global_arm_pos
+
+                    logger.debug("f: %s, %s, org_global_arm_pos: %s, org_global_neck_base_pos: %s, org_local_arm_pos: %s", fno, shoulder_name, \
+                                org_global_arm_pos.to_log(), org_global_neck_base_pos.to_log(), org_local_arm_pos.to_log())
+                    
+                    # 先モデル
+                    # 肩のグローバル位置
+                    rep_global_neck_base_pos = rep_arm_global_3ds["首根元"]
+                    # 肩のグローバル位置
+                    rep_global_shoulder_pos = rep_arm_global_3ds[shoulder_name]
+                    # 腕のグローバル位置(肩の角度がないので初期位置)
+                    rep_global_arm_pos = rep_arm_global_3ds[arm_name]
+                    
+                    logger.debug("f: %s, %s, rep_global_arm_pos: %s, rep_global_neck_base_pos: %s", fno, shoulder_name, \
+                                rep_global_arm_pos.to_log(), rep_global_neck_base_pos.to_log())
+                    
+                    # 首根元ボーンのローカル座標系
+                    rep_neck_base_matrix = MMatrix4x4()
+                    rep_neck_base_matrix.setToIdentity()
+                    rep_neck_base_matrix.translate(rep_global_neck_base_pos)
+
+                    # 先モデルの現在の腕のローカル位置
+                    rep_local_arm_pos = rep_neck_base_matrix.inverted() * rep_global_arm_pos
+
+                    # 先モデルの腕のローカル位置は、肩の縮尺
+                    recalc_rep_local_arm_pos = org_local_arm_pos * ratio
+                    # 先モデルの再計算した腕グローバル座標
+                    recalc_rep_global_arm_pos = rep_neck_base_matrix * recalc_rep_local_arm_pos
+
+                    logger.debug("f: %s, %s, rep_local_arm_pos: %s, recalc_rep_local_arm_pos: %s, recalc_rep_global_arm_pos: %s", fno, shoulder_name, \
+                                rep_local_arm_pos.to_log(), recalc_rep_local_arm_pos.to_log(), recalc_rep_global_arm_pos.to_log())
+                    
+                    # 肩からの補正角度
+                    new_shoulder_qq = MQuaternion.rotationTo(rep_global_arm_pos - rep_global_shoulder_pos, recalc_rep_global_arm_pos - rep_global_shoulder_pos)
+                    
+                    org_bf = data_set.org_motion.calc_bf(shoulder_name, bf.fno)
+                    logger.debug("f: %s, %s, 補正回転: %s, 元の回転: %s", bf.fno, bf.name, new_shoulder_qq.toEulerAngles4MMD().to_log(), bf.rotation.toEulerAngles4MMD().to_log())
+
+                    if org_bf:
+                        # 元にもあるキーである場合、内積チェック
+                        uad = abs(MQuaternion.dotProduct(new_shoulder_qq.normalized(), org_bf.rotation.normalized()))
+                        logger.debug("f: %s, uad: %s, org: %s, result: %s", bf.fno, uad, org_bf.rotation.toEulerAngles4MMD(), new_shoulder_qq.toEulerAngles4MMD())
+                        if uad < min(0.6, ratio):
+                            # 内積が離れすぎてたらNG
+                            logger.warning("【No.%s】%sフレーム目:%sスタンス補正失敗: 角度:%s, 近似度: %s", \
+                                        (data_set_idx + 1), bf.fno, shoulder_name, new_shoulder_qq.toEulerAngles4MMD().to_log(), round(uad, 5))
+                            bf.rotation = org_bf.rotation
+                        else:
+                            # 内積の差が小さい場合、回転適用
+                            bf.rotation = new_shoulder_qq
+                    else:
+                        # 元にもない場合（ないはず）、はそのまま設定
+                        bf.rotation = new_shoulder_qq
+
+                    # bf登録
+                    data_set.motion.regist_bf(bf, shoulder_name, bf.fno)
+                        
+                    if fno // 500 > prev_fno:
+                        logger.count("【No.{0} - {1}スタンス補正】".format(data_set_idx + 1, shoulder_name), fno, fnos)
+                        prev_fno = fno // 500
+
+                # 子の角度調整
+                self.adjust_rotation_by_parent(data_set_idx, data_set, arm_name, shoulder_name)
+
+                logger.info("%sスタンス補正: 終了【No.%s】", shoulder_name, (data_set_idx + 1))
+
+                return PROCESS_FINISH
+            else:
+                logger.info("%s補正: 【No.%s】[%s]のボーン群が、作成元もしくは変換先のいずれかで足りないため、処理をスキップします。", shoulder_name, (data_set_idx + 1), ", ".join(shoulder_target_bones))
+            
+            return PROCESS_SKIP
+        except MKilledException as ke:
+            raise ke
+        except SizingException as se:
+            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message)
+            return se
+        except Exception as e:
+            import traceback
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc())
+            raise e
+    
+    # 肩補正左右
+    cdef int adjust_shoulder_stance_lr2(self, int data_set_idx, str shoulder_p_name, str shoulder_name, str arm_name):
         cdef MOptionsDataSet data_set
         cdef double dot
         cdef list shoulder_target_bones
@@ -3025,12 +3251,19 @@ cdef class StanceService():
 
                 org_shoulder_diff = (data_set.org_model.bones[arm_name].position - data_set.org_model.bones[shoulder_name].position)
                 org_shoulder_diff.one()
+                if round(org_shoulder_diff.y(), 1) == 0:
+                    # ゼロに近い場合、分母なので比率が馬鹿でかくなるため、強制的に1を設定する
+                    org_shoulder_diff.setY(1)
                 rep_shoulder_diff = (data_set.rep_model.bones[arm_name].position - data_set.rep_model.bones[shoulder_name].position)
+                if round(rep_shoulder_diff.y(), 1) == 0:
+                    rep_shoulder_diff.setY(1)
                 shoulder_diff_ratio = rep_shoulder_diff / org_shoulder_diff
+
+                logger.debug("%s, org_shoulder_diff: %s, rep_shoulder_diff: %s", shoulder_name, org_shoulder_diff.to_log(), rep_shoulder_diff.to_log())
 
                 logger.info("【No.%s】%s - 長さ比率: %s", (data_set_idx + 1), shoulder_name, shoulder_diff_ratio.to_log())
 
-                if dot >= 0.8:
+                if dot >= 0.82:
                     self.adjust_shoulder_stance_near(data_set_idx, shoulder_p_name, shoulder_name, arm_name, 0.9, is_shoulder_p)
                 elif 0.5 <= dot:
                     # 肩の傾きが遠い場合
@@ -3051,7 +3284,7 @@ cdef class StanceService():
             return se
         except Exception as e:
             import traceback
-            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc())
             raise e
     
     # 肩の傾きが離れている場合のスタンス補正
@@ -3083,12 +3316,16 @@ cdef class StanceService():
         # TOの長さ比率（いかり肩ボーンとかあるので、絶対値はとらない）
         org_to_diff = (org_arm_links[shoulder_name[int(0)]].get(arm_name).position - org_arm_links[shoulder_name[int(0)]].get("首根元2").position)
         org_to_diff.non_zero()
+        if round(org_to_diff.y(), 1) == 0:
+            # ゼロに近い場合、分母なので比率が馬鹿でかくなるため、強制的に1を設定する
+            org_to_diff.setY(1)
         rep_to_diff = (rep_arm_links[shoulder_name[int(0)]].get(arm_name).position - rep_arm_links[shoulder_name[int(0)]].get("首根元2").position)
         rep_to_diff.non_zero()
+        if round(rep_to_diff.y(), 1) == 0:
+            rep_to_diff.setY(1)
         to_diff_ratio = rep_to_diff / org_to_diff
         
-        logger.test("arm_diff_ratio: %s", arm_diff_ratio)
-        logger.test("to_diff_ratio: %s", to_diff_ratio)
+        logger.debug(f"[far] arm_diff_ratio: {arm_diff_ratio}, org_to_diff: {org_to_diff}, rep_to_diff: {rep_to_diff}, to_diff_ratio: {to_diff_ratio}")
 
         ratio = MVector3D(arm_diff_ratio.x(), to_diff_ratio.y(), arm_diff_ratio.x())
 
@@ -3253,11 +3490,15 @@ cdef class StanceService():
         # TOの長さ比率（いかり肩ボーンとかあるので、絶対値はとらない）
         org_to_diff = (org_arm_links[shoulder_name[int(0)]].get(arm_name).position - org_arm_links[shoulder_name[int(0)]].get("首根元").position)
         org_to_diff.one()
+        if round(org_to_diff.y(), 1) == 0:
+            # ゼロに近い場合、分母なので比率が馬鹿でかくなるため、強制的に1を設定する
+            org_to_diff.setY(1)
         rep_to_diff = (rep_arm_links[shoulder_name[int(0)]].get(arm_name).position - rep_arm_links[shoulder_name[int(0)]].get("首根元").position)
+        if round(rep_to_diff.y(), 1) == 0:
+            rep_to_diff.setY(1)
         to_diff_ratio = rep_to_diff / org_to_diff
         
-        logger.test("arm_diff_ratio: %s", arm_diff_ratio)
-        logger.test("to_diff_ratio: %s", to_diff_ratio)
+        logger.debug(f"near round(org_to_diff.y(), 1): {round(org_to_diff.y(), 1)}, org_to_diff: {org_to_diff}, rep_to_diff: {rep_to_diff}, to_diff_ratio: {to_diff_ratio}")
 
         ratio = MVector3D(arm_diff_ratio.x(), to_diff_ratio.y(), arm_diff_ratio.x())
 
@@ -3610,7 +3851,7 @@ cdef class StanceService():
             return se
         except Exception as e:
             import traceback
-            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc())
             raise e
 
     # 腕スタンス補正左右
@@ -3643,7 +3884,7 @@ cdef class StanceService():
             return se
         except Exception as e:
             import traceback
-            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc())
             raise e
         
     # 腕スタンス補正用傾き計算

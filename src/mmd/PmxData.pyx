@@ -6,8 +6,9 @@ from collections import OrderedDict
 import math
 import numpy as np
 
-from module.MParams import BoneLinks
+from module.MParams import BoneLinks # noqa
 from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
+
 from utils.MException import SizingException # noqa
 from utils.MLogger import MLogger # noqa
 
@@ -505,7 +506,7 @@ cdef class OBB:
         self.shape_size_xyz = {"x": self.shape_size.x(), "y": self.shape_size.y(), "z": self.shape_size.z()}
 
     # OBBとの衝突判定
-    cpdef tuple get_collistion(self, MVector3D point, MVector3D root_global_pos, float max_length):
+    cpdef tuple get_collistion(self, MVector3D point, MVector3D root_global_pos, float max_length, float base_size):
         pass
     
 # 球剛体
@@ -514,49 +515,60 @@ cdef class Sphere(OBB):
         super().__init__(*args)
 
     # 衝突しているか
-    cpdef tuple get_collistion(self, MVector3D point, MVector3D root_global_pos, float max_length):
+    cpdef tuple get_collistion(self, MVector3D point, MVector3D root_global_pos, float max_length, float base_size):
         cdef MMatrix4x4 arm_matrix
         cdef bint collision, near_collision
-        cdef double d, sin_x_theta, sin_y_theta, sin_z_theta, x, x_theta, y, y_theta, z, z_theta, x_distance, z_distance, new_y
-        cdef MVector3D local_point, new_x_local, new_z_local, rep_x_collision_vec, rep_z_collision_vec, x_arm_local, z_arm_local
+        cdef double d, sin_x_theta, sin_y_theta, sin_z_plus_theta, sin_z_minus_theta, x, x_theta, y, y_theta, z, z_plus_theta, z_minus_theta, x_distance, z_plus_distance, z_minus_distance, new_y
+        cdef MVector3D local_point, new_x_local, new_z_plus_local, new_z_minus_local, rep_x_collision_vec, rep_z_plus_collision_vec, rep_z_minus_collision_vec, x_arm_local, z_plus_arm_local, z_minus_arm_local
+
+        cdef float min_ratio = base_size - 0.02
+        cdef float max_ratio = base_size + 0.02
 
         # 原点との距離が半径未満なら衝突
         d = point.distanceToPoint(self.origin)
-        collision = 0 < d < self.shape_size.x() * 0.98
-        near_collision = 0 <= d <= self.shape_size.x() * 1.02
+        collision = 0 < d < self.shape_size.x() * min_ratio
+        near_collision = 0 <= d <= self.shape_size.x() * max_ratio
 
         x_distance = 0
-        z_distance = 0
+        z_plus_distance = 0
+        z_minus_distance = 0
         rep_x_collision_vec = MVector3D()
-        rep_z_collision_vec = MVector3D()
+        rep_z_plus_collision_vec = MVector3D()
+        rep_z_minus_collision_vec = MVector3D()
 
         if collision or near_collision:
             # 剛体のローカル座標系に基づく点の位置
             local_point = self.matrix.inverted() * point
 
-            x = self.shape_size.x() * 1.02 * self.h_sign
-            y = self.shape_size.x() * 1.02 * self.v_sign
-            z = self.shape_size.x() * 1.02 * -1  # (np.sign(local_point.z()) if self.is_arm_upper else -1)
+            x = self.shape_size.x() * max_ratio * self.h_sign
+            y = self.shape_size.x() * max_ratio * self.v_sign
+            z_plus = self.shape_size.x() * max_ratio * 1
+            z_minus = self.shape_size.x() * max_ratio * -1
 
             # 各軸方向の離れ具合
             x_theta = math.acos(max(-1, min(1, local_point.x() / x)))
             y_theta = math.acos(max(-1, min(1, local_point.y() / y)))
-            z_theta = math.acos(max(-1, min(1, local_point.z() / z)))
+            z_plus_theta = math.acos(max(-1, min(1, local_point.z() / z_plus)))
+            z_minus_theta = math.acos(max(-1, min(1, local_point.z() / z_minus)))
             # 離れ具合から見た円周の位置
-            sin_y_theta = math.sin(y_theta) * 1.02
-            sin_x_theta = math.sin(x_theta) * 1.02
-            sin_z_theta = math.sin(z_theta) * 1.02
+            sin_y_theta = math.sin(y_theta) * max_ratio
+            sin_x_theta = math.sin(x_theta) * max_ratio
+            sin_z_plus_theta = math.sin(z_plus_theta) * max_ratio
+            sin_z_minus_theta = math.sin(z_minus_theta) * max_ratio
 
             new_y = local_point.y()
 
             new_x_local = MVector3D(y_theta * x, new_y, local_point.z())
-            new_z_local = MVector3D(local_point.x(), new_y, y_theta * z)
+            new_z_plus_local = MVector3D(local_point.x(), new_y, y_theta * z_plus)
+            new_z_minus_local = MVector3D(local_point.x(), new_y, y_theta * z_minus)
 
             x_distance = new_x_local.distanceToPoint(local_point)
-            z_distance = new_z_local.distanceToPoint(local_point)
+            z_plus_distance = new_z_plus_local.distanceToPoint(local_point)
+            z_minus_distance = new_z_minus_local.distanceToPoint(local_point)
 
             rep_x_collision_vec = self.matrix * new_x_local
-            rep_z_collision_vec = self.matrix * new_z_local
+            rep_z_plus_collision_vec = self.matrix * new_z_plus_local
+            rep_z_minus_collision_vec = self.matrix * new_z_minus_local
 
             # 腕の位置を起点とする行列（移動量だけ見る）
             arm_matrix = MMatrix4x4()
@@ -565,28 +577,36 @@ cdef class Sphere(OBB):
 
             # 腕から見た回避位置
             x_arm_local = arm_matrix.inverted() * rep_x_collision_vec
-            z_arm_local = arm_matrix.inverted() * rep_z_collision_vec
+            z_plus_arm_local = arm_matrix.inverted() * rep_z_plus_collision_vec
+            z_minus_arm_local = arm_matrix.inverted() * rep_z_minus_collision_vec
 
             if x_arm_local.length() >= max_length:
                 # 最大可能距離より長い場合、縮める
-                x_arm_local *= (max_length / x_arm_local.length()) * 0.98
+                x_arm_local *= (max_length / x_arm_local.length()) * min_ratio
                 rep_x_collision_vec = arm_matrix * x_arm_local
                 new_x_local = self.matrix.inverted() * rep_x_collision_vec
                 x_distance = new_x_local.distanceToPoint(local_point)
 
-            if z_arm_local.length() >= max_length:
+            if z_plus_arm_local.length() >= max_length:
                 # 最大可能距離より長い場合、縮める
-                z_arm_local *= (max_length / z_arm_local.length()) * 0.98
-                rep_z_collision_vec = arm_matrix * z_arm_local
-                new_z_local = self.matrix.inverted() * rep_z_collision_vec
-                z_distance = new_z_local.distanceToPoint(local_point)
+                z_plus_arm_local *= (max_length / z_plus_arm_local.length()) * min_ratio
+                rep_z_plus_collision_vec = arm_matrix * z_plus_arm_local
+                new_z_plus_local = self.matrix.inverted() * rep_z_plus_collision_vec
+                z_plus_distance = new_z_plus_local.distanceToPoint(local_point)
 
-            logger.debug("f: %s, y: %s, yt: %s, sy: %s, xt: %s, sx: %s, zt: %s, sz: %s, xd: %s, zd: %s, l: %s, d: %s, xl: %s, zl: %s, xr: %s, zr: %s", \
-                            self.fno, local_point.y() / y, y_theta, sin_y_theta, x_theta, sin_x_theta, z_theta, sin_z_theta, x_distance, z_distance, local_point.to_log(), d, \
-                            new_x_local.to_log(), new_z_local.to_log(), rep_x_collision_vec, rep_z_collision_vec)
+            if z_minus_arm_local.length() >= max_length:
+                # 最大可能距離より長い場合、縮める
+                z_minus_arm_local *= (max_length / z_minus_arm_local.length()) * min_ratio
+                rep_z_minus_collision_vec = arm_matrix * z_minus_arm_local
+                new_z_minus_local = self.matrix.inverted() * rep_z_minus_collision_vec
+                z_minus_distance = new_z_minus_local.distanceToPoint(local_point)
+
+            logger.debug("f: %s, y: %s, yt: %s, sy: %s, xt: %s, sx: %s, zt: %s, sz: %s, xd: %s, zd: %s, l: %s, d: %s, xl: %s, zl: %s, xr: %s, zrp: %s, zrm: %s", \
+                         self.fno, local_point.y() / y, y_theta, sin_y_theta, x_theta, sin_x_theta, z_plus_theta, sin_z_plus_theta, x_distance, z_plus_distance, local_point.to_log(), d, \
+                         new_x_local.to_log(), new_z_plus_local.to_log(), rep_x_collision_vec, rep_z_plus_collision_vec, rep_z_minus_collision_vec)
 
         # 3方向の間に点が含まれていたら衝突あり
-        return (collision, near_collision, x_distance, z_distance, rep_x_collision_vec, rep_z_collision_vec)
+        return (collision, near_collision, x_distance, z_plus_distance, z_minus_distance, rep_x_collision_vec, rep_z_plus_collision_vec, rep_z_minus_collision_vec)
 
 # 箱剛体
 cdef class Box(OBB):
@@ -595,12 +615,15 @@ cdef class Box(OBB):
 
     # 衝突しているか（内外判定）
     # https://stackoverflow.com/questions/21037241/how-to-determine-a-point-is-inside-or-outside-a-cube
-    cpdef tuple get_collistion(self, MVector3D point, MVector3D root_global_pos, float max_length):
+    cpdef tuple get_collistion(self, MVector3D point, MVector3D root_global_pos, float max_length, float base_size):
         cdef MMatrix4x4 arm_matrix
         cdef bint collision, near_collision, res1, res2, res3
-        cdef double d, sin_x_theta, sin_y_theta, sin_z_theta, x_theta, y, y_theta, z_theta, new_y, size1, size2, size3, x, z, x_diff, z_diff, x_distance, z_distance
-        cdef MVector3D b1,  b2, b4, d1, d2, d3, dir1, dir2, dir3, dir_vec, local_point, new_x_local, new_z_local, rep_x_collision_vec, rep_z_collision_vec, t1
-        cdef MVector3D x_arm_local, x_base, z_arm_local, z_base
+        cdef double d, sin_x_theta, sin_y_theta, sin_z_plus_theta, sin_z_minus_theta, x_theta, y, y_theta, z_plus_theta, z_minus_theta, new_y, size1, size2, size3, x, z_plus, z_minus, x_diff, z_plus_diff, x_distance, z_plus_distance, z_minus_distance
+        cdef MVector3D b1,  b2, b4, d1, d2, d3, dir1, dir2, dir3, dir_vec, local_point, new_x_local, new_z_plus_local, new_z_minus_local, rep_x_collision_vec, rep_z_plus_collision_vec, rep_z_minus_collision_vec, t1
+        cdef MVector3D x_arm_local, x_base, z_plus_arm_local, z_plus_base, z_minus_arm_local, z_minus_base
+
+        cdef float min_ratio = base_size - 0.02
+        cdef float max_ratio = base_size + 0.02
 
         # 立方体の中にある場合、衝突
 
@@ -639,11 +662,11 @@ cdef class Box(OBB):
 
         # ---------
         # 下辺
-        b1 = self.matrix * MVector3D(-self.shape_size.x(), -self.shape_size.y(), -self.shape_size.z()) * 1.02
-        b2 = self.matrix * MVector3D(self.shape_size.x(), -self.shape_size.y(), -self.shape_size.z()) * 1.02
-        b4 = self.matrix * MVector3D(-self.shape_size.x(), -self.shape_size.y(), self.shape_size.z()) * 1.02
+        b1 = self.matrix * MVector3D(-self.shape_size.x(), -self.shape_size.y(), -self.shape_size.z()) * max_ratio
+        b2 = self.matrix * MVector3D(self.shape_size.x(), -self.shape_size.y(), -self.shape_size.z()) * max_ratio
+        b4 = self.matrix * MVector3D(-self.shape_size.x(), -self.shape_size.y(), self.shape_size.z()) * max_ratio
         # 上辺
-        t1 = self.matrix * MVector3D(-self.shape_size.x(), self.shape_size.y(), -self.shape_size.z()) * 1.02
+        t1 = self.matrix * MVector3D(-self.shape_size.x(), self.shape_size.y(), -self.shape_size.z()) * max_ratio
 
         d1 = (t1 - b1)
         size1 = d1.length()
@@ -673,25 +696,31 @@ cdef class Box(OBB):
         x_distance = 0
         z_distance = 0
         rep_x_collision_vec = MVector3D()
-        rep_z_collision_vec = MVector3D()
+        rep_z_plus_collision_vec = MVector3D()
+        rep_z_minus_collision_vec = MVector3D()
 
         if collision or near_collision:
             # 左右の腕のどちらと衝突しているかにより、元に戻す方向が逆になる
-            x = self.shape_size.x() * 1.02 * self.h_sign
-            z = -self.shape_size.z() * 1.02
+            x = self.shape_size.x() * max_ratio * self.h_sign
+            z_plus = -self.shape_size.z() * max_ratio * 1
+            z_minus = -self.shape_size.z() * max_ratio * -1
             
             # X方向にOBBの境界に持って行った場合の位置
             x_base = self.rotated_matrix * MVector3D(x, 0, 0)
             # Z方向に同上
-            z_base = self.rotated_matrix * MVector3D(0, 0, z)
+            z_plus_base = self.rotated_matrix * MVector3D(0, 0, z_plus)
+            z_minus_base = self.rotated_matrix * MVector3D(0, 0, z_minus)
             logger.test("x_base: %s", x_base)
-            logger.test("z_base: %s", z_base)
+            logger.test("z_plus_base: %s", z_plus_base)
+            logger.test("z_minus_base: %s", z_minus_base)
 
             x_diff = x_base.distanceToPoint(point)
-            z_diff = z_base.distanceToPoint(point)
+            z_plus_diff = z_plus_base.distanceToPoint(point)
+            z_minus_diff = z_minus_base.distanceToPoint(point)
 
             logger.test("x_diff: %s", x_diff)
-            logger.test("z_diff: %s", z_diff)
+            logger.test("z_plus_diff: %s", z_plus_diff)
+            logger.test("z_minus_diff: %s", z_minus_diff)
 
             # 剛体のローカル座標系に基づく点の位置
             local_point = self.rotated_matrix.inverted() * point
@@ -699,13 +728,16 @@ cdef class Box(OBB):
             new_y = local_point.y()
 
             new_x_local = MVector3D(x, new_y, local_point.z())
-            new_z_local = MVector3D(local_point.x(), new_y, z)
+            new_z_plus_local = MVector3D(local_point.x(), new_y, z_plus)
+            new_z_minus_local = MVector3D(local_point.x(), new_y, z_minus)
 
             x_distance = new_x_local.distanceToPoint(local_point)
-            z_distance = new_z_local.distanceToPoint(local_point)
+            z_plus_distance = new_z_plus_local.distanceToPoint(local_point)
+            z_minus_distance = new_z_minus_local.distanceToPoint(local_point)
 
             rep_x_collision_vec = self.rotated_matrix * new_x_local
-            rep_z_collision_vec = self.rotated_matrix * new_z_local
+            rep_z_plus_collision_vec = self.rotated_matrix * new_z_plus_local
+            rep_z_minus_collision_vec = self.rotated_matrix * new_z_minus_local
 
             # 腕の位置を起点とする行列（移動量だけ見る）
             arm_matrix = MMatrix4x4()
@@ -714,26 +746,34 @@ cdef class Box(OBB):
 
             # 腕から見た回避位置
             x_arm_local = arm_matrix.inverted() * rep_x_collision_vec
-            z_arm_local = arm_matrix.inverted() * rep_z_collision_vec
+            z_plus_arm_local = arm_matrix.inverted() * rep_z_plus_collision_vec
+            z_minus_arm_local = arm_matrix.inverted() * rep_z_minus_collision_vec
 
             if x_arm_local.length() >= max_length:
                 # 最大可能距離より長い場合、縮める
-                x_arm_local *= (max_length / x_arm_local.length()) * 0.98
+                x_arm_local *= (max_length / x_arm_local.length()) * min_ratio
                 rep_x_collision_vec = arm_matrix * x_arm_local
                 new_x_local = self.matrix.inverted() * rep_x_collision_vec
                 x_distance = new_x_local.distanceToPoint(local_point)
 
-            if z_arm_local.length() >= max_length:
+            if z_plus_arm_local.length() >= max_length:
                 # 最大可能距離より長い場合、縮める
-                z_arm_local *= (max_length / z_arm_local.length()) * 0.98
-                rep_z_collision_vec = arm_matrix * z_arm_local
-                new_z_local = self.matrix.inverted() * rep_z_collision_vec
-                z_distance = new_z_local.distanceToPoint(local_point)
+                z_plus_arm_local *= (max_length / z_plus_arm_local.length()) * min_ratio
+                rep_z_plus_collision_vec = arm_matrix * z_plus_arm_local
+                new_z_plus_local = self.matrix.inverted() * rep_z_plus_collision_vec
+                z_plus_distance = new_z_plus_local.distanceToPoint(local_point)
 
-            logger.debug("f: %s, xd: %s, zd: %s, l: %s, xl: %s, zl: %s, xr: %s, zr: %s", \
-                            self.fno, x_distance, z_distance, local_point.to_log(), new_x_local.to_log(), new_z_local.to_log(), rep_x_collision_vec, rep_z_collision_vec)
+            if z_minus_arm_local.length() >= max_length:
+                # 最大可能距離より長い場合、縮める
+                z_minus_arm_local *= (max_length / z_minus_arm_local.length()) * min_ratio
+                rep_z_minus_collision_vec = arm_matrix * z_minus_arm_local
+                new_z_minus_local = self.matrix.inverted() * rep_z_minus_collision_vec
+                z_minus_distance = new_z_minus_local.distanceToPoint(local_point)
 
-        return (collision, near_collision, x_distance, z_distance, rep_x_collision_vec, rep_z_collision_vec)
+            logger.debug("f: %s, xd: %s, zd: %s, l: %s, xl: %s, zl: %s, xr: %s, zrp: %s, zrm: %s", \
+                         self.fno, x_distance, z_plus_distance, local_point.to_log(), new_x_local.to_log(), new_z_plus_local.to_log(), rep_x_collision_vec, rep_z_plus_collision_vec, rep_z_minus_collision_vec)
+        
+        return (collision, near_collision, x_distance, z_plus_distance, z_minus_distance, rep_x_collision_vec, rep_z_plus_collision_vec, rep_z_minus_collision_vec)
 
 # カプセル剛体
 cdef class Capsule(OBB):
@@ -742,13 +782,16 @@ cdef class Capsule(OBB):
 
     # 衝突しているか
     # http://marupeke296.com/COL_3D_No27_CapsuleCapsule.html
-    cpdef tuple get_collistion(self, MVector3D point, MVector3D root_global_pos, float max_length):
+    cpdef tuple get_collistion(self, MVector3D point, MVector3D root_global_pos, float max_length, float base_size):
         cdef MMatrix4x4 arm_matrix
         cdef bint collision, near_collision
-        cdef double d, sin_x_theta, sin_y_theta, sin_z_theta, x, x_theta, y, y_theta, z, z_theta, x_distance, z_distance, new_y
-        cdef MVector3D local_point, new_x_local, new_z_local, rep_x_collision_vec, rep_z_collision_vec, x_arm_local, z_arm_local
+        cdef double d, sin_x_theta, sin_y_theta, sin_z_plus_theta, x, x_theta, y, y_theta, z_plus, z_minus, z_plus_theta, x_distance, z_plus_distance, new_y, sin_z_minus_theta, z_minus_theta, z_minus_distance
+        cdef MVector3D local_point, new_x_local, new_z_plus_local, rep_x_collision_vec, rep_z_plus_collision_vec, x_arm_local, z_plus_arm_local, new_z_minus_local, rep_z_minus_collision_vec, z_minus_arm_local
         cdef MVector3D b1, t1, h, v
         cdef double ba, bb, bc, ta, tb, tc, lensq, t
+
+        cdef float min_ratio = base_size - 0.02
+        cdef float max_ratio = base_size + 0.02
 
         # 下辺
         b1 = self.rotated_matrix * MVector3D(0, -self.shape_size.y(), 0)
@@ -796,13 +839,15 @@ cdef class Capsule(OBB):
 
         # カプセルの線分から半径以内なら中に入っている
         d = point.distanceToPoint(h)
-        collision = 0 < d < self.shape_size.x() * 0.98
-        near_collision = 0 <= d <= self.shape_size.x() * 1.02
+        collision = 0 < d < self.shape_size.x() * min_ratio
+        near_collision = 0 <= d <= self.shape_size.x() * max_ratio
 
         x_distance = 0
-        z_distance = 0
+        z_plus_distance = 0
+        z_minus_distance = 0
         rep_x_collision_vec = MVector3D()
-        rep_z_collision_vec = MVector3D()
+        rep_z_plus_collision_vec = MVector3D()
+        rep_z_minus_collision_vec = MVector3D()
 
         if collision or near_collision:
             # hのローカル座標系に基づく点の位置
@@ -812,29 +857,35 @@ cdef class Capsule(OBB):
             logger.debug("h: %s, localh: %s", h, h_matrix * MVector3D())
 
             # 距離分だけ離した場合の球
-            x = d * 1.02 * self.h_sign
-            y = d * 1.02 * self.v_sign
-            z = d * 1.02 * -1    # (np.sign(local_point.z()) if self.is_arm_upper else -1)
+            x = d * max_ratio * self.h_sign
+            y = d * max_ratio * self.v_sign
+            z_plus = d * max_ratio * 1
+            z_minus = d * max_ratio * -1
 
             # 各軸方向の離れ具合
             x_theta = math.acos(max(-1, min(1, local_point.x() / x)))
             y_theta = math.acos(max(-1, min(1, abs(local_point.y()) / y)))
-            z_theta = math.acos(max(-1, min(1, local_point.z() / z)))
+            z_plus_theta = math.acos(max(-1, min(1, local_point.z() / z_plus)))
+            z_minus_theta = math.acos(max(-1, min(1, local_point.z() / z_minus)))
             # 離れ具合から見た円周の位置
-            sin_y_theta = math.sin(y_theta) * 1.02
-            sin_x_theta = math.sin(x_theta) * 1.02
-            sin_z_theta = math.sin(z_theta) * 1.02
+            sin_y_theta = math.sin(y_theta) * max_ratio
+            sin_x_theta = math.sin(x_theta) * max_ratio
+            sin_z_plus_theta = math.sin(z_plus_theta) * max_ratio
+            sin_z_minus_theta = math.sin(z_minus_theta) * max_ratio
 
             new_y = local_point.y()
 
             new_x_local = MVector3D(y_theta * x, new_y, local_point.z())
-            new_z_local = MVector3D(local_point.x(), new_y, y_theta * z)
+            new_z_plus_local = MVector3D(local_point.x(), new_y, y_theta * z_plus)
+            new_z_minus_local = MVector3D(local_point.x(), new_y, y_theta * z_minus)
 
             x_distance = new_x_local.distanceToPoint(local_point)
-            z_distance = new_z_local.distanceToPoint(local_point)
+            z_plus_distance = new_z_plus_local.distanceToPoint(local_point)
+            z_minus_distance = new_z_minus_local.distanceToPoint(local_point)
 
             rep_x_collision_vec = h_matrix * new_x_local
-            rep_z_collision_vec = h_matrix * new_z_local
+            rep_z_plus_collision_vec = h_matrix * new_z_plus_local
+            rep_z_minus_collision_vec = h_matrix * new_z_minus_local
 
             # 腕の位置を起点とする行列（移動量だけ見る）
             arm_matrix = MMatrix4x4()
@@ -843,29 +894,37 @@ cdef class Capsule(OBB):
 
             # 腕から見た回避位置
             x_arm_local = arm_matrix.inverted() * rep_x_collision_vec
-            z_arm_local = arm_matrix.inverted() * rep_z_collision_vec
+            z_plus_arm_local = arm_matrix.inverted() * rep_z_plus_collision_vec
+            z_minus_arm_local = arm_matrix.inverted() * rep_z_minus_collision_vec
 
             if x_arm_local.length() >= max_length:
                 # 最大可能距離より長い場合、縮める
-                x_arm_local *= (max_length / x_arm_local.length()) * 0.98
+                x_arm_local *= (max_length / x_arm_local.length()) * min_ratio
                 rep_x_collision_vec = arm_matrix * x_arm_local
                 new_x_local = h_matrix.inverted() * rep_x_collision_vec
                 x_distance = new_x_local.distanceToPoint(local_point)
 
-            if z_arm_local.length() >= max_length:
+            if z_plus_arm_local.length() >= max_length:
                 # 最大可能距離より長い場合、縮める
-                z_arm_local *= (max_length / z_arm_local.length()) * 0.98
-                rep_z_collision_vec = arm_matrix * z_arm_local
-                new_z_local = h_matrix.inverted() * rep_z_collision_vec
-                z_distance = new_z_local.distanceToPoint(local_point)
+                z_plus_arm_local *= (max_length / z_plus_arm_local.length()) * min_ratio
+                rep_z_plus_collision_vec = arm_matrix * z_plus_arm_local
+                new_z_plus_local = h_matrix.inverted() * rep_z_plus_collision_vec
+                z_plus_distance = new_z_plus_local.distanceToPoint(local_point)
 
-            logger.debug("f: %s, localy: %s, y_theta: %s, sin_y_theta: %s, x_theta: %s, sin_x_theta: %s, z_theta: %s, sin_z_theta: %s, x_distance: %s, z_distance: %s, "\
-                            "local_point: [%s], d: %s, new_x_local: %s, new_z_local: %s, rep_x_collision_vec: %s, rep_z_collision_vec: %s", \
-                            self.fno, local_point.y() / y, y_theta, sin_y_theta, x_theta, sin_x_theta, z_theta, sin_z_theta, x_distance, z_distance, local_point.to_log(), d, \
-                            new_x_local.to_log(), new_z_local.to_log(), rep_x_collision_vec, rep_z_collision_vec)
+            if z_minus_arm_local.length() >= max_length:
+                # 最大可能距離より長い場合、縮める
+                z_minus_arm_local *= (max_length / z_minus_arm_local.length()) * min_ratio
+                rep_z_minus_collision_vec = arm_matrix * z_minus_arm_local
+                new_z_minus_local = h_matrix.inverted() * rep_z_minus_collision_vec
+                z_minus_distance = new_z_minus_local.distanceToPoint(local_point)
 
+            logger.debug("f: %s, localy: %s, y_theta: %s, sin_y_theta: %s, x_theta: %s, sin_x_theta: %s, z_plus_theta: %s, sin_z_plus_theta: %s, x_distance: %s, z_plus_distance: %s, "\
+                            "local_point: [%s], d: %s, new_x_local: %s, new_z_plus_local: %s, rep_x_collision_vec: %s, rep_z_plus_collision_vec: %s, rep_z_minus_collision_vec: %s", \
+                            self.fno, local_point.y() / y, y_theta, sin_y_theta, x_theta, sin_x_theta, z_plus_theta, sin_z_plus_theta, x_distance, z_plus_distance, local_point.to_log(), d, \
+                            new_x_local.to_log(), new_z_plus_local.to_log(), rep_x_collision_vec, rep_z_plus_collision_vec, rep_z_minus_collision_vec)
+        
         # 3方向の間に点が含まれていたら衝突あり
-        return (collision, near_collision, x_distance, z_distance, rep_x_collision_vec, rep_z_collision_vec)
+        return (collision, near_collision, x_distance, z_plus_distance, z_minus_distance, rep_x_collision_vec, rep_z_plus_collision_vec, rep_z_minus_collision_vec)
 
 
 # ジョイント構造-----------------------

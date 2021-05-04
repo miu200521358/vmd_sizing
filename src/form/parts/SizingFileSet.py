@@ -21,7 +21,7 @@ class SizingFileSet():
         self.panel = panel
         self.set_no = set_no
         self.STANCE_DETAIL_CHOICES = ["センターXZ補正", "上半身補正", "下半身補正", "足ＩＫ補正", "つま先補正", "つま先ＩＫ補正", "肩補正", "センターY補正"]
-        self.selected_stance_details = range(len(self.STANCE_DETAIL_CHOICES))
+        self.selected_stance_details = [0, 1, 2, 4, 5, 6, 7]
 
         if self.set_no == 1:
             # ファイルパネルのはそのまま追加

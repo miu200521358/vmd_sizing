@@ -4,7 +4,6 @@ import wx
 from wx.core import TreeItemId
 import wx.lib.newevent
 import sys
-import os
 
 from form.panel.BasePanel import BasePanel
 from form.parts.SizingFileSet import SizingFileSet

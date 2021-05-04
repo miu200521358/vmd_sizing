@@ -167,6 +167,10 @@ class VmdReader:
                         camera.length = self.read_float(4)
                         logger.test("camera.length %s", camera.length)
 
+                        # ０距離の場合、念のため少しだけ距離を入れておく
+                        if camera.length == 0:
+                            camera.length = -0.00001
+
                         # 位置X,Y,Z
                         camera.position = self.read_Vector3D()
                         logger.test("camera.position %s", camera.position)
@@ -314,7 +318,7 @@ class VmdReader:
             return se
         except Exception as e:
             import traceback
-            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.print_exc())
+            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc())
             raise e
 
     def hexdigest(self):
