@@ -24,7 +24,7 @@ from module.MParams import BoneLinks # noqa
 from utils import MBezierUtils, MServiceUtils # noqa
 from utils.MException import SizingException # noqa
 from utils.MLogger import MLogger # noqa
-import traceback
+
 
 logger = MLogger(__name__, level=1)
 

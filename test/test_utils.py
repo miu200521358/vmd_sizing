@@ -18,8 +18,44 @@ from module.MOptions import MOptions # noqa
 from module.MParams import BoneLinks # noqa
 from utils import MBezierUtils, MServiceUtils # noqa
 from utils.MLogger import MLogger # noqa
+import itertools
 
 logger = MLogger(__name__)
+
+
+class MServiceUtilsSeparateTest(unittest.TestCase):
+
+    def test_separate(self):
+        MLogger.initialize(level=MLogger.TEST, is_file=True)
+        logger = MLogger(__name__, level=MLogger.TEST)
+
+        # motion = VmdReader("D:\\MMD\\MikuMikuDance_v926x64\\UserFile\\Motion\\ダンス_1人\\桃源恋歌配布用motion moka\\ノーマルTda式用0-2000.vmd").read_data()
+        model = PmxReader("D:\\MMD\\MikuMikuDance_v926x64\\UserFile\\Model\\VOCALOID\\初音ミク\\Tda式初音ミク・アペンドVer1.10\\Tda式初音ミク・アペンド_Ver1.10.pmx", is_check=False).read_data()
+
+        bone_axis_dict = {}
+        for bone_name in ["左ひじ", "右ひじ"]:
+            local_x_axis = model.get_local_x_axis("左ひじ")
+            local_z_axis = MVector3D(0, 0, -1)
+            local_y_axis = MVector3D.crossProduct(local_x_axis, local_z_axis).normalized()
+            bone_axis_dict[bone_name] = {"x": local_x_axis, "y": local_y_axis, "z": local_z_axis}
+
+        new_ik_qq = MQuaternion.fromEulerAngles(24.58152072747821, 135.9182003500461, 56.36785502950723)
+        ik_bone = model.bones["左ひじ"]
+        fno = 394
+
+        x_qq, y_qq, z_qq, yz_qq = MServiceUtils.separate_local_qq(fno, ik_bone.name, new_ik_qq, bone_axis_dict[ik_bone.name]["x"])
+
+        logger.debug(f"now: {new_ik_qq.toEulerAngles()} -> {(y_qq * x_qq * z_qq).toEulerAngles()}")
+        logger.debug(f"now: x: {x_qq.toDegree()}, y: {y_qq.toDegree()}, z: {z_qq.toDegree()}")
+        
+        for (x_sign, y_sign, z_sign) in list(itertools.product((1, -1), (1, -1), (1, -1))):
+            new_x_qq = MQuaternion.fromAxisAndAngle(x_qq.vector(), x_qq.toDegree() * x_sign)
+            new_y_qq = MQuaternion.fromAxisAndAngle(y_qq.vector(), y_qq.toDegree() * y_sign)
+            new_z_qq = MQuaternion.fromAxisAndAngle(z_qq.vector(), z_qq.toDegree() * z_sign)
+
+            logger.debug(f"x: {x_sign}, y: {y_sign}, z: {z_sign} -> {(new_y_qq * new_x_qq * new_z_qq).toEulerAngles()}")
+
+        self.assertTrue(True)
 
 
 class MServiceUtilsTest(unittest.TestCase):
