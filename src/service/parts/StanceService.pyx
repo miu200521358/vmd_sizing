@@ -3925,16 +3925,26 @@ cdef class StanceService():
                     _, rep_to_qq = data_set.rep_model.calc_arm_stance(target_bone_name, to_bone_name)
 
                     if "手首" in target_bone_name and f"{direction}中指２" in data_set.org_model.bones and f"{direction}中指２" in data_set.rep_model.bones:
-                        wrist2finger1 = data_set.org_model.bones[f"{direction}手首"].position.distanceToPoint(data_set.org_model.bones[f"{direction}中指１"].position)
-                        finget12finger3 = data_set.org_model.bones[f"{direction}中指１"].position.distanceToPoint(data_set.org_model.bones[f"{direction}中指３"].position)
+                        org_wrist2finger1 = data_set.org_model.bones[f"{direction}手首"].position.distanceToPoint(data_set.org_model.bones[f"{direction}中指１"].position)
+                        org_finget12finger3 = data_set.org_model.bones[f"{direction}中指１"].position.distanceToPoint(data_set.org_model.bones[f"{direction}中指３"].position)
                         
-                        logger.debug(f"手首－指１: {wrist2finger1}")
-                        logger.debug(f"指１－指３: {finget12finger3)}")
+                        logger.debug(f"手首－指１: {org_wrist2finger1}")
+                        logger.debug(f"指１－指３: {org_finget12finger3)}")
 
-                        if wrist2finger1 > finget12finger3 * 2:
+                        rep_wrist2finger1 = data_set.rep_model.bones[f"{direction}手首"].position.distanceToPoint(data_set.rep_model.bones[f"{direction}中指１"].position)
+                        rep_finget12finger3 = data_set.rep_model.bones[f"{direction}中指１"].position.distanceToPoint(data_set.rep_model.bones[f"{direction}中指３"].position)
+                        
+                        logger.debug(f"手首－指１: {rep_wrist2finger1}")
+                        logger.debug(f"指１－指３: {rep_finget12finger3)}")
+
+                        if org_wrist2finger1 > org_finget12finger3 * 2 or rep_wrist2finger1 > rep_finget12finger3 * 2:
                             # ISAO式ミクの場合、手首と中指が分断されてるので、表示先をベースに調整する
                             if direction == "左":
-                                logger.warning(f"手首から中指付け根までの長さが、中指の長さx2の長さより長いため、手首の表示先で傾きを調整します。【No.{(data_set_idx + 1)}】")
+                                if org_wrist2finger1 > org_finget12finger3 * 2:
+                                    logger.warning(f"作成元モデルの、手首から中指付け根までの長さ({round(org_wrist2finger1, 4)})が中指の長さx2の長さ({round(org_finget12finger3 * 2, 4)})より長いため、手首の表示先で傾きを調整します。【No.{(data_set_idx + 1)}】")
+
+                                if rep_wrist2finger1 > rep_finget12finger3 * 2:
+                                    logger.warning(f"変換先モデルの、手首から中指付け根までの長さ({round(rep_wrist2finger1, 4)})が中指の長さx2の長さ({round(rep_finget12finger3 * 2, 4)})より長いため、手首の表示先で傾きを調整します。【No.{(data_set_idx + 1)}】")
 
                             # TARGET-TOの傾き
                             _, org_to_qq = data_set.org_model.calc_arm_stance(target_bone_name, None)
