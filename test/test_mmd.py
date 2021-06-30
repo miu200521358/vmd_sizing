@@ -29,6 +29,199 @@ from utils.MLogger import MLogger # noqa
 logger = MLogger(__name__, level=1)
 
 
+
+class LegIkTest(unittest.TestCase):
+
+    def test_leg_fk(self):
+        MLogger.initialize(level=MLogger.DEBUG, is_file=True)
+        logger = MLogger(__name__, level=MLogger.DEBUG)
+
+        pmx_path = "D:\\MMD\\MikuMikuDance_v926x64\\UserFile\\Model\\初音ミクVer2 準標準.pmx"
+        reader = PmxReader(pmx_path, is_check=False)
+        model = reader.read_data()
+
+        # for test_fno in ["0000", "0010", "0063", "0101", "0145", "0747"]:
+        for test_fno in ["0747"]:
+            # reader = VmdReader(f"D:\\MMD\\MikuMikuDance_v926x64\\UserFile\\Motion\\ダンス_1人\\バレリーコ 553\\ミク用バレリーコ_4870-_さとく式鶯丸ver0.90_S_20210605_084703_{test_fno}.vmd")
+            reader = VmdReader("D:\\MMD\\MikuMikuDance_v926x64\\UserFile\\Motion\\ダンス_1人\\バレリーコ 553\\ミク用バレリーコ_4870-_さとく式鶯丸ver0.90_S_20210605_084703.vmd")
+            motion = reader.read_data()
+
+            for direction in ["右", "左"]:
+                leg_fk_bone_name = f'{direction}足'
+                leg_twist_fk_bone_name = f'{direction}足捩り実体'
+                leg_ik_bone_name = "{0}足ＩＫ".format(direction)
+                knee_bone_name = "{0}ひざ".format(direction)
+                ankle_bone_name = "{0}足首".format(direction)
+                leg_fk_links = model.create_link_2_top_one(ankle_bone_name, is_defined=False)
+                leg_ik_links = model.create_link_2_top_one(leg_ik_bone_name, is_defined=False)
+
+                # デフォルト姿勢での足ボーンから見た足IKのローカル座標
+                _, leg_initial_fk_matrixs = MServiceUtils.calc_global_pos(model, leg_fk_links, VmdMotion(), 9, return_matrix=True)
+                leg_initial_ik_local_pos = leg_initial_fk_matrixs[leg_fk_bone_name].inverted() * model.bones[leg_ik_bone_name].position
+                leg_length = leg_initial_ik_local_pos.length()
+
+                # 足IKの高さ
+                leg_ik_height = model.bones[leg_ik_bone_name].position.y()
+                logger.warning(f"{direction}足: leg_length: {round(leg_length, 4)}, leg_ik_height: {round(leg_ik_height, 4)}")
+
+                # # IK計算用FKボーン(事前Y用) ----------
+                # leg_y_fk2ik_links = BoneLinks()
+                
+                # # 足首
+                # leg_y_fk2ik_links.append(leg_fk_links.to_links(leg_fk_bone_name).get(ankle_bone_name))
+
+                # # ひざ
+                # knee_y_fk_bone = leg_fk_links.to_links(leg_fk_bone_name).get(knee_bone_name).copy()
+                # knee_y_fk_bone.ik_limit_min = MVector3D(0, -180, 0)
+                # knee_y_fk_bone.ik_limit_max = MVector3D(0, 10, 0)
+                # leg_y_fk2ik_links.append(knee_y_fk_bone)
+
+                # # 足
+                # leg_y_fk_bone = leg_fk_links.to_links(leg_fk_bone_name).get(leg_fk_bone_name).copy()
+                # leg_y_fk_bone.ik_limit_min = MVector3D(0, -30, 0)
+                # leg_y_fk_bone.ik_limit_max = MVector3D(0, 180, 0)
+                # leg_y_fk2ik_links.append(leg_y_fk_bone)
+
+                leg_fk_local_z_axis = MVector3D(0, 0, -1)
+                leg_fk_local_x_axis = model.get_local_x_axis(leg_fk_bone_name)
+                leg_fk_local_y_axis = MVector3D.crossProduct(leg_fk_local_x_axis, leg_fk_local_z_axis)
+                logger.warning(f"{direction}足: x_axis: {leg_fk_local_x_axis.to_log()}, y_axis: {leg_fk_local_y_axis.to_log()}")
+
+                # IK計算用FKボーン(足全体用) ----------
+                leg_fk2ik_links = BoneLinks()
+                
+                # 足首
+                leg_fk2ik_links.append(leg_fk_links.to_links(leg_fk_bone_name).get(ankle_bone_name))
+
+                # ひざ
+                knee_fk_bone = leg_fk_links.to_links(leg_fk_bone_name).get(knee_bone_name).copy()
+                knee_fk_bone.ik_limit_min = MVector3D(0, -180, 0)
+                knee_fk_bone.ik_limit_max = MVector3D(0, 10, 0)
+                leg_fk2ik_links.append(knee_fk_bone)
+
+                # 足捩り
+                leg_twist_bone_pos = model.bones[leg_fk_bone_name].position + ((model.bones[knee_bone_name].position - model.bones[leg_fk_bone_name].position) / 2)
+                leg_twist_fk_bone = Bone(leg_twist_fk_bone_name, "", leg_twist_bone_pos, -1, 0, 0)
+                leg_twist_fk_bone.fixed_axis = leg_fk_local_x_axis
+                leg_fk2ik_links.append(leg_twist_fk_bone)
+
+                # FKリンクにも挿入する
+                leg_fk_links.insert(leg_twist_fk_bone, leg_fk_bone_name)
+
+                # 足
+                leg_fk_bone = leg_fk_links.to_links(leg_fk_bone_name).get(leg_fk_bone_name).copy()
+                # leg_fk_bone.ik_limit_min = MVector3D(-180, -30, -180)
+                # leg_fk_bone.ik_limit_max = MVector3D(180, 180, 180)
+                leg_fk2ik_links.append(leg_fk_bone)
+
+                # knee_local_z_axis = MVector3D(0, 0, -1)
+                # knee_local_x_axis = model.get_local_x_axis(knee_bone_name)
+                # knee_local_y_axis = MVector3D.crossProduct(knee_local_x_axis, knee_local_z_axis)
+
+                # leg_fk_local_x_axis = model.get_local_x_axis(leg_fk_bone_name)
+                
+                for fno in motion.get_differ_fnos(0, [leg_fk_bone_name, leg_ik_bone_name], limit_degrees=30, limit_length=1):
+                    leg_ik_bf = motion.calc_bf(leg_ik_bone_name, fno)
+                    leg_fk_bf = motion.calc_bf(leg_fk_bone_name, fno).copy()
+                    knee_bf = motion.calc_bf(knee_bone_name, fno).copy()
+                    leg_fk_initial_global_3ds, leg_fk_initial_matrixs = MServiceUtils.calc_global_pos(model, leg_fk_links, motion, fno, \
+                        limit_links=leg_fk_links.from_links(leg_fk_links.get(leg_fk_bone_name, offset=-1).name), return_matrix=True)
+                    leg_fk_global_3ds, leg_fk_matrixs = MServiceUtils.calc_global_pos(model, leg_fk_links, motion, fno, return_matrix=True)
+
+                    leg_ik_global_3ds = MServiceUtils.calc_global_pos(model, leg_ik_links, motion, fno)
+                    leg_ik_global_pos = leg_ik_global_3ds[leg_ik_bone_name]
+
+                    # # 初期足FKから見た、初期ひざのローカル座標
+                    # knee_from_leg_local_pos = leg_fk_initial_matrixs["下半身"].inverted() * leg_fk_initial_global_3ds[leg_fk_bone_name]
+                    # 足FKから見た、足IKのローカル座標
+                    leg_ik_from_leg_local_pos = leg_fk_matrixs[leg_fk_bone_name].inverted() * leg_ik_global_pos
+                    # 足首FKから見た、足IKのローカル座標
+                    leg_ik_from_ankle_local_pos = leg_fk_matrixs[ankle_bone_name].inverted() * leg_ik_global_pos
+
+                    # 足首FKから見て、足IKが乖離している場合、補正対象とする
+                    # Yはマイナス（ローカルから見てプラス）の場合は接地して問題ない事が多いので、対象外とする。代わりに足IKのグローバルYが浮いてたら対象
+                    # 足FKにかなり近い場合、対象外としておく(しゃがみとか)
+                    if (abs(leg_ik_from_ankle_local_pos.x()) > leg_ik_height or abs(leg_ik_from_ankle_local_pos.z()) > leg_ik_height or leg_ik_bf.position.y() > leg_ik_height / 2) \
+                            and leg_ik_from_leg_local_pos.length() > leg_ik_height * 2:
+                        logger.warning(f"○{fno}, {direction}足: 足首から{leg_ik_from_ankle_local_pos.to_log()}, 足から{leg_ik_from_leg_local_pos.to_log()} ({leg_ik_global_pos.to_log()})")
+                            
+                        # # 足FKの捩り成分を制限する
+                        # # leg_fk_x_degree = min(90, max(0, leg_fk_x_qq.toDegreeSign(leg_fk_local_x_axis)))
+                        # leg_fk_x_degree = 180
+                        # new_leg_fk_x_qq = MQuaternion.fromAxisAndAngle(leg_fk_x_qq.vector(), leg_fk_x_degree)
+
+                        # copy_leg_fk_bf = leg_fk_bf.copy()
+                        # copy_leg_fk_bf.rotation = MQuaternion()
+                        # motion.regist_bf(copy_leg_fk_bf, leg_fk_bone_name, fno)
+
+                        # copy_knee_bf = knee_bf.copy()
+                        # copy_knee_bf.rotation = MQuaternion()
+                        # motion.regist_bf(copy_knee_bf, knee_bone_name, fno)
+
+                        # logger.warning(f"　{fno}, {direction}足捩り: axis: {leg_fk_local_x_axis.to_log()}, x: {round(leg_fk_x_qq.toDegreeSign(leg_fk_local_x_axis), 2)} -> {round(new_leg_fk_x_qq.toDegreeSign(leg_fk_local_x_axis), 2)}")
+
+                        # before_leg_fk_x_qq, _, _, _ = MServiceUtils.separate_local_qq(fno, leg_fk_bone_name, leg_fk_bf.rotation, leg_fk_local_x_axis)
+
+                        # IK計算実行
+                        MServiceUtils.calc_IK(model, leg_fk_links, motion, fno, leg_ik_global_pos, leg_fk2ik_links, max_count=20)
+                        
+                        # IK計算後のFK角度に捩り分を加算する
+                        leg_twist_after_fk_bf = motion.calc_bf(leg_twist_fk_bone_name, fno)
+                        leg_fk_after_bf = motion.calc_bf(leg_fk_bone_name, fno)
+                        leg_fk_after_bf.rotation *= leg_twist_after_fk_bf.rotation
+                        motion.regist_bf(leg_fk_after_bf, leg_fk_bone_name, fno)
+                        logger.warning(f"　{fno}, {direction}足: leg_twist_after_fk_bf: {leg_twist_after_fk_bf.rotation.data()}, ({round(leg_twist_after_fk_bf.rotation.toDegreeSign(leg_fk_local_x_axis), 2)})")
+
+                        # # _, after_leg_fk_y_qq, after_leg_fk_z_qq, _ = MServiceUtils.separate_local_qq(fno, leg_fk_bone_name, leg_fk_after_bf.rotation, leg_fk_local_x_axis)
+
+                        # # before_leg_fk_x_degree = before_leg_fk_x_qq.toDegreeSign(leg_fk_local_x_axis)
+                        # # after_leg_fk_x_degree = max(-45, min(45, before_leg_fk_x_degree))
+
+                        # # # Xの捩りを元に戻す
+                        # # leg_fk_after_bf.rotation *= MQuaternion.fromAxisAndAngle(leg_fk_local_x_axis, after_leg_fk_x_degree)
+                        # # motion.regist_bf(leg_fk_after_bf, leg_fk_bone_name, fno)
+                        # # logger.warning(f"　{fno}, {direction}足: before_leg_fk_x_qq: {before_leg_fk_x_qq.data()}, ({round(before_leg_fk_x_degree, 2)} -> {round(after_leg_fk_x_degree, 2)})")
+
+                        # # IK計算実行(Yが決まった後に全体)
+                        # MServiceUtils.calc_IK(model, leg_fk_links, motion, fno, leg_ik_global_pos, leg_fk2ik_links, max_count=20)
+                        
+                        # # IK計算後のFK角度
+                        # leg_fk_after_bf = motion.calc_bf(leg_fk_bone_name, fno)
+                        # leg_fk_after_x_qq, leg_fk_after_y_qq, leg_fk_after_z_qq, leg_fk_after_yz_qq = MServiceUtils.separate_local_qq(fno, leg_fk_bone_name, leg_fk_after_bf.rotation, leg_fk_local_x_axis)
+
+                        # # IK計算後のFK角度
+                        # knee_after_bf = motion.calc_bf(knee_bone_name, fno)
+                        # knee_x_qq, knee_y_qq, knee_z_qq, knee_yz_qq = MServiceUtils.separate_local_qq(fno, knee_bone_name, knee_bf.rotation, knee_local_x_axis)
+                        # knee_after_x_qq, knee_after_y_qq, knee_after_z_qq, knee_after_yz_qq = MServiceUtils.separate_local_qq(fno, knee_bone_name, knee_after_bf.rotation, knee_local_x_axis)
+
+                        # # # IK計算後の足FKの捩り成分を制限する
+                        # # new_leg_fk_x_degree = min(20, max(-45, leg_fk_after_x_qq.toDegreeSign(leg_fk_local_x_axis)))
+                        # # new_leg_fk_x_qq = MQuaternion.fromAxisAndAngle(leg_fk_after_x_qq.vector(), new_leg_fk_x_degree)
+                        # # logger.warning(f"　{fno}, {direction}足捩り: x: {round(leg_fk_after_x_qq.toDegreeSign(leg_fk_local_x_axis), 2)} -> {round(new_leg_fk_x_degree, 2)}")
+
+                        # # # Zの捩りはIK計算後のものを採用する
+                        # # leg_fk_after_bf.rotation = leg_fk_after_y_qq * leg_fk_after_x_qq * leg_fk_after_z_qq
+
+                        # # 足FKのbf
+                        # logger.warning(f"　{fno}, {direction}足: x: {round(leg_fk_x_qq.toDegreeSign(leg_fk_local_x_axis), 2)}, y: {round(leg_fk_y_qq.toDegreeSign(leg_fk_local_y_axis), 2)}, z: {round(leg_fk_z_qq.toDegreeSign(leg_fk_local_z_axis), 2)} →　x: {round(leg_fk_after_x_qq.toDegreeSign(leg_fk_local_x_axis), 2)}, y: {round(leg_fk_after_y_qq.toDegreeSign(leg_fk_local_y_axis), 2)}, z: {round(leg_fk_after_z_qq.toDegreeSign(leg_fk_local_z_axis), 2)}")
+                        # logger.warning(f"　{fno}, {direction}ひざ: x: {round(knee_x_qq.toDegreeSign(knee_local_x_axis), 2)}, y: {round(knee_y_qq.toDegreeSign(knee_local_y_axis), 2)}, z: {round(knee_z_qq.toDegreeSign(knee_local_z_axis), 2)} →　x: {round(knee_after_x_qq.toDegreeSign(knee_local_x_axis), 2)}, y: {round(knee_after_y_qq.toDegreeSign(knee_local_y_axis), 2)}, z: {round(knee_after_z_qq.toDegreeSign(knee_local_z_axis), 2)}")
+                    else:
+                        logger.warning(f"－{fno}, {direction}足: 足首から{leg_ik_from_ankle_local_pos.to_log()}({round(leg_ik_from_ankle_local_pos.length(), 4)}), 足から{leg_ik_from_leg_local_pos.to_log()}({round(leg_ik_from_leg_local_pos.length(), 4)})")
+
+                # # 後で削除しておく
+                # del motion.bones[leg_twist_fk_bone_name]
+
+            new_file_path = reader.file_path.replace(".vmd", f"_FK_{datetime.now():%Y%m%d_%H%M%S}.vmd")
+
+            data_set = MOptionsDataSet(motion, model, model, new_file_path)
+            writer = VmdWriter(data_set)
+            writer.write()
+
+            self.assertTrue(True)
+
+        logger.warning(f"出力終了: {new_file_path}")
+
+
 class CameraLengthTest(unittest.TestCase):
 
     def test_camera_length(self):

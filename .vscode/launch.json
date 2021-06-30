@@ -1,6 +1,7 @@
 {
     "version": "0.2.0",
     "configurations": [
+
         {
             "name": "exec_sizing",
             "type": "python",
@@ -231,6 +232,20 @@
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/../motion_supporter/src/executor.py",
+            "console": "integratedTerminal",
+            "python": "${command:python.interpreterPath}",
+            "stopOnEntry": false,
+            "args": [
+                "--verbose", "1",
+                "--out_log", "1",
+            ]
+        },
+        {
+            "name": "exec_vrm2pmx",
+            "type": "python",
+            "request": "launch",
+            "program": "src/executor.py",
+            "cwd": "${workspaceFolder}/../vrm2pmx/",
             "console": "integratedTerminal",
             "python": "${command:python.interpreterPath}",
             "stopOnEntry": false,
