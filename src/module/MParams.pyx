@@ -31,6 +31,19 @@ cdef class BoneLinks:
     def append(self, bone):
         self.__links[bone.name] = bone.copy()
     
+    # リンクに挿入
+    def insert(self, bone, prev_bone_name):
+        new_links = {}
+        for lidx, lkey in enumerate(self.__links.keys()):
+            new_links[lkey] = self.__links[lkey].copy()
+
+            if lkey == prev_bone_name:
+                # 直前ボーンが見つかったら、その後に挿入する
+                new_links[bone.name] = bone.copy()
+        
+        # 終わったら置き換える
+        self.__links = new_links
+    
     # リンクの反転
     def reversed(self):
         return reversed(self.__links)

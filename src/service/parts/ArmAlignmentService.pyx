@@ -807,7 +807,13 @@ cdef class ArmAlignmentService:
                         if is_avoidance_arm_x:
                             # 腕X回避済みのため、除去
                             ik_links = ik_links.remove_links(["{0}腕".format(ik_links.first_name()[0]), "{0}腕捩".format(ik_links.first_name()[0])])
+                        else:
+                            elbow_bone_name = "{0}ひじ".format(ik_links.first_name()[0])
 
+                            # ひじの角度が浅い場合、ひじ対象外とする
+                            if elbow_bone_name in org_bfs and org_bfs[elbow_bone_name].org_rotation.toDegree() < 30:
+                                ik_links = ik_links.remove_links([elbow_bone_name])
+                            
                         for now_ik_max_count in range(1):
                             now_ik_links = ik_links     # .from_links(target_bone_names[-1])
                             # if ik_cnt > 0:
@@ -1139,12 +1145,12 @@ cdef class ArmAlignmentService:
                         now_ik_links = target_link.tip_ik_links
 
                         # IK処理実行
-                        for now_ik_max_count in range(1, 10):
+                        for now_ik_max_count in range(1):
                             logger.debug("先端IK計算開始(%s): f: %s(%s:%s), 現在[%s], 指定[%s]", now_ik_max_count, fno, (data_set_idx + 1), \
                                          list(now_ik_links.all().keys()), rep_global_tip.to_log(), rep_target_global_tip.to_log())
                             
                             # IK計算実行
-                            MServiceUtils.c_calc_IK(data_set.rep_model, target_link.rep_links, data_set.motion, fno, rep_target_global_tip, now_ik_links, max_count=1)
+                            MServiceUtils.c_calc_IK(data_set.rep_model, target_link.rep_links, data_set.motion, fno, rep_target_global_tip, now_ik_links, max_count=10)
 
                             # 現在のエフェクタ位置
                             aligned_rep_global_3ds, _ = MServiceUtils.c_calc_global_pos(data_set.rep_model, target_link.rep_links, data_set.motion, fno, return_matrix=False, is_local_x=False, limit_links=None)

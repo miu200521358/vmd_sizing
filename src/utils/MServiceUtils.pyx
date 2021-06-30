@@ -14,7 +14,7 @@ from module.MOptions import MOptionsDataSet # noqa
 from utils import MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
 
-logger = MLogger(__name__, level=1)
+logger = MLogger(__name__, level=MLogger.DEBUG)
 
 
 # IK計算
@@ -27,11 +27,17 @@ cdef c_calc_IK(PmxModel model, BoneLinks links, VmdMotion motion, int fno, MVect
     cdef list bone_name_list = list(ik_links.all().keys())[1:]
     cdef str bone_name
     cdef VmdBoneFrame bf
+    cdef dict bone_axis_dict = {}
 
     for bone_name in bone_name_list:
         # bfをモーションに登録
         bf = motion.c_calc_bf(bone_name, fno, is_key=False, is_read=False, is_reset_interpolation=False)
         motion.regist_bf(bf, bone_name, fno)
+        # 軸
+        local_x_axis = model.get_local_x_axis(bone_name)
+        local_z_axis = MVector3D(0, 0, -1)
+        local_y_axis = MVector3D.crossProduct(local_x_axis, local_z_axis).normalized()
+        bone_axis_dict[bone_name] = {"x": local_x_axis, "y": local_y_axis, "z": local_z_axis}
     
     cdef MVector3D local_effector_pos
     cdef MVector3D local_target_pos
@@ -57,7 +63,7 @@ cdef c_calc_IK(PmxModel model, BoneLinks links, VmdMotion motion, int fno, MVect
     cdef MQuaternion correct_qq
     cdef MQuaternion new_ik_qq
     cdef MQuaternion x_qq, y_qq, z_qq, yz_qq
-    cdef double euler_x, euler_y, euler_z
+    cdef double x_degree, y_degree, z_degree, new_x_degree, new_y_degree, new_z_degree, elbow_degree, new_elbow_degree
 
     for cnt in range(max_count):
         # 規定回数ループ
@@ -117,19 +123,32 @@ cdef c_calc_IK(PmxModel model, BoneLinks links, VmdMotion motion, int fno, MVect
 
                 # IK軸制限がある場合、上限下限をチェック
                 if ik_bone.ik_limit_min != MVector3D() and ik_bone.ik_limit_max != MVector3D():
-                    x_qq, y_qq, z_qq, yz_qq = separate_local_qq(fno, ik_bone.name, new_ik_qq, model.get_local_x_axis(ik_bone.name))
+                    x_qq, y_qq, z_qq, yz_qq = separate_local_qq(fno, ik_bone.name, new_ik_qq, bone_axis_dict[ik_bone.name]["x"])
 
-                    logger.test("new_ik_qq: %s, x_qq: %s, y_qq: %s, z_qq: %s", new_ik_qq.toEulerAngles(), x_qq.toEulerAngles(), y_qq.toEulerAngles(), z_qq.toEulerAngles())
-                    logger.test("new_ik_qq: %s, x_qq: %s, y_qq: %s, z_qq: %s", new_ik_qq.toDegree(), x_qq.toDegree(), y_qq.toDegree(), z_qq.toDegree())
+                    # logger.debug("new_ik_qq: %s, x_qq: %s, y_qq: %s, z_qq: %s", new_ik_qq.toEulerAngles(), x_qq.toEulerAngles(), y_qq.toEulerAngles(), z_qq.toEulerAngles())
 
-                    euler_x = min(ik_bone.ik_limit_max.x(), max(ik_bone.ik_limit_min.x(), x_qq.toDegree()))
-                    euler_y = min(ik_bone.ik_limit_max.y(), max(ik_bone.ik_limit_min.y(), y_qq.toDegree()))
-                    euler_z = min(ik_bone.ik_limit_max.z(), max(ik_bone.ik_limit_min.z(), z_qq.toDegree()))
+                    x_degree = x_qq.toDegree()
+                    y_degree = y_qq.toDegree()
+                    z_degree = z_qq.toDegree()
 
-                    logger.test("limit_qq: %s -> %s", new_ik_qq.toEulerAngles(), MQuaternion.fromEulerAngles(euler_x, euler_y, euler_z).toEulerAngles())
+                    logger.debug("new_ik_qq: %s, x_qq: %s, y_qq: %s, z_qq: %s", new_ik_qq.toEulerAngles4MMD(), x_degree, y_degree, z_degree)
 
-                    new_ik_qq = MQuaternion.fromEulerAngles(euler_x, euler_y, euler_z)
+                    new_x_degree = min(ik_bone.ik_limit_max.x(), max(ik_bone.ik_limit_min.x(), x_degree))
+                    new_y_degree = min(ik_bone.ik_limit_max.y(), max(ik_bone.ik_limit_min.y(), y_degree))
+                    new_z_degree = min(ik_bone.ik_limit_max.z(), max(ik_bone.ik_limit_min.z(), z_degree))
 
+                    x_qq = MQuaternion.fromAxisAndAngle(x_qq.vector(), new_x_degree)
+                    y_qq = MQuaternion.fromAxisAndAngle(y_qq.vector(), new_y_degree)
+                    z_qq = MQuaternion.fromAxisAndAngle(z_qq.vector(), new_z_degree)
+
+                    new_ik_qq = y_qq * x_qq * z_qq
+
+                    logger.debug(f"yxz: {(y_qq * z_qq * x_qq).toEulerAngles4MMD()}")
+
+                    diff = "○" if (x_degree != new_x_degree or y_degree != new_y_degree or z_degree != new_z_degree) else "－"
+                    logger.debug(f"limit_degree: {diff}: {x_degree}, {y_degree}, {z_degree} -> {new_x_degree}, {new_y_degree}, {new_z_degree}")
+                    logger.debug(f"limit_qq: {new_ik_qq.toEulerAngles4MMD()}")
+                
                 bf.rotation = new_ik_qq
 
         # 位置の差がほとんどない場合、終了

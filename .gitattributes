@@ -2,4 +2,4 @@
 *.bat    text eol=crlf
 *.csv    text eol=crlf
 *.txt    text eol=crlf
-*.spec   text encoding=shift-jis eol=crlf
+*.spec   text eol=crlf

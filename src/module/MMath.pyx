@@ -1065,6 +1065,16 @@ cdef class MQuaternion:
     cpdef double toDegree(self):
         return degrees(2 * acos(min(1, max(-1, self.scalar()))))
 
+    # 軸による符号付き角度に変換
+    cpdef double toDegreeSign(self, MVector3D local_axis):
+        cdef double deg =  self.toDegree() * np.sign(MVector3D.dotProduct(self.vector(), local_axis)) * np.sign(self.scalar())
+
+        if abs(deg) > 180:
+            # 180度を超してる場合、フリップなので、除去
+            return (abs(deg) - 180) * np.sign(deg)
+            
+        return deg
+
     # 自分ともうひとつの値vとのtheta（変位量）を返す
     cpdef double calcTheata(self, MQuaternion v):
         return (1 - MQuaternion.dotProduct(self.normalized(), v.normalized()))

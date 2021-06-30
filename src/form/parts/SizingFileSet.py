@@ -145,6 +145,7 @@ class SizingFileSet():
         not_org_morphs = []
         not_rep_bones = []
         not_rep_morphs = []
+        mismatch_bones = []
 
         motion = self.motion_vmd_file_ctrl.data
         org_pmx = self.org_model_file_ctrl.data
@@ -174,6 +175,25 @@ class SizingFileSet():
                     if k not in rep_pmx.bones:
                         not_rep_bones.append(k)
                     
+                    if k in org_pmx.bones and k in rep_pmx.bones:
+                        mismatch_types = []
+                        # 両方にボーンがある場合、フラグが同じであるかチェック
+                        if org_pmx.bones[k].getRotatable() != rep_pmx.bones[k].getRotatable():
+                            mismatch_types.append("性能:回転")
+                        if org_pmx.bones[k].getTranslatable() != rep_pmx.bones[k].getTranslatable():
+                            mismatch_types.append("性能:移動")
+                        if org_pmx.bones[k].getIkFlag() != rep_pmx.bones[k].getIkFlag():
+                            mismatch_types.append("性能:IK")
+                        if org_pmx.bones[k].getVisibleFlag() != rep_pmx.bones[k].getVisibleFlag():
+                            mismatch_types.append("性能:表示")
+                        if org_pmx.bones[k].getManipulatable() != rep_pmx.bones[k].getManipulatable():
+                            mismatch_types.append("性能:操作")
+                        if org_pmx.bones[k].display != rep_pmx.bones[k].display:
+                            mismatch_types.append("表示枠")
+
+                        if len(mismatch_types) > 0:
+                            mismatch_bones.append(f"{k} 　【差異】{', '.join(mismatch_types)}）")
+                    
                     # 1件あればOK
                     break
 
@@ -200,6 +220,11 @@ class SizingFileSet():
         if len(not_rep_bones) > 0 or len(not_rep_morphs) > 0:
             logger.warning("%s%sに、モーションで使用されているボーン・モーフが不足しています。\nモデル: %s\n不足ボーン: %s\n不足モーフ: %s", \
                            display_set_no, self.rep_model_file_ctrl.title, rep_pmx.name, ",".join(not_rep_bones), ",".join(not_rep_morphs), decoration=MLogger.DECORATION_BOX)
+            is_warning = True
+
+        if len(mismatch_bones) > 0:
+            logger.warning("%s%sで、モーションで使用されているボーンの性能等が異なっています。\nモデル: %s\n差異ボーン:\n　%s", \
+                           display_set_no, self.rep_model_file_ctrl.title, rep_pmx.name, "\n　".join(mismatch_bones), decoration=MLogger.DECORATION_BOX)
             is_warning = True
 
         if not is_warning:

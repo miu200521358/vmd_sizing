@@ -230,7 +230,7 @@ cdef class StanceService():
                 elbow_local_z2y_axis = elbow_y2z_qq * elbow_local_y_axis
 
                 # 腕のスタンス差
-                arm_diff_qq_dic = self.calc_arm_stance(data_set)
+                arm_diff_qq_dic = self.calc_arm_stance(data_set, data_set_idx)
                 elbow_stance_degree = (arm_diff_qq_dic[elbow_bone_name]["from"].inverted() * arm_diff_qq_dic[elbow_bone_name]["to"]).toDegree()
                 logger.debug("%s: elbow_stance_degree: %s, from: %s, to: %s", elbow_bone_name, elbow_stance_degree, arm_diff_qq_dic[elbow_bone_name]["from"].toDegree(), arm_diff_qq_dic[elbow_bone_name]["to"].toDegree())
 
@@ -3792,7 +3792,7 @@ cdef class StanceService():
         logger.info("腕スタンス補正　【No.%s】", (data_set_idx + 1), decoration=MLogger.DECORATION_LINE)
         
         # 腕のスタンス差
-        arm_diff_qq_dic = self.calc_arm_stance(data_set)
+        arm_diff_qq_dic = self.calc_arm_stance(data_set, data_set_idx)
 
         futures = []
         with ThreadPoolExecutor(thread_name_prefix="arm{0}".format(data_set_idx), max_workers=self.options.max_workers) as executor:
@@ -3888,7 +3888,7 @@ cdef class StanceService():
             raise e
         
     # 腕スタンス補正用傾き計算
-    cdef dict calc_arm_stance(self, MOptionsDataSet data_set):
+    cdef dict calc_arm_stance(self, MOptionsDataSet data_set, int data_set_idx):
         cdef dict arm_diff_qq_dic = {}
         cdef str from_bone_name, target_bone_name, to_bone_name
         cdef list bone_names
@@ -3923,6 +3923,32 @@ cdef class StanceService():
                     # TARGET-TOの傾き
                     _, org_to_qq = data_set.org_model.calc_arm_stance(target_bone_name, to_bone_name)
                     _, rep_to_qq = data_set.rep_model.calc_arm_stance(target_bone_name, to_bone_name)
+
+                    if "手首" in target_bone_name and f"{direction}中指２" in data_set.org_model.bones and f"{direction}中指２" in data_set.rep_model.bones:
+                        org_wrist2finger1 = data_set.org_model.bones[f"{direction}手首"].position.distanceToPoint(data_set.org_model.bones[f"{direction}中指１"].position)
+                        org_finget12finger3 = data_set.org_model.bones[f"{direction}中指１"].position.distanceToPoint(data_set.org_model.bones[f"{direction}中指３"].position)
+                        
+                        logger.debug(f"手首－指１: {org_wrist2finger1}")
+                        logger.debug(f"指１－指３: {org_finget12finger3)}")
+
+                        rep_wrist2finger1 = data_set.rep_model.bones[f"{direction}手首"].position.distanceToPoint(data_set.rep_model.bones[f"{direction}中指１"].position)
+                        rep_finget12finger3 = data_set.rep_model.bones[f"{direction}中指１"].position.distanceToPoint(data_set.rep_model.bones[f"{direction}中指３"].position)
+                        
+                        logger.debug(f"手首－指１: {rep_wrist2finger1}")
+                        logger.debug(f"指１－指３: {rep_finget12finger3)}")
+
+                        if org_wrist2finger1 > org_finget12finger3 * 2 or rep_wrist2finger1 > rep_finget12finger3 * 2:
+                            # ISAO式ミクの場合、手首と中指が分断されてるので、表示先をベースに調整する
+                            if direction == "左":
+                                if org_wrist2finger1 > org_finget12finger3 * 2:
+                                    logger.warning(f"作成元モデルの、手首から中指付け根までの長さ({round(org_wrist2finger1, 4)})が中指の長さx2の長さ({round(org_finget12finger3 * 2, 4)})より長いため、手首の表示先で傾きを調整します。【No.{(data_set_idx + 1)}】")
+
+                                if rep_wrist2finger1 > rep_finget12finger3 * 2:
+                                    logger.warning(f"変換先モデルの、手首から中指付け根までの長さ({round(rep_wrist2finger1, 4)})が中指の長さx2の長さ({round(rep_finget12finger3 * 2, 4)})より長いため、手首の表示先で傾きを調整します。【No.{(data_set_idx + 1)}】")
+
+                            # TARGET-TOの傾き
+                            _, org_to_qq = data_set.org_model.calc_arm_stance(target_bone_name, None)
+                            _, rep_to_qq = data_set.rep_model.calc_arm_stance(target_bone_name, None)
 
                     arm_diff_qq_dic[target_bone_name]["to"] = rep_to_qq.inverted() * org_to_qq
         
