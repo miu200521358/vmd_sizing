@@ -29,11 +29,18 @@ class CameraPanel(BasePanel):
         self.static_line01 = wx.StaticLine(self.header_panel, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
         self.header_sizer.Add(self.static_line01, 0, wx.EXPAND | wx.ALL, 5)
 
+        camera_only_flg_spacer_ctrl = wx.StaticText(self.header_panel, wx.ID_ANY, u"　　　　　　　　　　　　　　　　　　　　　", wx.DefaultPosition, wx.DefaultSize, 0)
+
+        # カメラサイジングのみ実行
+        self.camera_only_flg_ctrl = wx.CheckBox(self.header_panel, wx.ID_ANY, u"カメラサイジングのみ実行", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.camera_only_flg_ctrl.SetToolTip(u"ボーンサイジング済みファイルを出力ファイルに指定した上でチェックを入れると、\nそのサイジング済みVMDを元にカメラサイジングを実行します。")
+        self.camera_only_flg_ctrl.Bind(wx.EVT_CHECKBOX, self.set_output_vmd_path)
+
         # カメラVMDファイルコントロール
         self.camera_vmd_file_ctrl = HistoryFilePickerCtrl(self.frame, self.header_panel, u"カメラモーションVMD", u"カメラモーションVMDファイルを開く", ("vmd"), wx.FLP_DEFAULT_STYLE, \
                                                           u"調整したいカメラモーションのVMDパスを指定してください。\nD&Dでの指定、開くボタンからの指定、履歴からの選択ができます。", \
-                                                          file_model_spacer=0, title_parts_ctrl=None, title_parts2_ctrl=None, file_histories_key="camera_vmd", is_change_output=True, \
-                                                          is_aster=False, is_save=False, set_no=1)
+                                                          file_model_spacer=0, title_parts_ctrl=camera_only_flg_spacer_ctrl, title_parts2_ctrl=self.camera_only_flg_ctrl, file_histories_key="camera_vmd", \
+                                                          is_change_output=True, is_aster=False, is_save=False, set_no=1)
         self.header_sizer.Add(self.camera_vmd_file_ctrl.sizer, 1, wx.EXPAND, 0)
 
         # 出力先VMDファイルコントロール

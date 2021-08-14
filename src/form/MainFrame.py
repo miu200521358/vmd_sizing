@@ -240,6 +240,22 @@ class MainFrame(wx.Frame):
         # multiはあるだけ調べる
         for file_set in self.multi_panel_ctrl.file_set_list:
             result = file_set.is_loaded_valid() and result
+        
+        # カメラサイジングのみチェックが入ってる場合、カメラファイルパスとサイジング済みデータがある事を確認する
+        if self.camera_panel_ctrl.camera_only_flg_ctrl.GetValue():
+            if not self.camera_panel_ctrl.camera_vmd_file_ctrl.data:
+                logger.error("カメラサイジングのみ実行する場合、\nカメラVMDデータを指定してください", decoration=MLogger.DECORATION_BOX)
+                result = False
+            
+            logger.test("exists: %s(%s:%s)", self.file_panel_ctrl.file_set.output_vmd_file_ctrl.path(), os.path.exists(self.file_panel_ctrl.file_set.output_vmd_file_ctrl.path()), os.path.isfile(self.file_panel_ctrl.file_set.output_vmd_file_ctrl.path()))
+            if not (os.path.exists(self.file_panel_ctrl.file_set.output_vmd_file_ctrl.path()) and os.path.isfile(self.file_panel_ctrl.file_set.output_vmd_file_ctrl.path())):
+                logger.error("カメラサイジングのみ実行する場合、\n1番目のファイルセットの出力VMDには既存のサイジング済みVMDファイルパスを指定してください。", decoration=MLogger.DECORATION_BOX)
+                result = False
+
+            for fidx, file_set in enumerate(self.multi_panel_ctrl.file_set_list):
+                if not (os.path.exists(file_set.output_vmd_file_ctrl.path()) and os.path.isfile(file_set.output_vmd_file_ctrl.path())):
+                    logger.error(f"カメラサイジングのみ実行する場合、\n{fidx+1}番目のファイルセットの出力VMDには既存のサイジング済みVMDファイルパスを指定してください。", decoration=MLogger.DECORATION_BOX)
+                    result = False
 
         return result
     
@@ -304,7 +320,8 @@ class MainFrame(wx.Frame):
             self.file_panel_ctrl.file_set.motion_vmd_file_ctrl.file_ctrl.SetPath(target_path)
             self.file_panel_ctrl.file_set.motion_vmd_file_ctrl.file_model_ctrl.set_model(target_path)
             # 出力パス変更
-            self.file_panel_ctrl.file_set.set_output_vmd_path(event)
+            if not self.file_panel_ctrl.file_set.output_vmd_file_ctrl.file_ctrl.GetPath():
+                self.file_panel_ctrl.file_set.set_output_vmd_path(event)
 
             # 停止ボタンに切り替え
             self.file_panel_ctrl.check_btn_ctrl.SetLabel("読み込み処理停止")
@@ -343,6 +360,8 @@ class MainFrame(wx.Frame):
         result = self.is_loaded_valid()
 
         if not result:
+            # 終了音を鳴らす
+            self.sound_finish()
             # タブ移動可
             self.release_tab()
             # フォーム有効化
@@ -406,13 +425,6 @@ class MainFrame(wx.Frame):
         self.file_panel_ctrl.exec_btn_ctrl.SetLabel("VMDサイジング実行")
         self.file_panel_ctrl.exec_btn_ctrl.Enable()
 
-        if not event.result:
-            # 終了音を鳴らす
-            self.sound_finish()
-
-            event.Skip()
-            return False
-        
         self.elapsed_time += event.elapsed_time
         worked_time = "\n処理時間: {0}".format(self.show_worked_time())
         logger.info(worked_time)
@@ -427,7 +439,7 @@ class MainFrame(wx.Frame):
         # ワーカー終了
         self.worker = None
 
-        if self.file_panel_ctrl.file_set.motion_vmd_file_ctrl.astr_path and self.get_target_vmd_path(event.target_idx + 1):
+        if event.result and self.file_panel_ctrl.file_set.motion_vmd_file_ctrl.astr_path and self.get_target_vmd_path(event.target_idx + 1):
             # アスタリスク付きパスの場合、次の存在チェック
             logger.info("\n----------------------------------")
 
@@ -438,10 +450,6 @@ class MainFrame(wx.Frame):
 
         # 終了音を鳴らす
         self.sound_finish()
-
-        # ファイルタブのコンソール
-        if sys.stdout != self.file_panel_ctrl.console_ctrl:
-            sys.stdout = self.file_panel_ctrl.console_ctrl
 
         # タブ移動可
         self.release_tab()
@@ -466,8 +474,12 @@ class MainFrame(wx.Frame):
         # スピンコントロール変更時
         if event.GetWheelRotation() > 0:
             event.GetEventObject().SetValue(event.GetEventObject().GetValue() + inc)
+            if event.GetEventObject().GetValue() >= 0:
+                event.GetEventObject().SetBackgroundColour("WHITE")
         else:
             event.GetEventObject().SetValue(event.GetEventObject().GetValue() - inc)
+            if event.GetEventObject().GetValue() < 0:
+                event.GetEventObject().SetBackgroundColour("TURQUOISE")
 
     def on_popup_finger_warning(self, event: wx.Event):
         if not self.popuped_finger_warning:

@@ -313,7 +313,7 @@ class MorphSet():
         self.grid_sizer.Add(self.rep_choices[-1], 0, wx.ALL, 5)
 
         # 大きさ比率
-        self.ratios.append(wx.SpinCtrlDouble(self.window, id=wx.ID_ANY, size=wx.Size(80, -1), value="1.0", min=0, max=10, initial=1.0, inc=0.01))
+        self.ratios.append(wx.SpinCtrlDouble(self.window, id=wx.ID_ANY, size=wx.Size(80, -1), value="1.0", min=-10, max=10, initial=1.0, inc=0.01))
         self.ratios[-1].Bind(wx.EVT_MOUSEWHEEL, lambda event: self.frame.on_wheel_spin_ctrl(event, 0.05))
         self.grid_sizer.Add(self.ratios[-1], 0, wx.ALL, 5)
 

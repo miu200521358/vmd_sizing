@@ -7,6 +7,7 @@ from pathlib import Path
 
 from mmd.PmxData import PmxModel
 from mmd.VmdWriter import VmdWriter
+from mmd.VmdReader import VmdReader
 from module.MOptions import MOptions, MOptionsDataSet
 from service.parts.MoveService import MoveService
 from service.parts.StanceService import StanceService
@@ -98,52 +99,59 @@ class SizingService():
 
             logger.info(service_data_txt, decoration=MLogger.DECORATION_BOX)
 
-            for data_set_idx, data_set in enumerate(self.options.data_set_list):
-                # 足IKのXYZの比率
-                data_set.original_xz_ratio, data_set.original_y_ratio = MServiceUtils.calc_leg_ik_ratio(data_set)
-            
-            # 足IKの比率再計算
-            self.options.calc_leg_ratio()
+            if self.options.is_sizing_camera_only is True:
+                # カメラサイジングのみ実行する場合、出力結果VMDを読み込む
+                for data_set_idx, data_set in enumerate(self.options.data_set_list):
+                    reader = VmdReader(data_set.output_vmd_path)
+                    data_set.motion = reader.read_data()
+            else:
+                for data_set_idx, data_set in enumerate(self.options.data_set_list):
+                    # 足IKのXYZの比率
+                    data_set.original_xz_ratio, data_set.original_y_ratio = MServiceUtils.calc_leg_ik_ratio(data_set)
+                
+                # 足IKの比率再計算
+                self.options.calc_leg_ratio()
 
-            # 移動補正
-            if not MoveService(self.options).execute():
-                return False
-
-            # スタンス補正
-            if not StanceService(self.options).execute():
-                return False
-
-            # 剛体接触回避
-            if self.options.arm_options.avoidance:
-                if not ArmAvoidanceService(self.options).execute():
+                # 移動補正
+                if not MoveService(self.options).execute():
                     return False
 
-            # 手首位置合わせ
-            if self.options.arm_options.alignment:
-                if not ArmAlignmentService(self.options).execute():
+                # スタンス補正
+                if not StanceService(self.options).execute():
                     return False
+
+                # 剛体接触回避
+                if self.options.arm_options.avoidance:
+                    if not ArmAvoidanceService(self.options).execute():
+                        return False
+
+                # 手首位置合わせ
+                if self.options.arm_options.alignment:
+                    if not ArmAlignmentService(self.options).execute():
+                        return False
 
             # カメラ補正
             if self.options.camera_motion:
                 if not CameraService(self.options).execute():
                     return False
 
-            # モーフ置換
-            if not MorphService(self.options).execute():
-                return False
-            
-            for data_set_idx, data_set in enumerate(self.options.data_set_list):
-                # 実行後、出力ファイル存在チェック
-                try:
-                    # 出力
-                    VmdWriter(data_set).write()
+            if self.options.is_sizing_camera_only is False:
+                # モーフ置換
+                if not MorphService(self.options).execute():
+                    return False
+                
+                for data_set_idx, data_set in enumerate(self.options.data_set_list):
+                    # 実行後、出力ファイル存在チェック
+                    try:
+                        # 出力
+                        VmdWriter(data_set).write()
 
-                    Path(data_set.output_vmd_path).resolve(True)
+                        Path(data_set.output_vmd_path).resolve(True)
 
-                    logger.info("【No.%s】 出力終了: %s", (data_set_idx + 1), os.path.basename(data_set.output_vmd_path), decoration=MLogger.DECORATION_BOX, title="サイジング成功")
-                except FileNotFoundError as fe:
-                    logger.error("【No.%s】出力VMDファイルが正常に作成されなかったようです。\nパスを確認してください。%s\n\n%s", (data_set_idx + 1), data_set.output_vmd_path, fe, decoration=MLogger.DECORATION_BOX)
-            
+                        logger.info("【No.%s】 出力終了: %s", (data_set_idx + 1), os.path.basename(data_set.output_vmd_path), decoration=MLogger.DECORATION_BOX, title="サイジング成功")
+                    except FileNotFoundError as fe:
+                        logger.error("【No.%s】出力VMDファイルが正常に作成されなかったようです。\nパスを確認してください。%s\n\n%s", (data_set_idx + 1), data_set.output_vmd_path, fe, decoration=MLogger.DECORATION_BOX)
+                
             if self.options.camera_motion:
                 try:
                     camera_model = PmxModel()
