@@ -247,7 +247,6 @@ class MainFrame(wx.Frame):
                 logger.error("カメラサイジングのみ実行する場合、\nカメラVMDデータを指定してください", decoration=MLogger.DECORATION_BOX)
                 result = False
             
-            logger.test("exists: %s(%s:%s)", self.file_panel_ctrl.file_set.output_vmd_file_ctrl.path(), os.path.exists(self.file_panel_ctrl.file_set.output_vmd_file_ctrl.path()), os.path.isfile(self.file_panel_ctrl.file_set.output_vmd_file_ctrl.path()))
             if not (os.path.exists(self.file_panel_ctrl.file_set.output_vmd_file_ctrl.path()) and os.path.isfile(self.file_panel_ctrl.file_set.output_vmd_file_ctrl.path())):
                 logger.error("カメラサイジングのみ実行する場合、\n1番目のファイルセットの出力VMDには既存のサイジング済みVMDファイルパスを指定してください。", decoration=MLogger.DECORATION_BOX)
                 result = False
