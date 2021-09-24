@@ -110,44 +110,48 @@ class VmdReader:
                         prev_n = n // 10000
                         logger.info("-- VMDモーション読み込み キー: %s" % n)
 
-                # モーフ数
-                motion.morph_cnt = self.read_uint(4)
-                logger.test("motion.morph_cnt %s", motion.morph_cnt)
+                try:
+                    # モーフ数
+                    motion.morph_cnt = self.read_uint(4)
+                    logger.test("motion.morph_cnt %s", motion.morph_cnt)
 
-                # 1F分のモーフ情報
-                prev_n = 0
-                for n in range(motion.morph_cnt):
-                    morph = VmdMorphFrame()
-                    morph.key = True
-                    morph.read = True
+                    # 1F分のモーフ情報
+                    prev_n = 0
+                    for n in range(motion.morph_cnt):
+                        morph = VmdMorphFrame()
+                        morph.key = True
+                        morph.read = True
 
-                    # モーフ ----------------------
-                    # モーフ名
-                    morph_bname, morph_name = self.read_text(15)
+                        # モーフ ----------------------
+                        # モーフ名
+                        morph_bname, morph_name = self.read_text(15)
 
-                    morph.name = morph_name
-                    morph.bname = morph_bname
-                    logger.test("name: %s, bname %s", morph_name, morph_bname)
+                        morph.name = morph_name
+                        morph.bname = morph_bname
+                        logger.test("name: %s, bname %s", morph_name, morph_bname)
 
-                    # フレームIDX
-                    morph.fno = self.read_uint(4)
-                    logger.test("morph.fno %s", morph.fno)
+                        # フレームIDX
+                        morph.fno = self.read_uint(4)
+                        logger.test("morph.fno %s", morph.fno)
 
-                    # 度数
-                    morph.ratio = self.read_float(4)
-                    logger.test("morph.ratio %s", morph.ratio)
+                        # 度数
+                        morph.ratio = self.read_float(4)
+                        logger.test("morph.ratio %s", morph.ratio)
 
-                    if morph_name not in motion.morphs:
-                        # まだ辞書にない場合、配列追加
-                        motion.morphs[morph_name] = {}
+                        if morph_name not in motion.morphs:
+                            # まだ辞書にない場合、配列追加
+                            motion.morphs[morph_name] = {}
 
-                    if morph.fno not in motion.morphs[morph_name]:
-                        # まだなければ辞書の該当部分にモーフフレームを追加
-                        motion.morphs[morph_name][morph.fno] = morph
+                        if morph.fno not in motion.morphs[morph_name]:
+                            # まだなければ辞書の該当部分にモーフフレームを追加
+                            motion.morphs[morph_name][morph.fno] = morph
 
-                    if n // 1000 > prev_n:
-                        prev_n = n // 1000
-                        logger.info("-- VMDモーション読み込み モーフ: %s" % n)
+                        if n // 1000 > prev_n:
+                            prev_n = n // 1000
+                            logger.info("-- VMDモーション読み込み モーフ: %s" % n)
+                except Exception:
+                    # 情報がない場合、catchして握りつぶす
+                    motion.morph_cnt = 0
 
                 try:
                     # カメラ数
