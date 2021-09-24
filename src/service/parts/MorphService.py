@@ -6,7 +6,7 @@ import copy
 from mmd.VmdData import VmdMorphFrame
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from module.MOptions import MOptions, MOptionsDataSet
-from utils import MUtils, MServiceUtils, MBezierUtils # noqa
+from utils import MServiceUtils, MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
 from utils.MException import SizingException, MKilledException
 

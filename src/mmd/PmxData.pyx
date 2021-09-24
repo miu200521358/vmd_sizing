@@ -12,7 +12,7 @@ from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MM
 from utils.MException import SizingException # noqa
 from utils.MLogger import MLogger # noqa
 
-logger = MLogger(__name__, level=MLogger.DEBUG)
+logger = MLogger(__name__, level=MLogger.DEBUG_INFO)
 
 
 cdef class Deform:
@@ -120,6 +120,21 @@ cdef class Vertex:
 
         return False
     
+    # 最もウェイトが乗ってるボーンINDEXとそのウェイト（全ボーン対象）
+    def get_max_deform_by_all(self):
+        if type(self.deform) is Bdef2 or type(self.deform) is Sdef or type(self.deform) is Qdef:
+            weights = [self.deform.weight0, 1 - self.deform.weight0]
+            names = [self.deform.index0, self.deform.index1]
+        elif type(self.deform) is Bdef4:
+            weights = [self.deform.weight0, self.deform.weight1, self.deform.weight2, self.deform.weight3]
+            names = [self.deform.index0, self.deform.index1, self.deform.index2, self.deform.index3]
+        else:
+            weights = [1]
+            names = [self.deform.index0]
+
+        max_weight_idx = np.argmax(weights)
+        return names[max_weight_idx], weights[max_weight_idx]
+
     # 最もウェイトが乗っているボーンINDEX
     def get_max_deform_index(self, head_links_indexes):
         if type(self.deform) is Bdef2 or type(self.deform) is Sdef or type(self.deform) is Qdef:
@@ -201,7 +216,7 @@ cdef class Ik:
     def __str__(self):
         return "<Ik target_index:{0}, loop:{1}, limit_radian:{2}, link:{3}".format(self.target_index, self.loop, self.limit_radian, self.link)
         
-class IkLink:
+cdef class IkLink:
 
     def __init__(self, bone_index, limit_angle, limit_min=None, limit_max=None):
         self.bone_index = bone_index
@@ -215,7 +230,7 @@ class IkLink:
 # ボーン構造-----------------------
 cdef class Bone:
     def __init__(self, name, english_name, position, parent_index, layer, flag, tail_position=None, tail_index=-1, effect_index=-1, effect_factor=0.0, fixed_axis=None,
-                 local_x_vector=None, local_z_vector=None, external_key=-1, ik=None):
+                 local_x_vector=None, local_z_vector=None, external_key=-1, ik=None, is_sizing=False):
         self.name = name
         self.english_name = english_name
         self.position = position
@@ -234,6 +249,10 @@ cdef class Bone:
         self.index = -1
         # 表示枠チェック時にONにするので、デフォルトはFalse
         self.display = False
+        # サイジング用特殊ボーンであるか
+        self.is_sizing = is_sizing
+        # 親ボーンから見た相対位置
+        self.relative_position = MVector3D()
 
         # 親ボーンからの長さ3D版(計算して求める）
         self.len_3d = MVector3D()
@@ -329,6 +348,41 @@ cdef class Bone:
 
 
 # モーフ構造-----------------------
+class GroupMorphData:
+    def __init__(self, morph_index, value):
+        self.morph_index = morph_index
+        self.value = value
+
+class VertexMorphOffset:
+    def __init__(self, vertex_index, position_offset):
+        self.vertex_index = vertex_index
+        self.position_offset = position_offset
+
+class BoneMorphData:
+    def __init__(self, bone_index, position, rotation):
+        self.bone_index = bone_index
+        self.position = position
+        self.rotation = rotation
+
+class UVMorphData:
+    def __init__(self, vertex_index, uv):
+        self.vertex_index = vertex_index
+        self.uv = uv
+
+class MaterialMorphData:
+    def __init__(self, material_index, calc_mode, diffuse, specular, specular_factor, ambient, edge_color, edge_size, texture_factor, sphere_texture_factor, toon_texture_factor):
+        self.material_index = material_index
+        self.calc_mode = calc_mode
+        self.diffuse = diffuse
+        self.specular = specular
+        self.specular_factor = specular_factor
+        self.ambient = ambient
+        self.edge_color = edge_color
+        self.edge_size = edge_size
+        self.texture_factor = texture_factor
+        self.sphere_texture_factor = sphere_texture_factor
+        self.toon_texture_factor = toon_texture_factor
+
 class Morph:
     def __init__(self, name, english_name, panel, morph_type, offsets=None):
         self.index = 0
@@ -357,53 +411,19 @@ class Morph:
             return "他"
         else:
             return "？"
-            
-    class GroupMorphData:
-        def __init__(self, morph_index, value):
-            self.morph_index = morph_index
-            self.value = value
-
-    class VertexMorphOffset:
-        def __init__(self, vertex_index, position_offset):
-            self.vertex_index = vertex_index
-            self.position_offset = position_offset
-
-    class BoneMorphData:
-        def __init__(self, bone_index, position, rotation):
-            self.bone_index = bone_index
-            self.position = position
-            self.rotation = rotation
-
-    class UVMorphData:
-        def __init__(self, vertex_index, uv):
-            self.vertex_index = vertex_index
-            self.uv = uv
-
-    class MaterialMorphData:
-        def __init__(self, material_index, calc_mode, diffuse, specular, specular_factor, ambient, edge_color, edge_size, texture_factor, sphere_texture_factor, toon_texture_factor):
-            self.material_index = material_index
-            self.calc_mode = calc_mode
-            self.diffuse = diffuse
-            self.specular = specular
-            self.specular_factor = specular_factor
-            self.ambient = ambient
-            self.edge_color = edge_color
-            self.edge_size = edge_size
-            self.texture_factor = texture_factor
-            self.sphere_texture_factor = sphere_texture_factor
-            self.toon_texture_factor = toon_texture_factor
 
 
 # 表示枠構造-----------------------
 class DisplaySlot:
-    def __init__(self, name, english_name, special_flag, references=None):
+    def __init__(self, name, english_name, special_flag, display_type=0, references=None):
         self.name = name
         self.english_name = english_name
         self.special_flag = special_flag
+        self.display_type = display_type
         self.references = references or []
 
     def __str__(self):
-        return "<DisplaySlots name:{0}, english_name:{1}, special_flag:{2}, references(len):{3}".format(self.name, self.english_name, self.special_flag, len(self.references))
+        return "<DisplaySlots name:{0}, english_name:{1}, special_flag:{2}, display_type: {3}, references(len):{4}".format(self.name, self.english_name, self.special_flag, self.display_type, len(self.references))
 
 
 # 剛体構造-----------------------
@@ -963,14 +983,18 @@ cdef class PmxModel:
         self.english_comment = ''
         # 頂点データ（キー：ボーンINDEX、値：頂点データリスト）
         self.vertices = {}
-        # 面データ
-        self.indices = []
+        # 頂点データ（キー：頂点INDEX、値：頂点データ）
+        self.vertex_dict = {}
+        # 面データ（キー：面INDEX、値：頂点INDEXリスト）
+        self.indices = {}
         # テクスチャデータ
         self.textures = []
         # 材質データ
         self.materials = {}
-        # 材質データ（キー：材質INDEX、値：材質名）
-        self.material_indexes = {}
+        # 材質データ（キー：材質名、値：面INDEXリスト）
+        self.material_indices = {}
+        # 材質-頂点引き当てデータ（キー：材質名、値：頂点INDEXリスト）
+        self.material_vertices = {}
         # ボーンデータ
         self.bones = {}
         # ボーンINDEXデータ（キー：ボーンINDEX、値：ボーン名）
@@ -1025,19 +1049,22 @@ cdef class PmxModel:
             fixed_x_axis = MVector3D()
         
         from_pos = self.bones[bone.name].position
-        if bone.tail_position != MVector3D():
+        if not bone.getConnectionFlag() and bone.tail_position > MVector3D():
             # 表示先が相対パスの場合、保持
             to_pos = from_pos + bone.tail_position
-        elif bone.tail_index >= 0 and bone.tail_index in self.bone_indexes and self.bones[self.bone_indexes[bone.tail_index]].position != bone.position:
+        elif bone.getConnectionFlag() and bone.tail_index >= 0 and bone.tail_index in self.bone_indexes:
             # 表示先が指定されているの場合、保持
             to_pos = self.bones[self.bone_indexes[bone.tail_index]].position
         else:
-            # 表示先がない場合、とりあえず子ボーンのどれかを選択
-            for b in self.bones.values():
-                if b.parent_index == bone.index and self.bones[self.bone_indexes[b.index]].position != bone.position:
-                    to_pos = self.bones[self.bone_indexes[b.index]].position
-                    break
+            # 表示先がない場合、とりあえず親ボーンからの向きにする
+            from_pos = self.bones[self.bone_indexes[bone.parent_index]].position
+            to_pos = self.bones[bone.name].position
+            # for b in self.bones.values():
+            #     if b.parent_index == bone.index and self.bones[self.bone_indexes[b.index]].position != bone.position:
+            #         to_pos = self.bones[self.bone_indexes[b.index]].position
+            #         break
         
+        logger.test("get_local_x_axis: from: %s, to: %s, tail:%s-[%s]", from_pos, to_pos, bone.tail_index, bone.tail_position)
         # 軸制限の指定が無い場合、子の方向
         x_axis = (to_pos - from_pos).normalized()
 
@@ -1046,6 +1073,20 @@ cdef class PmxModel:
             x_axis = -fixed_x_axis
 
         return x_axis
+    
+    def get_local_x_qq(self, bone_name: str, base_local_axis=None):
+        local_axis_qq = MQuaternion()
+
+        # 自身から親を引いた軸の向き
+        local_axis = self.get_local_x_axis(bone_name)
+        if not base_local_axis:
+            # 最も長い軸の向き(基本姿勢)を未指定の場合は求める
+            base_local_axis = MVector3D(np.where(np.abs(local_axis.data()) == np.max(np.abs(local_axis.data())), 1 * np.sign(local_axis.data()), 0))
+        local_axis_qq = MQuaternion.rotationTo(base_local_axis, local_axis.normalized())
+
+        logger.debug_info("get_local_x_qq: local_axis[%s], base_local_axis[%s], local_axis_qq[%s]", local_axis.to_log(), base_local_axis.to_log(), local_axis_qq.toEulerAngles4MMD().to_log())
+
+        return local_axis_qq
     
     # 腕のスタンスの違い
     def calc_arm_stance(self, from_bone_name: str, to_bone_name=None):
@@ -1102,17 +1143,17 @@ cdef class PmxModel:
             logger.warning("腕・ひじ・手首の左右ボーンが揃ってないため、%s\nモデル: %s", cannot_sizing, self.name, decoration=MLogger.DECORATION_BOX)
             return False
         
-        for bone_name in self.bones.keys():
-            if ("腕IK" in bone_name or "腕ＩＫ" in bone_name or "うでIK" in bone_name or "うでＩＫ" in bone_name or "腕XIK" in bone_name):
-                # 腕IKが入ってて、かつそれが表示されてる場合、NG
-                logger.warning("モデルに「腕IK」に類するボーンが含まれているため、%s\nモデル: %s", cannot_sizing, self.name, decoration=MLogger.DECORATION_BOX)
-                return False
+        # for bone_name in self.bones.keys():
+        #     if ("腕IK" in bone_name or "腕ＩＫ" in bone_name or "うでIK" in bone_name or "うでＩＫ" in bone_name or "腕XIK" in bone_name):
+        #         # 腕IKが入ってて、かつそれが表示されてる場合、NG
+        #         logger.warning("モデルに「腕IK」に類するボーンが含まれているため、%s\nモデル: %s", cannot_sizing, self.name, decoration=MLogger.DECORATION_BOX)
+        #         return False
 
         return True
     
     # ボーンリンク生成
     def create_link_2_top_lr(self, *target_bone_types, **kwargs):
-        is_defined = kwargs["is_defined"] if "is_defined" in kwargs else True
+        is_defined = kwargs["is_defined"] if "is_defined" in kwargs else False
 
         for target_bone_type in target_bone_types:
             left_links = self.create_link_2_top_one("左{0}".format(target_bone_type), is_defined=is_defined)
@@ -1124,32 +1165,142 @@ cdef class PmxModel:
 
     # ボーンリンク生成
     def create_link_2_top_one(self, *target_bone_names, **kwargs):
-        is_defined = kwargs["is_defined"] if "is_defined" in kwargs else True
+        # 未定義のままで生成する
+        is_defined = kwargs["is_defined"] if "is_defined" in kwargs else False
+        tmp_links = None
 
         for target_bone_name in target_bone_names:
-            links = self.create_link_2_top(target_bone_name, None, is_defined)
+            logger.test("create_link_2_top_one: %s", target_bone_name)
+            # 子からの直系ボーン
+            tmp_links = self.create_link_2_top(target_bone_name, tmp_links, is_defined)
 
-            if links and target_bone_name in links.all():
-                reversed_links = BoneLinks()
-                
-                # リンクがある場合、反転させて返す
-                for lname in reversed(links.all()):
-                    reversed_links.append(links.get(lname))
+        # # 付与親も念のため追加
+        # append_bone_names = []
+        # for lk, lv in tmp_links.items():
+        #     if lv.getExternalRotationFlag() or lv.getExternalTranslationFlag():
+        #         append_bone_names.append(self.bone_indexes[lv.effect_index])
+        # for bname in append_bone_names:
+        #     tmp_links[bname] = self.bones[bname]
 
-                return reversed_links
-        
+        # IKを取得
+        ik_links_dict = self.create_ik_links(tmp_links)
+
+        reversed_links = self.reverse_links(tmp_links)
+
+        if reversed_links:
+            for ik_target_name, links_dict in ik_links_dict.items():
+                reversed_links.append_ik_links(self.bones[ik_target_name], links_dict["target"], links_dict["ik"])
+
+        if reversed_links.size() > 0:
+            logger.debug_info("reversed_links: %s, \n%s", self.name, reversed_links.to_log())
+            return reversed_links
+
         # 最後まで回しても取れなかった場合、エラー
         raise SizingException("ボーンリンクの生成に失敗しました。モデル「%s」に「%s」のボーンがあるか確認してください。" % (self.name, ",".join(target_bone_names)))
+    
+    def reverse_links(self, links: dict, is_ik=False):
+        reversed_links = BoneLinks()
+        
+        # if is_ik:
+        #     total_links = {}
+
+        #     for lv in links.values():
+        #         # IKボーンリストの場合、階層＋ボーン順番
+        #         if lv.index >= 0:
+        #             total_links[f'{lv.layer:04d}-{lv.index:04d}'] = lv
+
+        #     if len(total_links.keys()) > 1:
+        #         # ボーン順番でソート
+        #         for tlk in sorted(list(total_links.keys())):
+        #             # まだ登録されていない
+        #             if total_links[tlk].index >= 0:
+        #                 reversed_links.append(total_links[tlk], total_links[tlk].layer)
+        #                 logger.test("tlk: %s, %s", tlk, total_links[tlk].name)
+
+        #         logger.test("reverse_links:%s, \n%s", self.name, reversed_links.to_log())
+            
+        #         return reversed_links
+        # else:
+        total_links = {}
+
+        for lv in links.values():
+            # 直系ボーンリストの場合、ボーン順番
+            total_links[f'{lv.index:04d}'] = lv
+
+        layers = []
+        for lidx, lv in enumerate(links.values()):
+            layers.append(lv.layer)
+
+        # 直系リストは変形階層別にレイヤー生成
+        target_layers = [min(layers)]
+        if len(layers) > 1:
+            target_layers.append(max(layers))
+
+        for layer in range(max(layers) + 1):
+            total_links = {}
+            for lv in links.values():
+                if lv.index >= 0 and layer == lv.layer:
+                    total_links[f'{lv.index:04d}'] = lv
+
+            # ボーン順番でソート
+            for tlk in sorted(list(total_links.keys())):
+                if total_links[tlk].index >= 0:
+                    reversed_links.append(total_links[tlk], layer)
+
+                logger.test("tlk: %s-%s, %s, index: %s", layer, tlk, total_links[tlk].name, total_links[tlk].index)
+
+        logger.test("reverse_links:%s, \n%s", self.name, reversed_links.to_log())
+    
+        return reversed_links
+    
+        # return None
+
+    def create_ik_links(self, links: dict):
+        ik_links_dict = {}
+
+        for dl in links.values():
+            if dl.name in ["全ての親", "センター", "グルーブ"]:
+                # 移動系は無視
+                continue
+
+            for b in self.bones.values():
+                if b.getIkFlag() and (dl.index in [i.bone_index for i in b.ik.link] or b.parent_index == dl.index):
+                    link_bone_names = []
+
+                    # 自分のINDEXがIK系列に含まれている場合、IKボーンのボーンリンクを保持
+                    ik_target_dicts = self.create_link_2_top(b.name, None, False)
+                    
+                    # ボーンリンクに、ターゲットとリンクを含める
+                    link_dicts = {}
+                    for i in b.ik.link:
+                        one_link_dicts = self.create_link_2_top(self.bones[self.bone_indexes[i.bone_index]].name, None, False)
+                        for k, v in one_link_dicts.items():
+                            if k not in link_dicts:
+                                link_dicts[k] = v
+                                # if v.layer < b.layer:
+                                #     ik_target_dicts[k] = v
+                        link_bone_names.append(self.bones[self.bone_indexes[i.bone_index]].name)
+                    # ターゲットの位置を捕捉するために、追加
+                    link_dicts[self.bone_indexes[b.ik.target_index]] = self.bones[self.bone_indexes[b.ik.target_index]]
+                    ik_target_dicts[self.bone_indexes[b.ik.target_index]] = self.bones[self.bone_indexes[b.ik.target_index]]
+
+                    for link_bone_name in link_bone_names:
+                        ik_links_dict[link_bone_name] = {"target": self.reverse_links(ik_target_dicts, is_ik=True), "ik": self.reverse_links(link_dicts, is_ik=True)}
+        
+        return ik_links_dict
 
     # リンク生成
-    def create_link_2_top(self, target_bone_name: str, links: BoneLinks, is_defined: bool):
+    def create_link_2_top(self, target_bone_name: str, links: dict, is_defined: bool):
         if not links:
             # まだリンクが生成されていない場合、順序保持辞書生成
-            links = BoneLinks()
+            links = {}
         
-        if target_bone_name not in self.bones and target_bone_name not in self.PARENT_BORN_PAIR:
+        if target_bone_name not in self.bones: # and target_bone_name not in self.PARENT_BORN_PAIR:
             # 開始ボーン名がなければ終了
+            logger.test("target_bone_name not in bones: %s", target_bone_name)
             return links
+
+        logger.test("create_link_2_top start: %s", target_bone_name)
 
         start_type_bone = target_bone_name
         if target_bone_name.startswith("右") or target_bone_name.startswith("左"):
@@ -1157,7 +1308,7 @@ cdef class PmxModel:
             start_type_bone = target_bone_name[1:]
 
         # 自分をリンクに登録
-        links.append(self.bones[target_bone_name])
+        links[target_bone_name] = self.bones[target_bone_name]
 
         parent_name = None
         if is_defined:
@@ -1174,21 +1325,24 @@ cdef class PmxModel:
             # 未定義でよい場合
             if self.bones[target_bone_name].parent_index >= 0:
                 # 親ボーンが存在している場合
+                logger.test("parent_index: %s -> %s", self.bones[target_bone_name].parent_index, self.bone_indexes[self.bones[target_bone_name].parent_index])
                 parent_name = self.bone_indexes[self.bones[target_bone_name].parent_index]
 
         if not parent_name:
+            logger.test("not parent_name: %s", self.bones[target_bone_name].parent_index)
+            logger.test("create_link_2_top: %s, %s, \n%s", self.name, target_bone_name, links)
             # 親ボーンがボーンインデックスリストになければ終了
             return links
         
-        logger.test("target_bone_name: %s. parent_name: %s, start_type_bone: %s", target_bone_name, parent_name, start_type_bone)
+        logger.test("target_bone_name: %s, parent_name: %s, start_type_bone: %s", target_bone_name, parent_name, start_type_bone)
         
         # 親をたどる
         try:
             return self.create_link_2_top(parent_name, links, is_defined)
         except RecursionError:
-            raise SizingException("ボーンリンクの生成に失敗しました。\nモデル「{0}」の「{1}」ボーンで以下を確認してください。\n" \
+            raise SizingException("ボーンリンクの生成に失敗しました。\nモデル「%s」の「%s」ボーンで以下を確認してください。\n" % (self.name, target_bone_name) \
                                   + "・同じ名前のボーンが複数ないか（ボーンのINDEXがズレるため、サイジングに失敗します）\n" \
-                                  + "・親ボーンに自分の名前と同じ名前のボーンが指定されていないか\n※ PMXEditorの「PMXデータの状態検証」から確認できます。".format(self.name, target_bone_name))
+                                  + "・親ボーンに自分の名前と同じ名前のボーンが指定されていないか\n※ PMXEditorの「PMXデータの状態検証」から確認できます。")
     
     # 子孫ボーンリスト取得
     def get_child_bones(self, target_bone: Bone, bone_list=None):
@@ -1347,9 +1501,9 @@ cdef class PmxModel:
 
             if not up_max_vertex:
                 if "頭" in self.bones:
-                    return Vertex(-1, self.bones["頭"].position.copy(), MVector3D(), [], [], Bdef1(-1), -1)
+                    return Vertex(-1, self.bones["頭"].position.copy() + 2.5, MVector3D(), [], [], Bdef1(-1), -1)
                 elif "首" in self.bones:
-                    return Vertex(-1, self.bones["首"].position.copy(), MVector3D(), [], [], Bdef1(-1), -1)
+                    return Vertex(-1, self.bones["首"].position.copy() + 3, MVector3D(), [], [], Bdef1(-1), -1)
                 else:
                     return Vertex(-1, MVector3D(), MVector3D(), [], [], Bdef1(-1), -1)
         

@@ -1,7 +1,86 @@
 {
     "version": "0.2.0",
     "configurations": [
-
+        {
+            "name": "exec_gui",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/executor.py",
+            "console": "integratedTerminal",
+            "python": "${command:python.interpreterPath}",
+            "stopOnEntry": false,
+            "args": [
+                "--verbose", "20",
+                // "--out_log",
+            ],
+            // "preLaunchTask": "app start",
+            // "postDebugTask": "app stop"
+        },
+        {
+            "name": "(gdb) exec_gui",
+            "type": "cppdbg",
+            "request": "attach",
+            "stopOnEntry": false,
+            "program": "C:/Development/Anaconda3/envs/vmdsizing_cython/python.exe",
+            "processId": "${command:pickProcess}",
+            "cwd": "${workspaceFolder}",
+            "MIMode": "gdb",
+            "miDebuggerPath": "C:/Development/msys64/mingw64/bin/gdb.exe",
+            // "miDebuggerPath": "C:/Development/Anaconda3/Scripts/cygdb.exe",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "sourceFileMap": {
+                "/c/": "C:/"
+            },
+            // "preLaunchTask": "DebugBuild",
+        },
+        {
+            "name": "exec_supporter_gui",
+            "type": "python",
+            "request": "launch",
+            "cwd": "${workspaceFolder}/../motion_supporter/",
+            "program": "${workspaceFolder}/../motion_supporter/src/executor.py",
+            "console": "integratedTerminal",
+            "python": "${command:python.interpreterPath}",
+            "stopOnEntry": false,
+            "args": [
+                "--verbose", "20",
+                "--out_log", "1",
+            ]
+        },
+        {
+            "name": "exec_vrm2pmx",
+            "type": "python",
+            "request": "launch",
+            "program": "src/executor.py",
+            "cwd": "${workspaceFolder}/../vrm2pmx/",
+            "console": "integratedTerminal",
+            "python": "${command:python.interpreterPath}",
+            "stopOnEntry": false,
+            "args": [
+                "--verbose", "10",
+                "--out_log", "1",
+            ]
+        },
+        {
+            "name": "exec_vmdsizing_bugfix",
+            "type": "python",
+            "request": "launch",
+            "program": "src/executor.py",
+            "cwd": "${workspaceFolder}/../vmd_sizing_5.01_bugfix/",
+            "console": "integratedTerminal",
+            "python": "${command:python.interpreterPath}",
+            "stopOnEntry": false,
+            "args": [
+                "--verbose", "10",
+                "--out_log", "1",
+            ]
+        },
         {
             "name": "exec_sizing",
             "type": "python",
@@ -215,46 +294,6 @@
             ]
         },
         {
-            "name": "exec_gui",
-            "type": "python",
-            "request": "launch",
-            "program": "${workspaceFolder}/src/executor.py",
-            "console": "integratedTerminal",
-            "python": "${command:python.interpreterPath}",
-            "stopOnEntry": false,
-            "args": [
-                "--verbose", "20",
-                // "--out_log",
-            ]
-        },
-        {
-            "name": "exec_supporter_gui",
-            "type": "python",
-            "request": "launch",
-            "program": "${workspaceFolder}/../motion_supporter/src/executor.py",
-            "console": "integratedTerminal",
-            "python": "${command:python.interpreterPath}",
-            "stopOnEntry": false,
-            "args": [
-                "--verbose", "1",
-                "--out_log", "1",
-            ]
-        },
-        {
-            "name": "exec_vrm2pmx",
-            "type": "python",
-            "request": "launch",
-            "program": "src/executor.py",
-            "cwd": "${workspaceFolder}/../vrm2pmx/",
-            "console": "integratedTerminal",
-            "python": "${command:python.interpreterPath}",
-            "stopOnEntry": false,
-            "args": [
-                "--verbose", "10",
-                "--out_log", "1",
-            ]
-        },
-        {
             "name": "exec_thread",
             "type": "python",
             "request": "launch",
@@ -268,22 +307,15 @@
             ]
         },
         {
-            "name": "exec_test",
+            "name": "exec_crumb",
             "type": "python",
             "request": "launch",
-            "program": "${file}",
+            "program": "${workspaceFolder}/crumb/Skirt4.py",
             "console": "integratedTerminal",
             "python": "${command:python.interpreterPath}",
             "stopOnEntry": false,
             "args": [
             ]
         },
-        {
-            "name": "Python: Current File",
-            "type": "python",
-            "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal"
-        }
     ]
 }
