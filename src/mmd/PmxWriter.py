@@ -310,20 +310,16 @@ class PmxWriter:
                 fout.write(struct.pack(TYPE_BYTE, display_slot.special_flag))
                 # 枠内要素数
                 fout.write(struct.pack(TYPE_INT, len(display_slot.references)))
-                if display_slot.display_type == 0:
-                    # ボーンの場合
-                    for bone_idx in display_slot.references:
-                        # 要素対象 0:ボーン 1:モーフ
-                        fout.write(struct.pack(TYPE_BYTE, 0))
+                # ボーンの場合
+                for display_type, bone_idx in display_slot.references:
+                    # 要素対象 0:ボーン 1:モーフ
+                    fout.write(struct.pack(TYPE_BYTE, display_type))
+                    if display_type == 0:
                         # ボーンIndex
                         fout.write(struct.pack(bone_idx_type, bone_idx))
-                elif display_slot.display_type == 1:
-                    # モーフの場合
-                    for morph_idx in display_slot.references:
-                        # 要素対象 0:ボーン 1:モーフ
-                        fout.write(struct.pack(TYPE_BYTE, 1))
+                    else:
                         # ボーンIndex
-                        fout.write(struct.pack(morph_idx_type, morph_idx))
+                        fout.write(struct.pack(morph_idx_type, bone_idx))
 
             logger.debug(f"-- 表示枠データ出力終了({len(list(pmx.display_slots.values()))})")
 

@@ -84,7 +84,7 @@ def exec():
         model.bones[root_bone.name] = root_bone
         model.bone_indexes[root_bone.index] = root_bone.name
         # 表示枠
-        model.display_slots[target_bone_name].references.append(model.bones[root_bone.name].index)
+        model.display_slots[target_bone_name].references.append((0, model.bones[root_bone.name].index))
 
         root_right_bone_name = ""
         root_left_bone_name = ""
@@ -103,8 +103,8 @@ def exec():
             model.bones[root_left_bone.name] = root_left_bone
             model.bone_indexes[root_left_bone.index] = root_left_bone.name
 
-            model.display_slots[target_bone_name].references.append(model.bones[root_right_bone.name].index)
-            model.display_slots[target_bone_name].references.append(model.bones[root_left_bone.name].index)
+            model.display_slots[target_bone_name].references.append((0, model.bones[root_right_bone.name].index))
+            model.display_slots[target_bone_name].references.append((0, model.bones[root_left_bone.name].index))
 
         logger.info(f"{target_bone_name}: 頂点チェック")
 
@@ -456,7 +456,7 @@ def exec():
                     model.bone_indexes[bone.index] = bone.name
 
                     # 表示枠
-                    model.display_slots[target_bone_name].references.append(bone.index)
+                    model.display_slots[target_bone_name].references.append((0, bone.index))
 
                     prev_bone_name = bone.name
 
