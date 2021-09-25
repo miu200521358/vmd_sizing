@@ -729,34 +729,34 @@ class PmxReader:
                         pmx.bones[leg_center_bone.name] = leg_center_bone
                         pmx.bone_indexes[leg_center_bone.index] = leg_center_bone.name
                     
-                    # ボーンの並び替え
-                    tmp_bones = {}
-                    tmp_bone_indexes = {}
-                    for k, v in pmx.bones.items():
-                        tmp_bones[k] = v.copy()
-                        tmp_bone_indexes[v.index] = k
+                    # # ボーンの並び替え
+                    # tmp_bones = {}
+                    # tmp_bone_indexes = {}
+                    # for k, v in pmx.bones.items():
+                    #     tmp_bones[k] = v.copy()
+                    #     tmp_bone_indexes[v.index] = k
 
-                    root_bone = (list(pmx.bones.values())[0]).copy()
-                    root_bone.index = -1
-                    root_bone.is_sizing = True
+                    # root_bone = (list(pmx.bones.values())[0]).copy()
+                    # root_bone.index = -1
+                    # root_bone.is_sizing = True
 
-                    pmx.bones = {}
-                    pmx.bone_indexes = {}
-                    pmx.bones[root_bone.name] = root_bone
-                    pmx.bone_indexes[root_bone.index] = root_bone.name
-                    index = -2
-                    for is_ik in [False, True]:
-                        index = self.sort_bones(pmx, tmp_bones, tmp_bone_indexes, root_bone.index, is_ik, index)
+                    # pmx.bones = {}
+                    # pmx.bone_indexes = {}
+                    # pmx.bones[root_bone.name] = root_bone
+                    # pmx.bone_indexes[root_bone.index] = root_bone.name
+                    # index = -2
+                    # for is_ik in [False, True]:
+                    #     index = self.sort_bones(pmx, tmp_bones, tmp_bone_indexes, root_bone.index, is_ik, index)
 
-                    for bv in pmx.bones.values():
-                        if bv.tail_index >= 0:
-                            bv.tail_index = pmx.bones[tmp_bone_indexes[bv.tail_index]].index
-                        if bv.effect_index >= 0:
-                            bv.effect_index = pmx.bones[tmp_bone_indexes[bv.effect_index]].index
-                        if bv.ik:
-                            bv.ik.target_index = pmx.bones[tmp_bone_indexes[bv.ik.target_index]].index
-                            for n in range(len(bv.ik.link)):
-                                bv.ik.link[n].bone_index = pmx.bones[tmp_bone_indexes[bv.ik.link[n].bone_index]].index
+                    # for bv in pmx.bones.values():
+                    #     if bv.tail_index >= 0:
+                    #         bv.tail_index = pmx.bones[tmp_bone_indexes[bv.tail_index]].index
+                    #     if bv.effect_index >= 0:
+                    #         bv.effect_index = pmx.bones[tmp_bone_indexes[bv.effect_index]].index
+                    #     if bv.ik:
+                    #         bv.ik.target_index = pmx.bones[tmp_bone_indexes[bv.ik.target_index]].index
+                    #         for n in range(len(bv.ik.link)):
+                    #             bv.ik.link[n].bone_index = pmx.bones[tmp_bone_indexes[bv.ik.link[n].bone_index]].index
 
                     logger.debug_info("bones: %s", ", ".join([f"{b.index:04d}-{b.parent_index:04d}[{b.name}]" for b in pmx.bones.values()]))
 
@@ -847,15 +847,15 @@ class PmxReader:
                     for _ in range(display_count):
                         display_type = self.read_int(1)
                         if display_type == 0:
-                            born_idx = self.read_bone_index_size()
-                            display_slot.references.append(born_idx)
+                            bone_idx = self.read_bone_index_size()
+                            display_slot.references.append((display_type, bone_idx))
                             # ボーン表示ON
                             for v in pmx.bones.values():
-                                if v.index == born_idx:
+                                if v.index == bone_idx:
                                     v.display = True
                         elif display_type == 1:
                             morph_idx = self.read_morph_index_size()
-                            display_slot.references.append(morph_idx)
+                            display_slot.references.append((display_type, morph_idx))
                             # モーフ表示ON
                             for v in pmx.morphs.values():
                                 if v.index == morph_idx:
@@ -1203,7 +1203,7 @@ class PmxReader:
         else:
             raise MParseException("read_uint format_sizeエラー {0}".format(format_size))
 
-        return self.unpack(format_size, format_type)
+        return int(self.unpack(format_size, format_type))
 
     # 小数の解凍
     def read_float(self, format_size=4):
@@ -1214,7 +1214,7 @@ class PmxReader:
         else:
             raise MParseException("read_float format_sizeエラー {0}".format(format_size))
 
-        return self.unpack(format_size, format_type)
+        return float(self.unpack(format_size, format_type))
 
     # 解凍して、offsetを更新する
     def unpack(self, format_size, format):

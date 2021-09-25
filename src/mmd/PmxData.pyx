@@ -1143,17 +1143,17 @@ cdef class PmxModel:
             logger.warning("腕・ひじ・手首の左右ボーンが揃ってないため、%s\nモデル: %s", cannot_sizing, self.name, decoration=MLogger.DECORATION_BOX)
             return False
         
-        # for bone_name in self.bones.keys():
-        #     if ("腕IK" in bone_name or "腕ＩＫ" in bone_name or "うでIK" in bone_name or "うでＩＫ" in bone_name or "腕XIK" in bone_name):
-        #         # 腕IKが入ってて、かつそれが表示されてる場合、NG
-        #         logger.warning("モデルに「腕IK」に類するボーンが含まれているため、%s\nモデル: %s", cannot_sizing, self.name, decoration=MLogger.DECORATION_BOX)
-        #         return False
+        for bone_name in self.bones.keys():
+            if ("腕IK" in bone_name or "腕ＩＫ" in bone_name or "うでIK" in bone_name or "うでＩＫ" in bone_name or "腕XIK" in bone_name):
+                # 腕IKが入ってて、かつそれが表示されてる場合、NG
+                logger.warning("モデルに「腕IK」に類するボーンが含まれているため、%s\nモデル: %s", cannot_sizing, self.name, decoration=MLogger.DECORATION_BOX)
+                return False
 
         return True
     
     # ボーンリンク生成
     def create_link_2_top_lr(self, *target_bone_types, **kwargs):
-        is_defined = kwargs["is_defined"] if "is_defined" in kwargs else False
+        is_defined = kwargs["is_defined"] if "is_defined" in kwargs else True
 
         for target_bone_type in target_bone_types:
             left_links = self.create_link_2_top_one("左{0}".format(target_bone_type), is_defined=is_defined)
@@ -1165,142 +1165,32 @@ cdef class PmxModel:
 
     # ボーンリンク生成
     def create_link_2_top_one(self, *target_bone_names, **kwargs):
-        # 未定義のままで生成する
-        is_defined = kwargs["is_defined"] if "is_defined" in kwargs else False
-        tmp_links = None
+        is_defined = kwargs["is_defined"] if "is_defined" in kwargs else True
 
         for target_bone_name in target_bone_names:
-            logger.test("create_link_2_top_one: %s", target_bone_name)
-            # 子からの直系ボーン
-            tmp_links = self.create_link_2_top(target_bone_name, tmp_links, is_defined)
+            links = self.create_link_2_top(target_bone_name, None, is_defined)
 
-        # # 付与親も念のため追加
-        # append_bone_names = []
-        # for lk, lv in tmp_links.items():
-        #     if lv.getExternalRotationFlag() or lv.getExternalTranslationFlag():
-        #         append_bone_names.append(self.bone_indexes[lv.effect_index])
-        # for bname in append_bone_names:
-        #     tmp_links[bname] = self.bones[bname]
+            if links and target_bone_name in links.all():
+                reversed_links = BoneLinks()
+                
+                # リンクがある場合、反転させて返す
+                for lname in reversed(links.all()):
+                    reversed_links.append(links.get(lname))
 
-        # IKを取得
-        ik_links_dict = self.create_ik_links(tmp_links)
-
-        reversed_links = self.reverse_links(tmp_links)
-
-        if reversed_links:
-            for ik_target_name, links_dict in ik_links_dict.items():
-                reversed_links.append_ik_links(self.bones[ik_target_name], links_dict["target"], links_dict["ik"])
-
-        if reversed_links.size() > 0:
-            logger.debug_info("reversed_links: %s, \n%s", self.name, reversed_links.to_log())
-            return reversed_links
-
+                return reversed_links
+        
         # 最後まで回しても取れなかった場合、エラー
         raise SizingException("ボーンリンクの生成に失敗しました。モデル「%s」に「%s」のボーンがあるか確認してください。" % (self.name, ",".join(target_bone_names)))
-    
-    def reverse_links(self, links: dict, is_ik=False):
-        reversed_links = BoneLinks()
-        
-        # if is_ik:
-        #     total_links = {}
-
-        #     for lv in links.values():
-        #         # IKボーンリストの場合、階層＋ボーン順番
-        #         if lv.index >= 0:
-        #             total_links[f'{lv.layer:04d}-{lv.index:04d}'] = lv
-
-        #     if len(total_links.keys()) > 1:
-        #         # ボーン順番でソート
-        #         for tlk in sorted(list(total_links.keys())):
-        #             # まだ登録されていない
-        #             if total_links[tlk].index >= 0:
-        #                 reversed_links.append(total_links[tlk], total_links[tlk].layer)
-        #                 logger.test("tlk: %s, %s", tlk, total_links[tlk].name)
-
-        #         logger.test("reverse_links:%s, \n%s", self.name, reversed_links.to_log())
-            
-        #         return reversed_links
-        # else:
-        total_links = {}
-
-        for lv in links.values():
-            # 直系ボーンリストの場合、ボーン順番
-            total_links[f'{lv.index:04d}'] = lv
-
-        layers = []
-        for lidx, lv in enumerate(links.values()):
-            layers.append(lv.layer)
-
-        # 直系リストは変形階層別にレイヤー生成
-        target_layers = [min(layers)]
-        if len(layers) > 1:
-            target_layers.append(max(layers))
-
-        for layer in range(max(layers) + 1):
-            total_links = {}
-            for lv in links.values():
-                if lv.index >= 0 and layer == lv.layer:
-                    total_links[f'{lv.index:04d}'] = lv
-
-            # ボーン順番でソート
-            for tlk in sorted(list(total_links.keys())):
-                if total_links[tlk].index >= 0:
-                    reversed_links.append(total_links[tlk], layer)
-
-                logger.test("tlk: %s-%s, %s, index: %s", layer, tlk, total_links[tlk].name, total_links[tlk].index)
-
-        logger.test("reverse_links:%s, \n%s", self.name, reversed_links.to_log())
-    
-        return reversed_links
-    
-        # return None
-
-    def create_ik_links(self, links: dict):
-        ik_links_dict = {}
-
-        for dl in links.values():
-            if dl.name in ["全ての親", "センター", "グルーブ"]:
-                # 移動系は無視
-                continue
-
-            for b in self.bones.values():
-                if b.getIkFlag() and (dl.index in [i.bone_index for i in b.ik.link] or b.parent_index == dl.index):
-                    link_bone_names = []
-
-                    # 自分のINDEXがIK系列に含まれている場合、IKボーンのボーンリンクを保持
-                    ik_target_dicts = self.create_link_2_top(b.name, None, False)
-                    
-                    # ボーンリンクに、ターゲットとリンクを含める
-                    link_dicts = {}
-                    for i in b.ik.link:
-                        one_link_dicts = self.create_link_2_top(self.bones[self.bone_indexes[i.bone_index]].name, None, False)
-                        for k, v in one_link_dicts.items():
-                            if k not in link_dicts:
-                                link_dicts[k] = v
-                                # if v.layer < b.layer:
-                                #     ik_target_dicts[k] = v
-                        link_bone_names.append(self.bones[self.bone_indexes[i.bone_index]].name)
-                    # ターゲットの位置を捕捉するために、追加
-                    link_dicts[self.bone_indexes[b.ik.target_index]] = self.bones[self.bone_indexes[b.ik.target_index]]
-                    ik_target_dicts[self.bone_indexes[b.ik.target_index]] = self.bones[self.bone_indexes[b.ik.target_index]]
-
-                    for link_bone_name in link_bone_names:
-                        ik_links_dict[link_bone_name] = {"target": self.reverse_links(ik_target_dicts, is_ik=True), "ik": self.reverse_links(link_dicts, is_ik=True)}
-        
-        return ik_links_dict
 
     # リンク生成
-    def create_link_2_top(self, target_bone_name: str, links: dict, is_defined: bool):
+    def create_link_2_top(self, target_bone_name: str, links: BoneLinks, is_defined: bool):
         if not links:
             # まだリンクが生成されていない場合、順序保持辞書生成
-            links = {}
+            links = BoneLinks()
         
-        if target_bone_name not in self.bones: # and target_bone_name not in self.PARENT_BORN_PAIR:
+        if target_bone_name not in self.bones and target_bone_name not in self.PARENT_BORN_PAIR:
             # 開始ボーン名がなければ終了
-            logger.test("target_bone_name not in bones: %s", target_bone_name)
             return links
-
-        logger.test("create_link_2_top start: %s", target_bone_name)
 
         start_type_bone = target_bone_name
         if target_bone_name.startswith("右") or target_bone_name.startswith("左"):
@@ -1308,7 +1198,7 @@ cdef class PmxModel:
             start_type_bone = target_bone_name[1:]
 
         # 自分をリンクに登録
-        links[target_bone_name] = self.bones[target_bone_name]
+        links.append(self.bones[target_bone_name])
 
         parent_name = None
         if is_defined:
@@ -1325,24 +1215,21 @@ cdef class PmxModel:
             # 未定義でよい場合
             if self.bones[target_bone_name].parent_index >= 0:
                 # 親ボーンが存在している場合
-                logger.test("parent_index: %s -> %s", self.bones[target_bone_name].parent_index, self.bone_indexes[self.bones[target_bone_name].parent_index])
                 parent_name = self.bone_indexes[self.bones[target_bone_name].parent_index]
 
         if not parent_name:
-            logger.test("not parent_name: %s", self.bones[target_bone_name].parent_index)
-            logger.test("create_link_2_top: %s, %s, \n%s", self.name, target_bone_name, links)
             # 親ボーンがボーンインデックスリストになければ終了
             return links
         
-        logger.test("target_bone_name: %s, parent_name: %s, start_type_bone: %s", target_bone_name, parent_name, start_type_bone)
+        logger.test("target_bone_name: %s. parent_name: %s, start_type_bone: %s", target_bone_name, parent_name, start_type_bone)
         
         # 親をたどる
         try:
             return self.create_link_2_top(parent_name, links, is_defined)
         except RecursionError:
-            raise SizingException("ボーンリンクの生成に失敗しました。\nモデル「%s」の「%s」ボーンで以下を確認してください。\n" % (self.name, target_bone_name) \
+            raise SizingException("ボーンリンクの生成に失敗しました。\nモデル「{0}」の「{1}」ボーンで以下を確認してください。\n" \
                                   + "・同じ名前のボーンが複数ないか（ボーンのINDEXがズレるため、サイジングに失敗します）\n" \
-                                  + "・親ボーンに自分の名前と同じ名前のボーンが指定されていないか\n※ PMXEditorの「PMXデータの状態検証」から確認できます。")
+                                  + "・親ボーンに自分の名前と同じ名前のボーンが指定されていないか\n※ PMXEditorの「PMXデータの状態検証」から確認できます。".format(self.name, target_bone_name))
     
     # 子孫ボーンリスト取得
     def get_child_bones(self, target_bone: Bone, bone_list=None):
