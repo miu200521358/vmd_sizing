@@ -55,8 +55,8 @@ class PmxReader:
             self.read_text = self.define_read_text(text_encoding)
 
             # 追加UV数
-            self.extended_uv = self.read_int(1)
-            logger.test("extended_uv: %s (%s)", self.extended_uv, self.offset)
+            extended_uv = self.read_int(1)
+            logger.test("extended_uv: %s (%s)", extended_uv, self.offset)
 
             # 頂点Indexサイズ
             self.vertex_index_size = self.read_int(1)
@@ -128,8 +128,8 @@ class PmxReader:
                 self.read_text = self.define_read_text(text_encoding)
 
                 # 追加UV数
-                self.extended_uv = self.read_int(1)
-                logger.test("extended_uv: %s (%s)", self.extended_uv, self.offset)
+                pmx.extended_uv = self.read_int(1)
+                logger.test("extended_uv: %s (%s)", pmx.extended_uv, self.offset)
 
                 # 頂点Indexサイズ
                 self.vertex_index_size = self.read_int(1)
@@ -184,9 +184,9 @@ class PmxReader:
                     uv = self.read_Vector2D()
 
                     extended_uvs = []
-                    if self.extended_uv > 0:
+                    if pmx.extended_uv > 0:
                         # 追加UVがある場合
-                        for _ in range(self.extended_uv):
+                        for _ in range(pmx.extended_uv):
                             extended_uvs.append(self.read_Vector4D())
 
                     deform = self.read_deform()
@@ -354,8 +354,8 @@ class PmxReader:
 
                     # ボーンのINDEX
                     bone.index = bone_idx
-                    # 親ボーンから見た相対位置
-                    if bone.parent_index >= 0:
+                    if self.is_sizing and bone.parent_index >= 0:
+                        # 親ボーンから見た相対位置
                         bone.relative_position = bone.position - pmx.bones[pmx.bone_indexes[bone.parent_index]].position
 
                     if bone.name not in pmx.bones:

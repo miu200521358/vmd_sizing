@@ -33,9 +33,9 @@ class PmxWriter:
             # エンコード方式  | 0:UTF16
             fout.write(struct.pack(TYPE_BYTE, 0))
             # 追加UV数
-            fout.write(struct.pack(TYPE_BYTE, 0))
+            fout.write(struct.pack(TYPE_BYTE, pmx.extended_uv))
             # 頂点Indexサイズ | 1,2,4 のいずれか
-            vertex_idx_size, vertex_idx_type = self.define_index_size(len(pmx.vertex_dict.keys()))
+            vertex_idx_size, vertex_idx_type = self.define_vertex_index_size(len(pmx.vertex_dict.keys()))
             fout.write(struct.pack(TYPE_BYTE, vertex_idx_size))
             # テクスチャIndexサイズ | 1,2,4 のいずれか
             texture_idx_size, texture_idx_type = self.define_index_size(len(pmx.textures))
@@ -77,6 +77,12 @@ class PmxWriter:
                 # uv
                 fout.write(struct.pack(TYPE_FLOAT, float(vertex.uv.x())))
                 fout.write(struct.pack(TYPE_FLOAT, float(vertex.uv.y())))
+                # 追加uv
+                for uv in vertex.extended_uvs:
+                    fout.write(struct.pack(TYPE_FLOAT, float(uv.x())))
+                    fout.write(struct.pack(TYPE_FLOAT, float(uv.y())))
+                    fout.write(struct.pack(TYPE_FLOAT, float(uv.z())))
+                    fout.write(struct.pack(TYPE_FLOAT, float(uv.w())))
 
                 # deform
                 if type(vertex.deform) is Bdef1:
@@ -473,6 +479,19 @@ class PmxWriter:
         else:
             idx_size = 1
             idx_type = TYPE_BYTE
+
+        return idx_size, idx_type
+  
+    def define_vertex_index_size(self, size: int):
+        if 65536 <= size:
+            idx_size = 4
+            idx_type = TYPE_UNSIGNED_INT
+        elif 256 <= size <= 65535:
+            idx_size = 2
+            idx_type = TYPE_UNSIGNED_SHORT
+        else:
+            idx_size = 1
+            idx_type = TYPE_UNSIGNED_BYTE
 
         return idx_size, idx_type
 

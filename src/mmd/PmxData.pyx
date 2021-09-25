@@ -977,6 +977,7 @@ class Joint:
 cdef class PmxModel:
     def __init__(self):
         self.path = ''
+        self.extended_uv = 0
         self.name = ''
         self.english_name = ''
         self.comment = ''
