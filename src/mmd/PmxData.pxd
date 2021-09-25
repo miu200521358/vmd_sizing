@@ -148,6 +148,7 @@ cdef class PmxModel:
     cdef public dict bone_indexes
     cdef public dict morphs
     cdef public dict morph_indexes
+    cdef public dict org_morphs
     cdef public dict display_slots
     cdef public dict rigidbodies
     cdef public dict rigidbody_indexes

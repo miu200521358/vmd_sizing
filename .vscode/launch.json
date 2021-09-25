@@ -54,6 +54,20 @@
             ]
         },
         {
+            "name": "exec_tailor_gui",
+            "type": "python",
+            "request": "launch",
+            "cwd": "${workspaceFolder}/../pmx_tailor/",
+            "program": "${workspaceFolder}/../pmx_tailor/src/executor.py",
+            "console": "integratedTerminal",
+            "python": "${command:python.interpreterPath}",
+            "stopOnEntry": false,
+            "args": [
+                "--verbose", "20",
+                "--out_log", "1",
+            ]
+        },
+        {
             "name": "exec_vrm2pmx",
             "type": "python",
             "request": "launch",

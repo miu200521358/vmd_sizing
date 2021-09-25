@@ -1003,6 +1003,8 @@ cdef class PmxModel:
         self.morphs = {}
         # モーフINDEXデータ（キー：モーフINDEX、値：モーフ名）
         self.morph_indexes = {}
+        # モーフデータ(元々の順番保持)
+        self.org_morphs = {}
         # 表示枠データ
         self.display_slots = {}
         # 剛体データ
