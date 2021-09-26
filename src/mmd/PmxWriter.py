@@ -485,7 +485,7 @@ class PmxWriter:
     def define_vertex_index_size(self, size: int):
         if 65536 <= size:
             idx_size = 4
-            idx_type = TYPE_UNSIGNED_INT
+            idx_type = TYPE_INT
         elif 256 <= size <= 65535:
             idx_size = 2
             idx_type = TYPE_UNSIGNED_SHORT

@@ -61,7 +61,8 @@ class PmxReader:
             # 頂点Indexサイズ
             self.vertex_index_size = self.read_int(1)
             logger.test("vertex_index_size: %s (%s)", self.vertex_index_size, self.offset)
-            self.read_vertex_index_size = lambda: self.read_int(self.vertex_index_size)
+            # サイズに基づいて頂点INDEX解凍処理を定義
+            self.read_vertex_index_size = self.define_read_vertex_idx(self.vertex_index_size)
 
             # テクスチャIndexサイズ
             self.texture_index_size = self.read_int(1)
@@ -134,7 +135,8 @@ class PmxReader:
                 # 頂点Indexサイズ
                 self.vertex_index_size = self.read_int(1)
                 logger.test("vertex_index_size: %s (%s)", self.vertex_index_size, self.offset)
-                self.read_vertex_index_size = lambda: self.read_int(self.vertex_index_size)
+                # サイズに基づいて頂点INDEX解凍処理を定義
+                self.read_vertex_index_size = self.define_read_vertex_idx(self.vertex_index_size)
 
                 # テクスチャIndexサイズ
                 self.texture_index_size = self.read_int(1)
@@ -212,11 +214,7 @@ class PmxReader:
                     if index_idx not in pmx.indices.keys():
                         pmx.indices[index_idx] = []
 
-                    if self.vertex_index_size <= 2:
-                        # 頂点サイズが2以下の場合、符号なし
-                        pmx.indices[index_idx].append(self.read_uint(self.vertex_index_size))
-                    else:
-                        pmx.indices[index_idx].append(self.read_int(self.vertex_index_size))
+                    pmx.indices[index_idx].append(self.read_vertex_index_size(self.vertex_index_size))
                     
                 logger.test("len(indices): %s", len(pmx.indices))
                 
@@ -1063,7 +1061,7 @@ class PmxReader:
 
     def read_vertex_position_morph_offset(self):
         return VertexMorphOffset(
-            self.read_vertex_index_size(), self.read_Vector3D())
+            self.read_vertex_index_size(self.vertex_index_size), self.read_Vector3D())
 
     def read_bone_morph_data(self):
         return BoneMorphData(
@@ -1074,7 +1072,7 @@ class PmxReader:
 
     def read_uv_morph_data(self):
         return UVMorphData(
-            self.read_vertex_index_size(),
+            self.read_vertex_index_size(self.vertex_index_size),
             self.read_Vector4D(),
         )
 
@@ -1180,6 +1178,19 @@ class PmxReader:
             return read_text
         else:
             raise MParseException("define_read_text 定義エラー {0}".format(text_encoding))
+
+    # 頂点INDEXの解凍（サイズに基づく）
+    def define_read_vertex_idx(self, vertex_size):
+        if vertex_size <= 2:
+            def read_vertex_idx(vertex_size):
+                return self.read_uint(vertex_size)
+            return read_vertex_idx
+        elif vertex_size == 4:
+            def read_vertex_idx(vertex_size):
+                return self.read_int(vertex_size)
+            return read_vertex_idx
+        else:
+            raise MParseException("define_read_vertex_idx 定義エラー {0}".format(vertex_size))
 
     # 整数の解凍
     def read_int(self, format_size):
