@@ -248,12 +248,14 @@ class MainFrame(wx.Frame):
                 result = False
             
             if not (os.path.exists(self.file_panel_ctrl.file_set.output_vmd_file_ctrl.path()) and os.path.isfile(self.file_panel_ctrl.file_set.output_vmd_file_ctrl.path())):
-                logger.error("カメラサイジングのみ実行する場合、\n1番目のファイルセットの出力VMDには既存のサイジング済みVMDファイルパスを指定してください。", decoration=MLogger.DECORATION_BOX)
+                logger.error("カメラサイジングのみ実行する場合、\n1番目のファイルセットの出力VMDには既存のサイジング済みVMDファイルパスを指定してください。" \
+                             "\n（出力VMDを「開く」から指定した場合に「上書きしますか？」と警告が出ますが、実際には上書きは行いません。）", decoration=MLogger.DECORATION_BOX)
                 result = False
 
             for fidx, file_set in enumerate(self.multi_panel_ctrl.file_set_list):
                 if not (os.path.exists(file_set.output_vmd_file_ctrl.path()) and os.path.isfile(file_set.output_vmd_file_ctrl.path())):
-                    logger.error(f"カメラサイジングのみ実行する場合、\n{fidx+1}番目のファイルセットの出力VMDには既存のサイジング済みVMDファイルパスを指定してください。", decoration=MLogger.DECORATION_BOX)
+                    logger.error(f"カメラサイジングのみ実行する場合、\n{fidx+1}番目のファイルセットの出力VMDには既存のサイジング済みVMDファイルパスを指定してください。" \
+                                 "\n（出力VMDを「開く」から指定した場合に「上書きしますか？」と警告が出ますが、実際には上書きは行いません。）", decoration=MLogger.DECORATION_BOX)
                     result = False
 
         return result
