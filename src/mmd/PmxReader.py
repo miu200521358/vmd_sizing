@@ -2,6 +2,8 @@
 #
 import struct
 import hashlib
+import random
+import string
 
 from mmd.PmxData import PmxModel, Bone, RigidBody, Vertex, Material, Morph, DisplaySlot, RigidBody, Joint, Ik, IkLink, Bdef1, Bdef2, Bdef4, Sdef, Qdef, MaterialMorphData, UVMorphData, BoneMorphData, VertexMorphOffset, GroupMorphData # noqa
 from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
@@ -352,7 +354,7 @@ class PmxReader:
 
                     # ボーンのINDEX
                     bone.index = bone_idx
-                    if self.is_sizing and bone.parent_index >= 0:
+                    if self.is_sizing and bone.parent_index >= 0 and bone.parent_index in pmx.bone_indexes:
                         # 親ボーンから見た相対位置
                         bone.relative_position = bone.position - pmx.bones[pmx.bone_indexes[bone.parent_index]].position
 
@@ -362,8 +364,11 @@ class PmxReader:
                         # インデックス逆引きも登録
                         pmx.bone_indexes[bone.index] = bone.name
                     else:
-                        # 既に同じボーン名がある場合、処理がおかしくなるので中断
-                        raise SizingException("同名ボーンが重複しています。\nモデル: %s\n重複ボーン名: %s(%s - %s)" % (pmx.name, bone.name, pmx.bones[bone.name].index, bone_idx))
+                        # 既に同じボーン名がある場合、処理がおかしくなるので乱数追加
+                        logger.warning("ボーン名が重複しているため、後のボーンを無視します。\nモデル: %s\n重複ボーン名: %s(%s - %s)" % (pmx.name, bone.name, pmx.bones[bone.name].index, bone_idx), decoration=MLogger.DECORATION_BOX)     # noqa
+                        # 乱数追加してボーンリストにだけ追加
+                        pmx.bones[bone.name + randomname(3)] = bone
+                        # INDEX逆引きは登録しない（同名のを優先させる）
                 
                 if self.is_sizing:
                     # サイジング用ボーン ---------
@@ -877,7 +882,7 @@ class PmxReader:
                         english_name=self.read_text(),
                         bone_index=self.read_bone_index_size(),
                         collision_group=self.read_int(1),
-                        no_collision_group=self.read_int(2),
+                        no_collision_group=self.read_uint(2),
                         shape_type=self.read_int(1),
                         shape_size=self.read_Vector3D(),
                         shape_position=self.read_Vector3D(),
@@ -1242,3 +1247,7 @@ class PmxReader:
             result = None
 
         return result
+
+
+def randomname(n) -> str:
+    return ''.join(random.choices(string.ascii_letters + string.digits, k=n))

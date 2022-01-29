@@ -172,11 +172,17 @@ class SizingFileSet():
                 if motion.bones[k][fno].position != MVector3D() or motion.bones[k][fno].rotation != MQuaternion():
                     # キーが存在しており、かつ初期値ではない値が入っている場合、警告対象
 
+                    if isinstance(org_pmx, Exception):
+                        raise org_pmx
+
                     if k not in org_pmx.bones:
                         if k in PmxModel.PARENT_BORN_PAIR:
                             not_org_standard_bones.append(k)
                         else:
                             not_org_other_bones.append(k)
+
+                    if isinstance(rep_pmx, Exception):
+                        raise rep_pmx
 
                     if k not in rep_pmx.bones:
                         if k in PmxModel.PARENT_BORN_PAIR:

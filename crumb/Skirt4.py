@@ -32,8 +32,8 @@ logger = MLogger(__name__, level=MLogger.DEBUG_INFO)
 
 
 def exec():
-    # model = PmxReader("D:\\MMD\\Blender\\スカート\\cloak.pmx", is_check=False, is_sizing=False).read_data()
-    model = PmxReader("D:\\MMD\\Blender\\スカート\\skirt_single.pmx", is_check=False, is_sizing=False).read_data()
+    model = PmxReader("D:\\MMD\\Blender\\スカート\\cloak.pmx", is_check=False, is_sizing=False).read_data()
+    # model = PmxReader("D:\\MMD\\Blender\\スカート\\skirt_single.pmx", is_check=False, is_sizing=False).read_data()
     # model = PmxReader("D:\\MMD\\Blender\\スカート\\skirt_double.pmx", is_check=False, is_sizing=False).read_data()
     # model = PmxReader("D:\\MMD\\Blender\\スカート\\pleats.pmx", is_check=False, is_sizing=False).read_data()
     # model = PmxReader("D:\\MMD\\MikuMikuDance_v926x64\\UserFile\\Model\\ゲーム\\Fate\\ジャンヌ・ダルク・オルタ・サンタ・リリィ[配布用]ver1.0 潮井イタチ\\ジャンヌ・ダルク・オルタ・サンタ・リリィ[ランサー]_スカート.pmx", is_check=False, is_sizing=False).read_data()
@@ -43,7 +43,7 @@ def exec():
     logger.info("頂点位置チェック")
     
     # 全ボーンを登録するか
-    is_full_regist = False
+    is_full_regist = True
 
     tailor_type = 0  # スカート
     tailor_type = 1  # マント
@@ -60,16 +60,16 @@ def exec():
     # max_vertical_limit_rot: 縦ジョイント回転制限MAX
     # min_horizonal_limit_rot: 横ジョイント回転制限MIN
     # max_horizonal_limit_rot: 横ジョイント回転制限MAX
-    # for target_bone_name, target_material_name, parent_bone_name, start_vertex_idx, y_density, x_density, collision_group_idx, rigidbody_param_to, \
-    #     min_vertical_limit_rot, max_vertical_limit_rot, min_horizonal_limit_rot, max_horizonal_limit_rot in \
-    #         [("mt", "マント", "首", 5837, 3, 2, 1, RigidBodyParam(0.2, 0.99, 0.99, 0, 0.5), 15, 30, 20, 40)]:
+    for target_bone_name, target_material_name, parent_bone_name, start_vertex_idx, y_density, x_density, collision_group_idx, rigidbody_param_to, \
+        min_vertical_limit_rot, max_vertical_limit_rot, min_horizonal_limit_rot, max_horizonal_limit_rot in \
+            [("mt", "マント", "首", 5837, 3, 2, 1, RigidBodyParam(0.2, 0.99, 0.99, 0, 0.5), 15, 30, 20, 40)]:
     # for target_bone_name, target_material_name, parent_bone_name, start_vertex_idx, y_density, x_density, collision_group_idx, rigidbody_param_to, \
     #     min_vertical_limit_rot, max_vertical_limit_rot, min_horizonal_limit_rot, max_horizonal_limit_rot in \
     #         [("内sk", "内スカート", "下半身", None, 3, 2, 1, RigidBodyParam(0.5, 0.9999, 0.9999, 0, 0.5), 10, 20, 40, 60), \
     #          ("外sk", "外スカート", "下半身", None, 4, 3, 2, RigidBodyParam(0.3, 0.99, 0.99, 0, 0.5), 10, 20, 60, 80)]:
-    for target_bone_name, target_material_name, parent_bone_name, start_vertex_idx, y_density, x_density, collision_group_idx, rigidbody_param_to, \
-        min_vertical_limit_rot, max_vertical_limit_rot, min_horizonal_limit_rot, max_horizonal_limit_rot in \
-            [("sk", "内スカート", "下半身", 94, 2, 2, 1, RigidBodyParam(0.5, 0.9999, 0.9999, 0, 0.5), 10, 20, 40, 60)]:
+    # for target_bone_name, target_material_name, parent_bone_name, start_vertex_idx, y_density, x_density, collision_group_idx, rigidbody_param_to, \
+    #     min_vertical_limit_rot, max_vertical_limit_rot, min_horizonal_limit_rot, max_horizonal_limit_rot in \
+    #         [("sk", "内スカート", "下半身", 94, 2, 2, 1, RigidBodyParam(0.5, 0.9999, 0.9999, 0, 0.5), 10, 20, 40, 60)]:
     # for target_bone_name, target_material_name, parent_bone_name, start_vertex_idx, y_density, x_density, collision_group_idx, rigidbody_param_to, \
     #     min_vertical_limit_rot, max_vertical_limit_rot, min_horizonal_limit_rot, max_horizonal_limit_rot in \
     #         [("sk", "プリーツ", "下半身", None, 2, 2, 1, RigidBodyParam(0.5, 0.9999, 0.9999, 0, 0.5), 10, 20, 40, 60)]:

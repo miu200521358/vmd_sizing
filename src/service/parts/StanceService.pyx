@@ -51,6 +51,7 @@ cdef class StanceService():
     def __init__(self, options: MOptions):
         self.options = options
 
+    # https://www.japanpt.or.jp/upload/jspt/obj/files/publiccomment/4_rom_20140612.pdf
     def execute(self):
         # for data_set_idx, data_set in enumerate(self.options.data_set_list):
         #     self.execute_pool(data_set_idx)

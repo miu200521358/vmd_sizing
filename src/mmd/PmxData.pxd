@@ -133,6 +133,7 @@ cdef class OBB:
 
 cdef class PmxModel:
     cdef public str path
+    cdef public dict json_data
     cdef public int extended_uv
     cdef public str name
     cdef public str english_name

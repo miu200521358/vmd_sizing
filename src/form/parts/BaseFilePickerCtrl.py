@@ -309,6 +309,9 @@ class BaseFilePickerCtrl():
             # ハッシュ値取得
             new_data_digest = reader.hexdigest()
 
+            if isinstance(self.data, Exception):
+                raise self.data
+
             # 新規データがあり、かつハッシュが違う場合、置き換え
             if new_data_digest and ((self.data and self.data.digest != new_data_digest) or not self.data):
                 # ハッシュが取得できてて、過去データがないかハッシュが違う場合、読み込み
