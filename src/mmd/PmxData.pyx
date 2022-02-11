@@ -12,7 +12,7 @@ from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MM
 from utils.MException import SizingException # noqa
 from utils.MLogger import MLogger # noqa
 
-logger = MLogger(__name__, level=MLogger.DEBUG)
+logger = MLogger(__name__, level=MLogger.DEBUG_INFO)
 
 
 cdef class Deform:
@@ -120,6 +120,21 @@ cdef class Vertex:
 
         return False
     
+    # 最もウェイトが乗ってるボーンINDEXとそのウェイト（全ボーン対象）
+    def get_max_deform_by_all(self):
+        if type(self.deform) is Bdef2 or type(self.deform) is Sdef or type(self.deform) is Qdef:
+            weights = [self.deform.weight0, 1 - self.deform.weight0]
+            names = [self.deform.index0, self.deform.index1]
+        elif type(self.deform) is Bdef4:
+            weights = [self.deform.weight0, self.deform.weight1, self.deform.weight2, self.deform.weight3]
+            names = [self.deform.index0, self.deform.index1, self.deform.index2, self.deform.index3]
+        else:
+            weights = [1]
+            names = [self.deform.index0]
+
+        max_weight_idx = np.argmax(weights)
+        return names[max_weight_idx], weights[max_weight_idx]
+
     # 最もウェイトが乗っているボーンINDEX
     def get_max_deform_index(self, head_links_indexes):
         if type(self.deform) is Bdef2 or type(self.deform) is Sdef or type(self.deform) is Qdef:
@@ -201,7 +216,7 @@ cdef class Ik:
     def __str__(self):
         return "<Ik target_index:{0}, loop:{1}, limit_radian:{2}, link:{3}".format(self.target_index, self.loop, self.limit_radian, self.link)
         
-class IkLink:
+cdef class IkLink:
 
     def __init__(self, bone_index, limit_angle, limit_min=None, limit_max=None):
         self.bone_index = bone_index
@@ -215,7 +230,7 @@ class IkLink:
 # ボーン構造-----------------------
 cdef class Bone:
     def __init__(self, name, english_name, position, parent_index, layer, flag, tail_position=None, tail_index=-1, effect_index=-1, effect_factor=0.0, fixed_axis=None,
-                 local_x_vector=None, local_z_vector=None, external_key=-1, ik=None):
+                 local_x_vector=None, local_z_vector=None, external_key=-1, ik=None, is_sizing=False):
         self.name = name
         self.english_name = english_name
         self.position = position
@@ -234,6 +249,10 @@ cdef class Bone:
         self.index = -1
         # 表示枠チェック時にONにするので、デフォルトはFalse
         self.display = False
+        # サイジング用特殊ボーンであるか
+        self.is_sizing = is_sizing
+        # 親ボーンから見た相対位置
+        self.relative_position = MVector3D()
 
         # 親ボーンからの長さ3D版(計算して求める）
         self.len_3d = MVector3D()
@@ -329,6 +348,41 @@ cdef class Bone:
 
 
 # モーフ構造-----------------------
+class GroupMorphData:
+    def __init__(self, morph_index, value):
+        self.morph_index = morph_index
+        self.value = value
+
+class VertexMorphOffset:
+    def __init__(self, vertex_index, position_offset):
+        self.vertex_index = vertex_index
+        self.position_offset = position_offset
+
+class BoneMorphData:
+    def __init__(self, bone_index, position, rotation):
+        self.bone_index = bone_index
+        self.position = position
+        self.rotation = rotation
+
+class UVMorphData:
+    def __init__(self, vertex_index, uv):
+        self.vertex_index = vertex_index
+        self.uv = uv
+
+class MaterialMorphData:
+    def __init__(self, material_index, calc_mode, diffuse, specular, specular_factor, ambient, edge_color, edge_size, texture_factor, sphere_texture_factor, toon_texture_factor):
+        self.material_index = material_index
+        self.calc_mode = calc_mode
+        self.diffuse = diffuse
+        self.specular = specular
+        self.specular_factor = specular_factor
+        self.ambient = ambient
+        self.edge_color = edge_color
+        self.edge_size = edge_size
+        self.texture_factor = texture_factor
+        self.sphere_texture_factor = sphere_texture_factor
+        self.toon_texture_factor = toon_texture_factor
+
 class Morph:
     def __init__(self, name, english_name, panel, morph_type, offsets=None):
         self.index = 0
@@ -357,53 +411,19 @@ class Morph:
             return "他"
         else:
             return "？"
-            
-    class GroupMorphData:
-        def __init__(self, morph_index, value):
-            self.morph_index = morph_index
-            self.value = value
-
-    class VertexMorphOffset:
-        def __init__(self, vertex_index, position_offset):
-            self.vertex_index = vertex_index
-            self.position_offset = position_offset
-
-    class BoneMorphData:
-        def __init__(self, bone_index, position, rotation):
-            self.bone_index = bone_index
-            self.position = position
-            self.rotation = rotation
-
-    class UVMorphData:
-        def __init__(self, vertex_index, uv):
-            self.vertex_index = vertex_index
-            self.uv = uv
-
-    class MaterialMorphData:
-        def __init__(self, material_index, calc_mode, diffuse, specular, specular_factor, ambient, edge_color, edge_size, texture_factor, sphere_texture_factor, toon_texture_factor):
-            self.material_index = material_index
-            self.calc_mode = calc_mode
-            self.diffuse = diffuse
-            self.specular = specular
-            self.specular_factor = specular_factor
-            self.ambient = ambient
-            self.edge_color = edge_color
-            self.edge_size = edge_size
-            self.texture_factor = texture_factor
-            self.sphere_texture_factor = sphere_texture_factor
-            self.toon_texture_factor = toon_texture_factor
 
 
 # 表示枠構造-----------------------
 class DisplaySlot:
-    def __init__(self, name, english_name, special_flag, references=None):
+    def __init__(self, name, english_name, special_flag, display_type=0, references=None):
         self.name = name
         self.english_name = english_name
         self.special_flag = special_flag
+        self.display_type = display_type
         self.references = references or []
 
     def __str__(self):
-        return "<DisplaySlots name:{0}, english_name:{1}, special_flag:{2}, references(len):{3}".format(self.name, self.english_name, self.special_flag, len(self.references))
+        return "<DisplaySlots name:{0}, english_name:{1}, special_flag:{2}, display_type: {3}, references(len):{4}".format(self.name, self.english_name, self.special_flag, self.display_type, len(self.references))
 
 
 # 剛体構造-----------------------
@@ -957,20 +977,25 @@ class Joint:
 cdef class PmxModel:
     def __init__(self):
         self.path = ''
+        self.extended_uv = 0
         self.name = ''
         self.english_name = ''
         self.comment = ''
         self.english_comment = ''
         # 頂点データ（キー：ボーンINDEX、値：頂点データリスト）
         self.vertices = {}
-        # 面データ
-        self.indices = []
+        # 頂点データ（キー：頂点INDEX、値：頂点データ）
+        self.vertex_dict = {}
+        # 面データ（キー：面INDEX、値：頂点INDEXリスト）
+        self.indices = {}
         # テクスチャデータ
         self.textures = []
         # 材質データ
         self.materials = {}
-        # 材質データ（キー：材質INDEX、値：材質名）
-        self.material_indexes = {}
+        # 材質データ（キー：材質名、値：面INDEXリスト）
+        self.material_indices = {}
+        # 材質-頂点引き当てデータ（キー：材質名、値：頂点INDEXリスト）
+        self.material_vertices = {}
         # ボーンデータ
         self.bones = {}
         # ボーンINDEXデータ（キー：ボーンINDEX、値：ボーン名）
@@ -979,6 +1004,8 @@ cdef class PmxModel:
         self.morphs = {}
         # モーフINDEXデータ（キー：モーフINDEX、値：モーフ名）
         self.morph_indexes = {}
+        # モーフデータ(元々の順番保持)
+        self.org_morphs = {}
         # 表示枠データ
         self.display_slots = {}
         # 剛体データ
@@ -1025,19 +1052,22 @@ cdef class PmxModel:
             fixed_x_axis = MVector3D()
         
         from_pos = self.bones[bone.name].position
-        if bone.tail_position != MVector3D():
+        if not bone.getConnectionFlag() and bone.tail_position > MVector3D():
             # 表示先が相対パスの場合、保持
             to_pos = from_pos + bone.tail_position
-        elif bone.tail_index >= 0 and bone.tail_index in self.bone_indexes and self.bones[self.bone_indexes[bone.tail_index]].position != bone.position:
+        elif bone.getConnectionFlag() and bone.tail_index >= 0 and bone.tail_index in self.bone_indexes:
             # 表示先が指定されているの場合、保持
             to_pos = self.bones[self.bone_indexes[bone.tail_index]].position
         else:
-            # 表示先がない場合、とりあえず子ボーンのどれかを選択
-            for b in self.bones.values():
-                if b.parent_index == bone.index and self.bones[self.bone_indexes[b.index]].position != bone.position:
-                    to_pos = self.bones[self.bone_indexes[b.index]].position
-                    break
+            # 表示先がない場合、とりあえず親ボーンからの向きにする
+            from_pos = self.bones[self.bone_indexes[bone.parent_index]].position
+            to_pos = self.bones[bone.name].position
+            # for b in self.bones.values():
+            #     if b.parent_index == bone.index and self.bones[self.bone_indexes[b.index]].position != bone.position:
+            #         to_pos = self.bones[self.bone_indexes[b.index]].position
+            #         break
         
+        logger.test("get_local_x_axis: from: %s, to: %s, tail:%s-[%s]", from_pos, to_pos, bone.tail_index, bone.tail_position)
         # 軸制限の指定が無い場合、子の方向
         x_axis = (to_pos - from_pos).normalized()
 
@@ -1046,6 +1076,20 @@ cdef class PmxModel:
             x_axis = -fixed_x_axis
 
         return x_axis
+    
+    def get_local_x_qq(self, bone_name: str, base_local_axis=None):
+        local_axis_qq = MQuaternion()
+
+        # 自身から親を引いた軸の向き
+        local_axis = self.get_local_x_axis(bone_name)
+        if not base_local_axis:
+            # 最も長い軸の向き(基本姿勢)を未指定の場合は求める
+            base_local_axis = MVector3D(np.where(np.abs(local_axis.data()) == np.max(np.abs(local_axis.data())), 1 * np.sign(local_axis.data()), 0))
+        local_axis_qq = MQuaternion.rotationTo(base_local_axis, local_axis.normalized())
+
+        logger.debug_info("get_local_x_qq: local_axis[%s], base_local_axis[%s], local_axis_qq[%s]", local_axis.to_log(), base_local_axis.to_log(), local_axis_qq.toEulerAngles4MMD().to_log())
+
+        return local_axis_qq
     
     # 腕のスタンスの違い
     def calc_arm_stance(self, from_bone_name: str, to_bone_name=None):
@@ -1346,12 +1390,14 @@ cdef class PmxModel:
                 = self.get_bone_end_vertex(bone_name_list, self.def_calc_vertex_pos_original, def_is_target=None)
 
             if not up_max_vertex:
-                if "頭" in self.bones:
-                    return Vertex(-1, self.bones["頭"].position.copy(), MVector3D(), [], [], Bdef1(-1), -1)
+                if "頭" in self.bones and "上半身" in self.bones and "首" in self.bones:
+                    return Vertex(-1, self.bones["頭"].position.copy() + ((self.bones["首"].position - self.bones["上半身"].position) / 2), MVector3D(), MVector2D(), [], Bdef1(-1), -1)
+                elif "頭" in self.bones:
+                    return Vertex(-1, self.bones["頭"].position.copy() + 2.5, MVector3D(), MVector2D(), [], Bdef1(-1), -1)
                 elif "首" in self.bones:
-                    return Vertex(-1, self.bones["首"].position.copy(), MVector3D(), [], [], Bdef1(-1), -1)
+                    return Vertex(-1, self.bones["首"].position.copy() + 3, MVector3D(), MVector2D(), [], Bdef1(-1), -1)
                 else:
-                    return Vertex(-1, MVector3D(), MVector3D(), [], [], Bdef1(-1), -1)
+                    return Vertex(-1, MVector3D(), MVector3D(), MVector2D(), [], Bdef1(-1), -1)
         
         return up_max_vertex
     
@@ -1412,7 +1458,7 @@ cdef class PmxModel:
             target_bone_name = "{0}足ＩＫ".format(direction)
         else:
             # 足末端系ボーンがない場合、処理終了
-            return Vertex(-1, MVector3D(), MVector3D(), [], [], Bdef1(-1), -1)
+            return Vertex(-1, MVector3D(), MVector3D(), MVector2D(), [], Bdef1(-1), -1)
 
         # 足末端系ボーン
         for bk, bv in self.bones.items():
@@ -1423,15 +1469,15 @@ cdef class PmxModel:
         if len(bone_name_list) == 0:
             # ウェイトボーンがない場合、つま先ボーン系の位置
             if "{0}つま先".format(direction) in self.bones:
-                return Vertex(-1, self.bones["{0}つま先".format(direction)].position, MVector3D(), [], [], Bdef1(-1), -1)
+                return Vertex(-1, self.bones["{0}つま先".format(direction)].position, MVector3D(), MVector2D(), [], Bdef1(-1), -1)
             elif "{0}つま先ＩＫ".format(direction) in self.bones:
-                return Vertex(-1, self.bones["{0}つま先ＩＫ".format(direction)].position, MVector3D(), [], [], Bdef1(-1), -1)
+                return Vertex(-1, self.bones["{0}つま先ＩＫ".format(direction)].position, MVector3D(), MVector2D(), [], Bdef1(-1), -1)
             elif "{0}足首".format(direction) in self.bones:
-                return Vertex(-1, self.bones["{0}足首".format(direction)].position, MVector3D(), [], [], Bdef1(-1), -1)
+                return Vertex(-1, self.bones["{0}足首".format(direction)].position, MVector3D(), MVector2D(), [], Bdef1(-1), -1)
             elif "{0}足ＩＫ".format(direction) in self.bones:
-                return Vertex(-1, self.bones["{0}足ＩＫ".format(direction)].position, MVector3D(), [], [], Bdef1(-1), -1)
+                return Vertex(-1, self.bones["{0}足ＩＫ".format(direction)].position, MVector3D(), MVector2D(), [], Bdef1(-1), -1)
             else:
-                return Vertex(-1, MVector3D(), MVector3D(), [], [], Bdef1(-1), -1)
+                return Vertex(-1, MVector3D(), MVector3D(), MVector2D(), [], Bdef1(-1), -1)
 
         up_max_pos, up_max_vertex, down_max_pos, down_max_vertex, right_max_pos, right_max_vertex, left_max_pos, left_max_vertex, \
             back_max_pos, back_max_vertex, front_max_pos, front_max_vertex, multi_max_pos, multi_max_vertex \
@@ -1441,15 +1487,15 @@ cdef class PmxModel:
         if not front_max_vertex:
             # つま先頂点が取れなかった場合
             if "{0}つま先".format(direction) in self.bones:
-                return Vertex(-1, self.bones["{0}つま先".format(direction)].position, MVector3D(), [], [], Bdef1(-1), -1)
+                return Vertex(-1, self.bones["{0}つま先".format(direction)].position, MVector3D(), MVector2D(), [], Bdef1(-1), -1)
             elif "{0}つま先ＩＫ".format(direction) in self.bones:
-                return Vertex(-1, self.bones["{0}つま先ＩＫ".format(direction)].position, MVector3D(), [], [], Bdef1(-1), -1)
+                return Vertex(-1, self.bones["{0}つま先ＩＫ".format(direction)].position, MVector3D(), MVector2D(), [], Bdef1(-1), -1)
             elif "{0}足首".format(direction) in self.bones:
-                return Vertex(-1, self.bones["{0}足首".format(direction)].position, MVector3D(), [], [], Bdef1(-1), -1)
+                return Vertex(-1, self.bones["{0}足首".format(direction)].position, MVector3D(), MVector2D(), [], Bdef1(-1), -1)
             elif "{0}足ＩＫ".format(direction) in self.bones:
-                return Vertex(-1, self.bones["{0}足ＩＫ".format(direction)].position, MVector3D(), [], [], Bdef1(-1), -1)
+                return Vertex(-1, self.bones["{0}足ＩＫ".format(direction)].position, MVector3D(), MVector2D(), [], Bdef1(-1), -1)
             else:
-                return Vertex(-1, MVector3D(), MVector3D(), [], [], Bdef1(-1), -1)
+                return Vertex(-1, MVector3D(), MVector3D(), MVector2D(), [], Bdef1(-1), -1)
         
         return front_max_vertex
 
@@ -1465,7 +1511,7 @@ cdef class PmxModel:
             target_bone_name = "{0}足ＩＫ".format(direction)
         else:
             # 足末端系ボーンがない場合、処理終了
-            return Vertex(-1, MVector3D(), MVector3D(), [], [], Bdef1(-1), -1)
+            return Vertex(-1, MVector3D(), MVector3D(), MVector2D(), [], Bdef1(-1), -1)
 
         # 足末端系ボーン
         for bk, bv in self.bones.items():
@@ -1476,9 +1522,9 @@ cdef class PmxModel:
         if len(bone_name_list) == 0:
             # ウェイトボーンがない場合、足ＩＫの位置
             if "{0}足ＩＫ".format(direction) in self.bones:
-                return Vertex(-1, self.bones["{0}足ＩＫ".format(direction)].position, MVector3D(), [], [], Bdef1(-1), -1)
+                return Vertex(-1, self.bones["{0}足ＩＫ".format(direction)].position, MVector3D(), MVector2D(), [], Bdef1(-1), -1)
             else:
-                return Vertex(-1, MVector3D(), MVector3D(), [], [], Bdef1(-1), -1)
+                return Vertex(-1, MVector3D(), MVector3D(), MVector2D(), [], Bdef1(-1), -1)
 
         up_max_pos, up_max_vertex, down_max_pos, down_max_vertex, right_max_pos, right_max_vertex, left_max_pos, left_max_vertex, \
             back_max_pos, back_max_vertex, front_max_pos, front_max_vertex, multi_max_pos, multi_max_vertex \
@@ -1488,9 +1534,9 @@ cdef class PmxModel:
         if not multi_max_vertex:
             # 足底頂点が取れなかった場合
             if "{0}足ＩＫ".format(direction) in self.bones:
-                return Vertex(-1, self.bones["{0}足ＩＫ".format(direction)].position, MVector3D(), [], [], Bdef1(-1), -1)
+                return Vertex(-1, self.bones["{0}足ＩＫ".format(direction)].position, MVector3D(), MVector2D(), [], Bdef1(-1), -1)
             else:
-                return Vertex(-1, MVector3D(), MVector3D(), [], [], Bdef1(-1), -1)
+                return Vertex(-1, MVector3D(), MVector3D(), MVector2D(), [], Bdef1(-1), -1)
         
         return multi_max_vertex
 
@@ -1505,7 +1551,7 @@ cdef class PmxModel:
                     bone_name_list.append(bk)
         else:
             # 手首ボーンがない場合、処理終了
-            return Vertex(-1, MVector3D(), MVector3D(), [], [], Bdef1(-1), -1)
+            return Vertex(-1, MVector3D(), MVector3D(), MVector2D(), [], Bdef1(-1), -1)
         
         # 腕の傾き（正確にはひじ以降の傾き）
         _, arm_stance_qq = self.calc_arm_stance("{0}ひじ".format(direction), "{0}手首".format(direction))
@@ -1525,7 +1571,7 @@ cdef class PmxModel:
 
             if not down_max_vertex:
                 # それでも取れなければ手首位置
-                return Vertex(-1, self.bones["{0}手首".format(direction)].position.copy(), MVector3D(), [], [], Bdef1(-1), -1)
+                return Vertex(-1, self.bones["{0}手首".format(direction)].position.copy(), MVector3D(), MVector2D(), [], Bdef1(-1), -1)
         
         return down_max_vertex
 
@@ -1539,7 +1585,7 @@ cdef class PmxModel:
             bone_name_list.append(finger_name)
         else:
             # 指ボーンがない場合、処理終了
-            return Vertex(-1, MVector3D(), MVector3D(), [], [], Bdef1(-1), -1)
+            return Vertex(-1, MVector3D(), MVector3D(), MVector2D(), [], Bdef1(-1), -1)
         
         # 腕の傾き（正確にはひじ以降の傾き）
         _, arm_stance_qq = self.calc_arm_stance("{0}手首".format(direction), finger_name)
@@ -1556,7 +1602,7 @@ cdef class PmxModel:
             return left_max_vertex
 
         # それでも取れなければ手首位置
-        return Vertex(-1, self.bones[finger_name].position.copy(), MVector3D(), [], [], Bdef1(-1), -1)
+        return Vertex(-1, self.bones[finger_name].position.copy(), MVector3D(), MVector2D(), [], Bdef1(-1), -1)
 
     # ひじの厚みをはかる頂点を取得
     def get_elbow_vertex(self, direction: str):
@@ -1572,7 +1618,7 @@ cdef class PmxModel:
                     bone_name_list.append(bk)
         else:
             # ひじボーンがない場合、処理終了
-            return Vertex(-1, MVector3D(), MVector3D(), [], [], Bdef1(-1), -1)
+            return Vertex(-1, MVector3D(), MVector3D(), MVector2D(), [], Bdef1(-1), -1)
         
         # 腕の傾き（正確にはひじ以降の傾き）
         _, arm_stance_qq = self.calc_arm_stance("{0}腕".format(direction), "{0}ひじ".format(direction))
@@ -1592,7 +1638,7 @@ cdef class PmxModel:
 
             if not down_max_vertex:
                 # それでも取れなければひじ位置
-                return Vertex(-1, self.bones["{0}ひじ".format(direction)].position.copy(), MVector3D(), [], [], Bdef1(-1), -1)
+                return Vertex(-1, self.bones["{0}ひじ".format(direction)].position.copy(), MVector3D(), MVector2D(), [], Bdef1(-1), -1)
         
         return down_max_vertex
 

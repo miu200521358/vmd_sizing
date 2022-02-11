@@ -22,9 +22,10 @@ class MLogger():
     TEST = 5
     TIMER = 12
     FULL = 15
+    DEBUG_INFO = 16
     INFO_DEBUG = 22
-    DEBUG = logging.DEBUG
-    INFO = logging.INFO
+    DEBUG = logging.DEBUG       # 10
+    INFO = logging.INFO         # 20
     WARNING = logging.WARNING
     ERROR = logging.ERROR
     CRITICAL = logging.CRITICAL
@@ -73,6 +74,14 @@ class MLogger():
             kwargs = {}
             
         kwargs["level"] = self.INFO_DEBUG
+        kwargs["time"] = True
+        self.print_logger(msg, *args, **kwargs)
+
+    def debug_info(self, msg, *args, **kwargs):
+        if not kwargs:
+            kwargs = {}
+            
+        kwargs["level"] = self.DEBUG_INFO
         kwargs["time"] = True
         self.print_logger(msg, *args, **kwargs)
 

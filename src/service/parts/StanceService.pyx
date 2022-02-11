@@ -51,6 +51,7 @@ cdef class StanceService():
     def __init__(self, options: MOptions):
         self.options = options
 
+    # https://www.japanpt.or.jp/upload/jspt/obj/files/publiccomment/4_rom_20140612.pdf
     def execute(self):
         # for data_set_idx, data_set in enumerate(self.options.data_set_list):
         #     self.execute_pool(data_set_idx)
@@ -640,19 +641,19 @@ cdef class StanceService():
                 logger.debug("×中間乖離%s f: %s, %s, twist_test_dot: %s, twist_test_x_dot: %s, twist_test_y_dot: %s", count, fno, arm_twist_bone_name, twist_test_dot, twist_test_x_dot, twist_test_y_dot)
                 
                 arm_bf.rotation = org_arm_bf.rotation
-                data_set.motion.c_regist_bf(arm_bf, arm_bone_name, fno, copy_interpolation=False)
+                data_set.motion.c_regist_bf(arm_bf, arm_bone_name, fno, copy_interpolation=False, key=True)
                 
                 arm_twist_bf.rotation = org_arm_twist_bf.rotation
-                data_set.motion.c_regist_bf(arm_twist_bf, arm_twist_bone_name, fno, copy_interpolation=False)
+                data_set.motion.c_regist_bf(arm_twist_bf, arm_twist_bone_name, fno, copy_interpolation=False, key=True)
                 
                 elbow_bf.rotation = org_elbow_bf.rotation
-                data_set.motion.c_regist_bf(elbow_bf, elbow_bone_name, fno, copy_interpolation=False)
+                data_set.motion.c_regist_bf(elbow_bf, elbow_bone_name, fno, copy_interpolation=False, key=True)
                 
                 wrist_twist_bf.rotation = org_wrist_twist_bf.rotation
-                data_set.motion.c_regist_bf(wrist_twist_bf, wrist_twist_bone_name, fno, copy_interpolation=False)
+                data_set.motion.c_regist_bf(wrist_twist_bf, wrist_twist_bone_name, fno, copy_interpolation=False, key=True)
                 
                 wrist_bf.rotation = org_wrist_bf.rotation
-                data_set.motion.c_regist_bf(wrist_bf, wrist_bone_name, fno, copy_interpolation=False)
+                data_set.motion.c_regist_bf(wrist_bf, wrist_bone_name, fno, copy_interpolation=False, key=True)
 
                 self.spread_twist_pool(data_set_idx, fno_idx, fno, last_fno, \
                                        arm_bone_name, arm_twist_bone_name, elbow_bone_name, wrist_twist_bone_name, wrist_bone_name, \

@@ -7,6 +7,7 @@ import wx.lib.newevent
 from form.parts.BaseFilePickerCtrl import BaseFilePickerCtrl
 from form.parts.HistoryFilePickerCtrl import HistoryFilePickerCtrl
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
+from mmd.PmxData import PmxModel
 from utils import MFormUtils, MFileUtils # noqa
 from utils.MLogger import MLogger # noqa
 
@@ -141,9 +142,11 @@ class SizingFileSet():
             display_set_no = "{0}番目の".format(self.set_no)
         
         # 両方のPMXが読めて、モーションも読み込めた場合、キーチェック
-        not_org_bones = []
+        not_org_standard_bones = []
+        not_org_other_bones = []
         not_org_morphs = []
-        not_rep_bones = []
+        not_rep_standard_bones = []
+        not_rep_other_bones = []
         not_rep_morphs = []
         mismatch_bones = []
 
@@ -169,11 +172,23 @@ class SizingFileSet():
                 if motion.bones[k][fno].position != MVector3D() or motion.bones[k][fno].rotation != MQuaternion():
                     # キーが存在しており、かつ初期値ではない値が入っている場合、警告対象
 
+                    if isinstance(org_pmx, Exception):
+                        raise org_pmx
+
                     if k not in org_pmx.bones:
-                        not_org_bones.append(k)
+                        if k in PmxModel.PARENT_BORN_PAIR:
+                            not_org_standard_bones.append(k)
+                        else:
+                            not_org_other_bones.append(k)
+
+                    if isinstance(rep_pmx, Exception):
+                        raise rep_pmx
 
                     if k not in rep_pmx.bones:
-                        not_rep_bones.append(k)
+                        if k in PmxModel.PARENT_BORN_PAIR:
+                            not_rep_standard_bones.append(k)
+                        else:
+                            not_rep_other_bones.append(k)
                     
                     if k in org_pmx.bones and k in rep_pmx.bones:
                         mismatch_types = []
@@ -212,14 +227,14 @@ class SizingFileSet():
                     # 1件あればOK
                     break
 
-        if len(not_org_bones) > 0 or len(not_org_morphs) > 0:
-            logger.warning("%s%sに、モーションで使用されているボーン・モーフが不足しています。\nモデル: %s\n不足ボーン: %s\n不足モーフ: %s", \
-                           display_set_no, self.org_model_file_ctrl.title, org_pmx.name, ",".join(not_org_bones), ",".join(not_org_morphs), decoration=MLogger.DECORATION_BOX)
+        if len(not_org_standard_bones) > 0 or len(not_org_other_bones) > 0 or len(not_org_morphs) > 0:
+            logger.warning("%s%sに、モーションで使用されているボーン・モーフが不足しています。\nモデル: %s\n不足ボーン（準標準まで）: %s\n不足ボーン（その他）: %s\n不足モーフ: %s", \
+                           display_set_no, self.org_model_file_ctrl.title, org_pmx.name, ",".join(not_org_standard_bones), ",".join(not_org_other_bones), ",".join(not_org_morphs), decoration=MLogger.DECORATION_BOX)
             is_warning = True
 
-        if len(not_rep_bones) > 0 or len(not_rep_morphs) > 0:
-            logger.warning("%s%sに、モーションで使用されているボーン・モーフが不足しています。\nモデル: %s\n不足ボーン: %s\n不足モーフ: %s", \
-                           display_set_no, self.rep_model_file_ctrl.title, rep_pmx.name, ",".join(not_rep_bones), ",".join(not_rep_morphs), decoration=MLogger.DECORATION_BOX)
+        if len(not_rep_standard_bones) > 0 or len(not_rep_other_bones) > 0 or len(not_rep_morphs) > 0:
+            logger.warning("%s%sに、モーションで使用されているボーン・モーフが不足しています。\nモデル: %s\n不足ボーン（準標準まで）: %s\n不足ボーン（その他）: %s\n不足モーフ: %s", \
+                           display_set_no, self.rep_model_file_ctrl.title, rep_pmx.name, ",".join(not_rep_standard_bones), ",".join(not_rep_other_bones), ",".join(not_rep_morphs), decoration=MLogger.DECORATION_BOX)
             is_warning = True
 
         if len(mismatch_bones) > 0:

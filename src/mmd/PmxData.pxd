@@ -2,6 +2,7 @@
 #
 
 from module.MMath cimport MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
+from module.MParams cimport BoneLinks
 
 
 cdef class Deform:
@@ -12,7 +13,7 @@ cdef class Vertex:
     cdef public int index
     cdef public MVector3D position
     cdef public MVector3D normal
-    cdef public list uv
+    cdef public MVector2D uv
     cdef public list extended_uvs
     cdef public Deform deform
     cdef public float edge_factor
@@ -23,6 +24,13 @@ cdef class Ik:
     cdef public int loop
     cdef public float limit_radian
     cdef public list link
+
+
+cdef class IkLink:
+    cdef public int bone_index
+    cdef public float limit_angle
+    cdef public MVector3D limit_min
+    cdef public MVector3D limit_max
 
 
 cdef class Bone:
@@ -43,6 +51,8 @@ cdef class Bone:
     cdef public Ik ik
     cdef public int index
     cdef public bint display
+    cdef public bint is_sizing
+    cdef public MVector3D relative_position
 
     cdef public float len_1d
     cdef public MVector3D len_3d
@@ -123,19 +133,24 @@ cdef class OBB:
 
 cdef class PmxModel:
     cdef public str path
+    cdef public dict json_data
+    cdef public int extended_uv
     cdef public str name
     cdef public str english_name
     cdef public str comment
     cdef public str english_comment
     cdef public dict vertices
-    cdef public list indices
+    cdef public dict vertex_dict
+    cdef public dict indices
     cdef public list textures
     cdef public dict materials
-    cdef public dict material_indexes
+    cdef public dict material_indices
+    cdef public dict material_vertices
     cdef public dict bones
     cdef public dict bone_indexes
     cdef public dict morphs
     cdef public dict morph_indexes
+    cdef public dict org_morphs
     cdef public dict display_slots
     cdef public dict rigidbodies
     cdef public dict rigidbody_indexes

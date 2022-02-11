@@ -8,7 +8,7 @@ from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdL
 from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from module.MOptions import MOptions, MOptionsDataSet # noqa
 from module.MParams import BoneLinks # noqa
-from utils import MUtils, MServiceUtils, MBezierUtils # noqa
+from utils import MServiceUtils, MBezierUtils # noqa
 from utils.MLogger import MLogger # noqa
 from utils.MException import SizingException, MKilledException
 
@@ -688,7 +688,7 @@ class CameraService():
         
     def calc_ratio(self, data_set_idx: int, model: PmxModel, model_type: str, camera_offset_y: float):
         if model.head_top_vertex.index < 0:
-            logger.warning("【No.%s】%sモデルの頭頂頂点INDEXが見つからなかったため、頭ボーンの位置で代用します。\n" \
+            logger.warning("【No.%s】%sモデルの頭頂頂点INDEXが見つからなかったため、頭ボーン＋上半身半分の位置で代用します。\n" \
                            + "全長Yオフセットで頭頂位置を調整すると、カメラの見切れ等が少なくなります。", (data_set_idx + 1), model_type)
         else:
             logger.info("【No.%s】%sモデルの頭頂頂点INDEX: %s (%s)", (data_set_idx + 1), model_type, model.head_top_vertex.index, \

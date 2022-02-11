@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #
+cimport numpy as np
 from module.MMath cimport MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 
 
@@ -10,7 +11,7 @@ cdef class LowPassFilter:
     cdef __setAlpha(self, double alpha)
     cdef double c__call__(self, double value, double timestamp, double alpha)
     cdef double lastValue(self)
-    cdef double skip(self, double value)
+    cdef double skip(self, double value, double timestamp, double alpha)
 
 cdef class OneEuroFilter:
     cdef double __freq
@@ -22,7 +23,6 @@ cdef class OneEuroFilter:
     cdef double __lasttime
     cdef double __alpha(self, double cutoff)
     cdef double c__call__(self, double x, double timestamp)
-    cdef c_skip(self, double x, str timestamp)
 
 cdef class VmdBoneFrame:
     cdef public str name
@@ -71,12 +71,19 @@ cdef class VmdMotion:
 
     cdef c_smooth_bf(self, int data_set_no, str bone_name, bint is_rot, bint is_mov, double limit_degrees, int start_fno, int end_fno, bint is_show_log)
 
-    cdef c_smooth_filter_bf(self, int data_set_no, str bone_name, bint is_rot, bint is_mov, int loop, dict config, int start_fno, int end_fno, bint is_show_log)
+    cdef c_smooth_filter_bf(self, int data_set_no, str bone_name, bint is_rot, bint is_mov, int loop, dict mconfig, int start_fno, int end_fno, bint is_show_log)
     
-    cdef c_remove_unnecessary_bf(self, int data_set_no, str bone_name, bint is_rot, bint is_mov, \
-                                 double offset, double rot_diff_limit, double mov_diff_limit, int start_fno, int end_fno, bint is_show_log, bint is_force)
+    cdef list c_remove_unnecessary_bf(self, int data_set_no, str bone_name, bint is_rot, bint is_mov, \
+                                      double offset, double rot_diff_limit, double mov_diff_limit, int start_fno, int end_fno, bint is_show_log, bint is_force, bint is_sub_remove, 
+                                      dict rot_diff_value_dict, dict mx_diff_value_dict, dict my_diff_value_dict, dict mz_diff_value_dict, list infections)
 
-    cdef c_regist_bf(self, VmdBoneFrame bf, str bone_name, int fno, bint copy_interpolation)
+    cdef tuple c_get_infections(self, int data_set_no, str bone_name, bint is_rot, bint is_mov, np.ndarray fnos, list active_fnos)
+
+    # cdef dict c_smooth_values(self, dict values, int delimiter)
+
+    cdef dict c_smooth_values(self, dict value_dict, dict config)
+
+    cdef c_regist_bf(self, VmdBoneFrame bf, str bone_name, int fno, bint copy_interpolation, bint key)
 
     cdef VmdBoneFrame c_calc_bf(self, str bone_name, int fno, bint is_key, bint is_read, bint is_reset_interpolation)
 
