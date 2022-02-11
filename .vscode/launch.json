@@ -40,7 +40,7 @@
             "python": "${command:python.interpreterPath}",
             "stopOnEntry": false,
             "args": [
-                "--verbose", "10",
+                "--verbose", "20",
                 "--log_mode", "1",
                 "--out_log", "1",
             ]

@@ -8,6 +8,6 @@ cd /d %~dp0
 
 cls
 
-activate vmdsizing_cython && src\setup_install.bat && pyinstaller --clean vmdising_np64.spec
+activate vmdsizing_cython && src\setup_install.bat && pyinstaller --clean vmdising_np64.spec && copy /y archive\Readme.txt dist\Readme.txt && copy /y archive\É¿î≈Readme.txt dist\É¿î≈Readme.txt
 
 
