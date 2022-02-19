@@ -3,6 +3,7 @@
 import os
 import sys
 import argparse
+import numpy as np
 
 from module.MMath import MRect, MVector2D, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from module.MParams import BoneLinks # noqa
@@ -18,11 +19,17 @@ from utils.MLogger import MLogger # noqa
 logger = MLogger(__name__)
 
 
+
+cdef class MLegProcessOptions():
+    def __init__(self, move_correction_ratio=1):
+        self.move_correction_ratio = move_correction_ratio
+
+
 cdef class MOptions():
 
     def __init__(self, version_name, logging_level, max_workers, data_set_list, arm_options, \
                  camera_motion, camera_output_vmd_path, is_sizing_camera_only, camera_length, monitor, \
-                 is_file, outout_datetime, total_process, now_process, total_process_ctrl, now_process_ctrl, tree_process_dict):
+                 is_file, outout_datetime, total_process, now_process, total_process_ctrl, now_process_ctrl, tree_process_dict, leg_options=MLegProcessOptions()):
         self.version_name = version_name
         self.logging_level = logging_level
         self.max_workers = max_workers
@@ -40,6 +47,7 @@ cdef class MOptions():
         self.total_process_ctrl = total_process_ctrl
         self.now_process_ctrl = now_process_ctrl
         self.tree_process_dict = tree_process_dict
+        self.leg_options = leg_options
     
     # 複数件のファイルセットの足IKの比率を再設定する
     def calc_leg_ratio(self):
@@ -48,24 +56,13 @@ cdef class MOptions():
         max_xz_ratio = -99999999999
         min_heads_tall_ratio = 99999999999
         max_heads_tall_ratio = -99999999999
+
+        xz_ratios = []
         for data_set_idx, data_set in enumerate(self.data_set_list):
-            if data_set.original_xz_ratio < min_xz_ratio:
-                min_xz_ratio = data_set.original_xz_ratio
-            
-            if data_set.original_xz_ratio > max_xz_ratio:
-                max_xz_ratio = data_set.original_xz_ratio
-
-            if data_set.original_heads_tall_ratio < min_heads_tall_ratio:
-                min_heads_tall_ratio = data_set.original_heads_tall_ratio
-            
-            if data_set.original_heads_tall_ratio > max_heads_tall_ratio:
-                max_heads_tall_ratio = data_set.original_heads_tall_ratio
-
-        # 全体の頭身比率(小さい子に変換したときに窮屈にならないよう)
-        total_heads_tall_ratio = max(1, min((min_heads_tall_ratio + ((max_heads_tall_ratio - min_heads_tall_ratio) / 2)), 1.1))
+            xz_ratios.append(data_set.original_xz_ratio)
 
         # XZ比率の差(差分の1.2倍をリミットとする)
-        total_xz_ratio = min((min_xz_ratio + ((max_xz_ratio - min_xz_ratio) / 2)) * total_heads_tall_ratio, 1.2)
+        total_xz_ratio = min(np.mean(xz_ratios), 1.2) * self.leg_options.move_correction_ratio
         logger.test("total_xz_ratio: %s", total_xz_ratio)
 
         log_txt = "\n足の長さの比率 ---------\n"
@@ -76,11 +73,11 @@ cdef class MOptions():
                 data_set.xz_ratio = total_xz_ratio
                 data_set.y_ratio = data_set.original_y_ratio
             else:
-                # セットが1件（一人モーションの場合はそのまま）
-                data_set.xz_ratio = data_set.original_xz_ratio
+                # セットが1件（一人モーションの場合はそのままで補正値だけかける）
+                data_set.xz_ratio = data_set.original_xz_ratio * self.leg_options.move_correction_ratio
                 data_set.y_ratio = data_set.original_y_ratio
 
-            log_txt = "{0}【No.{1}】　xz: {2}, y: {3}, 頭身比率: {4} (元: xz: {5}, 頭身比率: {6})\n".format(log_txt, (data_set_idx + 1), round(data_set.xz_ratio, 5), round(data_set.y_ratio, 5), round(total_heads_tall_ratio, 5), round(data_set.original_xz_ratio, 5), round(data_set.original_heads_tall_ratio, 5))
+            log_txt = "{0}【No.{1}】　xz: {2}, y: {3}, 補正値: {4} (元: xz: {5})\n".format(log_txt, (data_set_idx + 1), round(data_set.xz_ratio, 5), round(data_set.y_ratio, 5), round(self.leg_options.move_correction_ratio, 5), round(data_set.original_xz_ratio, 5))
 
         logger.info(log_txt)
 
@@ -317,7 +314,6 @@ cdef class MArmProcessOptions():
         self.alignment_distance_finger = alignment_distance_finger
         self.alignment_distance_floor = alignment_distance_floor
         self.arm_check_skip_flg = arm_check_skip_flg
-
 
 class MCsvOptions():
 

@@ -29,6 +29,7 @@ cdef class MOptions():
     cdef public int max_workers
     cdef public list data_set_list
     cdef public MArmProcessOptions arm_options
+    cdef public MLegProcessOptions leg_options
     cdef public VmdMotion camera_motion
     cdef public str camera_output_vmd_path
     cdef public bint is_sizing_camera_only
@@ -81,3 +82,5 @@ cdef class MArmProcessOptions():
     cdef public double alignment_distance_floor
     cdef public bint arm_check_skip_flg
 
+cdef class MLegProcessOptions():
+    cdef public float move_correction_ratio

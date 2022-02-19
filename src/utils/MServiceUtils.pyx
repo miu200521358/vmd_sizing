@@ -574,7 +574,7 @@ def calc_leg_ik_ratio(data_set: MOptionsDataSet):
     
     logger.warning("「左足」「左ひざ」「左足首」「センター」のいずれかのボーンが不足しているため、足の長さの比率が測れませんでした。", decoration=MLogger.DECORATION_IN_BOX)
 
-    return 1, 1
+    return 1, 1, 1
 
 
 # 頭身を計算する(カメラサイジングからの流用)

@@ -9,6 +9,7 @@ from form.panel.FilePanel import FilePanel
 from form.panel.MorphPanel import MorphPanel
 from form.panel.MultiPanel import MultiPanel
 from form.panel.ArmPanel import ArmPanel
+from form.panel.LegPanel import LegPanel
 from form.panel.CameraPanel import CameraPanel
 from form.panel.CsvPanel import CsvPanel
 from form.panel.VmdPanel import VmdPanel
@@ -93,20 +94,24 @@ class MainFrame(wx.Frame):
         self.arm_panel_ctrl = ArmPanel(self, self.note_ctrl, 3)
         self.note_ctrl.AddPage(self.arm_panel_ctrl, u"腕", False)
 
+        # 足タブ
+        self.leg_panel_ctrl = LegPanel(self, self.note_ctrl, 4)
+        self.note_ctrl.AddPage(self.leg_panel_ctrl, u"足", False)
+
         # カメラタブ
-        self.camera_panel_ctrl = CameraPanel(self, self.note_ctrl, 4)
+        self.camera_panel_ctrl = CameraPanel(self, self.note_ctrl, 5)
         self.note_ctrl.AddPage(self.camera_panel_ctrl, u"カメラ", False)
 
         # 一括タブ
-        self.bulk_panel_ctrl = BulkPanel(self, self.note_ctrl, 5)
+        self.bulk_panel_ctrl = BulkPanel(self, self.note_ctrl, 6)
         self.note_ctrl.AddPage(self.bulk_panel_ctrl, u"一括", False)
 
         # CSVタブ
-        self.csv_panel_ctrl = CsvPanel(self, self.note_ctrl, 6)
+        self.csv_panel_ctrl = CsvPanel(self, self.note_ctrl, 7)
         self.note_ctrl.AddPage(self.csv_panel_ctrl, u"CSV", False)
 
         # VMDタブ
-        self.vmd_panel_ctrl = VmdPanel(self, self.note_ctrl, 7)
+        self.vmd_panel_ctrl = VmdPanel(self, self.note_ctrl, 8)
         self.note_ctrl.AddPage(self.vmd_panel_ctrl, u"VMD", False)
         
         # ---------------------------------------------

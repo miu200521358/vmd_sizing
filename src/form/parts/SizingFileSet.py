@@ -8,7 +8,7 @@ from form.parts.BaseFilePickerCtrl import BaseFilePickerCtrl
 from form.parts.HistoryFilePickerCtrl import HistoryFilePickerCtrl
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
 from mmd.PmxData import PmxModel
-from utils import MFormUtils, MFileUtils # noqa
+from utils import MServiceUtils, MFileUtils # noqa
 from utils.MLogger import MLogger # noqa
 
 logger = MLogger(__name__)
@@ -287,3 +287,31 @@ class SizingFileSet():
         if len(output_vmd_path) >= 255 and os.name == "nt":
             logger.error("生成予定のファイルパスがWindowsの制限を超えています。\n生成予定パス: {0}".format(output_vmd_path), decoration=MLogger.DECORATION_BOX)
 
+    def calc_leg_ik_ratio(self):
+        target_bones = ["左足", "左ひざ", "左足首", "センター"]
+
+        if self.is_loaded() and set(target_bones).issubset(self.org_model_file_ctrl.data.bones) and set(target_bones).issubset(self.rep_model_file_ctrl.data.bones):
+            # 頭身
+            _, _, org_heads_tall = MServiceUtils.calc_heads_tall(self.org_model_file_ctrl.data)
+            _, _, rep_heads_tall = MServiceUtils.calc_heads_tall(self.rep_model_file_ctrl.data)
+
+            # 頭身比率
+            heads_tall_ratio = org_heads_tall / rep_heads_tall
+
+            # XZ比率(足の長さ)
+            org_leg_length = ((self.org_model_file_ctrl.data.bones["左足首"].position - self.org_model_file_ctrl.data.bones["左ひざ"].position) \
+                              + (self.org_model_file_ctrl.data.bones["左ひざ"].position - self.org_model_file_ctrl.data.bones["左足"].position)).length()
+            rep_leg_length = ((self.rep_model_file_ctrl.data.bones["左足首"].position - self.rep_model_file_ctrl.data.bones["左ひざ"].position) \
+                              + (self.rep_model_file_ctrl.data.bones["左ひざ"].position - self.rep_model_file_ctrl.data.bones["左足"].position)).length()
+            logger.test("xz_ratio rep_leg_length: %s, org_leg_length: %s", rep_leg_length, org_leg_length)
+            xz_ratio = 1 if org_leg_length == 0 else (rep_leg_length / org_leg_length)
+
+            # Y比率(股下のY差)
+            rep_leg_length = (self.rep_model_file_ctrl.data.bones["左足首"].position - self.rep_model_file_ctrl.data.bones["左足"].position).y()
+            org_leg_length = (self.org_model_file_ctrl.data.bones["左足首"].position - self.org_model_file_ctrl.data.bones["左足"].position).y()
+            logger.test("y_ratio rep_leg_length: %s, org_leg_length: %s", rep_leg_length, org_leg_length)
+            y_ratio = 1 if org_leg_length == 0 else (rep_leg_length / org_leg_length)
+
+            return xz_ratio, y_ratio, heads_tall_ratio
+        
+        return 1, 1, 1
