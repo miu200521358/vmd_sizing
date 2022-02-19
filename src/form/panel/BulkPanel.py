@@ -6,10 +6,12 @@ import sys
 import csv
 import re
 import os
+from datetime import datetime
 
 from form.panel.BasePanel import BasePanel
 from form.parts.HistoryFilePickerCtrl import HistoryFilePickerCtrl
 from form.parts.ConsoleCtrl import ConsoleCtrl
+from form.parts.SizingFileSet import SizingFileSet
 from form.worker.SizingWorkerThread import SizingWorkerThread
 from form.worker.LoadWorkerThread import LoadWorkerThread
 from module.MOptions import MOptions, MOptionsDataSet, MArmProcessOptions
@@ -44,15 +46,22 @@ class BulkPanel(BasePanel):
 
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
+        # 一括サイジング保存ボタン
+        self.save_btn_ctrl = wx.Button(self, wx.ID_ANY, u"一括サイジング保存", wx.DefaultPosition, wx.Size(150, 50), 0)
+        self.save_btn_ctrl.SetToolTip(u"現在のサイジング設定をCSVに保存します")
+        self.save_btn_ctrl.Bind(wx.EVT_LEFT_DCLICK, self.on_doubleclick)
+        self.save_btn_ctrl.Bind(wx.EVT_LEFT_DOWN, self.on_save_click)
+        btn_sizer.Add(self.save_btn_ctrl, 0, wx.ALL, 5)
+
         # 一括サイジング確認ボタン
-        self.check_btn_ctrl = wx.Button(self, wx.ID_ANY, u"一括サイジング確認", wx.DefaultPosition, wx.Size(200, 50), 0)
+        self.check_btn_ctrl = wx.Button(self, wx.ID_ANY, u"一括サイジング確認", wx.DefaultPosition, wx.Size(150, 50), 0)
         self.check_btn_ctrl.SetToolTip(u"指定されたCSVデータの設定を確認します。")
         self.check_btn_ctrl.Bind(wx.EVT_LEFT_DCLICK, self.on_doubleclick)
         self.check_btn_ctrl.Bind(wx.EVT_LEFT_DOWN, self.on_check_click)
         btn_sizer.Add(self.check_btn_ctrl, 0, wx.ALL, 5)
 
         # 一括サイジング実行ボタン
-        self.bulk_btn_ctrl = wx.Button(self, wx.ID_ANY, u"一括サイジング実行", wx.DefaultPosition, wx.Size(200, 50), 0)
+        self.bulk_btn_ctrl = wx.Button(self, wx.ID_ANY, u"一括サイジング実行", wx.DefaultPosition, wx.Size(150, 50), 0)
         self.bulk_btn_ctrl.SetToolTip(u"一括でサイジングを実行します")
         self.bulk_btn_ctrl.Bind(wx.EVT_LEFT_DCLICK, self.on_doubleclick)
         self.bulk_btn_ctrl.Bind(wx.EVT_LEFT_DOWN, self.on_bulk_click)
@@ -146,6 +155,83 @@ class BulkPanel(BasePanel):
         else:
             logger.error("まだ処理が実行中です。終了してから再度実行してください。", decoration=MLogger.DECORATION_BOX)
             event.Skip(False)
+    
+    def on_save_click(self, event: wx.Event):
+        self.timer = wx.Timer(self, TIMER_ID)
+        self.timer.Start(200)
+        self.Bind(wx.EVT_TIMER, self.on_save, id=TIMER_ID)
+
+    # サイジング一括データ保存
+    def on_save(self, event: wx.Event):
+        if self.timer:
+            self.timer.Stop()
+            self.Unbind(wx.EVT_TIMER, id=TIMER_ID)
+        
+        # 一括タブのコンソール
+        sys.stdout = self.console_ctrl
+
+        if not self.frame.file_panel_ctrl.file_set.motion_vmd_file_ctrl.path():
+            logger.warning("ファイルタブの「調整対象モーションVMD/VPD」が空欄のため、処理を中断します。", decoration=MLogger.DECORATION_BOX)
+            return
+
+        save_key = ["グループNo(複数人モーションは同じNo)", "調整対象モーションVMD/VPD(フルパス)", "モーション作成元モデルPMX(フルパス)", "モーション変換先モデルPMX(フルパス)", \
+                    "センターXZ補正(0:無効、1:有効)", "上半身補正(0:無効、1:有効)", "下半身補正(0:無効、1:有効)", "足ＩＫ補正(0:無効、1:有効)", "つま先補正(0:無効、1:有効)", \
+                    "つま先ＩＫ補正(0:無効、1:有効)", "肩補正(0:無効、1:有効)", "センターY補正(0:無効、1:有効)", "捩り分散(0:なし、1:あり)", "モーフ置換(元:先:大きさ;)", "接触回避(0:なし、1:あり)", \
+                    "接触回避剛体(剛体名;)", "位置合わせ(0:なし、1:あり)", "指位置合わせ(0:なし、1:あり)", "床位置合わせ(0:なし、1:あり)", "手首の距離", "指の距離", "床との距離", \
+                    "腕チェックスキップ(0:なし、1:あり)", "カメラモーションVMD(フルパス、グループ1件目のみ)", "距離可動範囲", "カメラ作成元モデルPMX(フルパス)", "全長Yオフセット"]
+        
+        output_path = os.path.join(os.path.dirname(self.frame.file_panel_ctrl.file_set.motion_vmd_file_ctrl.path()), f'一括サイジング用データ_{datetime.now():%Y%m%d_%H%M%S}.csv')
+
+        with open(output_path, 'w', encoding='cp932', newline='') as f:
+            writer = csv.DictWriter(f, save_key)
+            writer.writeheader()
+            writer.writerow(self.create_save_data(self.frame.file_panel_ctrl.file_set, 0, save_key))
+        
+            for multi_idx, file_set in enumerate(self.frame.multi_panel_ctrl.file_set_list):
+                writer.writerow(self.create_save_data(file_set, multi_idx + 1, save_key))
+
+        self.frame.sound_finish()
+        event.Skip()
+
+        logger.info("一括サイジング用データの保存に成功しました\n\n%s", output_path, decoration=MLogger.DECORATION_BOX)
+        return
+
+    def create_save_data(self, file_set: SizingFileSet, file_idx: int, save_key: list):
+
+        save_data = {}
+        for skey in save_key:
+            save_data[skey] = ""
+        
+        save_data[save_key[0]] = "1"
+        save_data[save_key[1]] = file_set.motion_vmd_file_ctrl.path()
+        save_data[save_key[2]] = file_set.org_model_file_ctrl.path()
+        save_data[save_key[3]] = file_set.rep_model_file_ctrl.path()
+        save_data[save_key[4]] = "1" if 0 in file_set.selected_stance_details else "0"
+        save_data[save_key[5]] = "1" if 1 in file_set.selected_stance_details else "0"
+        save_data[save_key[6]] = "1" if 2 in file_set.selected_stance_details else "0"
+        save_data[save_key[7]] = "1" if 3 in file_set.selected_stance_details else "0"
+        save_data[save_key[8]] = "1" if 4 in file_set.selected_stance_details else "0"
+        save_data[save_key[9]] = "1" if 5 in file_set.selected_stance_details else "0"
+        save_data[save_key[10]] = "1" if 6 in file_set.selected_stance_details else "0"
+        save_data[save_key[11]] = "1" if 7 in file_set.selected_stance_details else "0"
+        save_data[save_key[12]] = "1" if file_set.rep_model_file_ctrl.title_parts_ctrl.GetValue() else "0"
+        save_data[save_key[13]] = ";".join([f"{om}:{rm}:{r}" for (om, rm, r) in self.frame.morph_panel_ctrl.morph_set_dict[file_idx].get_morph_list()]) + ";" \
+            if file_idx in self.frame.morph_panel_ctrl.morph_set_dict else ""
+        save_data[save_key[14]] = "1" if self.frame.arm_panel_ctrl.arm_process_flg_avoidance.GetValue() else "0"
+        save_data[save_key[15]] = ";".join(list(self.frame.arm_panel_ctrl.get_avoidance_target()[file_idx])) + ";" if file_idx in self.frame.arm_panel_ctrl.get_avoidance_target() else ""
+        save_data[save_key[16]] = "1" if self.frame.arm_panel_ctrl.arm_process_flg_alignment.GetValue() else "0"
+        save_data[save_key[17]] = "1" if self.frame.arm_panel_ctrl.arm_alignment_finger_flg_ctrl.GetValue() else "0"
+        save_data[save_key[18]] = "1" if self.frame.arm_panel_ctrl.arm_alignment_floor_flg_ctrl.GetValue() else "0"
+        save_data[save_key[19]] = self.frame.arm_panel_ctrl.alignment_distance_wrist_slider.GetValue()
+        save_data[save_key[20]] = self.frame.arm_panel_ctrl.alignment_distance_finger_slider.GetValue()
+        save_data[save_key[21]] = self.frame.arm_panel_ctrl.alignment_distance_floor_slider.GetValue()
+        save_data[save_key[22]] = "1" if self.frame.arm_panel_ctrl.arm_check_skip_flg_ctrl.GetValue() else "0"
+        save_data[save_key[23]] = self.frame.camera_panel_ctrl.camera_vmd_file_ctrl.file_ctrl.GetPath()
+        save_data[save_key[24]] = self.frame.camera_panel_ctrl.camera_length_slider.GetValue()
+        save_data[save_key[25]] = self.frame.camera_panel_ctrl.camera_set_dict[file_idx + 1].camera_model_file_ctrl.path() if file_idx + 1 in self.frame.camera_panel_ctrl.camera_set_dict else ""
+        save_data[save_key[26]] = self.frame.camera_panel_ctrl.camera_set_dict[file_idx + 1].camera_offset_y_ctrl.GetValue() if file_idx + 1 in self.frame.camera_panel_ctrl.camera_set_dict else ""
+        
+        return save_data
 
     def on_check_click(self, event: wx.Event):
         self.timer = wx.Timer(self, TIMER_ID)
@@ -388,6 +474,7 @@ class BulkPanel(BasePanel):
         now_group_no = -1
         now_motion_idx = -1
         row_no = 0
+        is_buld = False
         with open(self.bulk_csv_file_ctrl.path(), encoding='cp932', mode='r') as f:
             reader = csv.reader(f)
             next(reader)  # ヘッダーを読み飛ばす
@@ -414,7 +501,10 @@ class BulkPanel(BasePanel):
 
                 if len(group_no) > 0 and group_no[0] != now_group_no:
                     # グループNOが変わっていたら、そのまま終了
-                    break
+                    continue
+                
+                # bulk対象
+                is_buld = True
                 
                 group_no_result, group_no = self.read_csv_row(rows, row_no, 0, "グループNo", True, int, r"\d+", "数値のみ", None)
                 org_motion_result, org_motion_path = self.read_csv_row(rows, row_no, 1, "調整対象モーションVMD/VPD", True, str, None, None, (".vmd", ".vpd"))
@@ -582,6 +672,12 @@ class BulkPanel(BasePanel):
                     # 出力パス変更
                     self.frame.multi_panel_ctrl.file_set_list[now_motion_idx - 1].set_output_vmd_path(event)
         
+        if not is_buld:
+            # Bulk終了
+            self.finish_buld()
+
+            return
+
         # 一旦リリース
         self.frame.release_tab()
         # ファイルタブに移動
@@ -698,8 +794,12 @@ class BulkPanel(BasePanel):
             # 次のターゲットがある場合、次を処理
             logger.info("\n----------------------------------")
 
-            return self.load(event, event.target_idx)
+            return self.load(event, event.target_idx + 1)
 
+        # Bulk終了
+        self.finish_buld()
+
+    def finish_buld(self):
         # ファイルタブのコンソール
         sys.stdout = self.frame.file_panel_ctrl.console_ctrl
 
@@ -723,4 +823,4 @@ class BulkPanel(BasePanel):
         self.frame.file_panel_ctrl.gauge_ctrl.SetValue(0)
 
         logger.info("全てのサイジング処理が終了しました", decoration=MLogger.DECORATION_BOX, title="一括処理")
-
+        

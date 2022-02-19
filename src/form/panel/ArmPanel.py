@@ -30,7 +30,7 @@ class ArmPanel(BasePanel):
         # Bulk用接触回避データ
         self.bulk_avoidance_set_dict = {}
 
-        # 同じグループなので、とりあえず宣言だけしておく
+        # 同じグループなので、とりあえず宣言だけしておく(Checkだから同じじゃなくていい(2022/02/19))
         self.arm_process_flg_avoidance = wx.CheckBox(self, wx.ID_ANY, u"", wx.DefaultPosition, wx.DefaultSize)
         self.arm_process_flg_avoidance.SetToolTip(avoidance_tooltip)
         self.arm_process_flg_avoidance.Bind(wx.EVT_CHECKBOX, self.set_output_vmd_path)

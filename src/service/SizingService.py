@@ -107,7 +107,7 @@ class SizingService():
             else:
                 for data_set_idx, data_set in enumerate(self.options.data_set_list):
                     # 足IKのXYZの比率
-                    data_set.original_xz_ratio, data_set.original_y_ratio = MServiceUtils.calc_leg_ik_ratio(data_set)
+                    data_set.original_xz_ratio, data_set.original_y_ratio, data_set.original_heads_tall_ratio = MServiceUtils.calc_leg_ik_ratio(data_set)
                 
                 # 足IKの比率再計算
                 self.options.calc_leg_ratio()

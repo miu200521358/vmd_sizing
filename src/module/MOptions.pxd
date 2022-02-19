@@ -63,6 +63,7 @@ cdef class MOptionsDataSet():
     # 本来の足IKの比率
     cdef public double original_xz_ratio
     cdef public double original_y_ratio
+    cdef public double original_heads_tall_ratio
 
     # 実際に計算に使う足IKの比率
     cdef public double xz_ratio

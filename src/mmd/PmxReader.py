@@ -354,9 +354,6 @@ class PmxReader:
 
                     # ボーンのINDEX
                     bone.index = bone_idx
-                    if self.is_sizing and bone.parent_index >= 0 and bone.parent_index in pmx.bone_indexes:
-                        # 親ボーンから見た相対位置
-                        bone.relative_position = bone.position - pmx.bones[pmx.bone_indexes[bone.parent_index]].position
 
                     if bone.name not in pmx.bones:
                         # まだ未登録の名前のボーンの場合のみ登録
@@ -378,7 +375,6 @@ class PmxReader:
                         pmx.head_top_vertex = head_top_vertex
                         head_top_bone = Bone("頭頂実体", "head_top", head_top_vertex.position.copy(), pmx.bones["頭"].index, pmx.bones["頭"].layer, 0, tail_position=MVector3D(0, -1, 0), is_sizing=True)
                         head_top_bone.index = len(pmx.bones.keys())
-                        head_top_bone.relative_position = head_top_bone.position - pmx.bones[pmx.bone_indexes[head_top_bone.parent_index]].position
                         pmx.bones[head_top_bone.name] = head_top_bone
                         pmx.bone_indexes[head_top_bone.index] = head_top_bone.name
 
@@ -404,7 +400,6 @@ class PmxReader:
                             
                             logger.debug("右足底実体: %s, parent: %s(%s)", right_sole_bone.index, right_sole_bone.parent_index, pmx.bone_indexes[right_sole_bone.parent_index])
 
-                            right_sole_bone.relative_position = right_sole_bone.position - pmx.bones[pmx.bone_indexes[right_sole_bone.parent_index]].position
                             pmx.bones[right_sole_bone.name] = right_sole_bone
                             pmx.bone_indexes[right_sole_bone.index] = right_sole_bone.name
 
@@ -430,7 +425,6 @@ class PmxReader:
 
                             logger.debug("左足底実体: %s, parent: %s(%s)", left_sole_bone.index, left_sole_bone.parent_index, pmx.bone_indexes[left_sole_bone.parent_index])
 
-                            left_sole_bone.relative_position = left_sole_bone.position - pmx.bones[pmx.bone_indexes[left_sole_bone.parent_index]].position
                             pmx.bones[left_sole_bone.name] = left_sole_bone
                             pmx.bone_indexes[left_sole_bone.index] = left_sole_bone.name
 
@@ -453,7 +447,6 @@ class PmxReader:
 
                             logger.debug("右つま先実体: %s, parent: %s(%s)", right_toe_bone.index, right_toe_bone.parent_index, pmx.bone_indexes[right_toe_bone.parent_index])
 
-                            right_toe_bone.relative_position = right_toe_bone.position - pmx.bones[pmx.bone_indexes[right_toe_bone.parent_index]].position
                             pmx.bones[right_toe_bone.name] = right_toe_bone
                             pmx.bone_indexes[right_toe_bone.index] = right_toe_bone.name
 
@@ -476,7 +469,6 @@ class PmxReader:
 
                             logger.debug("左つま先実体: %s, parent: %s(%s)", left_toe_bone.index, left_toe_bone.parent_index, pmx.bone_indexes[left_toe_bone.parent_index])
 
-                            left_toe_bone.relative_position = left_toe_bone.position - pmx.bones[pmx.bone_indexes[left_toe_bone.parent_index]].position
                             pmx.bones[left_toe_bone.name] = left_toe_bone
                             pmx.bone_indexes[left_toe_bone.index] = left_toe_bone.name
 
@@ -497,23 +489,18 @@ class PmxReader:
                             neck_base_bone.layer = pmx.bones["上半身"].layer
 
                         neck_base_bone.index = len(pmx.bones.keys())
-                        neck_base_bone.relative_position = neck_base_bone.position - pmx.bones[pmx.bone_indexes[neck_base_bone.parent_index]].position
                         pmx.bones[neck_base_bone.name] = neck_base_bone
                         pmx.bone_indexes[neck_base_bone.index] = neck_base_bone.name
                         
                         if "左肩P" in pmx.bones:
                             pmx.bones["左肩P"].parent_index = neck_base_bone.index
-                            pmx.bones["左肩P"].relative_position = pmx.bones["左肩P"].position - pmx.bones[pmx.bone_indexes[pmx.bones["左肩P"].parent_index]].position
                         else:
                             pmx.bones["左肩"].parent_index = neck_base_bone.index
-                            pmx.bones["左肩"].relative_position = pmx.bones["左肩"].position - pmx.bones[pmx.bone_indexes[pmx.bones["左肩"].parent_index]].position
                         
                         if "右肩P" in pmx.bones:
                             pmx.bones["右肩P"].parent_index = neck_base_bone.index
-                            pmx.bones["右肩P"].relative_position = pmx.bones["右肩P"].position - pmx.bones[pmx.bone_indexes[pmx.bones["右肩P"].parent_index]].position
                         else:
                             pmx.bones["右肩"].parent_index = neck_base_bone.index
-                            pmx.bones["右肩"].relative_position = pmx.bones["右肩"].position - pmx.bones[pmx.bone_indexes[pmx.bones["右肩"].parent_index]].position
                         
                     # 首根元2ボーン
                     if "左腕" in pmx.bones and "右腕" in pmx.bones:
@@ -537,7 +524,6 @@ class PmxReader:
                             neck_base2_bone.layer = pmx.bones["上半身"].layer
 
                         neck_base2_bone.index = len(pmx.bones.keys())
-                        neck_base2_bone.relative_position = neck_base2_bone.position - pmx.bones[pmx.bone_indexes[neck_base2_bone.parent_index]].position
                         pmx.bones[neck_base2_bone.name] = neck_base2_bone
                         pmx.bone_indexes[neck_base2_bone.index] = neck_base2_bone.name
 
@@ -547,7 +533,6 @@ class PmxReader:
                         right_shoulder_under_pos.setY(right_shoulder_under_pos.y() - 1)
                         right_shoulder_under_bone = Bone("右肩下延長", "", right_shoulder_under_pos, pmx.bones["右肩"].index, pmx.bones["右肩"].layer, 0, is_sizing=True)
                         right_shoulder_under_bone.index = len(pmx.bones.keys())
-                        right_shoulder_under_bone.relative_position = right_shoulder_under_bone.position - pmx.bones[pmx.bone_indexes[right_shoulder_under_bone.parent_index]].position
                         pmx.bones[right_shoulder_under_bone.name] = right_shoulder_under_bone
                         pmx.bone_indexes[right_shoulder_under_bone.index] = right_shoulder_under_bone.name
 
@@ -557,7 +542,6 @@ class PmxReader:
                         left_shoulder_under_pos.setY(left_shoulder_under_pos.y() - 1)
                         left_shoulder_under_bone = Bone("左肩下延長", "", left_shoulder_under_pos, pmx.bones["左肩"].index, pmx.bones["左肩"].layer, 0, is_sizing=True)
                         left_shoulder_under_bone.index = len(pmx.bones.keys())
-                        left_shoulder_under_bone.relative_position = left_shoulder_under_bone.position - pmx.bones[pmx.bone_indexes[left_shoulder_under_bone.parent_index]].position
                         pmx.bones[left_shoulder_under_bone.name] = left_shoulder_under_bone
                         pmx.bone_indexes[left_shoulder_under_bone.index] = left_shoulder_under_bone.name
 
@@ -577,7 +561,6 @@ class PmxReader:
                             right_arm_middle_bone.layer = pmx.bones["右腕"].layer
 
                         right_arm_middle_bone.tail_index = pmx.bones["右ひじ"].index
-                        right_arm_middle_bone.relative_position = right_arm_middle_bone.position - pmx.bones[pmx.bone_indexes[right_arm_middle_bone.parent_index]].position
                         pmx.bones["右ひじ"].parent_index = right_arm_middle_bone.index
 
                     if "左ひじ" in pmx.bones and "左腕" in pmx.bones:
@@ -596,7 +579,6 @@ class PmxReader:
                             left_arm_middle_bone.layer = pmx.bones["左腕"].layer
 
                         left_arm_middle_bone.tail_index = pmx.bones["左ひじ"].index
-                        left_arm_middle_bone.relative_position = left_arm_middle_bone.position - pmx.bones[pmx.bone_indexes[left_arm_middle_bone.parent_index]].position
                         pmx.bones["左ひじ"].parent_index = left_arm_middle_bone.index
 
                     if "右ひじ" in pmx.bones and "右手首" in pmx.bones:
@@ -614,7 +596,6 @@ class PmxReader:
                             right_elbow_middle_bone.parent_index = pmx.bones["右ひじ"].index
                             right_elbow_middle_bone.layer = pmx.bones["右ひじ"].layer
                         right_elbow_middle_bone.tail_index = pmx.bones["右手首"].index
-                        right_elbow_middle_bone.relative_position = right_elbow_middle_bone.position - pmx.bones[pmx.bone_indexes[right_elbow_middle_bone.parent_index]].position
                         pmx.bones["右手首"].parent_index = right_elbow_middle_bone.index
 
                     if "左ひじ" in pmx.bones and "左手首" in pmx.bones:
@@ -632,7 +613,6 @@ class PmxReader:
                             left_elbow_middle_bone.parent_index = pmx.bones["左ひじ"].index
                             left_elbow_middle_bone.layer = pmx.bones["左ひじ"].layer
                         left_elbow_middle_bone.tail_index = pmx.bones["左手首"].index
-                        left_elbow_middle_bone.relative_position = left_elbow_middle_bone.position - pmx.bones[pmx.bone_indexes[left_elbow_middle_bone.parent_index]].position
                         pmx.bones["左手首"].parent_index = left_elbow_middle_bone.index
 
                     if "右つま先" in pmx.bones or "右つま先ＩＫ" in pmx.bones:
@@ -647,7 +627,6 @@ class PmxReader:
                         right_small_toe_bone = Bone("右足小指", "", pmx.bones[toe_bone_name].position + MVector3D(-0.5, 0, 0), -1, 0, 0, is_sizing=True)
                         right_small_toe_bone.parent_index = pmx.bones[toe_bone_name].index
                         right_small_toe_bone.index = len(pmx.bones.keys())
-                        right_small_toe_bone.relative_position = right_small_toe_bone.position - pmx.bones[pmx.bone_indexes[right_small_toe_bone.parent_index]].position
                         pmx.bones[right_small_toe_bone.name] = right_small_toe_bone
                         pmx.bone_indexes[right_small_toe_bone.index] = right_small_toe_bone.name
 
@@ -660,7 +639,6 @@ class PmxReader:
                             right_heel_bone.parent_index = pmx.bones["右足首"].index
                             right_heel_bone.layer = pmx.bones["右足首"].layer
                         right_heel_bone.index = len(pmx.bones.keys())
-                        right_heel_bone.relative_position = right_heel_bone.position - pmx.bones[pmx.bone_indexes[right_heel_bone.parent_index]].position
                         pmx.bones[right_heel_bone.name] = right_heel_bone
                         pmx.bone_indexes[right_heel_bone.index] = right_heel_bone.name
 
@@ -677,7 +655,6 @@ class PmxReader:
                         left_small_toe_bone = Bone("左足小指", "", pmx.bones[toe_bone_name].position + MVector3D(-0.5, 0, 0), -1, 0, 0, is_sizing=True)
                         left_small_toe_bone.parent_index = pmx.bones[toe_bone_name].index
                         left_small_toe_bone.index = len(pmx.bones.keys())
-                        left_small_toe_bone.relative_position = left_small_toe_bone.position - pmx.bones[pmx.bone_indexes[left_small_toe_bone.parent_index]].position
                         pmx.bones[left_small_toe_bone.name] = left_small_toe_bone
                         pmx.bone_indexes[left_small_toe_bone.index] = left_small_toe_bone.name
 
@@ -690,7 +667,6 @@ class PmxReader:
                             left_heel_bone.parent_index = pmx.bones["左足首"].index
                             left_heel_bone.layer = pmx.bones["左足首"].layer
                         left_heel_bone.index = len(pmx.bones.keys())
-                        left_heel_bone.relative_position = left_heel_bone.position - pmx.bones[pmx.bone_indexes[left_heel_bone.parent_index]].position
                         pmx.bones[left_heel_bone.name] = left_heel_bone
                         pmx.bone_indexes[left_heel_bone.index] = left_heel_bone.name
 
@@ -712,7 +688,6 @@ class PmxReader:
                                 finger_tail_bone.index = len(pmx.bones.keys())
                                 finger_tail_bone.parent_index = pmx.bones[end_joint_name].index
                                 finger_tail_bone.layer = pmx.bones[end_joint_name].layer
-                                finger_tail_bone.relative_position = finger_tail_bone.position - pmx.bones[pmx.bone_indexes[finger_tail_bone.parent_index]].position
                                 pmx.bones[finger_tail_bone.name] = finger_tail_bone
                                 pmx.bone_indexes[finger_tail_bone.index] = finger_tail_bone.name
 
@@ -728,7 +703,6 @@ class PmxReader:
                             leg_center_bone.layer = pmx.bones["下半身"].layer
 
                         leg_center_bone.index = len(pmx.bones.keys())
-                        leg_center_bone.relative_position = leg_center_bone.position - pmx.bones[pmx.bone_indexes[leg_center_bone.parent_index]].position
                         pmx.bones[leg_center_bone.name] = leg_center_bone
                         pmx.bone_indexes[leg_center_bone.index] = leg_center_bone.name
                     
@@ -953,11 +927,11 @@ class PmxReader:
             # 終了命令
             raise ke
         except SizingException as se:
-            logger.error("サイジング処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
+            logger.error("Pmx読み込み処理が処理できないデータで終了しました。\n\n%s", se.message, decoration=MLogger.DECORATION_BOX)
             return se
         except Exception as e:
             import traceback
-            logger.error("サイジング処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc(), decoration=MLogger.DECORATION_BOX)
+            logger.error("Pmx読み込み処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc(), decoration=MLogger.DECORATION_BOX)
             raise e
     
     def sort_bones(self, pmx, tmp_bones, tmp_bone_indexes, bone_index, is_ik, index):

@@ -19,15 +19,21 @@ cdef class Deform:
     def __init__(self, index0):
         self.index0 = index0
 
+    def copy(self):
+        return Deform(self.index0)
+
 class Bdef1(Deform):
     def __init__(self, index0):
         self.index0 = index0
     
-    def get_idx_list(self):
+    def get_idx_list(self, weight=0):
         return [self.index0]
         
     def __str__(self):
         return "<Bdef1 {0}>".format(self.index0)
+
+    def copy(self):
+        return Bdef2(self.index0)
 
 class Bdef2(Deform):
     def __init__(self, index0, index1, weight0):
@@ -35,11 +41,19 @@ class Bdef2(Deform):
         self.index1 = index1
         self.weight0 = weight0
         
-    def get_idx_list(self):
-        return [self.index0, self.index1]
+    def get_idx_list(self, weight=0):
+        idx_list = []
+        if self.weight0 >= weight:
+            idx_list.append(self.index0)
+        if (1 - self.weight0) >= weight:
+            idx_list.append(self.index1)
+        return idx_list
         
     def __str__(self):
         return "<Bdef2 {0}, {1}, {2}>".format(self.index0, self.index1, self.weight0)
+
+    def copy(self):
+        return Bdef2(self.index0, self.index1, self.weight0)
 
 class Bdef4(Deform):
     def __init__(self, index0, index1, index2, index3, weight0, weight1, weight2, weight3):
@@ -52,11 +66,15 @@ class Bdef4(Deform):
         self.weight2 = weight2
         self.weight3 = weight3
         
-    def get_idx_list(self):
-        return [self.index0, self.index1, self.index2, self.index3]
+    def get_idx_list(self, weight=0):
+        weight_idxs = np.where(np.array([self.weight0, self.weight1, self.weight2, self.weight3]) >= weight)
+        return (np.array([self.index0, self.index1, self.index2, self.index3])[weight_idxs]).tolist()
 
     def __str__(self):
         return "<Bdef4 {0}:{1}, {2}:{3}, {4}:{5}, {6}:{7}>".format(self.index0, self.index1, self.index2, self.index3, self.weight0, self.weight1, self.weight2, self.weight3)
+
+    def copy(self):
+        return Bdef4(self.index0, self.index1, self.index2, self.index3, self.weight0, self.weight1, self.weight2, self.weight3)
             
 class Sdef(Deform):
     def __init__(self, index0, index1, weight0, sdef_c, sdef_r0, sdef_r1):
@@ -72,6 +90,9 @@ class Sdef(Deform):
 
     def __str__(self):
         return "<Sdef {0}, {1}, {2}, {3} {4} {5}>".format(self.index0, self.index1, self.weight0, self.sdef_c, self.sdef_r0, self.sdef_r1)
+
+    def copy(self):
+        return Sdef(self.index0, self.index1, self.weight0, self.sdef_c, self.sdef_r0, self.sdef_r1)
     
 class Qdef(Deform):
     def __init__(self, index0, index1, weight0, sdef_c, sdef_r0, sdef_r1):
@@ -87,6 +108,9 @@ class Qdef(Deform):
 
     def __str__(self):
         return "<Sdef {0}, {1}, {2}, {3} {4} {5}>".format(self.index0, self.index1, self.weight0, self.sdef_c, self.sdef_r0, self.sdef_r1)
+
+    def copy(self):
+        return Qdef(self.index0, self.index1, self.weight0, self.sdef_c, self.sdef_r0, self.sdef_r1)
 
 
 # 頂点構造 ----------------------------
@@ -104,6 +128,9 @@ cdef class Vertex:
     def __str__(self):
         return "<Vertex index:{0}, position:{1}, normal:{2}, uv:{3}, extended_uv: {4}, deform:{5}, edge:{6}".format(
                self.index, self.position, self.normal, self.uv, len(self.extended_uvs), self.deform, self.edge_factor)
+
+    def get_y_key(self):
+        return round(self.position.y(), 3)
 
     def is_deform_index(self, target_idx):
         if type(self.deform) is Bdef1:
@@ -171,7 +198,9 @@ cdef class Vertex:
                 return self.deform.index0
 
         return self.deform.index0
-    
+
+    def copy(self):
+        return Vertex(self.index, self.position.copy(), self.normal.copy(), self.uv.copy(), [euv.copy() for euv in self.extended_uvs], self.deform.copy(), self.edge_factor)   
 
 
 # 材質構造-----------------------
@@ -196,6 +225,11 @@ class Material:
         self.comment = comment
         self.vertex_count = vertex_count
 
+    def copy(self):
+        return Material(self.name, self.english_name, self.diffuse_color.copy(), self.alpha, self.specular_factor.copy(), self.specular_color.copy(), \
+                        self.ambient_color.copy(), self.flag, self.edge_color.copy(), self.edge_size, self.texture_index, self.sphere_texture_index, \
+                        self.sphere_mode, self.toon_sharing_flag, self.toon_texture_index, self.comment, self.vertex_count)
+
     def __str__(self):
         return "<Material name:{0}, english_name:{1}, diffuse_color:{2}, alpha:{3}, specular_color:{4}, " \
                "ambient_color: {5}, flag: {6}, edge_color: {7}, edge_size: {8}, texture_index: {9}, " \
@@ -215,6 +249,9 @@ cdef class Ik:
 
     def __str__(self):
         return "<Ik target_index:{0}, loop:{1}, limit_radian:{2}, link:{3}".format(self.target_index, self.loop, self.limit_radian, self.link)
+
+    def copy(self):
+        return Ik(self.target_index, self.loop, self.limit_radian, [l.copy for l in self.link])
         
 cdef class IkLink:
 
@@ -226,7 +263,10 @@ cdef class IkLink:
 
     def __str__(self):
         return "<IkLink bone_index:{0}, limit_angle:{1}, limit_min:{2}, limit_max:{3}".format(self.bone_index, self.limit_angle, self.limit_min, self.limit_max)
-        
+
+    def copy(self):
+        return Ik(self.bone_index, self.limit_angle, self.limit_min.copy(), self.limit_max.copy())
+                
 # ボーン構造-----------------------
 cdef class Bone:
     def __init__(self, name, english_name, position, parent_index, layer, flag, tail_position=None, tail_index=-1, effect_index=-1, effect_factor=0.0, fixed_axis=None,
@@ -251,8 +291,6 @@ cdef class Bone:
         self.display = False
         # サイジング用特殊ボーンであるか
         self.is_sizing = is_sizing
-        # 親ボーンから見た相対位置
-        self.relative_position = MVector3D()
 
         # 親ボーンからの長さ3D版(計算して求める）
         self.len_3d = MVector3D()
@@ -353,10 +391,16 @@ class GroupMorphData:
         self.morph_index = morph_index
         self.value = value
 
+    def copy(self):
+        return cPickle.loads(cPickle.dumps(self, -1))
+
 class VertexMorphOffset:
     def __init__(self, vertex_index, position_offset):
         self.vertex_index = vertex_index
         self.position_offset = position_offset
+
+    def copy(self):
+        return cPickle.loads(cPickle.dumps(self, -1))
 
 class BoneMorphData:
     def __init__(self, bone_index, position, rotation):
@@ -364,10 +408,16 @@ class BoneMorphData:
         self.position = position
         self.rotation = rotation
 
+    def copy(self):
+        return cPickle.loads(cPickle.dumps(self, -1))
+
 class UVMorphData:
     def __init__(self, vertex_index, uv):
         self.vertex_index = vertex_index
         self.uv = uv
+
+    def copy(self):
+        return cPickle.loads(cPickle.dumps(self, -1))
 
 class MaterialMorphData:
     def __init__(self, material_index, calc_mode, diffuse, specular, specular_factor, ambient, edge_color, edge_size, texture_factor, sphere_texture_factor, toon_texture_factor):
@@ -382,6 +432,9 @@ class MaterialMorphData:
         self.texture_factor = texture_factor
         self.sphere_texture_factor = sphere_texture_factor
         self.toon_texture_factor = toon_texture_factor
+
+    def copy(self):
+        return cPickle.loads(cPickle.dumps(self, -1))
 
 class Morph:
     def __init__(self, name, english_name, panel, morph_type, offsets=None):
@@ -398,6 +451,9 @@ class Morph:
     def __str__(self):
         return "<Morph name:{0}, english_name:{1}, panel:{2}, morph_type:{3}, offsets(len): {4}".format(
                self.name, self.english_name, self.panel, self.morph_type, len(self.offsets))
+
+    def copy(self):
+        return cPickle.loads(cPickle.dumps(self, -1))
     
     # パネルの名称取得
     def get_panel_name(self):
@@ -424,6 +480,9 @@ class DisplaySlot:
 
     def __str__(self):
         return "<DisplaySlots name:{0}, english_name:{1}, special_flag:{2}, display_type: {3}, references(len):{4}".format(self.name, self.english_name, self.special_flag, self.display_type, len(self.references))
+
+    def copy(self):
+        return cPickle.loads(cPickle.dumps(self, -1))
 
 
 # 剛体構造-----------------------
@@ -455,6 +514,9 @@ cdef class RigidBody:
                "shape_type: {5}, shape_size: {6}, shape_position: {7}, shape_rotation: {8}, param: {9}, " \
                "mode: {10}".format(self.name, self.english_name, self.bone_index, self.collision_group, self.no_collision_group,
                                    self.shape_type, self.shape_size, self.shape_position.to_log(), self.shape_rotation.to_log(), self.param, self.mode)
+
+    def copy(self):
+        return cPickle.loads(cPickle.dumps(self, -1))
     
     # 剛体: ボーン追従
     def isModeStatic(self):
@@ -491,6 +553,9 @@ cdef class RigidBodyParam:
     def __str__(self):
         return "<RigidBodyParam mass:{0}, linear_damping:{1}, angular_damping:{2}, restitution:{3}, friction: {4}".format(
             self.mass, self.linear_damping, self.angular_damping, self.restitution, self.friction)
+
+    def copy(self):
+        return cPickle.loads(cPickle.dumps(self, -1))
             
 # OBB（有向境界ボックス：Oriented Bounding Box）
 cdef class OBB:
@@ -973,10 +1038,15 @@ class Joint:
                    self.position, self.rotation, self.translation_limit_min, self.translation_limit_max,
                    self.spring_constant_translation, self.spring_constant_rotation)
 
+    def copy(self):
+        return cPickle.loads(cPickle.dumps(self, -1))
+
 
 cdef class PmxModel:
     def __init__(self):
         self.path = ''
+        # Vroid用jsonデータ
+        self.json_data = None
         self.extended_uv = 0
         self.name = ''
         self.english_name = ''
@@ -1758,3 +1828,5 @@ cdef class PmxModel:
         vec3.setY(cls.get_effective_value(vec3.y()))
         vec3.setZ(cls.get_effective_value(vec3.z()))
 
+    def copy(self):
+        return cPickle.loads(cPickle.dumps(self, -1))

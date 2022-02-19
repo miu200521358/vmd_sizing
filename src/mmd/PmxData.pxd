@@ -52,7 +52,6 @@ cdef class Bone:
     cdef public int index
     cdef public bint display
     cdef public bint is_sizing
-    cdef public MVector3D relative_position
 
     cdef public float len_1d
     cdef public MVector3D len_3d

@@ -46,24 +46,33 @@ cdef class MOptions():
         # まず一番小さいXZ比率と一番大きいXZ比率を取得する
         min_xz_ratio = 99999999999
         max_xz_ratio = -99999999999
+        min_heads_tall_ratio = 99999999999
+        max_heads_tall_ratio = -99999999999
         for data_set_idx, data_set in enumerate(self.data_set_list):
             if data_set.original_xz_ratio < min_xz_ratio:
                 min_xz_ratio = data_set.original_xz_ratio
             
             if data_set.original_xz_ratio > max_xz_ratio:
                 max_xz_ratio = data_set.original_xz_ratio
-        
+
+            if data_set.original_heads_tall_ratio < min_heads_tall_ratio:
+                min_heads_tall_ratio = data_set.original_heads_tall_ratio
+            
+            if data_set.original_heads_tall_ratio > max_heads_tall_ratio:
+                max_heads_tall_ratio = data_set.original_heads_tall_ratio
+
+        # 全体の頭身比率(小さい子に変換したときに窮屈にならないよう)
+        total_heads_tall_ratio = max(1, min((min_heads_tall_ratio + ((max_heads_tall_ratio - min_heads_tall_ratio) / 2)), 1.1))
+
         # XZ比率の差(差分の1.2倍をリミットとする)
-        total_xz_ratio = min((min_xz_ratio + ((max_xz_ratio - min_xz_ratio) / 2)), 1.2)
+        total_xz_ratio = min((min_xz_ratio + ((max_xz_ratio - min_xz_ratio) / 2)) * total_heads_tall_ratio, 1.2)
         logger.test("total_xz_ratio: %s", total_xz_ratio)
 
-        logger.info("")
-
-        log_txt = "足の長さの比率 ---------\n"
+        log_txt = "\n足の長さの比率 ---------\n"
 
         for data_set_idx, data_set in enumerate(self.data_set_list):
             if len(self.data_set_list) > 1:
-                # XZ比率は合計から導き出した比率
+                # XZ比率は合計から導き出した比率(頭身比率を加味する)
                 data_set.xz_ratio = total_xz_ratio
                 data_set.y_ratio = data_set.original_y_ratio
             else:
@@ -71,7 +80,7 @@ cdef class MOptions():
                 data_set.xz_ratio = data_set.original_xz_ratio
                 data_set.y_ratio = data_set.original_y_ratio
 
-            log_txt = "{0}【No.{1}】　xz: {2}, y: {3} (元: xz: {4})\n".format(log_txt, (data_set_idx + 1), data_set.xz_ratio, data_set.y_ratio, data_set.original_xz_ratio)
+            log_txt = "{0}【No.{1}】　xz: {2}, y: {3}, 頭身比率: {4} (元: xz: {5}, 頭身比率: {6})\n".format(log_txt, (data_set_idx + 1), round(data_set.xz_ratio, 5), round(data_set.y_ratio, 5), round(total_heads_tall_ratio, 5), round(data_set.original_xz_ratio, 5), round(data_set.original_heads_tall_ratio, 5))
 
         logger.info(log_txt)
 
@@ -288,6 +297,7 @@ cdef class MOptionsDataSet():
         # 本来の足IKの比率
         self.original_xz_ratio = 1
         self.original_y_ratio = 1
+        self.original_heads_tall_ratio = 1
 
         # 実際に計算に使う足IKの比率
         self.xz_ratio = 1
