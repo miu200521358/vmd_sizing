@@ -144,6 +144,9 @@ class MainFrame(wx.Frame):
             self.vmd_panel_ctrl.gauge_ctrl.Pulse()
 
     def on_tab_change(self, event: wx.Event):
+        # ファイルタブのコンソールに戻す
+        sys.stdout = self.file_panel_ctrl.console_ctrl
+
         if self.file_panel_ctrl.is_fix_tab:
             self.note_ctrl.ChangeSelection(self.file_panel_ctrl.tab_idx)
             event.Skip()
@@ -207,6 +210,20 @@ class MainFrame(wx.Frame):
 
             # 読み込み処理実行
             self.load(event, target_idx=0, is_arm=True)
+                
+        if self.note_ctrl.GetSelection() == self.leg_panel_ctrl.tab_idx:
+            # コンソールクリア
+            self.file_panel_ctrl.console_ctrl.Clear()
+            wx.GetApp().Yield()
+
+            # 一旦ファイルタブに固定
+            self.note_ctrl.SetSelection(self.file_panel_ctrl.tab_idx)
+            self.leg_panel_ctrl.fix_tab()
+
+            logger.info("足タブ表示準備開始\nファイル読み込み処理を実行します。少しお待ちください....", decoration=MLogger.DECORATION_BOX)
+
+            # 読み込み処理実行
+            self.load(event, target_idx=0, is_leg=True)
                 
         if self.note_ctrl.GetSelection() == self.camera_panel_ctrl.tab_idx:
             # カメラタブを開く場合、カメラタブ初期化処理実行
@@ -287,7 +304,7 @@ class MainFrame(wx.Frame):
         return self.file_panel_ctrl.file_set.motion_vmd_file_ctrl.file_ctrl.GetPath()
 
     # 読み込み
-    def load(self, event, target_idx, is_exec=False, is_morph=False, is_arm=False):
+    def load(self, event, target_idx, is_exec=False, is_morph=False, is_arm=False, is_leg=False):
         # フォーム無効化
         self.file_panel_ctrl.disable()
         # タブ固定
@@ -298,8 +315,8 @@ class MainFrame(wx.Frame):
         result = self.is_valid() and result
 
         if not result:
-            if is_morph or is_arm:
-                tab_name = "モーフ" if is_morph else "腕"
+            if is_morph or is_arm or is_leg:
+                tab_name = "モーフ" if is_morph else "腕" if is_arm else "足"
                 # 読み込み出来なかったらエラー
                 logger.error("「ファイル」タブで以下のいずれかのファイルパスが指定されていないため、「{tab_name}」タブが開けません。".format(tab_name=tab_name) \
                              + "\n・調整対象VMDファイル" \
@@ -334,7 +351,7 @@ class MainFrame(wx.Frame):
             self.file_panel_ctrl.check_btn_ctrl.Enable()
 
             # 別スレッドで実行
-            self.load_worker = LoadWorkerThread(self, LoadThreadEvent, target_idx, is_exec, is_morph, is_arm)
+            self.load_worker = LoadWorkerThread(self, LoadThreadEvent, target_idx, is_exec, is_morph, is_arm, is_leg)
             self.load_worker.start()
 
         return result
@@ -415,6 +432,11 @@ class MainFrame(wx.Frame):
             # 腕タブを開く場合、腕タブ初期化処理実行
             self.note_ctrl.ChangeSelection(self.arm_panel_ctrl.tab_idx)
             self.arm_panel_ctrl.initialize(event)
+
+        elif event.is_leg:
+            # 足タブを開く場合、足タブ初期化処理実行
+            self.note_ctrl.ChangeSelection(self.leg_panel_ctrl.tab_idx)
+            self.leg_panel_ctrl.initialize(event)
 
         else:
             # 終了音を鳴らす

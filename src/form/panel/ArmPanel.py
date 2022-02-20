@@ -308,7 +308,7 @@ class ArmPanel(BasePanel):
                     # 腕不可の場合、リスト追加
                     disable_arm_model_names.append("【No.{0}】変換先モデル: {1}".format(set_no, multi_file_set.rep_model_file_ctrl.data.name))
             
-        if len(disable_arm_model_names) > 0:
+        if len(disable_arm_model_names) > 0 and not self.arm_check_skip_flg_ctrl.GetValue():
             # 腕不可モデルがいる場合、ダイアログ表示
             with wx.MessageDialog(self, "下記モデルに「腕IK」に類する文字列が含まれているため、該当ファイルセットの腕系処理\n（腕スタンス補正・捩り分散・接触回避・位置合わせ）がこのままではスルーされます。\n" \
                                   + "腕チェックスキップFLGをONにすると、強制的に腕系処理が実行されます。\n※ただし、結果がおかしくなってもサポート対象外となります。\n" \

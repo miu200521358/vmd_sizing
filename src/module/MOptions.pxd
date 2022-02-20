@@ -84,3 +84,4 @@ cdef class MArmProcessOptions():
 
 cdef class MLegProcessOptions():
     cdef public float move_correction_ratio
+    cdef public dict leg_offsets

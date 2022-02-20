@@ -188,7 +188,8 @@ class SizingWorkerThread(BaseWorkerThread):
                     self.frame.arm_panel_ctrl.arm_check_skip_flg_ctrl.GetValue()
                 ), \
                 leg_options=MLegProcessOptions(
-                    move_correction_ratio=self.frame.leg_panel_ctrl.move_correction_slider.GetValue()
+                    move_correction_ratio=self.frame.leg_panel_ctrl.move_correction_slider.GetValue(),
+                    leg_offsets=self.frame.leg_panel_ctrl.get_leg_offsets()
                 ), \
                 camera_motion=now_camera_data, \
                 camera_output_vmd_path=now_camera_output_vmd_path, \

@@ -14,7 +14,6 @@ from form.parts.ConsoleCtrl import ConsoleCtrl
 from form.parts.SizingFileSet import SizingFileSet
 from form.worker.SizingWorkerThread import SizingWorkerThread
 from form.worker.LoadWorkerThread import LoadWorkerThread
-from module.MOptions import MOptions, MOptionsDataSet, MArmProcessOptions
 from utils import MFormUtils, MFileUtils # noqa
 from utils.MLogger import MLogger # noqa
 
@@ -178,7 +177,7 @@ class BulkPanel(BasePanel):
                     "センターXZ補正(0:無効、1:有効)", "上半身補正(0:無効、1:有効)", "下半身補正(0:無効、1:有効)", "足ＩＫ補正(0:無効、1:有効)", "つま先補正(0:無効、1:有効)", \
                     "つま先ＩＫ補正(0:無効、1:有効)", "肩補正(0:無効、1:有効)", "センターY補正(0:無効、1:有効)", "捩り分散(0:なし、1:あり)", "モーフ置換(元:先:大きさ;)", "接触回避(0:なし、1:あり)", \
                     "接触回避剛体(剛体名;)", "位置合わせ(0:なし、1:あり)", "指位置合わせ(0:なし、1:あり)", "床位置合わせ(0:なし、1:あり)", "手首の距離", "指の距離", "床との距離", \
-                    "腕チェックスキップ(0:なし、1:あり)", "カメラモーションVMD(フルパス、グループ1件目のみ)", "距離可動範囲", "カメラ作成元モデルPMX(フルパス)", "全長Yオフセット"]
+                    "腕チェックスキップ(0:なし、1:あり)", "移動量補正値", "カメラモーションVMD(フルパス、グループ1件目のみ)", "距離可動範囲", "カメラ作成元モデルPMX(フルパス)", "全長Yオフセット"]
         
         output_path = os.path.join(os.path.dirname(self.frame.file_panel_ctrl.file_set.motion_vmd_file_ctrl.path()), f'一括サイジング用データ_{datetime.now():%Y%m%d_%H%M%S}.csv')
 
@@ -226,10 +225,11 @@ class BulkPanel(BasePanel):
         save_data[save_key[20]] = self.frame.arm_panel_ctrl.alignment_distance_finger_slider.GetValue()
         save_data[save_key[21]] = self.frame.arm_panel_ctrl.alignment_distance_floor_slider.GetValue()
         save_data[save_key[22]] = "1" if self.frame.arm_panel_ctrl.arm_check_skip_flg_ctrl.GetValue() else "0"
-        save_data[save_key[23]] = self.frame.camera_panel_ctrl.camera_vmd_file_ctrl.file_ctrl.GetPath()
-        save_data[save_key[24]] = self.frame.camera_panel_ctrl.camera_length_slider.GetValue()
-        save_data[save_key[25]] = self.frame.camera_panel_ctrl.camera_set_dict[file_idx + 1].camera_model_file_ctrl.path() if file_idx + 1 in self.frame.camera_panel_ctrl.camera_set_dict else ""
-        save_data[save_key[26]] = self.frame.camera_panel_ctrl.camera_set_dict[file_idx + 1].camera_offset_y_ctrl.GetValue() if file_idx + 1 in self.frame.camera_panel_ctrl.camera_set_dict else ""
+        save_data[save_key[23]] = self.frame.leg_panel_ctrl.move_correction_slider.GetValue()
+        save_data[save_key[24]] = self.frame.camera_panel_ctrl.camera_vmd_file_ctrl.file_ctrl.GetPath()
+        save_data[save_key[25]] = self.frame.camera_panel_ctrl.camera_length_slider.GetValue()
+        save_data[save_key[26]] = self.frame.camera_panel_ctrl.camera_set_dict[file_idx + 1].camera_model_file_ctrl.path() if file_idx + 1 in self.frame.camera_panel_ctrl.camera_set_dict else ""
+        save_data[save_key[27]] = self.frame.camera_panel_ctrl.camera_set_dict[file_idx + 1].camera_offset_y_ctrl.GetValue() if file_idx + 1 in self.frame.camera_panel_ctrl.camera_set_dict else ""
         
         return save_data
 
@@ -304,17 +304,19 @@ class BulkPanel(BasePanel):
                 finger_alignment_length_result, finger_alignment_length_datas = self.read_csv_row(rows, row_no, 20, "指の距離", False, float, None, None, None)
                 floor_alignment_length_result, floor_alignment_length_datas = self.read_csv_row(rows, row_no, 21, "床との距離", False, float, None, None, None)
                 arm_check_skip_result, arm_check_skip_datas = self.read_csv_row(rows, row_no, 22, "腕チェックスキップ", True, int, r"^(0|1)$", "0 もしくは 1", None)
-                org_camera_motion_result, org_camera_motion_path = self.read_csv_row(rows, row_no, 23, "カメラモーションVMD", False, str, None, None, (".vmd"))
-                camera_length_result, camera_length_datas = self.read_csv_row(rows, row_no, 24, "距離稼働範囲", False, float, r"^[1-9]\d*\.?\d*", "1以上", None)
-                org_camera_model_result, org_camera_model_path = self.read_csv_row(rows, row_no, 25, "カメラ作成元モデルPMX", False, str, None, None, (".pmx"))
-                camera_y_offset_result, camera_y_offset_datas = self.read_csv_row(rows, row_no, 26, "全長Yオフセット", False, float, None, None, None)
+                move_correction_result, move_correction_data = self.read_csv_row(rows, row_no, 23, "全体移動量補正", False, float, None, None, None)
+                leg_offset_result, leg_offset_data = self.read_csv_row(rows, row_no, 24, "足ＩＫオフセット値", False, float, None, None, None)
+                org_camera_motion_result, org_camera_motion_path = self.read_csv_row(rows, row_no, 25, "カメラモーションVMD", False, str, None, None, (".vmd"))
+                camera_length_result, camera_length_datas = self.read_csv_row(rows, row_no, 26, "距離稼働範囲", False, float, r"^[1-9]\d*\.?\d*", "1以上", None)
+                org_camera_model_result, org_camera_model_path = self.read_csv_row(rows, row_no, 27, "カメラ作成元モデルPMX", False, str, None, None, (".pmx"))
+                camera_y_offset_result, camera_y_offset_datas = self.read_csv_row(rows, row_no, 28, "全長Yオフセット", False, float, None, None, None)
                 
                 result = result & group_no_result & org_motion_result & org_model_result & rep_model_result & stance_center_xz_result \
                     & stance_upper_result & stance_lower_result & stance_leg_ik_result & stance_toe_result & stance_toe_ik_result & stance_shoulder_result \
                     & stance_center_y_result & separate_twist_result & arm_check_skip_result & morph_result & arm_avoidance_result & avoidance_name_result \
                     & arm_alignment_result & finger_alignment_result & floor_alignment_result & arm_alignment_length_result & finger_alignment_length_result \
                     & floor_alignment_length_result & org_camera_motion_result & camera_length_result & org_camera_model_result \
-                    & camera_y_offset_result
+                    & camera_y_offset_result & move_correction_result & leg_offset_result
                 
                 if result:
                     if prev_group_no != group_no[0]:
@@ -337,6 +339,7 @@ class BulkPanel(BasePanel):
                         service_data_txt = f"{service_data_txt}　床位置合わせ: {floor_alignment_txt} ({floor_alignment_length_datas})\n"
                         arm_check_skip_txt = "あり" if arm_check_skip_datas[0] == 1 else "なし"
                         service_data_txt = f"{service_data_txt}　腕チェックスキップ: {arm_check_skip_txt}\n"
+                        service_data_txt = f"{service_data_txt}　全体移動量補正値: {move_correction_data}\n"
 
                         service_data_txt = f"{service_data_txt}　カメラ: {org_camera_motion_path}\n"
                         service_data_txt = f"{service_data_txt}　距離制限: {camera_length_datas}\n"
@@ -349,6 +352,7 @@ class BulkPanel(BasePanel):
                     service_data_txt = f"{service_data_txt}　　モーション: {org_motion_path}\n"
                     service_data_txt = f"{service_data_txt}　　作成元モデル: {org_model_path}\n"
                     service_data_txt = f"{service_data_txt}　　変換先モデル: {rep_model_path}\n"
+                    service_data_txt = f"{service_data_txt}　　足ＩＫ補正値: {leg_offset_data}\n"
                     service_data_txt = f"{service_data_txt}　　カメラ作成元モデル: {org_camera_model_path}\n"
                     service_data_txt = f"{service_data_txt}　　Yオフセット: {camera_y_offset_datas}\n"
                     
@@ -529,10 +533,12 @@ class BulkPanel(BasePanel):
                 finger_alignment_length_result, finger_alignment_length_datas = self.read_csv_row(rows, row_no, 20, "指の距離", False, float, None, None, None)
                 floor_alignment_length_result, floor_alignment_length_datas = self.read_csv_row(rows, row_no, 21, "床との距離", False, float, None, None, None)
                 arm_check_skip_result, arm_check_skip_datas = self.read_csv_row(rows, row_no, 22, "腕チェックスキップ", True, int, r"^(0|1)$", "0 もしくは 1", None)
-                org_camera_motion_result, org_camera_motion_path = self.read_csv_row(rows, row_no, 23, "カメラモーションVMD", False, str, None, None, (".vmd"))
-                camera_length_result, camera_length_datas = self.read_csv_row(rows, row_no, 24, "距離稼働範囲", False, float, None, None, None)
-                org_camera_model_result, org_camera_model_path = self.read_csv_row(rows, row_no, 25, "カメラ作成元モデルPMX", False, str, None, None, (".pmx"))
-                camera_y_offset_result, camera_y_offset_datas = self.read_csv_row(rows, row_no, 26, "全長Yオフセット", False, float, None, None, None)
+                move_correction_result, move_correction_data = self.read_csv_row(rows, row_no, 23, "全体移動量補正", False, float, None, None, None)
+                leg_offset_result, leg_offset_data = self.read_csv_row(rows, row_no, 24, "足ＩＫオフセット値", False, float, None, None, None)
+                org_camera_motion_result, org_camera_motion_path = self.read_csv_row(rows, row_no, 25, "カメラモーションVMD", False, str, None, None, (".vmd"))
+                camera_length_result, camera_length_datas = self.read_csv_row(rows, row_no, 26, "距離稼働範囲", False, float, None, None, None)
+                org_camera_model_result, org_camera_model_path = self.read_csv_row(rows, row_no, 27, "カメラ作成元モデルPMX", False, str, None, None, (".pmx"))
+                camera_y_offset_result, camera_y_offset_datas = self.read_csv_row(rows, row_no, 28, "全長Yオフセット", False, float, None, None, None)
                 
                 if now_motion_idx == 0:
                     # 複数パネルはクリア
@@ -598,7 +604,13 @@ class BulkPanel(BasePanel):
                     self.frame.arm_panel_ctrl.alignment_distance_wrist_slider.SetValue(arm_alignment_length_datas)
                     self.frame.arm_panel_ctrl.alignment_distance_finger_slider.SetValue(finger_alignment_length_datas)
                     self.frame.arm_panel_ctrl.alignment_distance_floor_slider.SetValue(floor_alignment_length_datas)
+
+                    # 移動量補正値
+                    self.frame.leg_panel_ctrl.move_correction_slider.SetValue(move_correction_data)
                     
+                    # 足ＩＫオフセット
+                    self.frame.leg_panel_ctrl.bulk_leg_offset_set_dict[0] = leg_offset_data
+
                     # カメラ
                     self.frame.camera_panel_ctrl.camera_vmd_file_ctrl.file_ctrl.SetPath(org_camera_motion_path)
                     self.frame.camera_panel_ctrl.output_camera_vmd_file_ctrl.file_ctrl.SetPath("")
@@ -660,6 +672,9 @@ class BulkPanel(BasePanel):
                     for avoidance_data in avoidance_name_datas:
                         m = re.findall(r"([^\:]+)\;", avoidance_data)
                         self.frame.arm_panel_ctrl.bulk_avoidance_set_dict[now_motion_idx - 1].append(m[0][0])
+                    
+                    # 足ＩＫオフセット
+                    self.frame.leg_panel_ctrl.bulk_leg_offset_set_dict[now_motion_idx - 1] = leg_offset_data
 
                     # 指位置合わせは常に0(ダイアログ防止)
                     self.frame.arm_panel_ctrl.arm_alignment_finger_flg_ctrl.SetValue(0)
@@ -711,7 +726,7 @@ class BulkPanel(BasePanel):
             self.frame.file_panel_ctrl.check_btn_ctrl.Enable()
 
             # 別スレッドで実行(次行がない場合、-1で終了フラグ)
-            self.frame.load_worker = LoadWorkerThread(self.frame, BulkLoadThreadEvent, row_no if row_no > line_idx else -1, True, False, False)
+            self.frame.load_worker = LoadWorkerThread(self.frame, BulkLoadThreadEvent, row_no if row_no > line_idx else -1, True, False, False, False)
             self.frame.load_worker.start()
 
         return result

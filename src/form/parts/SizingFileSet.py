@@ -261,9 +261,10 @@ class SizingFileSet():
     def load(self):
         result = True
         try:
-            result = self.motion_vmd_file_ctrl.load() and result
-            result = self.org_model_file_ctrl.load() and result
-            result = self.rep_model_file_ctrl.load() and result
+            is_check = not self.frame.arm_panel_ctrl.arm_check_skip_flg_ctrl.GetValue()
+            result = self.motion_vmd_file_ctrl.load(is_check=is_check) and result
+            result = self.org_model_file_ctrl.load(is_check=is_check) and result
+            result = self.rep_model_file_ctrl.load(is_check=is_check) and result
         except Exception:
             result = False
         

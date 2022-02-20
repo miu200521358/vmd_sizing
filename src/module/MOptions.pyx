@@ -21,9 +21,9 @@ logger = MLogger(__name__)
 
 
 cdef class MLegProcessOptions():
-    def __init__(self, move_correction_ratio=1):
+    def __init__(self, move_correction_ratio=1, leg_offsets={0: 0}):
         self.move_correction_ratio = move_correction_ratio
-
+        self.leg_offsets = leg_offsets
 
 cdef class MOptions():
 
@@ -66,6 +66,7 @@ cdef class MOptions():
         logger.test("total_xz_ratio: %s", total_xz_ratio)
 
         log_txt = "\n足の長さの比率 ---------\n"
+        log_txt = f"{log_txt}全体移動量補正： {round(self.leg_options.move_correction_ratio, 5)}\n"
 
         for data_set_idx, data_set in enumerate(self.data_set_list):
             if len(self.data_set_list) > 1:
@@ -77,7 +78,7 @@ cdef class MOptions():
                 data_set.xz_ratio = data_set.original_xz_ratio * self.leg_options.move_correction_ratio
                 data_set.y_ratio = data_set.original_y_ratio
 
-            log_txt = "{0}【No.{1}】　xz: {2}, y: {3}, 補正値: {4} (元: xz: {5})\n".format(log_txt, (data_set_idx + 1), round(data_set.xz_ratio, 5), round(data_set.y_ratio, 5), round(self.leg_options.move_correction_ratio, 5), round(data_set.original_xz_ratio, 5))
+            log_txt = "{0}　【No.{1}】　xz: {2}, y: {3}, (元: xz: {4})\n".format(log_txt, (data_set_idx + 1), round(data_set.xz_ratio, 5), round(data_set.y_ratio, 5), round(data_set.original_xz_ratio, 5))
 
         logger.info(log_txt)
 
