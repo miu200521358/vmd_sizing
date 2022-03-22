@@ -177,7 +177,7 @@ class BulkPanel(BasePanel):
                     "センターXZ補正(0:無効、1:有効)", "上半身補正(0:無効、1:有効)", "下半身補正(0:無効、1:有効)", "足ＩＫ補正(0:無効、1:有効)", "つま先補正(0:無効、1:有効)", \
                     "つま先ＩＫ補正(0:無効、1:有効)", "肩補正(0:無効、1:有効)", "センターY補正(0:無効、1:有効)", "捩り分散(0:なし、1:あり)", "モーフ置換(元:先:大きさ;)", "接触回避(0:なし、1:あり)", \
                     "接触回避剛体(剛体名;)", "位置合わせ(0:なし、1:あり)", "指位置合わせ(0:なし、1:あり)", "床位置合わせ(0:なし、1:あり)", "手首の距離", "指の距離", "床との距離", \
-                    "腕チェックスキップ(0:なし、1:あり)", "移動量補正値", "カメラモーションVMD(フルパス、グループ1件目のみ)", "距離可動範囲", "カメラ作成元モデルPMX(フルパス)", "全長Yオフセット"]
+                    "腕チェックスキップ(0:なし、1:あり)", "全移動量補正値", "足ＩＫオフセット", "カメラモーションVMD(フルパス、グループ1件目のみ)", "距離可動範囲", "カメラ作成元モデルPMX(フルパス)", "全長Yオフセット"]
         
         output_path = os.path.join(os.path.dirname(self.frame.file_panel_ctrl.file_set.motion_vmd_file_ctrl.path()), f'一括サイジング用データ_{datetime.now():%Y%m%d_%H%M%S}.csv')
 
@@ -205,14 +205,14 @@ class BulkPanel(BasePanel):
         save_data[save_key[1]] = file_set.motion_vmd_file_ctrl.path()
         save_data[save_key[2]] = file_set.org_model_file_ctrl.path()
         save_data[save_key[3]] = file_set.rep_model_file_ctrl.path()
-        save_data[save_key[4]] = "1" if 0 in file_set.selected_stance_details else "0"
-        save_data[save_key[5]] = "1" if 1 in file_set.selected_stance_details else "0"
-        save_data[save_key[6]] = "1" if 2 in file_set.selected_stance_details else "0"
-        save_data[save_key[7]] = "1" if 3 in file_set.selected_stance_details else "0"
-        save_data[save_key[8]] = "1" if 4 in file_set.selected_stance_details else "0"
-        save_data[save_key[9]] = "1" if 5 in file_set.selected_stance_details else "0"
-        save_data[save_key[10]] = "1" if 6 in file_set.selected_stance_details else "0"
-        save_data[save_key[11]] = "1" if 7 in file_set.selected_stance_details else "0"
+        save_data[save_key[4]] = "1" if 0 in file_set.selected_stance_details and file_set.org_model_file_ctrl.title_parts_ctrl.GetValue() else "0"
+        save_data[save_key[5]] = "1" if 1 in file_set.selected_stance_details and file_set.org_model_file_ctrl.title_parts_ctrl.GetValue() else "0"
+        save_data[save_key[6]] = "1" if 2 in file_set.selected_stance_details and file_set.org_model_file_ctrl.title_parts_ctrl.GetValue() else "0"
+        save_data[save_key[7]] = "1" if 3 in file_set.selected_stance_details and file_set.org_model_file_ctrl.title_parts_ctrl.GetValue() else "0"
+        save_data[save_key[8]] = "1" if 4 in file_set.selected_stance_details and file_set.org_model_file_ctrl.title_parts_ctrl.GetValue() else "0"
+        save_data[save_key[9]] = "1" if 5 in file_set.selected_stance_details and file_set.org_model_file_ctrl.title_parts_ctrl.GetValue() else "0"
+        save_data[save_key[10]] = "1" if 6 in file_set.selected_stance_details and file_set.org_model_file_ctrl.title_parts_ctrl.GetValue() else "0"
+        save_data[save_key[11]] = "1" if 7 in file_set.selected_stance_details and file_set.org_model_file_ctrl.title_parts_ctrl.GetValue() else "0"
         save_data[save_key[12]] = "1" if file_set.rep_model_file_ctrl.title_parts_ctrl.GetValue() else "0"
         save_data[save_key[13]] = ";".join([f"{om}:{rm}:{r}" for (om, rm, r) in self.frame.morph_panel_ctrl.morph_set_dict[file_idx].get_morph_list()]) + ";" \
             if file_idx in self.frame.morph_panel_ctrl.morph_set_dict else ""
@@ -226,10 +226,11 @@ class BulkPanel(BasePanel):
         save_data[save_key[21]] = self.frame.arm_panel_ctrl.alignment_distance_floor_slider.GetValue()
         save_data[save_key[22]] = "1" if self.frame.arm_panel_ctrl.arm_check_skip_flg_ctrl.GetValue() else "0"
         save_data[save_key[23]] = self.frame.leg_panel_ctrl.move_correction_slider.GetValue()
-        save_data[save_key[24]] = self.frame.camera_panel_ctrl.camera_vmd_file_ctrl.file_ctrl.GetPath()
-        save_data[save_key[25]] = self.frame.camera_panel_ctrl.camera_length_slider.GetValue()
-        save_data[save_key[26]] = self.frame.camera_panel_ctrl.camera_set_dict[file_idx + 1].camera_model_file_ctrl.path() if file_idx + 1 in self.frame.camera_panel_ctrl.camera_set_dict else ""
-        save_data[save_key[27]] = self.frame.camera_panel_ctrl.camera_set_dict[file_idx + 1].camera_offset_y_ctrl.GetValue() if file_idx + 1 in self.frame.camera_panel_ctrl.camera_set_dict else ""
+        save_data[save_key[24]] = self.frame.leg_panel_ctrl.get_leg_offsets()[file_idx] if file_idx in self.frame.leg_panel_ctrl.get_leg_offsets() else "0"
+        save_data[save_key[25]] = self.frame.camera_panel_ctrl.camera_vmd_file_ctrl.file_ctrl.GetPath()
+        save_data[save_key[26]] = self.frame.camera_panel_ctrl.camera_length_slider.GetValue()
+        save_data[save_key[27]] = self.frame.camera_panel_ctrl.camera_set_dict[file_idx + 1].camera_model_file_ctrl.path() if file_idx + 1 in self.frame.camera_panel_ctrl.camera_set_dict else ""
+        save_data[save_key[28]] = self.frame.camera_panel_ctrl.camera_set_dict[file_idx + 1].camera_offset_y_ctrl.GetValue() if file_idx + 1 in self.frame.camera_panel_ctrl.camera_set_dict else ""
         
         return save_data
 
