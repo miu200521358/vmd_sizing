@@ -549,6 +549,13 @@ def calc_leg_ik_ratio(data_set: MOptionsDataSet):
     target_bones = ["左足", "左ひざ", "左足首", "センター"]
 
     if set(target_bones).issubset(data_set.org_model.bones) and set(target_bones).issubset(data_set.rep_model.bones):
+        # 頭身
+        _, _, org_heads_tall = calc_heads_tall(data_set.org_model)
+        _, _, rep_heads_tall = calc_heads_tall(data_set.rep_model)
+
+        # 頭身比率
+        heads_tall_ratio = org_heads_tall / rep_heads_tall
+
         # XZ比率(足の長さ)
         org_leg_length = ((data_set.org_model.bones["左足首"].position - data_set.org_model.bones["左ひざ"].position) \
                           + (data_set.org_model.bones["左ひざ"].position - data_set.org_model.bones["左足"].position)).length()
@@ -563,9 +570,30 @@ def calc_leg_ik_ratio(data_set: MOptionsDataSet):
         logger.test("y_ratio rep_leg_length: %s, org_leg_length: %s", rep_leg_length, org_leg_length)
         y_ratio = 1 if org_leg_length == 0 else (rep_leg_length / org_leg_length)
 
-        return xz_ratio, y_ratio
+        return xz_ratio, y_ratio, heads_tall_ratio
     
     logger.warning("「左足」「左ひざ」「左足首」「センター」のいずれかのボーンが不足しているため、足の長さの比率が測れませんでした。", decoration=MLogger.DECORATION_IN_BOX)
 
-    return 1, 1
+    return 1, 1, 1
 
+
+# 頭身を計算する(カメラサイジングからの流用)
+def calc_heads_tall(model: PmxModel):
+    face_length = 1
+    if "頭" in model.bones:
+        # 顔の大きさ
+        face_length = model.bones["頭頂実体"].position.y() - model.bones["頭"].position.y()
+
+        if face_length == 0:
+            if "首" in model.bones:
+                # 頭がなくて首がある場合、首までの長さ
+                face_length = model.bones["頭頂実体"].position.y() - model.bones["首"].position.y()
+            else:
+                # 首もなければ比率1
+                return 1, 1, 1
+
+    # 全身の高さ
+    total_height = model.bones["頭頂実体"].position.y()
+
+    # 顔の大きさ / 全身の高さ　で頭身算出
+    return total_height, face_length, total_height / face_length

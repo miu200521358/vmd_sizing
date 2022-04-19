@@ -2,12 +2,12 @@
 #
 import wx
 import wx.lib.newevent
+import numpy as np
 
 from form.panel.BasePanel import BasePanel
 from form.parts.FloatSliderCtrl import FloatSliderCtrl
 from form.parts.SizingFileSet import SizingFileSet
 from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
-from utils import MFormUtils, MFileUtils # noqa
 from utils.MLogger import MLogger # noqa
 
 logger = MLogger(__name__)
@@ -30,14 +30,6 @@ class ArmPanel(BasePanel):
         # Bulk用接触回避データ
         self.bulk_avoidance_set_dict = {}
 
-        # 同じグループなので、とりあえず宣言だけしておく
-        self.arm_process_flg_avoidance = wx.CheckBox(self, wx.ID_ANY, u"", wx.DefaultPosition, wx.DefaultSize)
-        self.arm_process_flg_avoidance.SetToolTip(avoidance_tooltip)
-        self.arm_process_flg_avoidance.Bind(wx.EVT_CHECKBOX, self.set_output_vmd_path)
-        self.arm_process_flg_alignment = wx.CheckBox(self, wx.ID_ANY, u"", wx.DefaultPosition, wx.DefaultSize)
-        self.arm_process_flg_alignment.SetToolTip(alignment_tooltip)
-        self.arm_process_flg_alignment.Bind(wx.EVT_CHECKBOX, self.set_output_vmd_path)
-
         self.description_txt = wx.StaticText(self, wx.ID_ANY, "腕を変換先モデルに合わせて調整する事ができます。\n「接触回避」と「位置合わせ」を合わせて実行できます。（接触回避→位置合わせの順に実行）" + \
                                              "\n腕の動きが、元々のモーションから変わる事があります。いずれもそれなりに時間がかかります。", wx.DefaultPosition, wx.DefaultSize, 0)
         self.sizer.Add(self.description_txt, 0, wx.ALL, 5)
@@ -48,13 +40,16 @@ class ArmPanel(BasePanel):
         # 剛体接触回避 ----------------
         self.avoidance_title_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        # 剛体接触回避タイトルラジオ
+        # 剛体接触回避タイトル
         self.avoidance_title_txt = wx.StaticText(self, wx.ID_ANY, u"接触回避", wx.DefaultPosition, wx.DefaultSize, 0)
         self.avoidance_title_txt.SetToolTip(avoidance_tooltip)
         self.avoidance_title_txt.Wrap(-1)
         self.avoidance_title_txt.SetFont(wx.Font(wx.NORMAL_FONT.GetPointSize(), wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, False, wx.EmptyString))
         self.avoidance_title_txt.Bind(wx.EVT_LEFT_DOWN, self.on_check_arm_process_avoidance)
 
+        self.arm_process_flg_avoidance = wx.CheckBox(self, wx.ID_ANY, u"", wx.DefaultPosition, wx.DefaultSize)
+        self.arm_process_flg_avoidance.SetToolTip(avoidance_tooltip)
+        self.arm_process_flg_avoidance.Bind(wx.EVT_CHECKBOX, self.set_output_vmd_path)
         self.avoidance_title_sizer.Add(self.arm_process_flg_avoidance, 0, wx.ALL, 5)
         self.avoidance_title_sizer.Add(self.avoidance_title_txt, 0, wx.ALL, 5)
         self.sizer.Add(self.avoidance_title_sizer, 0, wx.ALL, 5)
@@ -84,7 +79,7 @@ class ArmPanel(BasePanel):
         # 手首位置合わせ --------------------
         self.alignment_title_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        # 手首位置合わせタイトルラジオ
+        # 手首位置合わせタイトル
         self.alignment_title_txt = wx.StaticText(self, wx.ID_ANY, u"位置合わせ", wx.DefaultPosition, wx.DefaultSize, 0)
         self.alignment_title_txt.SetToolTip("両手を合わせたり、床に手をついたりするモーションを、変換先モデルの手首位置に合わせて調整します。\n" + \
                                             "それぞれの距離を調整することで、位置合わせの適用範囲を調整することができます。")
@@ -92,6 +87,9 @@ class ArmPanel(BasePanel):
         self.alignment_title_txt.SetFont(wx.Font(wx.NORMAL_FONT.GetPointSize(), wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, False, wx.EmptyString))
         self.alignment_title_txt.Bind(wx.EVT_LEFT_DOWN, self.on_check_arm_process_alignment)
 
+        self.arm_process_flg_alignment = wx.CheckBox(self, wx.ID_ANY, u"", wx.DefaultPosition, wx.DefaultSize)
+        self.arm_process_flg_alignment.SetToolTip(alignment_tooltip)
+        self.arm_process_flg_alignment.Bind(wx.EVT_CHECKBOX, self.set_output_vmd_path)
         self.alignment_title_sizer.Add(self.arm_process_flg_alignment, 0, wx.ALL, 5)
         self.alignment_title_sizer.Add(self.alignment_title_txt, 0, wx.ALL, 5)
         self.sizer.Add(self.alignment_title_sizer, 0, wx.ALL, 5)
@@ -196,7 +194,7 @@ class ArmPanel(BasePanel):
         self.sizer.Add(self.arm_check_skip_sizer, 0, wx.ALL | wx.EXPAND, 5)
 
         self.fit()
-    
+        
     def get_avoidance_target(self):
         if len(self.bulk_avoidance_set_dict.keys()) > 0:
             # Bulk用データがある場合、優先返還
@@ -272,23 +270,20 @@ class ArmPanel(BasePanel):
                         # 違う場合、ファイルセット読み直し
                         self.add_set(set_no, multi_file_set, replace=True)
                     
-                        # 複数件ある場合、手首間の距離デフォルト値変更
-                        self.alignment_distance_wrist_slider.SetValue(2.5)
-                        self.alignment_distance_wrist_label.SetLabel("（2.5）")
+                        # 複数件ある場合、デフォルト値変更
+                        self.set_multi_initialize_value()
                 else:
                     # 複数タブが読み込み失敗している場合、読み直し（クリア）
                     self.add_set(set_no, multi_file_set, replace=True)
 
-                    # 複数件ある場合、手首間の距離デフォルト値変更
-                    self.alignment_distance_wrist_slider.SetValue(2.5)
-                    self.alignment_distance_wrist_label.SetLabel("（2.5）")
+                    # 複数件ある場合、デフォルト値変更
+                    self.set_multi_initialize_value()
             else:
                 # 空から作る場合、複数タブのファイルセット参照
                 self.add_set(set_no, multi_file_set, replace=False)
             
-                # 複数件ある場合、手首間の距離デフォルト値変更
-                self.alignment_distance_wrist_slider.SetValue(2.5)
-                self.alignment_distance_wrist_label.SetLabel("（2.5）")
+                # 複数件ある場合、デフォルト値変更
+                self.set_multi_initialize_value()
 
         # 腕系不可モデル名リスト
         disable_arm_model_names = []
@@ -313,7 +308,7 @@ class ArmPanel(BasePanel):
                     # 腕不可の場合、リスト追加
                     disable_arm_model_names.append("【No.{0}】変換先モデル: {1}".format(set_no, multi_file_set.rep_model_file_ctrl.data.name))
             
-        if len(disable_arm_model_names) > 0:
+        if len(disable_arm_model_names) > 0 and not self.arm_check_skip_flg_ctrl.GetValue():
             # 腕不可モデルがいる場合、ダイアログ表示
             with wx.MessageDialog(self, "下記モデルに「腕IK」に類する文字列が含まれているため、該当ファイルセットの腕系処理\n（腕スタンス補正・捩り分散・接触回避・位置合わせ）がこのままではスルーされます。\n" \
                                   + "腕チェックスキップFLGをONにすると、強制的に腕系処理が実行されます。\n※ただし、結果がおかしくなってもサポート対象外となります。\n" \
@@ -326,6 +321,11 @@ class ArmPanel(BasePanel):
                     self.arm_check_skip_flg_ctrl.SetValue(1)
                 
         event.Skip()
+    
+    def set_multi_initialize_value(self):
+        # 複数件ある場合、手首間の距離デフォルト値変更
+        self.alignment_distance_wrist_slider.SetValue(2.5)
+        self.alignment_distance_wrist_label.SetLabel("（2.5）")
 
     def add_set(self, set_idx: int, file_set: SizingFileSet, replace: bool):
         new_avoidance_set = AvoidanceSet(self.frame, self, self.avoidance_dialog.scrolled_window, set_idx, file_set)
@@ -356,7 +356,7 @@ class ArmPanel(BasePanel):
     
     # 処理対象：接触回避ON
     def on_check_arm_process_avoidance(self, event: wx.Event):
-        # ラジオボタンかチェックボックスイベントがTrueの場合、切り替え
+        # テキスト、チェックボックス、実値のいずれかが入った場合、切替
         if isinstance(event.GetEventObject(), wx.StaticText):
             if self.arm_process_flg_avoidance.GetValue() == 0:
                 self.arm_process_flg_avoidance.SetValue(1)
@@ -370,7 +370,7 @@ class ArmPanel(BasePanel):
 
     # 処理対象：手首位置合わせON
     def on_check_arm_process_alignment(self, event: wx.Event):
-        # ラジオボタンかチェックボックスイベントがTrueの場合、切り替え
+        # テキスト、チェックボックス、実値のいずれかが入った場合、切替
         if isinstance(event.GetEventObject(), wx.StaticText):
             if self.arm_process_flg_alignment.GetValue() == 0:
                 self.arm_process_flg_alignment.SetValue(1)

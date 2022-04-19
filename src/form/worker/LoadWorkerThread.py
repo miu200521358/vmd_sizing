@@ -8,11 +8,12 @@ from form.worker.BaseWorkerThread import BaseWorkerThread, task_takes_time
 
 class LoadWorkerThread(BaseWorkerThread):
 
-    def __init__(self, frame: wx.Frame, result_event: wx.Event, target_idx: int, is_exec: bool, is_morph: bool, is_arm: bool):
+    def __init__(self, frame: wx.Frame, result_event: wx.Event, target_idx: int, is_exec: bool, is_morph: bool, is_arm: bool, is_leg: bool):
         self.elapsed_time = 0
         self.is_exec = is_exec
         self.is_morph = is_morph
         self.is_arm = is_arm
+        self.is_leg = is_leg
         self.target_idx = target_idx
         self.gauge_ctrl = frame.file_panel_ctrl.gauge_ctrl
 
@@ -45,4 +46,4 @@ class LoadWorkerThread(BaseWorkerThread):
 
     def post_event(self):
         wx.PostEvent(self.frame, self.result_event(result=self.result and not self.is_killed, target_idx=self.target_idx, \
-                                                   elapsed_time=self.elapsed_time, is_exec=self.is_exec, is_morph=self.is_morph, is_arm=self.is_arm))
+                                                   elapsed_time=self.elapsed_time, is_exec=self.is_exec, is_morph=self.is_morph, is_arm=self.is_arm, is_leg=self.is_leg))

@@ -9,18 +9,19 @@ from form.panel.FilePanel import FilePanel
 from form.panel.MorphPanel import MorphPanel
 from form.panel.MultiPanel import MultiPanel
 from form.panel.ArmPanel import ArmPanel
+from form.panel.LegPanel import LegPanel
 from form.panel.CameraPanel import CameraPanel
 from form.panel.CsvPanel import CsvPanel
 from form.panel.VmdPanel import VmdPanel
 from form.panel.BulkPanel import BulkPanel
 from form.worker.SizingWorkerThread import SizingWorkerThread
 from form.worker.LoadWorkerThread import LoadWorkerThread
-from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
-from utils import MFormUtils, MFileUtils # noqa
-from utils.MLogger import MLogger # noqa
+from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4  # noqa
+from utils import MFormUtils, MFileUtils  # noqa
+from utils.MLogger import MLogger  # noqa
 
 if os.name == "nt":
-    import winsound     # Windows版のみインポート
+    import winsound  # Windows版のみインポート
 
 logger = MLogger(__name__)
 
@@ -31,8 +32,9 @@ logger = MLogger(__name__)
 
 
 class MainFrame(wx.Frame):
-
-    def __init__(self, parent, mydir_path: str, version_name: str, logging_level: int, is_saving: bool, is_out_log: bool):
+    def __init__(
+        self, parent, mydir_path: str, version_name: str, logging_level: int, is_saving: bool, is_out_log: bool
+    ):
         self.version_name = version_name
         self.logging_level = logging_level
         self.is_out_log = is_out_log
@@ -40,12 +42,19 @@ class MainFrame(wx.Frame):
         self.mydir_path = mydir_path
         self.elapsed_time = 0
         self.popuped_finger_warning = False
-        
+
         self.worker = None
         self.load_worker = None
 
-        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"VMDサイジング ローカル版 {0}".format(self.version_name), \
-                          pos=wx.DefaultPosition, size=wx.Size(600, 650), style=wx.DEFAULT_FRAME_STYLE | wx.TAB_TRAVERSAL)
+        wx.Frame.__init__(
+            self,
+            parent,
+            id=wx.ID_ANY,
+            title="VMDサイジング ローカル版 {0}".format(self.version_name),
+            pos=wx.DefaultPosition,
+            size=wx.Size(600, 650),
+            style=wx.DEFAULT_FRAME_STYLE | wx.TAB_TRAVERSAL,
+        )
 
         # ファイル履歴読み込み
         self.file_hitories = MFileUtils.read_history(self.mydir_path)
@@ -79,36 +88,40 @@ class MainFrame(wx.Frame):
 
         # ファイルタブ
         self.file_panel_ctrl = FilePanel(self, self.note_ctrl, 0, self.file_hitories)
-        self.note_ctrl.AddPage(self.file_panel_ctrl, u"ファイル", True)
+        self.note_ctrl.AddPage(self.file_panel_ctrl, "ファイル", True)
 
         # 複数タブ
         self.multi_panel_ctrl = MultiPanel(self, self.note_ctrl, 1, self.file_hitories)
-        self.note_ctrl.AddPage(self.multi_panel_ctrl, u"複数", False)
+        self.note_ctrl.AddPage(self.multi_panel_ctrl, "複数", False)
 
         # モーフタブ
         self.morph_panel_ctrl = MorphPanel(self, self.note_ctrl, 2)
-        self.note_ctrl.AddPage(self.morph_panel_ctrl, u"モーフ", False)
+        self.note_ctrl.AddPage(self.morph_panel_ctrl, "モーフ", False)
 
         # 腕タブ
         self.arm_panel_ctrl = ArmPanel(self, self.note_ctrl, 3)
-        self.note_ctrl.AddPage(self.arm_panel_ctrl, u"腕", False)
+        self.note_ctrl.AddPage(self.arm_panel_ctrl, "腕", False)
+
+        # 足タブ
+        self.leg_panel_ctrl = LegPanel(self, self.note_ctrl, 4)
+        self.note_ctrl.AddPage(self.leg_panel_ctrl, "足", False)
 
         # カメラタブ
-        self.camera_panel_ctrl = CameraPanel(self, self.note_ctrl, 4)
-        self.note_ctrl.AddPage(self.camera_panel_ctrl, u"カメラ", False)
+        self.camera_panel_ctrl = CameraPanel(self, self.note_ctrl, 5)
+        self.note_ctrl.AddPage(self.camera_panel_ctrl, "カメラ", False)
 
         # 一括タブ
-        self.bulk_panel_ctrl = BulkPanel(self, self.note_ctrl, 5)
-        self.note_ctrl.AddPage(self.bulk_panel_ctrl, u"一括", False)
+        self.bulk_panel_ctrl = BulkPanel(self, self.note_ctrl, 6)
+        self.note_ctrl.AddPage(self.bulk_panel_ctrl, "一括", False)
 
         # CSVタブ
-        self.csv_panel_ctrl = CsvPanel(self, self.note_ctrl, 6)
-        self.note_ctrl.AddPage(self.csv_panel_ctrl, u"CSV", False)
+        self.csv_panel_ctrl = CsvPanel(self, self.note_ctrl, 7)
+        self.note_ctrl.AddPage(self.csv_panel_ctrl, "CSV", False)
 
         # VMDタブ
-        self.vmd_panel_ctrl = VmdPanel(self, self.note_ctrl, 7)
-        self.note_ctrl.AddPage(self.vmd_panel_ctrl, u"VMD", False)
-        
+        self.vmd_panel_ctrl = VmdPanel(self, self.note_ctrl, 8)
+        self.note_ctrl.AddPage(self.vmd_panel_ctrl, "VMD", False)
+
         # ---------------------------------------------
 
         # タブ押下時の処理
@@ -129,7 +142,7 @@ class MainFrame(wx.Frame):
         self.Layout()
 
         self.Centre(wx.BOTH)
-    
+
     def on_idle(self, event: wx.Event):
         if self.worker or self.load_worker:
             self.file_panel_ctrl.gauge_ctrl.Pulse()
@@ -139,6 +152,9 @@ class MainFrame(wx.Frame):
             self.vmd_panel_ctrl.gauge_ctrl.Pulse()
 
     def on_tab_change(self, event: wx.Event):
+        # ファイルタブのコンソールに戻す
+        sys.stdout = self.file_panel_ctrl.console_ctrl
+
         if self.file_panel_ctrl.is_fix_tab:
             self.note_ctrl.ChangeSelection(self.file_panel_ctrl.tab_idx)
             event.Skip()
@@ -202,7 +218,21 @@ class MainFrame(wx.Frame):
 
             # 読み込み処理実行
             self.load(event, target_idx=0, is_arm=True)
-                
+
+        if self.note_ctrl.GetSelection() == self.leg_panel_ctrl.tab_idx:
+            # コンソールクリア
+            self.file_panel_ctrl.console_ctrl.Clear()
+            wx.GetApp().Yield()
+
+            # 一旦ファイルタブに固定
+            self.note_ctrl.SetSelection(self.file_panel_ctrl.tab_idx)
+            self.leg_panel_ctrl.fix_tab()
+
+            logger.info("足タブ表示準備開始\nファイル読み込み処理を実行します。少しお待ちください....", decoration=MLogger.DECORATION_BOX)
+
+            # 読み込み処理実行
+            self.load(event, target_idx=0, is_leg=True)
+
         if self.note_ctrl.GetSelection() == self.camera_panel_ctrl.tab_idx:
             # カメラタブを開く場合、カメラタブ初期化処理実行
             self.note_ctrl.ChangeSelection(self.camera_panel_ctrl.tab_idx)
@@ -220,7 +250,7 @@ class MainFrame(wx.Frame):
     def enable(self):
         self.file_panel_ctrl.enable()
         self.bulk_panel_ctrl.enable()
-    
+
     # ファイルセットの入力可否チェック
     def is_valid(self):
         result = True
@@ -231,7 +261,7 @@ class MainFrame(wx.Frame):
             result = file_set.is_valid() and result
 
         return result
-    
+
     # 入力後の入力可否チェック
     def is_loaded_valid(self):
         result = True
@@ -240,26 +270,38 @@ class MainFrame(wx.Frame):
         # multiはあるだけ調べる
         for file_set in self.multi_panel_ctrl.file_set_list:
             result = file_set.is_loaded_valid() and result
-        
+
         # カメラサイジングのみチェックが入ってる場合、カメラファイルパスとサイジング済みデータがある事を確認する
         if self.camera_panel_ctrl.camera_only_flg_ctrl.GetValue():
             if not self.camera_panel_ctrl.camera_vmd_file_ctrl.data:
                 logger.error("カメラサイジングのみ実行する場合、\nカメラVMDデータを指定してください", decoration=MLogger.DECORATION_BOX)
                 result = False
-            
-            if not (os.path.exists(self.file_panel_ctrl.file_set.output_vmd_file_ctrl.path()) and os.path.isfile(self.file_panel_ctrl.file_set.output_vmd_file_ctrl.path())):
-                logger.error("カメラサイジングのみ実行する場合、\n1番目のファイルセットの出力VMDには既存のサイジング済みVMDファイルパスを指定してください。" \
-                             "\n（出力VMDを「開く」から指定した場合に「上書きしますか？」と警告が出ますが、実際には上書きは行いません。）", decoration=MLogger.DECORATION_BOX)
+
+            if not (
+                os.path.exists(self.file_panel_ctrl.file_set.output_vmd_file_ctrl.path())
+                and os.path.isfile(self.file_panel_ctrl.file_set.output_vmd_file_ctrl.path())
+            ):
+                logger.error(
+                    "カメラサイジングのみ実行する場合、\n1番目のファイルセットの出力VMDには既存のサイジング済みVMDファイルパスを指定してください。"
+                    "\n（出力VMDを「開く」から指定した場合に「上書きしますか？」と警告が出ますが、実際には上書きは行いません。）",
+                    decoration=MLogger.DECORATION_BOX,
+                )
                 result = False
 
             for fidx, file_set in enumerate(self.multi_panel_ctrl.file_set_list):
-                if not (os.path.exists(file_set.output_vmd_file_ctrl.path()) and os.path.isfile(file_set.output_vmd_file_ctrl.path())):
-                    logger.error(f"カメラサイジングのみ実行する場合、\n{fidx+1}番目のファイルセットの出力VMDには既存のサイジング済みVMDファイルパスを指定してください。" \
-                                 "\n（出力VMDを「開く」から指定した場合に「上書きしますか？」と警告が出ますが、実際には上書きは行いません。）", decoration=MLogger.DECORATION_BOX)
+                if not (
+                    os.path.exists(file_set.output_vmd_file_ctrl.path())
+                    and os.path.isfile(file_set.output_vmd_file_ctrl.path())
+                ):
+                    logger.error(
+                        f"カメラサイジングのみ実行する場合、\n{fidx+1}番目のファイルセットの出力VMDには既存のサイジング済みVMDファイルパスを指定してください。"
+                        "\n（出力VMDを「開く」から指定した場合に「上書きしますか？」と警告が出ますが、実際には上書きは行いません。）",
+                        decoration=MLogger.DECORATION_BOX,
+                    )
                     result = False
 
         return result
-    
+
     def show_worked_time(self):
         # 経過秒数を時分秒に変換
         td_m, td_s = divmod(self.elapsed_time, 60)
@@ -270,7 +312,7 @@ class MainFrame(wx.Frame):
             worked_time = "{0:02d}分{1:02d}秒".format(int(td_m), int(td_s))
 
         return worked_time
-    
+
     # ファイルタブの処理対象VMD/VPDパス
     def get_target_vmd_path(self, target_idx):
         if self.file_panel_ctrl.file_set.motion_vmd_file_ctrl.astr_path:
@@ -282,7 +324,7 @@ class MainFrame(wx.Frame):
         return self.file_panel_ctrl.file_set.motion_vmd_file_ctrl.file_ctrl.GetPath()
 
     # 読み込み
-    def load(self, event, target_idx, is_exec=False, is_morph=False, is_arm=False):
+    def load(self, event, target_idx, is_exec=False, is_morph=False, is_arm=False, is_leg=False):
         # フォーム無効化
         self.file_panel_ctrl.disable()
         # タブ固定
@@ -293,17 +335,20 @@ class MainFrame(wx.Frame):
         result = self.is_valid() and result
 
         if not result:
-            if is_morph or is_arm:
-                tab_name = "モーフ" if is_morph else "腕"
+            if is_morph or is_arm or is_leg:
+                tab_name = "モーフ" if is_morph else "腕" if is_arm else "足"
                 # 読み込み出来なかったらエラー
-                logger.error("「ファイル」タブで以下のいずれかのファイルパスが指定されていないため、「{tab_name}」タブが開けません。".format(tab_name=tab_name) \
-                             + "\n・調整対象VMDファイル" \
-                             + "\n・作成元モデルPMXファイル" \
-                             + "\n・変換先モデルPMXファイル" \
-                             + "\n既に指定済みの場合、現在読み込み中の可能性があります。" \
-                             + "\n特に長いVMDは読み込みに時間がかかります。" \
-                             + "\n調整に必要な３ファイルすべてを指定して、" \
-                             + "\n「■読み込み成功」のログが出てから、「{tab_name}」タブを開いてください。".format(tab_name=tab_name), decoration=MLogger.DECORATION_BOX)
+                logger.error(
+                    "「ファイル」タブで以下のいずれかのファイルパスが指定されていないため、「{tab_name}」タブが開けません。".format(tab_name=tab_name)
+                    + "\n・調整対象VMDファイル"
+                    + "\n・作成元モデルPMXファイル"
+                    + "\n・変換先モデルPMXファイル"
+                    + "\n既に指定済みの場合、現在読み込み中の可能性があります。"
+                    + "\n特に長いVMDは読み込みに時間がかかります。"
+                    + "\n調整に必要な３ファイルすべてを指定して、"
+                    + "\n「■読み込み成功」のログが出てから、「{tab_name}」タブを開いてください。".format(tab_name=tab_name),
+                    decoration=MLogger.DECORATION_BOX,
+                )
 
             # タブ移動可
             self.release_tab()
@@ -321,7 +366,8 @@ class MainFrame(wx.Frame):
             self.file_panel_ctrl.file_set.motion_vmd_file_ctrl.file_ctrl.SetPath(target_path)
             self.file_panel_ctrl.file_set.motion_vmd_file_ctrl.file_model_ctrl.set_model(target_path)
             # 出力パス変更
-            if not self.file_panel_ctrl.file_set.output_vmd_file_ctrl.file_ctrl.GetPath():
+            if not self.file_panel_ctrl.file_set.output_vmd_file_ctrl.file_ctrl.GetPath() or target_idx > 0:
+                self.file_panel_ctrl.file_set.output_vmd_file_ctrl.file_ctrl.SetPath("")
                 self.file_panel_ctrl.file_set.set_output_vmd_path(event)
 
             # 停止ボタンに切り替え
@@ -329,7 +375,7 @@ class MainFrame(wx.Frame):
             self.file_panel_ctrl.check_btn_ctrl.Enable()
 
             # 別スレッドで実行
-            self.load_worker = LoadWorkerThread(self, LoadThreadEvent, target_idx, is_exec, is_morph, is_arm)
+            self.load_worker = LoadWorkerThread(self, LoadThreadEvent, target_idx, is_exec, is_morph, is_arm, is_leg)
             self.load_worker.start()
 
         return result
@@ -337,7 +383,7 @@ class MainFrame(wx.Frame):
     # 読み込み完了処理
     def on_load_result(self, event: wx.Event):
         self.elapsed_time = event.elapsed_time
-        
+
         # タブ移動可
         self.release_tab()
         # フォーム有効化
@@ -354,7 +400,7 @@ class MainFrame(wx.Frame):
         if not event.result:
             # 終了音を鳴らす
             self.sound_finish()
-            
+
             event.Skip()
             return False
 
@@ -370,7 +416,7 @@ class MainFrame(wx.Frame):
 
             event.Skip()
             return False
-        
+
         logger.info("ファイルデータ読み込みが完了しました", decoration=MLogger.DECORATION_BOX, title="OK")
 
         if event.is_exec:
@@ -398,7 +444,9 @@ class MainFrame(wx.Frame):
                 self.file_panel_ctrl.exec_btn_ctrl.Enable()
 
                 # 別スレッドで実行
-                self.worker = SizingWorkerThread(self, SizingThreadEvent, event.target_idx, self.is_saving, self.is_out_log)
+                self.worker = SizingWorkerThread(
+                    self, SizingThreadEvent, event.target_idx, self.is_saving, self.is_out_log
+                )
                 self.worker.start()
 
         elif event.is_morph:
@@ -411,12 +459,17 @@ class MainFrame(wx.Frame):
             self.note_ctrl.ChangeSelection(self.arm_panel_ctrl.tab_idx)
             self.arm_panel_ctrl.initialize(event)
 
+        elif event.is_leg:
+            # 足タブを開く場合、足タブ初期化処理実行
+            self.note_ctrl.ChangeSelection(self.leg_panel_ctrl.tab_idx)
+            self.leg_panel_ctrl.initialize(event)
+
         else:
             # 終了音を鳴らす
             self.sound_finish()
 
             logger.info("\n処理時間: %s", self.show_worked_time())
-        
+
             event.Skip()
             return True
 
@@ -432,7 +485,7 @@ class MainFrame(wx.Frame):
 
         if self.is_out_log and event.output_log_path and os.path.exists(event.output_log_path):
             # ログ出力対象である場合、追記
-            with open(event.output_log_path, mode='a', encoding='utf-8') as f:
+            with open(event.output_log_path, mode="a", encoding="utf-8") as f:
                 f.write(worked_time)
 
         logger.debug("self.worker = None")
@@ -440,7 +493,11 @@ class MainFrame(wx.Frame):
         # ワーカー終了
         self.worker = None
 
-        if event.result and self.file_panel_ctrl.file_set.motion_vmd_file_ctrl.astr_path and self.get_target_vmd_path(event.target_idx + 1):
+        if (
+            event.result
+            and self.file_panel_ctrl.file_set.motion_vmd_file_ctrl.astr_path
+            and self.get_target_vmd_path(event.target_idx + 1)
+        ):
             # アスタリスク付きパスの場合、次の存在チェック
             logger.info("\n----------------------------------")
 
@@ -484,8 +541,11 @@ class MainFrame(wx.Frame):
 
     def on_popup_finger_warning(self, event: wx.Event):
         if not self.popuped_finger_warning:
-            dialog = wx.MessageDialog(self, "複数人数モーションで指位置合わせがONになっています。\n指の数だけ組み合わせが膨大になり時間がかかりますが、" \
-                                      + "その割に余計な指に反応して綺麗になりません。よろしいですか？", style=wx.YES_NO | wx.ICON_WARNING)
+            dialog = wx.MessageDialog(
+                self,
+                "複数人数モーションで指位置合わせがONになっています。\n指の数だけ組み合わせが膨大になり時間がかかりますが、" + "その割に余計な指に反応して綺麗になりません。よろしいですか？",
+                style=wx.YES_NO | wx.ICON_WARNING,
+            )
             if dialog.ShowModal() == wx.ID_NO:
                 # 指位置合わせOFF
                 self.arm_panel_ctrl.arm_alignment_finger_flg_ctrl.SetValue(0)

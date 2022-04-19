@@ -8,7 +8,7 @@ import re
 import gc
 
 from form.worker.BaseWorkerThread import BaseWorkerThread, task_takes_time
-from module.MOptions import MOptions, MOptionsDataSet, MArmProcessOptions
+from module.MOptions import MOptions, MOptionsDataSet, MArmProcessOptions, MLegProcessOptions
 from service.SizingService import SizingService
 from utils import MFileUtils # noqa
 from utils.MLogger import MLogger # noqa
@@ -186,6 +186,10 @@ class SizingWorkerThread(BaseWorkerThread):
                     self.frame.arm_panel_ctrl.alignment_distance_finger_slider.GetValue(), \
                     self.frame.arm_panel_ctrl.alignment_distance_floor_slider.GetValue(), \
                     self.frame.arm_panel_ctrl.arm_check_skip_flg_ctrl.GetValue()
+                ), \
+                leg_options=MLegProcessOptions(
+                    move_correction_ratio=self.frame.leg_panel_ctrl.move_correction_slider.GetValue(),
+                    leg_offsets=self.frame.leg_panel_ctrl.get_leg_offsets()
                 ), \
                 camera_motion=now_camera_data, \
                 camera_output_vmd_path=now_camera_output_vmd_path, \
