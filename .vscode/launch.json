@@ -49,6 +49,28 @@
                 "1",
                 "--out_log",
                 "1",
+                "--lang",
+                "ja_JP",
+            ]
+        },
+        {
+            "name": "exec_tailor_gui_lang",
+            "type": "python",
+            "request": "launch",
+            "cwd": "${workspaceFolder}/../pmx_tailor/",
+            "program": "${workspaceFolder}/../pmx_tailor/src/executor.py",
+            "console": "integratedTerminal",
+            "python": "${command:python.interpreterPath}",
+            "stopOnEntry": false,
+            "args": [
+                "--verbose",
+                "20",
+                "--log_mode",
+                "1",
+                "--out_log",
+                "0",
+                "--lang",
+                "zh_CN",
             ]
         },
         {
@@ -67,16 +89,16 @@
                 "1",
                 "--out_log",
                 "1",
+                "--lang",
+                "ja_JP",
             ]
         },
         {
             "name": "(gdb) exec_gui",
             "type": "cppdbg",
             "request": "attach",
-            "stopOnEntry": false,
             "program": "C:/Development/Anaconda3/envs/vmdsizing_cython/python.exe",
             "processId": "${command:pickProcess}",
-            "cwd": "${workspaceFolder}",
             "MIMode": "gdb",
             "miDebuggerPath": "C:/Development/msys64/mingw64/bin/gdb.exe",
             // "miDebuggerPath": "C:/Development/Anaconda3/Scripts/cygdb.exe",

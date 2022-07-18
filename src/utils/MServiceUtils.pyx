@@ -444,9 +444,13 @@ cdef list c_calc_relative_rotation(PmxModel model, BoneLinks links, VmdMotion mo
             # 上限リンクでボーンがない場合、ボーンは初期値
             fill_bf = VmdBoneFrame(fno=fno)
             fill_bf.set_name(link_bone_name)
-        
+
+        logger.debug(f"c_calc_relative_rotation 1 bone_name={fill_bf.name} fno={fill_bf.fno} rot={motion.calc_bf(fill_bf.name, fill_bf.fno).rotation.toEulerAngles().to_log()}")
+
         # 実際の回転量を計算
         rot = deform_rotation(model, motion, fill_bf)
+
+        logger.debug(f"c_calc_relative_rotation 2 bone_name={fill_bf.name} fno={fill_bf.fno} rot={motion.calc_bf(fill_bf.name, fill_bf.fno).rotation.toEulerAngles().to_log()}")
 
         add_qs.append(rot)
 
@@ -458,10 +462,16 @@ cpdef MQuaternion deform_rotation(PmxModel model, VmdMotion motion, VmdBoneFrame
     if bf.name not in model.bones:
         return MQuaternion()
 
+    logger.debug(f"deform_rotation 0 bone_name={bf.name} fno={bf.fno} rot={motion.calc_bf(bf.name, bf.fno).rotation.toEulerAngles().to_log()}")
+
     cdef Bone bone = model.bones[bf.name]
     cdef MQuaternion rot = bf.rotation.normalized().copy()
 
+    logger.debug(f"deform_rotation 1 bone_name={bf.name} fno={bf.fno} rot={motion.calc_bf(bf.name, bf.fno).rotation.toEulerAngles().to_log()}")
+
     rot = deform_fix_rotation(bf.name, bone.fixed_axis, rot)
+
+    logger.debug(f"deform_rotation 2 bone_name={bf.name} fno={bf.fno} rot={motion.calc_bf(bf.name, bf.fno).rotation.toEulerAngles().to_log()}")
 
     cdef Bone effect_parent_bone
     cdef Bone effect_bone
@@ -498,6 +508,8 @@ cpdef MQuaternion deform_rotation(PmxModel model, VmdMotion motion, VmdBoneFrame
                 break
 
             cnt += 1
+
+    logger.debug(f"deform_rotation 3 bone_name={bf.name} fno={bf.fno} rot={motion.calc_bf(bf.name, bf.fno).rotation.toEulerAngles().to_log()}")
 
     return rot
 
