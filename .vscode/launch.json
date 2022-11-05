@@ -11,7 +11,7 @@
             "stopOnEntry": false,
             "args": [
                 "--verbose",
-                "20",
+                "10",
                 // "--out_log",
             ],
             // "preLaunchTask": "app start",
@@ -361,7 +361,7 @@
             "name": "exec_crumb",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/../pmx_tailor/crumb/search_sode_ik.py",
+            "program": "${workspaceFolder}/../pmx_tailor/crumb/write_pmx_bone.py",
             "console": "integratedTerminal",
             "python": "${command:python.interpreterPath}",
             "stopOnEntry": false,
