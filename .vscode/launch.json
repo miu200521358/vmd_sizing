@@ -11,7 +11,7 @@
             "stopOnEntry": false,
             "args": [
                 "--verbose",
-                "10",
+                "20",
                 // "--out_log",
             ],
             // "preLaunchTask": "app start",

@@ -4,9 +4,18 @@ import struct
 import hashlib
 import re
 
-from mmd.VmdData import VmdMotion, VmdBoneFrame, VmdCameraFrame, VmdInfoIk, VmdLightFrame, VmdMorphFrame, VmdShadowFrame, VmdShowIkFrame
-from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4 # noqa
-from utils.MLogger import MLogger # noqa
+from mmd.VmdData import (
+    VmdMotion,
+    VmdBoneFrame,
+    VmdCameraFrame,
+    VmdInfoIk,
+    VmdLightFrame,
+    VmdMorphFrame,
+    VmdShadowFrame,
+    VmdShowIkFrame,
+)
+from module.MMath import MRect, MVector3D, MVector4D, MQuaternion, MMatrix4x4  # noqa
+from utils.MLogger import MLogger  # noqa
 from utils.MException import SizingException, MKilledException, MParseException
 
 logger = MLogger(__name__)
@@ -192,8 +201,8 @@ class VmdReader:
                         logger.test("camera.perspective %s", camera.perspective)
 
                         # オリジナルを保持
-                        camera.org_length = camera.org_length
-                        camera.org_position = camera.org_position.copy()
+                        camera.org_length = camera.length
+                        camera.org_position = camera.position.copy()
 
                         # カメラを追加
                         motion.cameras[camera.fno] = camera
@@ -318,20 +327,23 @@ class VmdReader:
             return se
         except Exception as e:
             import traceback
-            logger.critical("VMD読み込み処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc(), decoration=MLogger.DECORATION_BOX)
+
+            logger.critical(
+                "VMD読み込み処理が意図せぬエラーで終了しました。\n\n%s", traceback.format_exc(), decoration=MLogger.DECORATION_BOX
+            )
             raise e
 
     def hexdigest(self):
         sha1 = hashlib.sha1()
 
-        with open(self.file_path, 'rb') as f:
-            for chunk in iter(lambda: f.read(2048 * sha1.block_size), b''):
+        with open(self.file_path, "rb") as f:
+            for chunk in iter(lambda: f.read(2048 * sha1.block_size), b""):
                 sha1.update(chunk)
 
         sha1.update(chunk)
 
         # ファイルパスをハッシュに含める
-        sha1.update(self.file_path.encode('utf-8'))
+        sha1.update(self.file_path.encode("utf-8"))
 
         return sha1.hexdigest()
 
@@ -350,12 +362,12 @@ class VmdReader:
 
     # ファイルのエンコードを取得する
     def get_encoding(self, fbytes, is_raise=True):
-        codelst = ('shift-jis', 'utf-8')
+        codelst = ("shift-jis", "utf-8")
 
         for encoding in codelst:
             try:
                 fstr = self.decode_text(fbytes, encoding, False)  # bytes文字列から指定文字コードの文字列に変換
-                fstr = fstr.encode('utf-8')  # uft-8文字列に変換
+                fstr = fstr.encode("utf-8")  # uft-8文字列に変換
                 # 問題なく変換できたらエンコードを返す
                 logger.test("%s: encoding: %s", fstr, encoding)
                 return encoding
@@ -375,7 +387,7 @@ class VmdReader:
             # エンコードがない場合はNone
             return None
 
-        fbytes2 = re.sub(b'\x00.*$', b'', fbytes)
+        fbytes2 = re.sub(b"\x00.*$", b"", fbytes)
         logger.test("decode_text %s -> %s", fbytes, fbytes2)
 
         if is_raise:
@@ -387,12 +399,16 @@ class VmdReader:
         else:
             # エラーを投げない場合
             try:
-                if encoding == 'shift-jis':
+                if encoding == "shift-jis":
                     # shift-jisは一旦cp932に変換してもう一度戻したのでテスト
-                    return fbytes2.decode('shift_jis', errors='replace').encode('cp932', errors='replace').decode('cp932', errors='replace')
+                    return (
+                        fbytes2.decode("shift_jis", errors="replace")
+                        .encode("cp932", errors="replace")
+                        .decode("cp932", errors="replace")
+                    )
 
                 # 変換できなかった文字は「?」に変換する
-                return fbytes2.decode(encoding=encoding, errors='replace')
+                return fbytes2.decode(encoding=encoding, errors="replace")
             except Exception:
                 # 投げない場合はとりあえずNone
                 return None
