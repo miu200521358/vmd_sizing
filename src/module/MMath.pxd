@@ -36,6 +36,8 @@ cdef class MVector2D:
 
     cpdef np.ndarray[DTYPE_FLOAT_t, ndim=1] data(self)
 
+    cpdef MVector2D copy(self)
+
     cpdef DTYPE_FLOAT_t x(self)
 
     cpdef DTYPE_FLOAT_t y(self)
@@ -99,6 +101,8 @@ cdef class MVector3D:
     cpdef double length(self)
 
     cpdef double lengthSquared(self)
+
+    cpdef MVector3D round(self, decimals)
 
     cpdef MVector3D normalized(self)
 
@@ -181,6 +185,8 @@ cdef double dotProduct_MVector3D(MVector3D v1, MVector3D v2)
 
 cdef class MVector4D:
     cdef np.ndarray __data
+
+    cpdef MVector4D copy(self)
 
     cpdef double length(self)
 
@@ -277,10 +283,12 @@ cdef class MQuaternion:
 
     cpdef MVector3D toEulerAngles(self)
 
+    cpdef MVector3D separateEulerAngles(self)
+
     cpdef double toDegree(self)
 
     cpdef double toDegreeSign(self, MVector3D local_axis)
-
+    
     cpdef double calcTheata(self, MQuaternion v)
 
     cpdef data(self)

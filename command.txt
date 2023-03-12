@@ -1,3 +1,10 @@
+pip install numpy-quaternion==2022.4.3
+
+
+
+
+
+
 conda create -n vmdsizing_np pip python=3.8
 
 pip install numpy

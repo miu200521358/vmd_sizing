@@ -1,13 +1,14 @@
 @echo off
 rem --- 
-rem ---  exe‚ğ¶¬
+rem ---  exeï¿½ğ¶ï¿½
 rem --- 
 
-rem ---  ƒJƒŒƒ“ƒgƒfƒBƒŒƒNƒgƒŠ‚ğÀsæ‚É•ÏX
+rem ---  ï¿½Jï¿½ï¿½ï¿½ï¿½ï¿½gï¿½fï¿½Bï¿½ï¿½ï¿½Nï¿½gï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½sï¿½ï¿½É•ÏX
 cd /d %~dp0
 
 cls
 
-activate vmdsizing_cython && src\setup_install.bat && pyinstaller --clean vmdising_np64.spec && copy /y archive\Readme.txt dist\Readme.txt && copy /y archive\ƒÀ”ÅReadme.txt dist\ƒÀ”ÅReadme.txt
+activate vmdsizing_cython && src\setup_install.bat && pyinstaller --clean vmdising_np64.spec && copy /y archive\Readme.txt dist\Readme.txt && copy /y archive\ï¿½ï¿½ï¿½ï¿½Readme.txt dist\ï¿½ï¿½ï¿½ï¿½Readme.txt
+
 
 

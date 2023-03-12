@@ -8,7 +8,7 @@ import numpy as np
 cimport numpy as np
 cimport cython
 from libc.math cimport sin, cos, acos, atan2, asin, pi, sqrt
-from math import degrees, radians
+from math import degrees, radians, isnan, isinf
 
 from utils.MLogger import MLogger # noqa
 
@@ -102,11 +102,11 @@ cdef class MVector2D:
         return np.all(np.greater_equal(self.data(), other.data()))
 
     def __add__(self, other):
-        if isinstance(other, np.float):
+        if isinstance(other, np.float64):
             v = self.add_float(other)
         elif isinstance(other, MVector2D):
             v = self.add_MVector2D(other)
-        elif isinstance(other, np.int):
+        elif isinstance(other, np.int32):
             v = self.add_int(other)
         else:
             v = self.data() + other
@@ -124,11 +124,11 @@ cdef class MVector2D:
         return self.__data + other
 
     def __sub__(self, other):
-        if isinstance(other, np.float):
+        if isinstance(other, np.float64):
             v = self.sub_float(other)
         elif isinstance(other, MVector2D):
             v = self.sub_MVector2D(other)
-        elif isinstance(other, np.int):
+        elif isinstance(other, np.int32):
             v = self.sub_int(other)
         else:
             v = self.data() - other
@@ -146,11 +146,11 @@ cdef class MVector2D:
         return self.__data - other
 
     def __mul__(self, other):
-        if isinstance(other, np.float):
+        if isinstance(other, np.float64):
             v = self.mul_float(other)
         elif isinstance(other, MVector2D):
             v = self.mul_MVector2D(other)
-        elif isinstance(other, np.int):
+        elif isinstance(other, np.int32):
             v = self.mul_int(other)
         else:
             v = self.data() * other
@@ -168,11 +168,11 @@ cdef class MVector2D:
         return self.__data * other
 
     def __truediv__(self, other):
-        if isinstance(other, np.float):
+        if isinstance(other, np.float64):
             v = self.truediv_float(other)
         elif isinstance(other, MVector2D):
             v = self.truediv_MVector2D(other)
-        elif isinstance(other, np.int):
+        elif isinstance(other, np.int32):
             v = self.truediv_int(other)
         else:
             v = self.data() / other
@@ -190,11 +190,11 @@ cdef class MVector2D:
         return self.__data / other
 
     def __floordiv__(self, other):
-        if isinstance(other, np.float):
+        if isinstance(other, np.float64):
             v = self.floordiv_float(other)
         elif isinstance(other, MVector2D):
             v = self.floordiv_MVector2D(other)
-        elif isinstance(other, np.int):
+        elif isinstance(other, np.int32):
             v = self.floordiv_int(other)
         else:
             v = self.data() // other
@@ -212,11 +212,11 @@ cdef class MVector2D:
         return self.__data // other
 
     def __mod__(self, other):
-        if isinstance(other, np.float):
+        if isinstance(other, np.float64):
             v = self.mod_float(other)
         elif isinstance(other, MVector2D):
             v = self.mod_MVector2D(other)
-        elif isinstance(other, np.int):
+        elif isinstance(other, np.int32):
             v = self.mod_int(other)
         else:
             v = self.data() % other
@@ -287,8 +287,58 @@ cdef class MVector2D:
     cpdef setY(self, y):
         self.__data[1] = y
 
+    cpdef MVector2D copy(self):
+        return MVector2D(self.x(), self.y())
+
     def to_log(self):
         return "x: {0}, y: {1}".format(round(self.x(), 5), round(self.y(), 5))
+
+
+class MPoint:
+
+    def __init__(self, p: MVector3D):
+        self.point = p
+
+    def get_point(self, f: float):
+        return self.point * f
+
+
+class MLine:
+
+    def __init__(self, p: MPoint, v: MVector3D):
+        self.point = p
+        self.vector_start = v
+        self.vector_real = p.point - v
+        self.vector = (p.point - v).normalized()
+
+    def get_point(self, f: float):
+        return self.vector_start + (self.vector_real * f)
+
+
+class MSegment(MLine):
+
+    def __init__(self, sv: MVector3D, ev: MVector3D):
+        super().__init__(MPoint((sv + ev) / 2), sv)
+        self.vector_end = ev
+        self.vector_real = ev - sv
+        self.vector = self.vector_real.normalized()
+
+    def get_point(self, f: float):
+        return self.vector_start + (self.vector_real * f)
+
+
+class MSphere:
+
+    def __init__(self, p: MPoint, r=1.0):
+        self.point = p
+        self.radius = r
+
+
+class MCapsule:
+
+    def __init__(self, s: MSegment, r=0.0):
+        self.segment = s
+        self.radius = r
 
 
 cdef class MVector3D:
@@ -314,6 +364,9 @@ cdef class MVector3D:
 
     cpdef double lengthSquared(self):
         return float(np.linalg.norm(self.data(), ord=2)**2)
+
+    cpdef MVector3D round(self, decimals):
+        return MVector3D(np.round(self.data(), decimals=decimals))
 
     cpdef MVector3D normalized(self):
         cdef np.ndarray[DTYPE_FLOAT_t, ndim=1] l2 = np.linalg.norm(self.data(), ord=2, axis=-1, keepdims=True)
@@ -415,6 +468,11 @@ cdef class MVector3D:
     def to_log(self):
         return "x: {0}, y: {1} z: {2}".format(round(self.__data[0], 5), round(self.__data[1], 5), round(self.__data[2], 5))
 
+    def to_key(self, threshold=0.1):
+        # return (round(self.__data[0], 1), round(self.__data[1], 1), round(self.__data[2], 1))
+        # return (round(self.__data[0] * 5) / 5, round(self.__data[1] * 5) / 5, round(self.__data[2] * 5) / 5)
+        return (round(self.__data[0] / threshold), round(self.__data[1] / threshold), round(self.__data[2] / threshold))
+
     def __str__(self):
         return "MVector3D({0}, {1}, {2})".format(self.__data[0], self.__data[1], self.__data[2])
 
@@ -441,11 +499,11 @@ cdef class MVector3D:
         return np.all(np.greater_equal(self.data(), other.data()))
 
     def __add__(self, other):
-        if isinstance(other, np.float):
+        if isinstance(other, np.float64):
             v = self.add_float(other)
         elif isinstance(other, MVector3D):
             v = self.add_MVector3D(other)
-        elif isinstance(other, np.int):
+        elif isinstance(other, np.int32):
             v = self.add_int(other)
         else:
             v = self.data() + other
@@ -463,11 +521,11 @@ cdef class MVector3D:
         return self.__data + other
 
     def __sub__(self, other):
-        if isinstance(other, np.float):
+        if isinstance(other, np.float64):
             v = self.sub_float(other)
         elif isinstance(other, MVector3D):
             v = self.sub_MVector3D(other)
-        elif isinstance(other, np.int):
+        elif isinstance(other, np.int32):
             v = self.sub_int(other)
         else:
             v = self.data() - other
@@ -485,11 +543,11 @@ cdef class MVector3D:
         return self.__data - other
 
     def __mul__(self, other):
-        if isinstance(other, np.float):
+        if isinstance(other, np.float64):
             v = self.mul_float(other)
         elif isinstance(other, MVector3D):
             v = self.mul_MVector3D(other)
-        elif isinstance(other, np.int):
+        elif isinstance(other, np.int32):
             v = self.mul_int(other)
         else:
             v = self.data() * other
@@ -507,11 +565,11 @@ cdef class MVector3D:
         return self.__data * other
 
     def __truediv__(self, other):
-        if isinstance(other, np.float):
+        if isinstance(other, np.float64):
             v = self.truediv_float(other)
         elif isinstance(other, MVector3D):
             v = self.truediv_MVector3D(other)
-        elif isinstance(other, np.int):
+        elif isinstance(other, np.int32):
             v = self.truediv_int(other)
         else:
             v = self.data() / other
@@ -529,11 +587,11 @@ cdef class MVector3D:
         return self.__data / other
 
     def __floordiv__(self, other):
-        if isinstance(other, np.float):
+        if isinstance(other, np.float64):
             v = self.floordiv_float(other)
         elif isinstance(other, MVector3D):
             v = self.floordiv_MVector3D(other)
-        elif isinstance(other, np.int):
+        elif isinstance(other, np.int32):
             v = self.floordiv_int(other)
         else:
             v = self.data() // other
@@ -551,11 +609,11 @@ cdef class MVector3D:
         return self.__data // other
 
     def __mod__(self, other):
-        if isinstance(other, np.float):
+        if isinstance(other, np.float64):
             v = self.mod_float(other)
         elif isinstance(other, MVector3D):
             v = self.mod_MVector3D(other)
-        elif isinstance(other, np.int):
+        elif isinstance(other, np.int32):
             v = self.mod_int(other)
         else:
             v = self.data() % other
@@ -656,6 +714,9 @@ cdef class MVector4D:
         else:
             self.__data = np.array([x, y, z, w], dtype=np.float64)
     
+    cpdef MVector4D copy(self):
+        return MVector4D(float(self.x()), float(self.y()), float(self.z()), float(self.w()))
+    
     cpdef double length(self):
         return np.linalg.norm(self.data(), ord=2)
 
@@ -723,11 +784,11 @@ cdef class MVector4D:
         return self.data().greater_equal(other.data())
 
     def __add__(self, other):
-        if isinstance(other, np.float):
+        if isinstance(other, np.float64):
             v = self.add_float(other)
         elif isinstance(other, MVector4D):
             v = self.add_MVector4D(other)
-        elif isinstance(other, np.int):
+        elif isinstance(other, np.int32):
             v = self.add_int(other)
         else:
             v = self.data() + other
@@ -745,11 +806,11 @@ cdef class MVector4D:
         return self.__data + other
 
     def __sub__(self, other):
-        if isinstance(other, np.float):
+        if isinstance(other, np.float64):
             v = self.sub_float(other)
         elif isinstance(other, MVector4D):
             v = self.sub_MVector4D(other)
-        elif isinstance(other, np.int):
+        elif isinstance(other, np.int32):
             v = self.sub_int(other)
         else:
             v = self.data() - other
@@ -767,11 +828,11 @@ cdef class MVector4D:
         return self.__data - other
 
     def __mul__(self, other):
-        if isinstance(other, np.float):
+        if isinstance(other, np.float64):
             v = self.mul_float(other)
         elif isinstance(other, MVector4D):
             v = self.mul_MVector4D(other)
-        elif isinstance(other, np.int):
+        elif isinstance(other, np.int32):
             v = self.mul_int(other)
         else:
             v = self.data() * other
@@ -789,11 +850,11 @@ cdef class MVector4D:
         return self.__data * other
 
     def __truediv__(self, other):
-        if isinstance(other, np.float):
+        if isinstance(other, np.float64):
             v = self.truediv_float(other)
         elif isinstance(other, MVector4D):
             v = self.truediv_MVector4D(other)
-        elif isinstance(other, np.int):
+        elif isinstance(other, np.int32):
             v = self.truediv_int(other)
         else:
             v = self.data() / other
@@ -811,11 +872,11 @@ cdef class MVector4D:
         return self.__data / other
 
     def __floordiv__(self, other):
-        if isinstance(other, np.float):
+        if isinstance(other, np.float64):
             v = self.floordiv_float(other)
         elif isinstance(other, MVector4D):
             v = self.floordiv_MVector4D(other)
-        elif isinstance(other, np.int):
+        elif isinstance(other, np.int32):
             v = self.floordiv_int(other)
         else:
             v = self.data() // other
@@ -833,11 +894,11 @@ cdef class MVector4D:
         return self.__data // other
 
     def __mod__(self, other):
-        if isinstance(other, np.float):
+        if isinstance(other, np.float64):
             v = self.mod_float(other)
         elif isinstance(other, MVector4D):
             v = self.mod_MVector4D(other)
-        elif isinstance(other, np.int):
+        elif isinstance(other, np.int32):
             v = self.mod_int(other)
         else:
             v = self.data() % other
@@ -943,7 +1004,7 @@ cdef class MQuaternion:
             self.__data = np.array([w, x, y, z], dtype=np.float64)
 
     cpdef MQuaternion copy(self):
-        return MQuaternion(self.scalar(), self.x(), self.y(), self.z())
+        return MQuaternion(float(self.scalar()), float(self.x()), float(self.y()), float(self.z()))
     
     def __str__(self):
         return "MQuaternion({0}, {1}, {2}, {3})".format(self.scalar(), self.x(), self.y(), self.z())
@@ -1015,6 +1076,18 @@ cdef class MQuaternion:
         cdef MVector3D euler = self.toEulerAngles()
 
         return MVector3D(euler.x(), -euler.y(), -euler.z())
+
+    cpdef MVector3D separateEulerAngles(self):
+        # ZXYの回転順序でオイラー角度を分割する
+        # https://programming-surgeon.com/script/euler-python-script/
+        cdef MMatrix4x4 mat = self.normalized().toMatrix4x4()
+        cdef np.ndarray[DTYPE_FLOAT_t, ndim=2] m = mat.data()
+
+        cdef float z_radian = atan2(-m[0, 1], m[0, 0])
+        cdef float x_radian = atan2(m[2, 1] * cos(z_radian), m[1, 1])
+        cdef float y_radian = atan2(-m[2, 0], m[2, 2])
+
+        return MVector3D(degrees(x_radian), degrees(y_radian), degrees(z_radian))
 
     # http://www.j3d.org/matrix_faq/matrfaq_latest.html#Q37
     cpdef MVector3D toEulerAngles(self):
@@ -1606,11 +1679,11 @@ cdef class MMatrix4x4:
         return np.all(np.greater_equal(self.data(), other.data()))
 
     def __add__(self, other):
-        if isinstance(other, np.float):
+        if isinstance(other, np.float64):
             v = self.add_float(other)
         elif isinstance(other, MMatrix4x4):
             v = self.add_MMatrix4x4(other)
-        elif isinstance(other, np.int):
+        elif isinstance(other, np.int32):
             v = self.add_int(other)
         else:
             v = self.data() + other
@@ -1627,11 +1700,11 @@ cdef class MMatrix4x4:
         return self.__data + other
 
     def __sub__(self, other):
-        if isinstance(other, np.float):
+        if isinstance(other, np.float64):
             v = self.sub_float(other)
         elif isinstance(other, MMatrix4x4):
             v = self.sub_MMatrix4x4(other)
-        elif isinstance(other, np.int):
+        elif isinstance(other, np.int32):
             v = self.sub_int(other)
         else:
             v = self.data() - other
@@ -1648,7 +1721,7 @@ cdef class MMatrix4x4:
         return self.__data - other
 
     def __mul__(self, other):
-        if isinstance(other, np.float):
+        if isinstance(other, np.float64):
             v = self.mul_float(other)
         elif isinstance(other, MMatrix4x4):
             v = self.mul_MMatrix4x4(other)
@@ -1656,7 +1729,7 @@ cdef class MMatrix4x4:
             return self.mul_MVector3D(other)
         elif isinstance(other, MVector4D):
             return self.mul_MVector4D(other)
-        elif isinstance(other, np.int):
+        elif isinstance(other, np.int32):
             v = self.mul_int(other)
         else:
             v = self.data() * other
@@ -1728,10 +1801,10 @@ cpdef bint is_almost_null(v):
 
 
 cpdef double get_effective_value(v):
-    if math.isnan(v):
+    if isnan(v):
         return 0
     
-    if math.isinf(v):
+    if isinf(v):
         return 0
     
     return v
